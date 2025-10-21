@@ -1,13 +1,33 @@
-// web/src/index.html
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>ExITS SaaS - Enterprise Platform</title>
+  <title>ExITS SaaS - Integrated Loan & Appraisal Management</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <script>
+    // Apply dark mode immediately to prevent flash
+    // This runs BEFORE Angular loads to prevent theme flicker
+    (function() {
+      try {
+        const theme = localStorage.getItem('theme');
+        const isDark = theme === 'dark' || theme === null; // Default to dark if not set
+        
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          console.log('🎨 [BOOT] Applied dark mode');
+        } else {
+          document.documentElement.classList.remove('dark');
+          console.log('🎨 [BOOT] Applied light mode');
+        }
+      } catch (e) {
+        // Fallback to dark mode if anything fails
+        document.documentElement.classList.add('dark');
+        console.warn('🎨 [BOOT] Error reading theme, defaulting to dark:', e);
+      }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

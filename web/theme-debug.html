@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app" class="min-h-screen flex flex-col items-center justify-center gap-8 p-8">
+        <h1 class="text-4xl font-bold text-gray-900 dark:text-white">Theme Debug Test</h1>
+        
+        <div class="flex gap-4">
+            <button onclick="toggleDarkMode()" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+                Toggle Dark Mode
+            </button>
+            <button onclick="checkState()" class="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
+                Check State
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-8 w-96">
+            <p class="text-gray-900 dark:text-white text-center font-medium">
+                Current Mode: <span id="modeText" class="font-bold text-lg text-blue-600 dark:text-blue-400">LIGHT</span>
+            </p>
+            <p id="stateText" class="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm"></p>
+        </div>
+
+        <pre id="log" class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-xs text-gray-900 dark:text-white w-full max-w-md overflow-auto max-h-48"></pre>
+    </div>
+
+    <script>
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            logEl.textContent += msg + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function checkState() {
+            const hasDarkClass = document.documentElement.classList.contains('dark');
+            const theme = localStorage.getItem('theme');
+            const modeText = hasDarkClass ? 'DARK' : 'LIGHT';
+            
+            document.getElementById('modeText').textContent = modeText;
+            document.getElementById('stateText').textContent = `localStorage.theme: ${theme}`;
+            
+            log(`✓ Check: isDark=${hasDarkClass}, theme="${theme}"`);
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            
+            if (isDark) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                log('→ Switched to LIGHT mode');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                log('→ Switched to DARK mode');
+            }
+            
+            checkState();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            log('Page loaded');
+            const theme = localStorage.getItem('theme');
+            if (theme === 'dark' || theme === null) {
+                document.documentElement.classList.add('dark');
+                log('✓ Applied dark mode on load');
+            }
+            checkState();
+        });
+    </script>
+</body>
+</html>

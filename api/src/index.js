@@ -10,9 +10,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 const logger = require('./utils/logger');
-const { CONSTANTS } = require('./config/constants');
+const CONSTANTS = require('./config/constants');
 const errorHandlerMiddleware = require('./middleware/errorHandler');
-const requestLoggingMiddleware = require('./middleware/requestLogging');
+const { requestLogger, errorLogger, logStartupBanner } = require('./middleware/httpLogger');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -39,9 +39,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Logging
-app.use(morgan('combined'));
-app.use(requestLoggingMiddleware);
+// Beautiful HTTP logging
+app.use(requestLogger);
 
 // ==================== ROUTES ====================
 
@@ -84,15 +83,17 @@ app.use((req, res) => {
 
 // ==================== ERROR HANDLER ====================
 
+app.use(errorLogger);
 app.use(errorHandlerMiddleware);
 
 // ==================== SERVER START ====================
 
 const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📝 Environment: ${process.env.NODE_ENV}`);
-  logger.info(`🔗 Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
-  logger.info(`✅ Health check: http://localhost:${PORT}/health`);
+  logStartupBanner(PORT, {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME,
+  });
 });
 
 // ==================== GRACEFUL SHUTDOWN ====================

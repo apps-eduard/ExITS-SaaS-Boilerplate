@@ -29,19 +29,29 @@ async function seed() {
        ('ACME Corporation', 'acme', 'pro', 'active', 100),
        ('TechStartup Inc', 'techstartup', 'basic', 'active', 50),
        ('Enterprise Corp', 'enterprise', 'enterprise', 'active', 500)
-       ON CONFLICT DO NOTHING
+       ON CONFLICT (subdomain) DO NOTHING
        RETURNING id, name`
     );
     console.log(`✅ Created ${tenantRes.rows.length} test tenants`);
 
-    const tenantIds = tenantRes.rows.map(r => r.id);
+    // Get all tenant IDs (including existing ones)
+    const allTenantsRes = await client.query(
+      `SELECT id FROM tenants WHERE subdomain IN ('acme', 'techstartup', 'enterprise') ORDER BY id`
+    );
+    const tenantIds = allTenantsRes.rows.map(r => r.id);
+    console.log(`📋 Found ${tenantIds.length} total tenants`);
 
     // 2. Create system admin user
     const adminPassword = await bcrypt.hash('Admin@123456', 10);
     const adminRes = await client.query(
       `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (email) DO NOTHING
+       ON CONFLICT (tenant_id, email) DO UPDATE SET
+         password_hash = EXCLUDED.password_hash,
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         status = EXCLUDED.status,
+         email_verified = EXCLUDED.email_verified
        RETURNING id, email`,
       [
         null,
@@ -53,15 +63,22 @@ async function seed() {
         true,
       ]
     );
-    console.log(`✅ Created system admin user: ${adminRes.rows[0]?.email}`);
+    if (adminRes.rows[0]) {
+      console.log(`✅ System admin user ready: ${adminRes.rows[0].email}`);
+    }
 
     // 3. Create tenant admin users for each tenant
+    const tenantAdminPassword = await bcrypt.hash('TenantAdmin@123456', 10);
     for (const tenantId of tenantIds) {
-      const tenantAdminPassword = await bcrypt.hash('TenantAdmin@123456', 10);
       const userRes = await client.query(
         `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (email) DO NOTHING
+         ON CONFLICT (tenant_id, email) DO UPDATE SET
+           password_hash = EXCLUDED.password_hash,
+           first_name = EXCLUDED.first_name,
+           last_name = EXCLUDED.last_name,
+           status = EXCLUDED.status,
+           email_verified = EXCLUDED.email_verified
          RETURNING id, email`,
         [
           tenantId,
@@ -74,7 +91,7 @@ async function seed() {
         ]
       );
       if (userRes.rows[0]) {
-        console.log(`✅ Created tenant admin: ${userRes.rows[0].email}`);
+        console.log(`✅ Tenant admin ready: ${userRes.rows[0].email}`);
       }
     }
 
@@ -95,12 +112,18 @@ async function seed() {
     ];
 
     for (const role of roles) {
-      await client.query(
-        `INSERT INTO roles (tenant_id, name, description, space)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT DO NOTHING`,
-        [role.tenant_id, role.name, role.description, role.space]
-      );
+      try {
+        await client.query(
+          `INSERT INTO roles (tenant_id, name, description, space, status)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [role.tenant_id, role.name, role.description, role.space, 'active']
+        );
+      } catch (err) {
+        // Ignore duplicate key errors
+        if (!err.message.includes('duplicate')) {
+          throw err;
+        }
+      }
     }
 
     // Add tenant-specific roles
@@ -113,12 +136,18 @@ async function seed() {
       ];
 
       for (const role of tenantRoles) {
-        await client.query(
-          `INSERT INTO roles (tenant_id, name, description, space)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT DO NOTHING`,
-          [tenantId, role.name, role.description, 'tenant']
-        );
+        try {
+          await client.query(
+            `INSERT INTO roles (tenant_id, name, description, space, status)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [tenantId, role.name, role.description, 'tenant', 'active']
+          );
+        } catch (err) {
+          // Ignore duplicate key errors
+          if (!err.message.includes('duplicate')) {
+            throw err;
+          }
+        }
       }
     }
     console.log('✅ Created roles for all tenants');
@@ -130,7 +159,7 @@ async function seed() {
         display_name: 'Dashboard',
         parent_menu_key: null,
         icon: 'dashboard',
-        space: 'both',
+        space: 'tenant',
         route_path: '/dashboard',
         component_name: 'DashboardComponent',
         action_keys: ['view'],
@@ -140,7 +169,7 @@ async function seed() {
         display_name: 'Users',
         parent_menu_key: null,
         icon: 'people',
-        space: 'both',
+        space: 'tenant',
         route_path: '/users',
         component_name: 'UsersComponent',
         action_keys: ['view', 'create', 'edit', 'delete'],
@@ -150,7 +179,7 @@ async function seed() {
         display_name: 'Roles & Permissions',
         parent_menu_key: null,
         icon: 'security',
-        space: 'both',
+        space: 'tenant',
         route_path: '/roles',
         component_name: 'RolesComponent',
         action_keys: ['view', 'create', 'edit', 'delete'],
@@ -180,7 +209,7 @@ async function seed() {
         display_name: 'Settings',
         parent_menu_key: null,
         icon: 'settings',
-        space: 'both',
+        space: 'tenant',
         route_path: '/settings',
         component_name: 'SettingsComponent',
         action_keys: ['view', 'edit'],
@@ -188,21 +217,28 @@ async function seed() {
     ];
 
     for (const module of modules) {
-      await client.query(
-        `INSERT INTO modules (menu_key, display_name, parent_menu_key, icon, space, route_path, component_name, action_keys)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (menu_key) DO NOTHING`,
-        [
-          module.menu_key,
-          module.display_name,
-          module.parent_menu_key,
-          module.icon,
-          module.space,
-          module.route_path,
-          module.component_name,
-          JSON.stringify(module.action_keys),
-        ]
-      );
+      try {
+        await client.query(
+          `INSERT INTO modules (menu_key, display_name, parent_menu_key, icon, space, route_path, component_name, action_keys, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            module.menu_key,
+            module.display_name,
+            module.parent_menu_key,
+            module.icon,
+            module.space,
+            module.route_path,
+            module.component_name,
+            JSON.stringify(module.action_keys),
+            'active',
+          ]
+        );
+      } catch (err) {
+        // Ignore duplicate key errors
+        if (!err.message.includes('duplicate')) {
+          throw err;
+        }
+      }
     }
     console.log('✅ Created modules/menu items');
 
@@ -211,19 +247,25 @@ async function seed() {
       `SELECT r.id, r.name, r.space, m.id as module_id, m.menu_key
        FROM roles r
        CROSS JOIN modules m
-       WHERE (r.space = 'system' AND m.space IN ('system', 'both'))
-          OR (r.space = 'tenant' AND m.space IN ('tenant', 'both'))`
+       WHERE (r.space = 'system' AND m.space = 'system')
+          OR (r.space = 'tenant' AND m.space = 'tenant')`
     );
 
     for (const row of rolePermsRes.rows) {
       const actions = ['view', 'create', 'edit', 'delete'];
       for (const action of actions) {
-        await client.query(
-          `INSERT INTO role_permissions (role_id, module_id, action_key, status)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT DO NOTHING`,
-          [row.id, row.module_id, action, 'active']
-        );
+        try {
+          await client.query(
+            `INSERT INTO role_permissions (role_id, module_id, action_key, status)
+             VALUES ($1, $2, $3, $4)`,
+            [row.id, row.module_id, action, 'active']
+          );
+        } catch (err) {
+          // Ignore duplicate key errors
+          if (!err.message.includes('duplicate')) {
+            throw err;
+          }
+        }
       }
     }
     console.log('✅ Created role-permission assignments');

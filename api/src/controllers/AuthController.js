@@ -6,7 +6,7 @@
 const AuthService = require('../services/AuthService');
 const { validateLogin } = require('../utils/validators');
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 class AuthController {
   /**

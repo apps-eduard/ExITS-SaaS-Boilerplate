@@ -253,7 +253,7 @@ class AuthService {
       await pool.query(
         `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status, ip_address)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'active', ipAddress]
+        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'success', ipAddress]
       );
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);

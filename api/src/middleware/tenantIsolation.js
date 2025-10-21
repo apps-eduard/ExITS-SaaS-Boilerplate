@@ -4,7 +4,7 @@
  */
 
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 const tenantIsolationMiddleware = (req, res, next) => {
   try {
@@ -36,7 +36,7 @@ const tenantIsolationMiddleware = (req, res, next) => {
     next();
   } catch (err) {
     logger.error(`Tenant isolation middleware error: ${err.message}`);
-    return res.status(CONSTANTS.HTTP_STATUS.INTERNAL_ERROR).json({
+    return res.status(CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: 'Tenant validation failed',
     });
   }

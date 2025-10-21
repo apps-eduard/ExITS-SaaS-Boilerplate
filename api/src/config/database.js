@@ -15,19 +15,19 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  logger.error('Unexpected error on idle client', err);
+  logger.error(`Database error: ${err.message}`);
 });
 
 pool.on('connect', () => {
-  logger.debug('New database connection established');
+  logger.debug('🔌 Database connection opened');
 });
 
 // Test connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    logger.error('Database connection error:', err);
+    logger.error(`Database connection failed: ${err.message}`);
   } else {
-    logger.info('✅ Database connected successfully');
+    logger.success('Database connected successfully');
   }
 });
 

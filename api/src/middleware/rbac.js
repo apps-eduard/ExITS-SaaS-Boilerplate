@@ -5,7 +5,7 @@
 
 const PermissionService = require('../services/PermissionService');
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 const rbacMiddleware = (requiredModules = [], requiredActions = []) => {
   return async (req, res, next) => {

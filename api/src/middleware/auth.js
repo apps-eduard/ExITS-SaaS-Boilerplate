@@ -5,7 +5,7 @@
 
 const { verifyAccessToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 const authMiddleware = (req, res, next) => {
   try {

@@ -4,7 +4,7 @@
  */
 
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 const errorHandlerMiddleware = (err, req, res, next) => {
   logger.error(`Error: ${err.message}`, { stack: err.stack });
@@ -75,7 +75,7 @@ const errorHandlerMiddleware = (err, req, res, next) => {
   }
 
   // Default error response
-  const statusCode = err.statusCode || CONSTANTS.HTTP_STATUS.INTERNAL_ERROR;
+  const statusCode = err.statusCode || CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR;
 
   return res.status(statusCode).json({
     error: 'Internal server error',

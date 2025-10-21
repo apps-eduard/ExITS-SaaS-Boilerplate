@@ -1,32 +1,27 @@
-/**
- * Auth Guard
- * Protects routes that require authentication
- */
-
-import { Injectable } from '@angular/core';
-import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { CanActivateFn, Router } from '@angular/router';
+import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 
-@Injectable({
-  providedIn: 'root',
-})
-export class AuthGuard implements CanActivate {
-  constructor(private authService: AuthService, private router: Router) {}
+export const authGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-  canActivate(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot,
-  ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    return this.authService.isAuthenticated$.pipe(
-      map((isAuthenticated) => {
-        if (isAuthenticated) {
-          return true;
-        }
-        this.router.navigate(['/auth/login'], { queryParams: { returnUrl: state.url } });
-        return false;
-      }),
-    );
+  // Check if user is authenticated by checking the signal value
+  const isAuth = authService.isAuthenticated();
+  
+  console.log('Auth guard check:', {
+    isAuthenticated: isAuth,
+    currentUser: authService.currentUser(),
+    token: authService.getAccessToken()
+  });
+  
+  if (isAuth) {
+    console.log('Auth guard: User authenticated, allowing access');
+    return true;
   }
-}
+
+  // Not authenticated, redirect to login
+  console.log('Auth guard: User not authenticated, redirecting to login');
+  router.navigate(['/login']);
+  return false;
+};

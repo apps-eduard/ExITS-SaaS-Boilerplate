@@ -1,4 +1,4 @@
-// src/scripts/schema.sql
+-- Database Schema for ExITS-SaaS
 -- Create ENUM types
 CREATE TYPE user_status AS ENUM ('active', 'suspended', 'deleted');
 CREATE TYPE role_space AS ENUM ('system', 'tenant');
@@ -25,10 +25,11 @@ CREATE TABLE IF NOT EXISTS tenants (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
-  CONSTRAINT unique_subdomain UNIQUE(subdomain),
-  INDEX idx_subdomain (subdomain),
-  INDEX idx_status (status)
+  CONSTRAINT unique_subdomain UNIQUE(subdomain)
 );
+
+CREATE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
+CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -50,11 +51,12 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP,
   
-  CONSTRAINT unique_email_per_tenant UNIQUE(tenant_id, email),
-  INDEX idx_tenant_id (tenant_id),
-  INDEX idx_email (email),
-  INDEX idx_status (status)
+  CONSTRAINT unique_email_per_tenant UNIQUE(tenant_id, email)
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 
 -- Roles table
 CREATE TABLE IF NOT EXISTS roles (
@@ -72,11 +74,13 @@ CREATE TABLE IF NOT EXISTS roles (
   CONSTRAINT valid_space_tenant CHECK (
     (space = 'system' AND tenant_id IS NULL) OR
     (space = 'tenant' AND tenant_id IS NOT NULL)
-  ),
-  CONSTRAINT unique_role_per_space UNIQUE(space, COALESCE(tenant_id, -1), name),
-  INDEX idx_tenant_id (tenant_id),
-  INDEX idx_space (space)
+  )
 );
+
+CREATE INDEX IF NOT EXISTS idx_roles_tenant_id ON roles(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_roles_space ON roles(space);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_unique_system ON roles(name) WHERE space = 'system' AND tenant_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_unique_tenant ON roles(space, tenant_id, name) WHERE space = 'tenant';
 
 -- Modules table (Menu registry)
 CREATE TABLE IF NOT EXISTS modules (
@@ -97,11 +101,12 @@ CREATE TABLE IF NOT EXISTS modules (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
-  CONSTRAINT unique_menu_key UNIQUE(menu_key),
-  INDEX idx_menu_key (menu_key),
-  INDEX idx_parent_menu_key (parent_menu_key),
-  INDEX idx_space (space)
+  CONSTRAINT unique_menu_key UNIQUE(menu_key)
 );
+
+CREATE INDEX IF NOT EXISTS idx_modules_menu_key ON modules(menu_key);
+CREATE INDEX IF NOT EXISTS idx_modules_parent_menu_key ON modules(parent_menu_key);
+CREATE INDEX IF NOT EXISTS idx_modules_space ON modules(space);
 
 -- User_Roles join table
 CREATE TABLE IF NOT EXISTS user_roles (
@@ -111,10 +116,11 @@ CREATE TABLE IF NOT EXISTS user_roles (
   assigned_by INT REFERENCES users(id) ON DELETE SET NULL,
   expires_at TIMESTAMP,
   
-  CONSTRAINT pk_user_roles PRIMARY KEY (user_id, role_id),
-  INDEX idx_user_id (user_id),
-  INDEX idx_role_id (role_id)
+  CONSTRAINT pk_user_roles PRIMARY KEY (user_id, role_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 
 -- Role_Permissions table
 CREATE TABLE IF NOT EXISTS role_permissions (
@@ -127,10 +133,11 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
-  CONSTRAINT unique_permission UNIQUE(role_id, module_id, action_key),
-  INDEX idx_role_id (role_id),
-  INDEX idx_module_id (module_id)
+  CONSTRAINT unique_permission UNIQUE(role_id, module_id, action_key)
 );
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_module_id ON role_permissions(module_id);
 
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
@@ -145,12 +152,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   status session_status NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP,
-  last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
-  INDEX idx_user_id (user_id),
-  INDEX idx_status (status),
-  INDEX idx_expires_at (expires_at)
+  last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 
 -- Audit_Logs table
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -168,15 +175,15 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   ip_address VARCHAR(45),
   user_agent TEXT,
   request_id VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
-  INDEX idx_tenant_id (tenant_id),
-  INDEX idx_user_id (user_id),
-  INDEX idx_entity_type (entity_type),
-  INDEX idx_action (action),
-  INDEX idx_created_at (created_at DESC),
-  INDEX idx_composite (tenant_id, created_at DESC)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_id ON audit_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_type ON audit_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_composite ON audit_logs(tenant_id, created_at DESC);
 
 -- Permissions_Delegation table
 CREATE TABLE IF NOT EXISTS permissions_delegation (
@@ -190,16 +197,15 @@ CREATE TABLE IF NOT EXISTS permissions_delegation (
   scope JSONB DEFAULT '{}',
   status VARCHAR(20) NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  revoked_at TIMESTAMP,
-  
-  INDEX idx_delegated_to (delegated_to),
-  INDEX idx_expires_at (expires_at)
+  revoked_at TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_permissions_delegation_delegated_to ON permissions_delegation(delegated_to);
+CREATE INDEX IF NOT EXISTS idx_permissions_delegation_expires_at ON permissions_delegation(expires_at);
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_tenant_email ON users(tenant_id, email);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_composite ON audit_logs(tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(user_id, status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(user_id, status);
 
 -- Create views
 CREATE OR REPLACE VIEW user_permissions_view AS
