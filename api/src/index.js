@@ -22,6 +22,7 @@ const permissionRoutes = require('./routes/permissionRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const moduleRoutes = require('./routes/moduleRoutes');
+const rbacRoutes = require('./routes/rbacRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,6 +71,7 @@ app.use('/api/permissions', permissionRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/modules', moduleRoutes);
+app.use('/api/rbac', rbacRoutes);
 
 // ==================== 404 HANDLER ====================
 

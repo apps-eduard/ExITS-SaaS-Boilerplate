@@ -1,14 +1,16 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { RBACService } from '../../../core/services/rbac.service';
 
 interface MenuItem {
   label: string;
   icon: string;
   route?: string;
   children?: MenuItem[];
-  permission?: string;
+  menuKey?: string;
+  requiredAction?: string;
 }
 
 @Component({
@@ -61,49 +63,53 @@ interface MenuItem {
 
       <!-- Navigation -->
       <nav class="flex-1 overflow-y-auto p-3 space-y-1">
-        @for (item of menuItems(); track item.label) {
-          @if (!item.children) {
-            <!-- Simple Link -->
-            <a
-              [routerLink]="item.route"
-              routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-              [routerLinkActiveOptions]="{exact: false}"
-              class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <span class="text-xl">{{ item.icon }}</span>
-              <span class="text-sm font-medium">{{ item.label }}</span>
-            </a>
-          } @else {
-            <!-- Expandable Group -->
-            <div>
-              <button
-                (click)="toggleGroup(item.label)"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <div class="flex items-center gap-3">
-                  <span class="text-xl">{{ item.icon }}</span>
-                  <span class="text-sm font-medium">{{ item.label }}</span>
-                </div>
-                <svg
-                  class="w-4 h-4 transition-transform"
-                  [class.rotate-180]="expandedGroups().has(item.label)"
-                  fill="currentColor"
-                  viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                </svg>
-              </button>
-              
-              @if (expandedGroups().has(item.label)) {
-                <div class="mt-1 ml-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
-                  @for (child of item.children; track child.label) {
-                    <a
-                      [routerLink]="child.route"
-                      routerLinkActive="text-primary-600 dark:text-primary-400 font-medium"
-                      class="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                      {{ child.label }}
-                    </a>
-                  }
-                </div>
-              }
-            </div>
+        @for (item of staticMenuItems(); track item.label) {
+          @if (hasMenuAccessMethod(item.menuKey)) {
+            @if (!item.children) {
+              <!-- Simple Link -->
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                [routerLinkActiveOptions]="{exact: false}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <span class="text-xl">{{ item.icon }}</span>
+                <span class="text-sm font-medium">{{ item.label }}</span>
+              </a>
+            } @else {
+              <!-- Expandable Group -->
+              <div>
+                <button
+                  (click)="toggleGroup(item.label)"
+                  class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xl">{{ item.icon }}</span>
+                    <span class="text-sm font-medium">{{ item.label }}</span>
+                  </div>
+                  <svg
+                    class="w-4 h-4 transition-transform"
+                    [class.rotate-180]="expandedGroups().has(item.label)"
+                    fill="currentColor"
+                    viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+                
+                @if (expandedGroups().has(item.label)) {
+                  <div class="mt-1 ml-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
+                    @for (child of item.children; track child.label) {
+                      @if (hasMenuAccessMethod(child.menuKey)) {
+                        <a
+                          [routerLink]="child.route"
+                          routerLinkActive="text-primary-600 dark:text-primary-400 font-medium"
+                          class="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {{ child.label }}
+                        </a>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+            }
           }
         }
       </nav>
@@ -122,28 +128,139 @@ interface MenuItem {
 })
 export class SidebarComponent {
   authService = inject(AuthService);
+  rbacService = inject(RBACService);
+  
   isOpen = signal(false);
   isDesktop = signal(window.innerWidth >= 1024);
-  
   expandedGroups = signal(new Set<string>(['Dashboard']));
   
-  menuItems = signal<MenuItem[]>([]);
+  staticMenuItems = signal<MenuItem[]>([
+    { label: 'Dashboard', icon: '📊', route: '/dashboard', menuKey: 'dashboard' },
+    {
+      label: 'Tenants',
+      icon: '🏢',
+      menuKey: 'tenants',
+      children: [
+        { label: 'Overview', icon: '📋', route: '/tenants', menuKey: 'tenants' },
+        { label: 'Create Tenant', icon: '➕', route: '/tenants/create', menuKey: 'tenants', requiredAction: 'create' },
+        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', menuKey: 'tenants' },
+        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', menuKey: 'tenants' },
+      ]
+    },
+    {
+      label: 'Users',
+      icon: '👥',
+      menuKey: 'users',
+      children: [
+        { label: 'All Users', icon: '👤', route: '/users', menuKey: 'users' },
+        { label: 'Invite User', icon: '📧', route: '/users/invite', menuKey: 'users', requiredAction: 'create' },
+        { label: 'Admin Users', icon: '👑', route: '/users/admins', menuKey: 'users' },
+        { label: 'User Activity', icon: '👣', route: '/users/activity', menuKey: 'users' },
+      ]
+    },
+    {
+      label: 'Roles & Permissions',
+      icon: '🔐',
+      menuKey: 'roles',
+      children: [
+        { label: 'Global Roles', icon: '👔', route: '/roles', menuKey: 'roles' },
+        { label: 'Permissions', icon: '🔑', route: '/permissions', menuKey: 'roles' },
+        { label: 'Role Matrix', icon: '📋', route: '/roles/matrix', menuKey: 'roles' },
+      ]
+    },
+    {
+      label: 'System',
+      icon: '⚙️',
+      menuKey: 'system',
+      children: [
+        { label: 'System Health', icon: '💚', route: '/system/health', menuKey: 'system' },
+        { label: 'Performance', icon: '⚡', route: '/system/performance', menuKey: 'system' },
+        { label: 'Database', icon: '🗄️', route: '/system/database', menuKey: 'system' },
+        { label: 'API Status', icon: '🌐', route: '/system/api', menuKey: 'system' },
+      ]
+    },
+    {
+      label: 'Monitoring',
+      icon: '📈',
+      menuKey: 'monitoring',
+      children: [
+        { label: 'Error Logs', icon: '⚠️', route: '/monitoring/errors', menuKey: 'monitoring' },
+        { label: 'Audit Logs', icon: '📋', route: '/monitoring/audit', menuKey: 'monitoring' },
+        { label: 'Security Events', icon: '🔒', route: '/monitoring/security', menuKey: 'monitoring' },
+        { label: 'System Logs', icon: '📄', route: '/monitoring/logs', menuKey: 'monitoring' },
+      ]
+    },
+    {
+      label: 'Configuration',
+      icon: '🛠️',
+      menuKey: 'config',
+      children: [
+        { label: 'Email', icon: '📧', route: '/config/email', menuKey: 'config' },
+        { label: 'SMS', icon: '💬', route: '/config/sms', menuKey: 'config' },
+        { label: 'Notifications', icon: '🔔', route: '/config/notifications', menuKey: 'config' },
+        { label: 'API Keys', icon: '🔑', route: '/config/api-keys', menuKey: 'config', requiredAction: 'create' },
+        { label: 'Webhooks', icon: '🪝', route: '/config/webhooks', menuKey: 'config' },
+      ]
+    },
+    {
+      label: 'Billing',
+      icon: '💰',
+      menuKey: 'billing',
+      children: [
+        { label: 'Plans', icon: '📋', route: '/billing/plans', menuKey: 'billing' },
+        { label: 'Invoices', icon: '💳', route: '/billing/invoices', menuKey: 'billing' },
+        { label: 'Payments', icon: '💸', route: '/billing/payments', menuKey: 'billing' },
+        { label: 'Revenue', icon: '📊', route: '/billing/revenue', menuKey: 'billing' },
+      ]
+    },
+  ]);
 
   constructor() {
-    // Build menu based on user role
-    const user = this.authService.currentUser();
-    this.buildMenu(user?.role_id);
-
     // Track desktop status
     const handleResize = () => {
       this.isDesktop.set(window.innerWidth >= 1024);
-      // Close sidebar on desktop
       if (window.innerWidth >= 1024) {
         this.isOpen.set(false);
       }
     };
     
     window.addEventListener('resize', handleResize);
+    console.log('🧭 SidebarComponent initialized - RBAC support active');
+
+    // Add debug logging
+    console.log('📊 Current user:', this.authService.currentUser());
+    console.log('🔐 RBAC Service initialized');
+    console.log('📋 User permissions available:', Object.keys(this.rbacService.userPermissions()));
+  }
+
+  /**
+   * Check if user has access to a menu - Public method for template
+   */
+  hasMenuAccessMethod(menuKey?: string): boolean {
+    if (!menuKey) return false;
+    
+    // Get current permissions
+    const permissions = this.rbacService.userPermissions();
+    const hasPermissions = Object.keys(permissions).length > 0;
+    
+    // If no permissions loaded yet, show all menus (demo mode)
+    if (!hasPermissions) {
+      console.log('⚠️ No permissions loaded, showing all menus (demo mode)');
+      return true;
+    }
+    
+    // Check if user has this menu
+    const hasAccess = this.rbacService.hasMenuAccess(menuKey);
+    console.log(`🔍 Menu "${menuKey}" access: ${hasAccess}`);
+    return hasAccess;
+  }
+
+  /**
+   * Check if user has action on menu - Public method for template
+   */
+  hasActionMethod(menuKey?: string, actionKey?: string): boolean {
+    if (!menuKey || !actionKey) return false;
+    return this.rbacService.hasAction(menuKey, actionKey);
   }
 
   toggleGroup(label: string) {
@@ -159,243 +276,5 @@ export class SidebarComponent {
 
   closeMenu() {
     this.isOpen.set(false);
-  }
-
-  buildMenu(roleId?: string) {
-    const commonItems: MenuItem[] = [
-      { label: 'Dashboard', icon: '📊', route: '/dashboard' },
-    ];
-
-    if (roleId === '1') {
-      // System Admin - Full access to all features
-      this.menuItems.set([
-        ...commonItems,
-        {
-          label: 'Tenant Management',
-          icon: '🏢',
-          children: [
-            { label: 'All Tenants', icon: '📋', route: '/tenants' },
-            { label: 'Create Tenant', icon: '➕', route: '/tenants/create' },
-            { label: 'Tenant Settings', icon: '⚙️', route: '/tenants/settings' },
-            { label: 'Tenant Analytics', icon: '�', route: '/tenants/analytics' },
-          ]
-        },
-        {
-          label: 'User Management',
-          icon: '�👥',
-          children: [
-            { label: 'All Users', icon: '👤', route: '/users' },
-            { label: 'Create User', icon: '➕', route: '/users/create' },
-            { label: 'User Groups', icon: '👫', route: '/users/groups' },
-            { label: 'Active Sessions', icon: '🔌', route: '/users/sessions' },
-          ]
-        },
-        {
-          label: 'Access Control',
-          icon: '🔐',
-          children: [
-            { label: 'Roles', icon: '👔', route: '/roles' },
-            { label: 'Permissions', icon: '🔑', route: '/permissions' },
-            { label: 'API Keys', icon: '�', route: '/api-keys' },
-            { label: 'OAuth Clients', icon: '🌐', route: '/oauth' },
-          ]
-        },
-        {
-          label: 'System Monitoring',
-          icon: '📈',
-          children: [
-            { label: 'System Health', icon: '💚', route: '/monitoring/health' },
-            { label: 'Performance Metrics', icon: '⚡', route: '/monitoring/performance' },
-            { label: 'Database Status', icon: '🗄️', route: '/monitoring/database' },
-            { label: 'API Analytics', icon: '📊', route: '/monitoring/api' },
-            { label: 'Error Tracking', icon: '⚠️', route: '/monitoring/errors' },
-          ]
-        },
-        {
-          label: 'Audit & Logs',
-          icon: '📋',
-          children: [
-            { label: 'Audit Logs', icon: '📝', route: '/audit-logs' },
-            { label: 'System Logs', icon: '📄', route: '/system-logs' },
-            { label: 'User Activity', icon: '👣', route: '/activity-logs' },
-            { label: 'Security Events', icon: '🔒', route: '/security-events' },
-          ]
-        },
-        {
-          label: 'System Configuration',
-          icon: '⚙️',
-          children: [
-            { label: 'Email Settings', icon: '📧', route: '/config/email' },
-            { label: 'SMS Settings', icon: '💬', route: '/config/sms' },
-            { label: 'Notification Rules', icon: '🔔', route: '/config/notifications' },
-            { label: 'Backup Settings', icon: '💾', route: '/config/backup' },
-          ]
-        },
-      ]);
-    } else if (roleId === '2') {
-      // Tenant Admin - Tenant-specific features
-      this.menuItems.set([
-        ...commonItems,
-        {
-          label: 'Team Management',
-          icon: '👥',
-          children: [
-            { label: 'Team Members', icon: '👤', route: '/team' },
-            { label: 'Add Member', icon: '➕', route: '/team/add' },
-            { label: 'Departments', icon: '🏢', route: '/departments' },
-            { label: 'Teams', icon: '👫', route: '/teams' },
-          ]
-        },
-        {
-          label: 'Roles & Access',
-          icon: '🔐',
-          children: [
-            { label: 'Tenant Roles', icon: '👔', route: '/tenant-roles' },
-            { label: 'Permissions', icon: '🔑', route: '/tenant-permissions' },
-            { label: 'Access Requests', icon: '📬', route: '/access-requests' },
-          ]
-        },
-        {
-          label: 'Loan Management',
-          icon: '💰',
-          children: [
-            { label: 'All Loans', icon: '📋', route: '/loans' },
-            { label: 'Create Loan', icon: '➕', route: '/loans/create' },
-            { label: 'Pending Loans', icon: '⏳', route: '/loans/pending' },
-            { label: 'Approved Loans', icon: '✅', route: '/loans/approved' },
-            { label: 'Rejected Loans', icon: '❌', route: '/loans/rejected' },
-          ]
-        },
-        {
-          label: 'Appraisals',
-          icon: '📊',
-          children: [
-            { label: 'All Appraisals', icon: '📋', route: '/appraisals' },
-            { label: 'New Appraisal', icon: '➕', route: '/appraisals/create' },
-            { label: 'In Progress', icon: '⏳', route: '/appraisals/in-progress' },
-            { label: 'Completed', icon: '✅', route: '/appraisals/completed' },
-          ]
-        },
-        {
-          label: 'Customer Management',
-          icon: '👤',
-          children: [
-            { label: 'All Customers', icon: '👥', route: '/customers' },
-            { label: 'Add Customer', icon: '➕', route: '/customers/create' },
-            { label: 'Customer Analytics', icon: '📊', route: '/customers/analytics' },
-            { label: 'KYC Documents', icon: '📄', route: '/customers/kyc' },
-          ]
-        },
-        {
-          label: 'Operations',
-          icon: '💼',
-          children: [
-            { label: 'Tasks', icon: '✅', route: '/operations/tasks' },
-            { label: 'Requests', icon: '�', route: '/operations/requests' },
-            { label: 'Queue Management', icon: '⏱️', route: '/operations/queue' },
-          ]
-        },
-        {
-          label: 'Reports & Analytics',
-          icon: '📈',
-          children: [
-            { label: 'Reports', icon: '📊', route: '/reports' },
-            { label: 'Loan Analytics', icon: '💹', route: '/reports/loans' },
-            { label: 'Revenue Reports', icon: '�', route: '/reports/revenue' },
-            { label: 'Performance Reports', icon: '⚡', route: '/reports/performance' },
-            { label: 'Export Data', icon: '📥', route: '/reports/export' },
-          ]
-        },
-        {
-          label: 'Settings',
-          icon: '⚙️',
-          children: [
-            { label: 'Tenant Settings', icon: '🏢', route: '/settings/tenant' },
-            { label: 'Notification Settings', icon: '🔔', route: '/settings/notifications' },
-            { label: 'API Configuration', icon: '🌐', route: '/settings/api' },
-            { label: 'Integrations', icon: '🔗', route: '/settings/integrations' },
-          ]
-        },
-      ]);
-    } else if (roleId === '3') {
-      // Department Manager - Department-level features
-      this.menuItems.set([
-        ...commonItems,
-        {
-          label: 'Team',
-          icon: '👥',
-          children: [
-            { label: 'Department Members', icon: '👤', route: '/team/department' },
-            { label: 'Manage Tasks', icon: '✅', route: '/team/tasks' },
-          ]
-        },
-        {
-          label: 'Loans',
-          icon: '💰',
-          children: [
-            { label: 'Department Loans', icon: '📋', route: '/loans/department' },
-            { label: 'Create Loan', icon: '➕', route: '/loans/create' },
-            { label: 'My Loans', icon: '📝', route: '/loans/my' },
-          ]
-        },
-        {
-          label: 'Appraisals',
-          icon: '📊',
-          children: [
-            { label: 'Department Appraisals', icon: '�', route: '/appraisals/department' },
-            { label: 'New Appraisal', icon: '➕', route: '/appraisals/create' },
-          ]
-        },
-        {
-          label: 'Reports',
-          icon: '📈',
-          children: [
-            { label: 'Department Reports', icon: '📊', route: '/reports/department' },
-            { label: 'Team Performance', icon: '⚡', route: '/reports/team' },
-          ]
-        },
-      ]);
-    } else {
-      // Regular User - Basic features
-      this.menuItems.set([
-        ...commonItems,
-        {
-          label: 'My Work',
-          icon: '✅',
-          children: [
-            { label: 'My Tasks', icon: '📋', route: '/tasks' },
-            { label: 'Pending Items', icon: '⏳', route: '/tasks/pending' },
-            { label: 'Completed Items', icon: '✅', route: '/tasks/completed' },
-          ]
-        },
-        {
-          label: 'Loans',
-          icon: '💰',
-          children: [
-            { label: 'My Loans', icon: '📋', route: '/my-loans' },
-            { label: 'Loan Status', icon: '📊', route: '/my-loans/status' },
-            { label: 'Loan Documents', icon: '📄', route: '/my-loans/documents' },
-          ]
-        },
-        {
-          label: 'Documents',
-          icon: '📄',
-          children: [
-            { label: 'My Documents', icon: '📋', route: '/documents' },
-            { label: 'Upload Document', icon: '📤', route: '/documents/upload' },
-            { label: 'Archived', icon: '📦', route: '/documents/archived' },
-          ]
-        },
-        {
-          label: 'Communication',
-          icon: '💬',
-          children: [
-            { label: 'Inbox', icon: '📧', route: '/messages/inbox' },
-            { label: 'Sent', icon: '📤', route: '/messages/sent' },
-            { label: 'Notifications', icon: '🔔', route: '/messages/notifications' },
-          ]
-        },
-      ]);
-    }
   }
 }
