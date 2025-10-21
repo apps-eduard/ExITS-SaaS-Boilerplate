@@ -21,6 +21,14 @@ class AuthController {
         return next(error);
       }
 
+      // Debug logging
+      logger.info('🔐 Login attempt:', {
+        email: value.email,
+        passwordLength: value.password?.length,
+        hasPassword: !!value.password,
+        ip: req.ip
+      });
+
       const result = await AuthService.login(value.email, value.password, req.ip);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({

@@ -189,80 +189,18 @@ function Setup-Database {
     }
     
     Write-Info "Seeding database with test data..."
-    npm run seed 2>&1 | Out-Null
+    node simple-seed.js 2>&1 | ForEach-Object { Write-Host $_ }
     $seedSuccess = $LASTEXITCODE -eq 0
+    
     Pop-Location
     
-    if ($seedSuccess) {
-        Write-Success "Database seeded successfully"
-        return $true
-    } else {
+    if (!$seedSuccess) {
         Write-Error-Custom "Database seeding failed"
         return $false
     }
-}
-
-# Reset passwords
-function Reset-TestUserPasswords {
-    Write-Header "Resetting Test User Passwords"
     
-    Write-Info "Generating new password hashes..."
-    
-    # Use Node.js to generate bcrypt hashes (more reliable than PowerShell)
-    $adminHash = node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('Admin@123456', 10));"
-    $tenantHash = node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('TenantAdmin@123456', 10));"
-    
-    if ([string]::IsNullOrWhiteSpace($adminHash) -or [string]::IsNullOrWhiteSpace($tenantHash)) {
-        Write-Error-Custom "Failed to generate password hashes"
-        return $false
-    }
-    
-    Write-Info "Updating test user passwords in database..."
-    
-    $env:PGPASSWORD = 'postgres'
-    
-    # Update system admin
-    $query1 = "UPDATE users SET password_hash = '$adminHash' WHERE email = 'admin@exitsaas.com';"
-    $result1 = psql -U postgres -h localhost -p 5432 -d exits_saas_db -c $query1 2>&1
-    
-    # Update all tenant admins
-    $query2 = "UPDATE users SET password_hash = '$tenantHash' WHERE email LIKE 'admin-%@example.com';"
-    $result2 = psql -U postgres -h localhost -p 5432 -d exits_saas_db -c $query2 2>&1
-    
-    # Verify the updates
-    $query3 = "SELECT email, CASE WHEN tenant_id IS NULL THEN 'System Admin' ELSE 'Tenant Admin' END as role FROM users WHERE email IN ('admin@exitsaas.com', 'admin-1@example.com', 'admin-2@example.com', 'admin-3@example.com') ORDER BY tenant_id NULLS FIRST, email;"
-    $verifyResult = psql -U postgres -h localhost -p 5432 -d exits_saas_db -t -c $query3 2>&1
-    
-    Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Success "Test user passwords reset successfully!"
-        Write-Host ""
-        Write-Host "$($Cyan)═══════════════════════════════════════════════════$($Reset)"
-        Write-Host "$($Bright)$($Yellow)           Default Test Credentials$($Reset)"
-        Write-Host "$($Cyan)═══════════════════════════════════════════════════$($Reset)"
-        Write-Host ""
-        Write-Host "$($Green)✓ System Administrator:$($Reset)"
-        Write-Host "  📧 Email:    $($Yellow)admin@exitsaas.com$($Reset)"
-        Write-Host "  🔑 Password: $($Yellow)Admin@123456$($Reset)"
-        Write-Host ""
-        Write-Host "$($Green)✓ Tenant Administrators:$($Reset)"
-        Write-Host "  📧 Email:    $($Yellow)admin-1@example.com$($Reset) (Tenant: ACME Corporation)"
-        Write-Host "  🔑 Password: $($Yellow)TenantAdmin@123456$($Reset)"
-        Write-Host ""
-        Write-Host "  📧 Email:    $($Yellow)admin-2@example.com$($Reset) (Tenant: TechStartup Inc)"
-        Write-Host "  🔑 Password: $($Yellow)TenantAdmin@123456$($Reset)"
-        Write-Host ""
-        Write-Host "  📧 Email:    $($Yellow)admin-3@example.com$($Reset) (Tenant: Enterprise Corp)"
-        Write-Host "  🔑 Password: $($Yellow)TenantAdmin@123456$($Reset)"
-        Write-Host ""
-        Write-Host "$($Cyan)═══════════════════════════════════════════════════$($Reset)"
-        Write-Host ""
-        return $true
-    } else {
-        Write-Error-Custom "Failed to reset passwords"
-        return $false
-    }
+    Write-Success "Database seeded successfully (users created)"
+    return $true
 }
 
 # Build web
@@ -308,17 +246,13 @@ function Build-Web {
 function Start-Servers {
     Write-Header "Starting Development Servers"
     
-    Write-Info "Starting API server (npm run dev)..."
-    Push-Location api
-    Start-Process -NoNewWindow -ArgumentList "npm", "run", "dev"
-    Pop-Location
+    Write-Info "Starting API server (npm start)..."
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd api; npm start"
     
     Start-Sleep -Seconds 3
     
     Write-Info "Starting Web server (npm start)..."
-    Push-Location web
-    Start-Process -NoNewWindow -ArgumentList "npm", "start"
-    Pop-Location
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd web; npm start"
     
     Start-Sleep -Seconds 5
     
@@ -354,7 +288,6 @@ function Main {
     }
     
     if (!(Setup-Database)) { return }
-    # Password reset is now handled by the seed script
     if (!(Build-Web)) { return }
     
     if (!$NoStart) {
@@ -363,7 +296,7 @@ function Main {
         Write-Header "Setup Complete"
         Write-Success "Development environment is ready!"
         Write-Host "Run to start servers:"
-        Write-Host "  $($Cyan)cd api && npm run dev$($Reset)"
+        Write-Host "  $($Cyan)cd api && npm start$($Reset)"
         Write-Host "  $($Cyan)cd web && npm start$($Reset)"
         Write-Host ""
     }

@@ -163,9 +163,7 @@ export class SidebarComponent {
       icon: '🔐',
       menuKey: 'roles',
       children: [
-        { label: 'Roles Management', icon: '👔', route: '/admin/roles', menuKey: 'roles' },
-        { label: 'Permissions Matrix', icon: '🔑', route: '/admin/permissions', menuKey: 'roles' },
-        { label: 'Module Registry', icon: '�', route: '/admin/modules', menuKey: 'roles' },
+        { label: 'Roles Management', icon: '👔', route: '/admin/roles', menuKey: 'roles' }
       ]
     },
     {

@@ -15,12 +15,22 @@ class AuthService {
    */
   static async login(email, password, ipAddress) {
     try {
+      logger.info('🔍 Querying database for user:', { email });
+      
       const result = await pool.query(
         `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.status, u.tenant_id
          FROM users u
          WHERE u.email = $1 AND u.status = $2`,
         [email, 'active']
       );
+
+      logger.info('📊 Database query result:', {
+        email,
+        rowCount: result.rows.length,
+        foundUser: result.rows.length > 0,
+        userId: result.rows[0]?.id,
+        userStatus: result.rows[0]?.status
+      });
 
       if (result.rows.length === 0) {
         logger.warn(`Login attempt failed for non-existent user: ${email}`);

@@ -126,18 +126,18 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 CREATE TABLE IF NOT EXISTS role_permissions (
   id SERIAL PRIMARY KEY,
   role_id INT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-  module_id INT NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  module_id INT REFERENCES modules(id) ON DELETE CASCADE,
+  menu_key VARCHAR(100),
   action_key VARCHAR(50) NOT NULL,
   constraints JSONB DEFAULT '{}',
   status permission_status NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
-  CONSTRAINT unique_permission UNIQUE(role_id, module_id, action_key)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_module_id ON role_permissions(module_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_role_permissions_unique ON role_permissions(role_id, COALESCE(menu_key, ''), action_key);
 
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
