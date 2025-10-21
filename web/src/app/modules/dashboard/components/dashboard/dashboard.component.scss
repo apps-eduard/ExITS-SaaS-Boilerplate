@@ -1,0 +1,72 @@
+.dashboard-container {
+  padding: 20px;
+
+  h2 {
+    margin-bottom: 20px;
+  }
+
+  .dashboard-card {
+    position: relative;
+    overflow: hidden;
+
+    mat-card-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+      padding: 0;
+    }
+
+    .card-icon {
+      font-size: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .card-info {
+      text-align: right;
+
+      h3 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 500;
+      }
+
+      p {
+        margin: 5px 0 0 0;
+        color: rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    &.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+
+      .card-info p {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    &.accent {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+
+      .card-info p {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    &.warn {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      color: white;
+
+      .card-info p {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+  }
+
+  .recent-activity {
+    margin-top: 20px;
+  }
+}

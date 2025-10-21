@@ -1,0 +1,56 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Notifications</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="markAllAsRead()">
+        <ion-icon name="checkmark-all"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-list *ngIf="(notifications$ | async) as notifications">
+    <ion-list-header>
+      <ion-label>
+        Notifications ({{ unreadCount$ | async }})
+      </ion-label>
+    </ion-list-header>
+    <ion-item-sliding *ngFor="let notification of notifications" #item>
+      <ion-item [class.unread]="!notification.read">
+        <ion-icon name="notifications" slot="start" color="primary"></ion-icon>
+        <ion-label>
+          <h2>{{ notification.title }}</h2>
+          <p>{{ notification.message }}</p>
+          <ion-text color="medium">
+            <p>{{ notification.timestamp | date: 'short' }}</p>
+          </ion-text>
+        </ion-label>
+      </ion-item>
+      <ion-item-options side="end">
+        <ion-item-option color="medium" (click)="markAsRead(notification.id)">
+          Mark Read
+        </ion-item-option>
+        <ion-item-option color="danger" (click)="deleteNotification(notification.id)">
+          Delete
+        </ion-item-option>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
+
+  <ion-card *ngIf="!(notifications$ | async)?.length" class="ion-margin">
+    <ion-card-content class="ion-text-center">
+      <ion-icon name="notifications-off" size="large" color="medium"></ion-icon>
+      <p>No notifications</p>
+    </ion-card-content>
+  </ion-card>
+
+  <div class="ion-padding">
+    <ion-button expand="block" color="danger" (click)="clearAll()">
+      Clear All
+    </ion-button>
+  </div>
+</ion-content>

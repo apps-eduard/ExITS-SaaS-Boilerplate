@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Profile</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Profile Information</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <ion-item>
+          <ion-label>Email</ion-label>
+          <ion-text>{{ currentUser?.email }}</ion-text>
+        </ion-item>
+        <ion-item>
+          <ion-label>Name</ion-label>
+          <ion-text>{{ currentUser?.firstName }} {{ currentUser?.lastName }}</ion-text>
+        </ion-item>
+        <ion-item>
+          <ion-label>Role</ion-label>
+          <ion-text>{{ currentUser?.role }}</ion-text>
+        </ion-item>
+        <ion-item>
+          <ion-label>Tenant</ion-label>
+          <ion-text>{{ currentUser?.tenant?.name }}</ion-text>
+        </ion-item>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Actions</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-button expand="block" color="primary" (click)="editProfile()">
+        Edit Profile
+      </ion-button>
+      <ion-button expand="block" color="warning" (click)="changePassword()">
+        Change Password
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

@@ -1,0 +1,108 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Settings</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="settings$ | async as settings">
+    <!-- Display Settings -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Display</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Dark Mode</ion-label>
+          <ion-toggle
+            [checked]="settings.theme === 'dark'"
+            (ionChange)="toggleTheme()"
+            slot="end"
+          ></ion-toggle>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Language & Region -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Language & Region</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Language</ion-label>
+          <ion-select
+            [value]="settings.language"
+            (ionChange)="changeLanguage($event.detail.value)"
+          >
+            <ion-select-option value="en">English</ion-select-option>
+            <ion-select-option value="es">Spanish</ion-select-option>
+            <ion-select-option value="fr">French</ion-select-option>
+            <ion-select-option value="de">German</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-label>Timezone</ion-label>
+          <ion-select
+            [value]="settings.timezone"
+            (ionChange)="changeTimezone($event.detail.value)"
+          >
+            <ion-select-option value="UTC">UTC</ion-select-option>
+            <ion-select-option value="EST">Eastern Standard</ion-select-option>
+            <ion-select-option value="CST">Central Standard</ion-select-option>
+            <ion-select-option value="MST">Mountain Standard</ion-select-option>
+            <ion-select-option value="PST">Pacific Standard</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Notifications & Security -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Notifications & Security</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Push Notifications</ion-label>
+          <ion-toggle
+            [checked]="settings.notifications"
+            (ionChange)="toggleNotifications()"
+            slot="end"
+          ></ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-label>Biometric Authentication</ion-label>
+          <ion-toggle
+            [checked]="settings.biometricAuth"
+            (ionChange)="toggleBiometricAuth()"
+            slot="end"
+          ></ion-toggle>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Offline Mode -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Offline</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Offline Mode</ion-label>
+          <ion-toggle
+            [checked]="settings.offlineMode"
+            (ionChange)="toggleOfflineMode()"
+            slot="end"
+          ></ion-toggle>
+        </ion-item>
+        <ion-text color="medium">
+          <p>Data syncs when online</p>
+        </ion-text>
+      </ion-card-content>
+    </ion-card>
+  </ng-container>
+</ion-content>

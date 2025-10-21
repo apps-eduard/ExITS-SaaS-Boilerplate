@@ -1,0 +1,6 @@
+<h2>{{ data.title }}</h2>
+<p>{{ data.message }}</p>
+<div class="dialog-actions">
+  <button mat-button (click)="onCancel()">{{ data.cancelButtonText }}</button>
+  <button mat-raised-button color="primary" (click)="onOk()">{{ data.okButtonText }}</button>
+</div>

@@ -1,0 +1,21 @@
+.user-info {
+  margin-bottom: 20px;
+}
+
+.user-info h2 {
+  margin: 10px 0 5px 0;
+  font-size: 18px;
+}
+
+.user-info p {
+  margin: 2px 0;
+}
+
+ion-item[routerLinkActive='active'] {
+  --background: var(--ion-color-light);
+  --color: var(--ion-color-primary);
+}
+
+ion-item button {
+  --color: var(--ion-color-danger);
+}

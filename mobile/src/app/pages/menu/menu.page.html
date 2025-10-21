@@ -1,0 +1,35 @@
+<ion-menu side="start" menuId="mainMenu" contentId="main">
+  <ion-header>
+    <ion-toolbar color="primary">
+      <ion-title>Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content class="ion-padding">
+    <!-- User Info -->
+    <ion-card class="user-info">
+      <ion-card-content class="ion-text-center">
+        <ion-icon name="person-circle" size="large" color="primary"></ion-icon>
+        <h2>{{ currentUser?.firstName }} {{ currentUser?.lastName }}</h2>
+        <p color="medium">{{ currentUser?.email }}</p>
+        <p color="medium" style="font-size: 12px">{{ currentUser?.role }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Menu Items -->
+    <ion-list>
+      <ion-menu-toggle auto-close *ngFor="let item of menuItems">
+        <ion-item [routerLink]="item.route" routerLinkActive="active" (click)="closeMenu()">
+          <ion-icon [name]="item.icon" slot="start"></ion-icon>
+          <ion-label>{{ item.label }}</ion-label>
+        </ion-item>
+      </ion-menu-toggle>
+    </ion-list>
+
+    <!-- Logout -->
+    <ion-item button (click)="logout()" color="danger">
+      <ion-icon name="log-out" slot="start"></ion-icon>
+      <ion-label>Logout</ion-label>
+    </ion-item>
+  </ion-content>
+</ion-menu>

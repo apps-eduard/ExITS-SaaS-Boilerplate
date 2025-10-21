@@ -1,0 +1,28 @@
+<div class="settings-container">
+  <div class="settings-header">
+    <h2>Settings</h2>
+    <p>Manage your organization's settings and preferences</p>
+  </div>
+
+  <div class="settings-content">
+    <!-- Settings Navigation Sidebar -->
+    <div class="settings-nav">
+      <mat-list>
+        <mat-list-item
+          *ngFor="let item of settingsNavItems"
+          (click)="navigateTo(item.path)"
+          [class.active]="activeTab === item.path"
+          class="nav-item">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <div matListItemTitle class="nav-item-title">{{ item.label }}</div>
+          <small matListItemMeta>{{ item.description }}</small>
+        </mat-list-item>
+      </mat-list>
+    </div>
+
+    <!-- Settings Content Area -->
+    <div class="settings-main">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>
