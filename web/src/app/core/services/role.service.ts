@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -83,14 +83,14 @@ export class RoleService {
         options['params'] = { space };
       }
 
-      const response = await firstValueFrom(
+      const response: any = await firstValueFrom(
         this.http.get<any>(
           `${this.apiUrl}/roles`,
-          options
+          { ...options, responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         this.rolesSignal.set(response.data || []);
         console.log(`📋 Loaded ${response.data?.length || 0} roles`);
       }
@@ -111,13 +111,14 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.get<{ success: boolean; data: Role }>(
-          `${this.apiUrl}/roles/${roleId}`
+      const response: any = await firstValueFrom(
+        this.http.get<any>(
+          `${this.apiUrl}/roles/${roleId}`,
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         this.currentRoleSignal.set(response.data);
         console.log(`✅ Loaded role: ${response.data.name}`);
         return response.data;
@@ -141,14 +142,15 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.post<{ success: boolean; data: Role }>(
+      const response: any = await firstValueFrom(
+        this.http.post<any>(
           `${this.apiUrl}/roles`,
-          payload
+          payload,
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         const newRole = response.data;
         this.rolesSignal.set([...this.rolesSignal(), newRole]);
         console.log(`✅ Role created: ${newRole.name}`);
@@ -173,14 +175,15 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.put<{ success: boolean; data: Role }>(
+      const response: any = await firstValueFrom(
+        this.http.put<any>(
           `${this.apiUrl}/roles/${roleId}`,
-          payload
+          payload,
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         const updated = response.data;
         // Update in signal
         this.rolesSignal.set(
@@ -209,13 +212,14 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.delete<{ success: boolean; message: string }>(
-          `${this.apiUrl}/roles/${roleId}`
+      const response: any = await firstValueFrom(
+        this.http.delete<any>(
+          `${this.apiUrl}/roles/${roleId}`,
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         // Remove from signal
         this.rolesSignal.set(
           this.rolesSignal().filter(r => r.id !== roleId)
@@ -244,14 +248,15 @@ export class RoleService {
     try {
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.post<{ success: boolean; data: Permission }>(
+      const response: any = await firstValueFrom(
+        this.http.post<any>(
           `${this.apiUrl}/roles/${roleId}/permissions`,
-          { menuKey, actionKey }
+          { menuKey, actionKey },
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         console.log(`✅ Permission assigned: ${menuKey}.${actionKey}`);
         // Reload current role to update permissions
         await this.getRole(roleId);
@@ -273,14 +278,14 @@ export class RoleService {
     try {
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.delete<{ success: boolean; message: string }>(
+      const response: any = await firstValueFrom(
+        this.http.delete<any>(
           `${this.apiUrl}/roles/${roleId}/permissions`,
-          { body: { menuKey, actionKey } }
+          { body: { menuKey, actionKey }, responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         console.log(`✅ Permission revoked: ${menuKey}.${actionKey}`);
         // Reload current role to update permissions
         await this.getRole(roleId);
@@ -303,14 +308,15 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      const response = await firstValueFrom(
-        this.http.post<{ success: boolean; message: string; count: number }>(
+      const response: any = await firstValueFrom(
+        this.http.post<any>(
           `${this.apiUrl}/roles/${roleId}/permissions/bulk`,
-          { permissions }
+          { permissions },
+          { responseType: 'json' }
         )
       );
 
-      if (response.success) {
+      if (response && response.success) {
         console.log(`✅ ${response.count} permissions assigned`);
         // Reload current role
         await this.getRole(roleId);

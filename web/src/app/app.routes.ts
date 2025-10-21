@@ -19,6 +19,33 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'admin',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'roles',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/roles/roles-list.component').then(m => m.RolesListComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/admin/roles/role-editor.component').then(m => m.RoleEditorComponent)
+          }
+        ]
+      },
+      {
+        path: 'modules',
+        loadComponent: () => import('./features/admin/modules/modules-list.component').then(m => m.ModulesListComponent)
+      },
+      {
+        path: 'permissions',
+        loadComponent: () => import('./features/admin/permissions/permissions.component').then(m => m.PermissionsComponent)
+      }
+    ]
+  },
+  {
     path: '**',
     redirectTo: '/login'
   }
