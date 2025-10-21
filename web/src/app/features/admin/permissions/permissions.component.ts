@@ -8,25 +8,24 @@ import { RBACService } from '../../../core/services/rbac.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="p-6">
+    <div class="p-4 space-y-4">
       <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Permissions Management</h1>
-        <p class="mt-1 text-gray-600 dark:text-gray-400">View and manage role permissions across the system</p>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Permissions</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">View role permission matrix</p>
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="roleService.loadingSignal()" class="text-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">Loading permissions...</p>
+      <div *ngIf="roleService.loadingSignal()" class="text-center py-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
       </div>
 
       <!-- Role Selector -->
-      <div *ngIf="!roleService.loadingSignal()" class="mb-6 rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
-        <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Select Role</h2>
-        
+      <div *ngIf="!roleService.loadingSignal()" class="rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Select Role</label>
         <select
           (change)="selectRole($event)"
-          class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          class="w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           <option value="">-- Choose a role --</option>
           <optgroup label="System Roles">
@@ -43,73 +42,67 @@ import { RBACService } from '../../../core/services/rbac.service';
       </div>
 
       <!-- Permission Matrix for Selected Role -->
-      <div *ngIf="selectedRole() && !roleService.loadingSignal()" class="rounded-lg border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-900">
+      <div *ngIf="selectedRole() && !roleService.loadingSignal()" class="rounded border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-900">
         <!-- Role Header -->
-        <div class="border-b border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800">
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ selectedRole()?.name }}</h2>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ selectedRole()?.description }}</p>
-          <div class="mt-4 flex gap-4">
+        <div class="border-b border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+          <h2 class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedRole()?.name }}</h2>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{{ selectedRole()?.description }}</p>
+          <div class="mt-2 flex gap-3 text-xs">
             <div>
-              <p class="text-xs text-gray-600 dark:text-gray-400">SPACE</p>
+              <p class="text-gray-600 dark:text-gray-400">SPACE</p>
               <p class="font-medium text-gray-900 dark:text-white">{{ selectedRole()?.space | uppercase }}</p>
             </div>
             <div>
-              <p class="text-xs text-gray-600 dark:text-gray-400">PERMISSIONS</p>
+              <p class="text-gray-600 dark:text-gray-400">PERMISSIONS</p>
               <p class="font-medium text-gray-900 dark:text-white">{{ selectedRole()?.permissions?.length || 0 }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Permission Matrix Table -->
+        <!-- Permission Matrix Table - Compact -->
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full text-xs">
             <thead class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
               <tr>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Module</th>
-                <th *ngFor="let action of ['view', 'create', 'edit', 'delete']" class="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                  {{ action | uppercase }}
+                <th class="px-2 py-2 text-left font-semibold text-gray-900 dark:text-white">Module</th>
+                <th *ngFor="let action of ['view', 'create', 'edit', 'delete']" class="px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                  {{ action[0] | uppercase }}
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr *ngFor="let module of getModulesList()" class="hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                <td class="px-2 py-2 font-medium text-gray-900 dark:text-white">
                   {{ module.displayName }}
                 </td>
-                <td *ngFor="let action of ['view', 'create', 'edit', 'delete']" class="px-6 py-4 text-center">
-                  <div class="flex justify-center">
-                    <div *ngIf="hasPermission(module.menuKey, action)" class="inline-block rounded-full bg-green-100 p-1 dark:bg-green-900">
-                      <span class="text-green-700 dark:text-green-300">✓</span>
-                    </div>
-                    <div *ngIf="!hasPermission(module.menuKey, action)" class="inline-block rounded-full bg-gray-100 p-1 dark:bg-gray-800">
-                      <span class="text-gray-400 dark:text-gray-600">—</span>
-                    </div>
-                  </div>
+                <td *ngFor="let action of ['view', 'create', 'edit', 'delete']" class="px-2 py-2 text-center">
+                  <span *ngIf="hasPermission(module.menuKey, action)" class="inline-block text-green-600 dark:text-green-400">✓</span>
+                  <span *ngIf="!hasPermission(module.menuKey, action)" class="inline-block text-gray-400 dark:text-gray-600">—</span>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Permission Summary -->
-        <div class="border-t border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Summary -->
+        <div class="border-t border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800 text-xs">
+          <div class="grid grid-cols-3 gap-2">
             <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">TOTAL PERMISSIONS</p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="font-medium text-gray-600 dark:text-gray-400">TOTAL</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ selectedRole()?.permissions?.length || 0 }}
               </p>
             </div>
             <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">MODULES WITH ACCESS</p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="font-medium text-gray-600 dark:text-gray-400">MODULES</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ getModulesWithAccess(selectedRole()).length }}
               </p>
             </div>
             <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">AVAILABLE ACTIONS</p>
-              <p class="mt-1 flex gap-1">
-                <span *ngFor="let action of getActionsForRole(selectedRole())" class="inline-block rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+              <p class="font-medium text-gray-600 dark:text-gray-400">ACTIONS</p>
+              <p class="text-xs font-medium text-gray-900 dark:text-white">
+                <span *ngFor="let action of getActionsForRole(selectedRole())" class="inline-block mr-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                   {{ action }}
                 </span>
               </p>
@@ -119,8 +112,8 @@ import { RBACService } from '../../../core/services/rbac.service';
       </div>
 
       <!-- Empty State -->
-      <div *ngIf="!selectedRole() && !roleService.loadingSignal()" class="text-center py-12">
-        <p class="text-gray-500 dark:text-gray-400">Select a role to view permissions</p>
+      <div *ngIf="!selectedRole() && !roleService.loadingSignal()" class="text-center py-8">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Select a role to view permissions</p>
       </div>
     </div>
   `,

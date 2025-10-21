@@ -16,9 +16,11 @@ export const noAuthGuard: CanActivateFn = () => {
   });
   
   if (isAuth) {
-    // User is authenticated, redirect to dashboard
-    console.log('No-auth guard: User authenticated, redirecting to dashboard');
-    router.navigate(['/dashboard']);
+    // User is authenticated, redirect based on user type
+    const isSystemAdmin = authService.isSystemAdmin();
+    const targetRoute = isSystemAdmin ? '/dashboard' : '/tenant/dashboard';
+    console.log('No-auth guard: User authenticated, redirecting to', targetRoute);
+    router.navigate([targetRoute]);
     return false;
   }
 

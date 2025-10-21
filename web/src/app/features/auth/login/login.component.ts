@@ -154,10 +154,17 @@ export class LoginComponent {
         console.log('isAuthenticated:', this.authService.isAuthenticated());
         this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
         
+        // Route based on user type
+        const user = response.data.user;
+        const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
+        const targetRoute = isSystemAdmin ? '/dashboard' : '/tenant/dashboard';
+        
+        console.log('User type:', isSystemAdmin ? 'System Admin' : 'Tenant User');
+        console.log('Redirecting to:', targetRoute);
+        
         // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {
-          console.log('Navigating to dashboard...');
-          this.router.navigate(['/dashboard']).then(success => {
+          this.router.navigate([targetRoute]).then(success => {
             console.log('Navigation result:', success);
           });
         }, 100);

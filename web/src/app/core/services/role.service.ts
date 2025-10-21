@@ -364,23 +364,55 @@ export class RoleService {
   /**
    * Get role status summary
    */
-  getRoleSummary(role: Role): { totalPermissions: number; systemModules: number; actions: string[] } {
+  getRoleSummary(role: Role): {
+    totalPermissions: number;
+    systemModules: number;
+    moduleCount: number;
+    actions: string[];
+    viewCount: number;
+    createCount: number;
+    editCount: number;
+    deleteCount: number;
+  } {
     if (!role || !role.permissions) {
-      return { totalPermissions: 0, systemModules: 0, actions: [] };
+      return {
+        totalPermissions: 0,
+        systemModules: 0,
+        moduleCount: 0,
+        actions: [],
+        viewCount: 0,
+        createCount: 0,
+        editCount: 0,
+        deleteCount: 0
+      };
     }
 
     const actions = new Set<string>();
     const modules = new Set<string>();
+    let viewCount = 0;
+    let createCount = 0;
+    let editCount = 0;
+    let deleteCount = 0;
 
     for (const perm of role.permissions) {
       modules.add(perm.menuKey);
       actions.add(perm.actionKey);
+      
+      if (perm.actionKey === 'view') viewCount++;
+      else if (perm.actionKey === 'create') createCount++;
+      else if (perm.actionKey === 'edit') editCount++;
+      else if (perm.actionKey === 'delete') deleteCount++;
     }
 
     return {
       totalPermissions: role.permissions.length,
       systemModules: modules.size,
-      actions: Array.from(actions)
+      moduleCount: modules.size,
+      actions: Array.from(actions),
+      viewCount,
+      createCount,
+      editCount,
+      deleteCount
     };
   }
 

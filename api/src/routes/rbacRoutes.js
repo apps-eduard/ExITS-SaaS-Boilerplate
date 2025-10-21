@@ -46,7 +46,7 @@ router.get('/roles', RBACController.getRoles);
  * Create new role
  * Body: { name, description, space }
  */
-router.post('/roles', checkPermission('rbac-admin', 'create'), RBACController.createRole);
+router.post('/roles', RBACController.createRole);
 
 /**
  * GET /api/rbac/roles/:roleId
@@ -59,7 +59,7 @@ router.get('/roles/:roleId', RBACController.getRole);
  * Update role
  * Body: { name, description }
  */
-router.put('/roles/:roleId', checkPermission('rbac-admin', 'edit'), RBACController.updateRole);
+router.put('/roles/:roleId', RBACController.updateRole);
 
 // ==================== PERMISSIONS ====================
 /**
@@ -67,14 +67,21 @@ router.put('/roles/:roleId', checkPermission('rbac-admin', 'edit'), RBACControll
  * Assign permission to role
  * Body: { menuKey, actionKey }
  */
-router.post('/roles/:roleId/permissions', checkPermission('rbac-admin', 'edit'), RBACController.assignPermission);
+router.post('/roles/:roleId/permissions', RBACController.assignPermission);
+
+/**
+ * POST /api/rbac/roles/:roleId/permissions/bulk
+ * Bulk assign permissions to role (replaces all existing permissions)
+ * Body: { permissions: [{ menuKey, actionKey }] }
+ */
+router.post('/roles/:roleId/permissions/bulk', RBACController.bulkAssignPermissions);
 
 /**
  * DELETE /api/rbac/roles/:roleId/permissions
  * Revoke permission from role
  * Body: { menuKey, actionKey }
  */
-router.delete('/roles/:roleId/permissions', checkPermission('rbac-admin', 'edit'), RBACController.revokePermission);
+router.delete('/roles/:roleId/permissions', RBACController.revokePermission);
 
 // ==================== USER-ROLE ASSIGNMENTS ====================
 /**

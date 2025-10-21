@@ -177,6 +177,17 @@ function Setup-Database {
     
     Write-Success "Database schema created"
     
+    Write-Info "Applying database fixes and enhancements..."
+    
+    # Add menu_key column and fix constraints
+    node -e "const db = require('./src/config/database'); (async () => { try { await db.query('ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS menu_key VARCHAR(100)'); console.log('✓ Added menu_key column'); await db.query('ALTER TABLE role_permissions DROP CONSTRAINT IF EXISTS unique_permission'); console.log('✓ Dropped old constraint'); await db.query('DELETE FROM role_permissions a USING role_permissions b WHERE a.id < b.id AND a.role_id = b.role_id AND COALESCE(a.menu_key, \\'\\') = COALESCE(b.menu_key, \\'\\') AND a.action_key = b.action_key'); console.log('✓ Removed duplicates'); await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_role_permissions_unique ON role_permissions(role_id, COALESCE(menu_key, \\'\\'), action_key)'); console.log('✓ Created new unique index'); process.exit(0); } catch(err) { console.error('✗ Error:', err.message); process.exit(1); } })();" 2>&1 | Out-Null
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Database fixes applied"
+    } else {
+        Write-Warning "Some database fixes may have failed (this might be okay if already applied)"
+    }
+    
     Write-Info "Seeding database with test data..."
     npm run seed 2>&1 | Out-Null
     $seedSuccess = $LASTEXITCODE -eq 0
@@ -258,8 +269,28 @@ function Reset-TestUserPasswords {
 function Build-Web {
     Write-Header "Building Web Application"
     
-    Write-Info "Building Angular application..."
+    Write-Info "Ensuring proxy configuration exists..."
     Push-Location web
+    
+    # Create proxy.conf.json if it doesn't exist
+    if (!(Test-Path "proxy.conf.json")) {
+        $proxyConfig = @"
+{
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "logLevel": "debug",
+    "changeOrigin": true
+  }
+}
+"@
+        $proxyConfig | Out-File -FilePath "proxy.conf.json" -Encoding UTF8
+        Write-Success "Created proxy configuration"
+    } else {
+        Write-Success "Proxy configuration exists"
+    }
+    
+    Write-Info "Building Angular application..."
     npm run build 2>&1 | Out-Null
     $buildSuccess = $LASTEXITCODE -eq 0
     Pop-Location

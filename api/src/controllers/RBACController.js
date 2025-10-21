@@ -90,6 +90,8 @@ class RBACController {
       const { name, description, space } = req.body;
       const tenantId = space === 'tenant' ? req.user.tenant_id : null;
       
+      logger.info(`📝 Creating role: ${name}, space: ${space}, tenant: ${tenantId}`);
+      
       if (!name || !space) {
         return res.status(400).json({ error: 'Name and space are required' });
       }
@@ -109,7 +111,8 @@ class RBACController {
       });
     } catch (error) {
       logger.error('❌ Error creating role:', error.message);
-      res.status(500).json({ error: 'Failed to create role' });
+      logger.error('❌ Error stack:', error.stack);
+      res.status(500).json({ error: 'Failed to create role', details: error.message });
     }
   }
 
@@ -166,6 +169,47 @@ class RBACController {
     } catch (error) {
       logger.error('❌ Error assigning permission:', error.message);
       res.status(500).json({ error: 'Failed to assign permission' });
+    }
+  }
+
+  /**
+   * Bulk assign permissions to role
+   */
+  static async bulkAssignPermissions(req, res) {
+    try {
+      const { roleId } = req.params;
+      const { permissions } = req.body;
+      
+      if (!permissions || !Array.isArray(permissions)) {
+        return res.status(400).json({ error: 'permissions array is required' });
+      }
+
+      // First, remove all existing permissions for this role
+      const deleteQuery = `
+        DELETE FROM role_permissions WHERE role_id = $1
+      `;
+      await req.app.locals.db.query(deleteQuery, [roleId]);
+
+      // Then insert all new permissions
+      let count = 0;
+      for (const perm of permissions) {
+        if (perm.menuKey && perm.actionKey) {
+          await RBACService.assignPermissionToRole(roleId, perm.menuKey, perm.actionKey);
+          count++;
+        }
+      }
+
+      logger.info(`✅ Bulk assigned ${count} permissions to role ${roleId}`);
+      
+      res.status(201).json({
+        success: true,
+        message: `${count} permissions assigned`,
+        count,
+        data: { roleId, permissions }
+      });
+    } catch (error) {
+      logger.error('❌ Error bulk assigning permissions:', error.message);
+      res.status(500).json({ error: 'Failed to bulk assign permissions' });
     }
   }
 

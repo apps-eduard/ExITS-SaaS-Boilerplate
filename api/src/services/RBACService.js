@@ -207,29 +207,27 @@ class RBACService {
    */
   static async assignPermissionToRole(roleId, menuKey, actionKey) {
     try {
-      // Get module ID
+      // Try to get module ID (module may not exist yet)
       const moduleQuery = `SELECT id FROM modules WHERE menu_key = $1`;
       const moduleResult = await db.query(moduleQuery, [menuKey]);
-      if (moduleResult.rows.length === 0) {
-        throw new Error('Module not found');
-      }
       
-      const moduleId = moduleResult.rows[0].id;
+      const moduleId = moduleResult.rows.length > 0 ? moduleResult.rows[0].id : null;
       
-      // Create permission
+      // Create permission with menu_key (works even if module doesn't exist)
       const permQuery = `
-        INSERT INTO role_permissions (role_id, module_id, action_key, status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO role_permissions (role_id, module_id, menu_key, action_key, status)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (role_id, module_id, action_key) DO UPDATE
-        SET status = EXCLUDED.status
+        SET status = EXCLUDED.status, menu_key = EXCLUDED.menu_key
         RETURNING id
       `;
       
-      const result = await db.query(permQuery, [roleId, moduleId, actionKey, 'active']);
-      logger.info(`✅ Permission assigned: Role ${roleId}, Module ${menuKey}, Action ${actionKey}`);
+      const result = await db.query(permQuery, [roleId, moduleId, menuKey, actionKey, 'active']);
+      logger.info(`✅ Permission assigned: Role ${roleId}, Menu ${menuKey}, Action ${actionKey}`);
       return result.rows[0];
     } catch (error) {
       logger.error('❌ Error assigning permission:', error.message);
+      logger.error('Stack:', error.stack);
       throw error;
     }
   }
@@ -336,20 +334,36 @@ class RBACService {
   static async getAllRoles(tenantId = null) {
     try {
       let query = `
-        SELECT id, name, description, space, status, tenant_id
-        FROM roles
-        WHERE status = 'active'
+        SELECT 
+          r.id, 
+          r.name, 
+          r.description, 
+          r.space, 
+          r.status, 
+          r.tenant_id,
+          COUNT(DISTINCT rp.id) as permission_count,
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'menuKey', COALESCE(m.menu_key, rp.menu_key),
+              'actionKey', rp.action_key
+            )
+          ) FILTER (WHERE rp.id IS NOT NULL) as permissions
+        FROM roles r
+        LEFT JOIN role_permissions rp ON r.id = rp.role_id AND rp.status = 'active'
+        LEFT JOIN modules m ON rp.module_id = m.id
+        WHERE r.status = 'active'
       `;
       
       const params = [];
       if (tenantId === null) {
-        query += ` AND space = 'system'`;
+        query += ` AND r.space = 'system'`;
       } else {
-        query += ` AND (space = 'system' OR tenant_id = $1)`;
+        query += ` AND (r.space = 'system' OR r.tenant_id = $1)`;
         params.push(tenantId);
       }
       
-      query += ` ORDER BY name`;
+      query += ` GROUP BY r.id, r.name, r.description, r.space, r.status, r.tenant_id`;
+      query += ` ORDER BY r.name`;
       
       const result = await db.query(query, params);
       return result.rows;

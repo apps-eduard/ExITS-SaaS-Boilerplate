@@ -11,6 +11,7 @@ const morgan = require('morgan');
 
 const logger = require('./utils/logger');
 const CONSTANTS = require('./config/constants');
+const db = require('./config/database');
 const errorHandlerMiddleware = require('./middleware/errorHandler');
 const { requestLogger, errorLogger, logStartupBanner } = require('./middleware/httpLogger');
 
@@ -26,6 +27,9 @@ const rbacRoutes = require('./routes/rbacRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Attach database to app locals
+app.locals.db = db;
 
 // ==================== MIDDLEWARE ====================
 

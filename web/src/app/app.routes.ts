@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { systemAdminGuard } from './core/guards/system-admin.guard';
+import { tenantUserGuard } from './core/guards/tenant-user.guard';
 import { noAuthGuard } from './core/guards/no-auth.guard';
 
 export const routes: Routes = [
@@ -16,11 +18,12 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
-    canActivate: [authGuard]
+    canActivate: [systemAdminGuard]
   },
   {
     path: 'admin',
-    canActivate: [authGuard],
+    loadComponent: () => import('./shared/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
+    canActivate: [systemAdminGuard],
     children: [
       {
         path: 'roles',
@@ -42,6 +45,22 @@ export const routes: Routes = [
       {
         path: 'permissions',
         loadComponent: () => import('./features/admin/permissions/permissions.component').then(m => m.PermissionsComponent)
+      }
+    ]
+  },
+  {
+    path: 'tenant',
+    loadComponent: () => import('./shared/layouts/tenant-layout.component').then(m => m.TenantLayoutComponent),
+    canActivate: [tenantUserGuard],
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/tenant/dashboard/tenant-dashboard.component').then(m => m.TenantDashboardComponent)
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
       }
     ]
   },

@@ -115,10 +115,16 @@ export class AuthService {
   }
 
   isSystemAdmin(): boolean {
-    return this.currentUser()?.role_id === '1';
+    const user = this.currentUser();
+    return user?.tenant_id === null || user?.tenant_id === undefined;
   }
 
-  isTenantAdmin(): boolean {
-    return this.currentUser()?.role_id === '2';
+  isTenantUser(): boolean {
+    const user = this.currentUser();
+    return user?.tenant_id !== null && user?.tenant_id !== undefined;
+  }
+
+  getTenantId(): string | number | null {
+    return this.currentUser()?.tenant_id ?? null;
   }
 }

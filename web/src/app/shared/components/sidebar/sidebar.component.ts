@@ -39,30 +39,30 @@ interface MenuItem {
       [class.translate-x-0]="isOpen() || isDesktop()">
       
       <!-- Logo -->
-      <div class="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center shadow-lg">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="h-14 flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center shadow-lg">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
           </div>
           <div>
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">ExITS</h1>
-            <p class="text-xs text-gray-500 dark:text-gray-400">SaaS Platform</p>
+            <h1 class="text-sm font-bold text-gray-900 dark:text-white">ExITS</h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Admin</p>
           </div>
         </div>
         <!-- Close Button (Mobile) -->
         <button
           (click)="isOpen.set(false)"
-          class="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-          <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="lg:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+          <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+      <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
         @for (item of staticMenuItems(); track item.label) {
           @if (hasMenuAccessMethod(item.menuKey)) {
             @if (!item.children) {
@@ -71,22 +71,22 @@ interface MenuItem {
                 [routerLink]="item.route"
                 routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
                 [routerLinkActiveOptions]="{exact: false}"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <span class="text-xl">{{ item.icon }}</span>
-                <span class="text-sm font-medium">{{ item.label }}</span>
+                class="flex items-center gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
+                <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+                <span class="font-medium truncate">{{ item.label }}</span>
               </a>
             } @else {
               <!-- Expandable Group -->
               <div>
                 <button
                   (click)="toggleGroup(item.label)"
-                  class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                  <div class="flex items-center gap-3">
-                    <span class="text-xl">{{ item.icon }}</span>
-                    <span class="text-sm font-medium">{{ item.label }}</span>
+                  class="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+                    <span class="font-medium truncate">{{ item.label }}</span>
                   </div>
                   <svg
-                    class="w-4 h-4 transition-transform"
+                    class="w-3.5 h-3.5 transition-transform flex-shrink-0"
                     [class.rotate-180]="expandedGroups().has(item.label)"
                     fill="currentColor"
                     viewBox="0 0 20 20">
@@ -95,13 +95,13 @@ interface MenuItem {
                 </button>
                 
                 @if (expandedGroups().has(item.label)) {
-                  <div class="mt-1 ml-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
+                  <div class="mt-0.5 ml-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5">
                     @for (child of item.children; track child.label) {
                       @if (hasMenuAccessMethod(child.menuKey)) {
                         <a
                           [routerLink]="child.route"
-                          routerLinkActive="text-primary-600 dark:text-primary-400 font-medium"
-                          class="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                          routerLinkActive="text-primary-600 dark:text-primary-400 font-semibold"
+                          class="block px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 truncate">
                           {{ child.label }}
                         </a>
                       }

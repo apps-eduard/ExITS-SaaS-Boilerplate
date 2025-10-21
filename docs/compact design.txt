@@ -1,0 +1,62 @@
+Smaller spacing: gap-3 instead of gap-6
+Smaller padding: p-4 instead of p-6
+Smaller font: text-xs for labels and text-sm for headings
+Smaller margins: mb-3 instead of mb-6
+Smaller input padding: px-3 py-2 instead of px-4 py-2
+
+Header:
+    Title Font Size: text-xl (1.25rem)
+    Font Weight: font-bold
+    Color: text-white
+    Back Link Font Size: text-xs
+    Gap: gap-2 between back link and title
+    Margin Bottom: mb-4
+
+Submit Button:
+    Padding: px-4 py-2
+    Text: text-white text-xs font-semibold
+    Hover: hover:shadow-lg
+    Disabled State: disabled:opacity-50
+
+TABLE ACTION BUTTON
+
+Action Button Sizes - Roles Table
+    Edit Button:
+    Padding: px-3 py-1
+    Font Size: text-xs
+    Font Weight: font-medium
+    Icon: ✏️ Edit
+    Background: bg-blue-100 dark:bg-blue-600/20
+    Hover: hover:bg-blue-200 dark:hover:bg-blue-600/30
+    Text Color: text-blue-700 dark:text-blue-300
+    Border Radius: rounded
+
+TABLE ACTION BUTTON => Icon depend to the label
+    Padding: px-3 py-1
+    Font Size: text-xs
+    Font Weight: font-medium
+    Icon: 🗑️ Delete  
+    Background: bg-red-100 dark:bg-red-600/20
+    Hover: hover:bg-red-200 dark:hover:bg-red-600/30
+    Text Color: text-red-700 dark:text-red-300
+    Border Radius: rounded
+
+Header:
+    Title Font Size: text-xl (1.25rem)
+    Font Weight: font-bold
+    Color: text-gray-900 dark:text-white
+    Subtitle Font Size: text-xs
+    Subtitle Color: text-gray-600 dark:text-gray-400
+    Margin Between: mt-1
+    Container Margin Bottom: mb-4
+
+Create Button:
+    Padding: px-3 py-2
+    Font Size: text-xs
+    Font Weight: font-semibold
+    Background: bg-gradient-to-r from-purple-600 to-pink-600 (gradient)
+    Text Color: text-white
+    Icon: ➕ Create
+    Hover: hover:shadow-lg
+    Border Radius: rounded-lg
+    Transition: transition
