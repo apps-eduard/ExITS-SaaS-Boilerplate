@@ -164,12 +164,12 @@ import { RoleService, Role } from '../../../core/services/role.service';
           <div class="border-t border-gray-200 dark:border-gray-700 pt-2">
             <div class="flex items-center justify-between text-xs">
               <span class="text-gray-600 dark:text-gray-400">Module Access:</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ getRoleSummary(role).moduleCount }} of 8</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ getRoleSummary(role).moduleCount }} menus</span>
             </div>
             <div class="mt-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div 
                 class="h-full bg-blue-600 dark:bg-blue-400 transition-all"
-                [style.width.%]="(getRoleSummary(role).moduleCount / 8) * 100"
+                [style.width.%]="(getRoleSummary(role).moduleCount / 42) * 100"
               ></div>
             </div>
             <!-- Module Badges -->
@@ -257,6 +257,7 @@ export class RolesListComponent implements OnInit {
 
     return {
       ...summary,
+      moduleCount: modules.size, // Actual unique menus
       modules: Array.from(modules)
     };
   }

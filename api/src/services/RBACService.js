@@ -214,11 +214,15 @@ class RBACService {
       const moduleId = moduleResult.rows.length > 0 ? moduleResult.rows[0].id : null;
       
       // Create permission with menu_key (works even if module doesn't exist)
+      // Use the columns that match the unique index
       const permQuery = `
         INSERT INTO role_permissions (role_id, module_id, menu_key, action_key, status)
         VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (role_id, module_id, action_key) DO UPDATE
-        SET status = EXCLUDED.status, menu_key = EXCLUDED.menu_key
+        ON CONFLICT (role_id, COALESCE(menu_key, ''), action_key) 
+        DO UPDATE SET 
+          status = EXCLUDED.status, 
+          module_id = EXCLUDED.module_id,
+          updated_at = CURRENT_TIMESTAMP
         RETURNING id
       `;
       

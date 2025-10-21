@@ -96,6 +96,12 @@ class RBACController {
         return res.status(400).json({ error: 'Name and space are required' });
       }
 
+      // Check if database is available
+      if (!req.app.locals.db) {
+        logger.error('❌ Database connection not available in req.app.locals.db');
+        return res.status(500).json({ error: 'Database connection not available' });
+      }
+
       const query = `
         INSERT INTO roles (name, description, space, status, tenant_id)
         VALUES ($1, $2, $3, $4, $5)
@@ -103,13 +109,22 @@ class RBACController {
       `;
 
       const result = await req.app.locals.db.query(query, [name, description, space, 'active', tenantId]);
-      logger.info(`✅ Role created: ${name}`);
+      logger.info(`✅ Role created: ${name} with ID: ${result.rows[0].id}`);
       
       res.status(201).json({
         success: true,
         data: result.rows[0]
       });
     } catch (error) {
+      // Handle duplicate role name
+      if (error.code === '23505') {
+        logger.warn(`⚠️  Duplicate role name: ${req.body.name}`);
+        return res.status(409).json({ 
+          error: 'Role already exists', 
+          message: `A role named "${req.body.name}" already exists in this ${req.body.space} space.`
+        });
+      }
+
       logger.error('❌ Error creating role:', error.message);
       logger.error('❌ Error stack:', error.stack);
       res.status(500).json({ error: 'Failed to create role', details: error.message });
