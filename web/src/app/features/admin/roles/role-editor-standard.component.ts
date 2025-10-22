@@ -239,24 +239,24 @@ export class RoleEditorComponent implements OnInit {
   resourceGroups: ResourceGroup[] = [
     // System level
     { resource: 'dashboard', displayName: 'Dashboard', description: 'System dashboard access', actions: ['view'], category: 'system' },
-    { resource: 'tenants', displayName: 'Tenants', description: 'Manage tenant organizations', actions: ['read', 'create', 'update', 'delete', 'manage-subscriptions'], category: 'system' },
-    { resource: 'users', displayName: 'Users (System)', description: 'System-wide user management', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'system' },
-    { resource: 'roles', displayName: 'Roles & Permissions', description: 'Role and permission management', actions: ['read', 'create', 'update', 'delete', 'assign-permissions'], category: 'system' },
+    { resource: 'tenants', displayName: 'Tenants', description: 'Manage tenant organizations', actions: ['view', 'create', 'update', 'delete'], category: 'system' },
+    { resource: 'users', displayName: 'Users (System)', description: 'System-wide user management', actions: ['view', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'system' },
+    { resource: 'roles', displayName: 'Roles & Permissions', description: 'Role and permission management', actions: ['view', 'create', 'update', 'delete', 'assign-permissions'], category: 'system' },
     { resource: 'permissions', displayName: 'Permissions', description: 'Permission management', actions: ['view', 'assign'], category: 'system' },
-    { resource: 'system', displayName: 'System Settings', description: 'System configuration', actions: ['view-health', 'view-performance', 'manage-config'], category: 'system' },
-    { resource: 'monitoring', displayName: 'Monitoring', description: 'System monitoring', actions: ['view'], category: 'system' },
-    { resource: 'billing', displayName: 'Billing', description: 'Billing and invoices', actions: ['read', 'manage-plans', 'view-invoices'], category: 'system' },
+    { resource: 'system', displayName: 'System Settings', description: 'System configuration', actions: ['view', 'manage-config'], category: 'system' },
+    { resource: 'monitoring', displayName: 'Monitoring', description: 'System monitoring', actions: ['view', 'view-performance'], category: 'system' },
+    { resource: 'billing', displayName: 'Billing', description: 'Billing and invoices', actions: ['view', 'manage-plans', 'view-invoices'], category: 'system' },
     
     // Tenant level
     { resource: 'tenant-dashboard', displayName: 'Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant' },
-    { resource: 'tenant-users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'tenant' },
-    { resource: 'tenant-roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
-    { resource: 'tenant-settings', displayName: 'Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant' },
+    { resource: 'tenant-users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['view', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'tenant' },
+    { resource: 'tenant-roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['view', 'create', 'update', 'delete'], category: 'tenant' },
+    { resource: 'tenant-settings', displayName: 'Tenant Settings', description: 'Tenant configuration', actions: ['view', 'update'], category: 'tenant' },
     
     // Business modules
-    { resource: 'loans', displayName: 'Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse'], category: 'business' },
-    { resource: 'payments', displayName: 'Payments', description: 'Payment processing', actions: ['read', 'create', 'update', 'delete'], category: 'business' },
-    { resource: 'reports', displayName: 'Reports', description: 'Reporting and analytics', actions: ['read', 'export', 'financial'], category: 'business' },
+    { resource: 'loans', displayName: 'Loans', description: 'Loan management', actions: ['view', 'create', 'update', 'delete', 'approve', 'disburse'], category: 'business' },
+    { resource: 'payments', displayName: 'Payments', description: 'Payment processing', actions: ['view', 'create', 'update', 'delete'], category: 'business' },
+    { resource: 'reports', displayName: 'Reports', description: 'Reporting and analytics', actions: ['view', 'export', 'financial'], category: 'business' },
   ];
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
@@ -281,40 +281,27 @@ export class RoleEditorComponent implements OnInit {
 
   async loadRole(): Promise<void> {
     if (!this.roleId) return;
-    console.log('🔄 Loading role ID:', this.roleId);
-    
     const role = await this.roleService.getRole(this.roleId);
-    console.log('🔄 Role data received:', role);
-    
     if (role) {
       this.roleName = role.name;
       this.roleDescription = role.description || '';
       this.roleSpace = role.space;
 
-      console.log('🔄 Role permissions array:', role.permissions);
-      console.log('🔄 Permissions is array?', Array.isArray(role.permissions));
-      console.log('🔄 Permissions length:', role.permissions?.length);
+      console.log('🔄 Loading role:', role);
+      console.log('🔄 Role permissions:', role.permissions);
 
       // Load permissions into set
       const permSet = new Set<string>();
       if (role.permissions && Array.isArray(role.permissions)) {
         for (const perm of role.permissions) {
-          console.log('🔍 Processing permission:', perm);
           const permKey = perm.permissionKey || `${perm.resource}:${perm.action}`;
-          console.log('🔍 Permission key:', permKey);
           permSet.add(permKey);
         }
-      } else {
-        console.warn('⚠️ Permissions is not an array or is null:', role.permissions);
       }
 
-      console.log('✅ Loaded permissions set:', Array.from(permSet));
-      console.log('✅ Total permissions loaded:', permSet.size);
+      console.log('✅ Loaded permissions:', Array.from(permSet));
       this.selectedPermissions.set(permSet);
       this.cdr.detectChanges();
-      console.log('✅ Selected permissions signal updated');
-    } else {
-      console.error('❌ No role data returned');
     }
   }
 

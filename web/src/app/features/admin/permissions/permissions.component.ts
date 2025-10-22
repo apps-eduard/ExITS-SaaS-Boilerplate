@@ -145,30 +145,45 @@ export class PermissionsComponent implements OnInit {
   }
 
   getModulesList() {
-    const modules = this.rbacService.allModules();
-    if (!modules) return [];
-    return Object.entries(modules).map(([key, module]: any) => ({
-      menuKey: key,
-      displayName: module.displayName || key,
-      actionKeys: module.actionKeys || ['view']
+    // Get unique resources from the selected role's permissions
+    const role = this.selectedRole();
+    if (!role || !role.permissions) return [];
+    
+    const resourceMap = new Map<string, { resource: string; displayName: string; actions: Set<string> }>();
+    
+    role.permissions.forEach(perm => {
+      if (!resourceMap.has(perm.resource)) {
+        resourceMap.set(perm.resource, {
+          resource: perm.resource,
+          displayName: perm.resource.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+          actions: new Set()
+        });
+      }
+      resourceMap.get(perm.resource)!.actions.add(perm.action);
+    });
+    
+    return Array.from(resourceMap.values()).map(r => ({
+      menuKey: r.resource,
+      displayName: r.displayName,
+      actionKeys: Array.from(r.actions)
     }));
   }
 
-  hasPermission(moduleKey: string, actionKey: string): boolean {
+  hasPermission(resource: string, action: string): boolean {
     const role = this.selectedRole();
     if (!role || !role.permissions) return false;
-    return role.permissions.some(p => p.menuKey === moduleKey && p.actionKey === actionKey);
+    return role.permissions.some(p => p.resource === resource && p.action === action);
   }
 
   getModulesWithAccess(role: Role | null): string[] {
     if (!role || !role.permissions) return [];
-    const modules = new Set(role.permissions.map(p => p.menuKey));
-    return Array.from(modules);
+    const resources = new Set(role.permissions.map(p => p.resource));
+    return Array.from(resources);
   }
 
   getActionsForRole(role: Role | null): string[] {
     if (!role || !role.permissions) return [];
-    const actions = new Set(role.permissions.map(p => p.actionKey));
+    const actions = new Set(role.permissions.map(p => p.action));
     return Array.from(actions).sort();
   }
 }

@@ -264,9 +264,6 @@ class RoleService {
     try {
       await client.query('BEGIN');
 
-      logger.info(`🔄 Bulk assigning permissions to role ${roleId}...`);
-      logger.info(`📋 Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
-
       // Delete all existing permissions for this role
       await client.query(
         'DELETE FROM role_permissions_standard WHERE role_id = $1',
@@ -279,11 +276,9 @@ class RoleService {
         const { permissionKey } = perm;
         
         if (!permissionKey) {
-          logger.warn(`⚠️ Skipping invalid permission (missing permissionKey): ${JSON.stringify(perm)}`);
+          logger.warn(`Skipping invalid permission: ${JSON.stringify(perm)}`);
           continue;
         }
-
-        logger.info(`🔍 Looking up permission: ${permissionKey}`);
 
         // Get the permission ID from permissions table
         const permResult = await client.query(
@@ -292,12 +287,11 @@ class RoleService {
         );
 
         if (permResult.rows.length === 0) {
-          logger.warn(`⚠️ Permission not found in database: ${permissionKey}`);
+          logger.warn(`Permission not found: ${permissionKey}`);
           continue;
         }
 
         const permissionId = permResult.rows[0].id;
-        logger.info(`✅ Found permission ${permissionKey} with ID: ${permissionId}`);
 
         // Insert the role-permission mapping
         await client.query(
@@ -307,7 +301,6 @@ class RoleService {
           [roleId, permissionId, requestingUserId]
         );
 
-        logger.info(`✅ Inserted permission ${permissionKey} for role ${roleId}`);
         insertedCount++;
       }
 
@@ -325,8 +318,7 @@ class RoleService {
       };
     } catch (err) {
       await client.query('ROLLBACK');
-      logger.error(`❌ Bulk assign permissions error: ${err.message}`);
-      logger.error(err.stack);
+      logger.error(`Bulk assign permissions error: ${err.message}`);
       throw err;
     } finally {
       client.release();

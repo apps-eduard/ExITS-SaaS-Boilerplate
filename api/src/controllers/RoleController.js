@@ -43,6 +43,7 @@ class RoleController {
       const result = await RoleService.getRoleById(id, req.tenantId);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
         message: 'Role retrieved successfully',
         data: result,
       });
@@ -117,22 +118,23 @@ class RoleController {
 
   /**
    * POST /roles/:id/permissions
-   * Grant permission to role
+   * Grant permission to role (standard RBAC)
    */
   static async grantPermission(req, res, next) {
     try {
       const { id } = req.params;
-      const { moduleId, actionKey, constraints } = req.body;
+      const { permissionKey } = req.body;
 
-      if (!moduleId || !actionKey) {
+      if (!permissionKey) {
         return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Module ID and action key are required',
+          error: 'Permission key is required (e.g., users:create)',
         });
       }
 
-      const result = await RoleService.grantPermission(id, moduleId, actionKey, constraints, req.userId, req.tenantId);
+      const result = await RoleService.grantPermission(id, permissionKey, req.userId, req.tenantId);
 
       res.status(CONSTANTS.HTTP_STATUS.CREATED).json({
+        success: true,
         message: 'Permission granted successfully',
         data: result,
       });
@@ -143,7 +145,7 @@ class RoleController {
 
   /**
    * POST /roles/:id/permissions/bulk
-   * Bulk assign permissions to role (replaces existing)
+   * Bulk assign permissions to role (replaces existing) - Standard RBAC
    */
   static async bulkAssignPermissions(req, res, next) {
     try {
@@ -152,7 +154,7 @@ class RoleController {
 
       if (!Array.isArray(permissions)) {
         return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
-          error: 'Permissions must be an array',
+          error: 'Permissions must be an array of {permissionKey} objects',
         });
       }
 
@@ -170,17 +172,38 @@ class RoleController {
   }
 
   /**
-   * DELETE /roles/:id/permissions/:moduleId/:actionKey
-   * Revoke permission from role
+   * DELETE /roles/:id/permissions/:permissionKey
+   * Revoke permission from role (standard RBAC)
    */
   static async revokePermission(req, res, next) {
     try {
-      const { id, moduleId, actionKey } = req.params;
+      const { id, permissionKey } = req.params;
 
-      const result = await RoleService.revokePermission(id, moduleId, actionKey, req.userId, req.tenantId);
+      const result = await RoleService.revokePermission(id, permissionKey, req.userId, req.tenantId);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
         message: 'Permission revoked successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /roles/permissions
+   * Get all available permissions
+   */
+  static async getAllPermissions(req, res, next) {
+    try {
+      const { space } = req.query;
+
+      const result = await RoleService.getAllPermissions(space);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Permissions retrieved successfully',
         data: result,
       });
     } catch (err) {

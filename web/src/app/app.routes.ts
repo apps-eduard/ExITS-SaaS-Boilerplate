@@ -82,6 +82,31 @@ export const routes: Routes = [
       {
         path: 'permissions',
         loadComponent: () => import('./features/admin/permissions/permissions.component').then(m => m.PermissionsComponent)
+      },
+      {
+        path: 'system',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/system/system-dashboard.component').then(m => m.SystemDashboardComponent)
+          },
+          {
+            path: 'health',
+            loadComponent: () => import('./features/admin/system/system-health.component').then(m => m.SystemHealthComponent)
+          },
+          {
+            path: 'performance',
+            loadComponent: () => import('./features/admin/system/system-performance.component').then(m => m.SystemPerformanceComponent)
+          },
+          {
+            path: 'config',
+            loadComponent: () => import('./features/admin/system/system-config.component').then(m => m.SystemConfigComponent)
+          },
+          {
+            path: 'logs',
+            loadComponent: () => import('./features/admin/system/system-logs.component').then(m => m.SystemLogsComponent)
+          }
+        ]
       }
     ]
   },

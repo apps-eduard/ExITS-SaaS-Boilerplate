@@ -11,7 +11,7 @@ const tenantIsolationMiddleware = require('../middleware/tenantIsolation');
 const router = express.Router();
 
 // All audit log routes require authentication and tenant isolation
-router.use(authMiddleware, tenantIsolationMiddleware, rbacMiddleware(['audit-logs'], ['view']));
+router.use(authMiddleware, tenantIsolationMiddleware, rbacMiddleware(['audit-logs'], ['read']));
 
 // Get audit logs
 router.get('/', AuditLogController.getAuditLogs);

@@ -28,7 +28,7 @@ ON CONFLICT (menu_key) DO NOTHING;
 -- System roles must have tenant_id = NULL
 INSERT INTO roles (tenant_id, name, description, space, status)
 VALUES 
-  (NULL, 'System Administrator', 'Full system access with all permissions', 'system', 'active')
+  (NULL, 'Super Admin', 'Full system access with all permissions', 'system', 'active')
 ON CONFLICT DO NOTHING;
 
 -- Tenant roles must have tenant_id set
@@ -53,7 +53,7 @@ INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id 
 FROM users u, roles r 
 WHERE u.email = 'admin@exitsaas.com' 
-  AND r.name = 'System Administrator'
+  AND r.name = 'Super Admin'
   AND r.space = 'system'
 ON CONFLICT (user_id, role_id) DO NOTHING;
 
@@ -76,7 +76,7 @@ CROSS JOIN (
   UNION ALL SELECT 'export'
   UNION ALL SELECT 'approve'
 ) actions
-WHERE r.name = 'System Administrator' 
+WHERE r.name = 'Super Admin' 
   AND r.space = 'system'
   AND m.status = 'active'
 ON CONFLICT (role_id, COALESCE(menu_key, ''), action_key) DO NOTHING;
@@ -118,7 +118,7 @@ INSERT INTO philippine_addresses (
 SELECT 
   NULL, u.id, 'home', true, 'Home Address',
   'Unit 1501', 'Tower A', 'BGC High Street', 'Fort Bonifacio', 'Taguig City', 'Metro Manila', 'NCR', '1634',
-  'Near Bonifacio High Street Mall', 'System Administrator', '+63 917 123 4567', 'active', true
+  'Near Bonifacio High Street Mall', 'Super Admin', '+63 917 123 4567', 'active', true
 FROM users u WHERE u.email = 'admin@exitsaas.com'
 ON CONFLICT DO NOTHING;
 
@@ -131,7 +131,7 @@ INSERT INTO philippine_addresses (
 SELECT 
   NULL, u.id, 'work', false, 'Office',
   '15th Floor', 'One Corporate Center', 'Julia Vargas Avenue', 'Ortigas Center', 'Pasig City', 'Metro Manila', 'NCR', '1605',
-  'Beside Metrobank', 'System Administrator', '+63 917 123 4567', 'active', true
+  'Beside Metrobank', 'Super Admin', '+63 917 123 4567', 'active', true
 FROM users u WHERE u.email = 'admin@exitsaas.com'
 ON CONFLICT DO NOTHING;
 

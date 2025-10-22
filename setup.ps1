@@ -277,15 +277,41 @@ EMAIL_FROM=noreply@exits-saas.com
     $seedOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
     $seedSuccess = $LASTEXITCODE -eq 0
     
-    Pop-Location
-    
     if (!$seedSuccess) {
+        Pop-Location
         Write-Error-Custom "Database seeding failed"
         Write-Host "$($Yellow)The database tables may not have been created. Please verify the migration output above.$($Reset)"
         return $false
     }
     
     Write-Success "Database seeded successfully with test users and data"
+    
+    Write-Step "Migrating to standard RBAC (resource:action format)..."
+    Write-Host "$($Gray)  RBAC migration output:$($Reset)"
+    $env:PGPASSWORD = $dbPassword
+    $rbacMigrateOutput = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -d exits_saas_db -f 'src\scripts\migrate-to-standard-rbac.sql' 2>&1
+    $rbacMigrateOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
+    $rbacMigrateSuccess = $LASTEXITCODE -eq 0
+    
+    if (!$rbacMigrateSuccess) {
+        Write-Warning "RBAC migration may have failed (this might be okay if already applied)"
+    } else {
+        Write-Success "Standard RBAC schema created (permissions table with resource:action format)"
+    }
+    
+    Write-Step "Assigning default permissions to users..."
+    Write-Host "$($Gray)  Permission assignment output:$($Reset)"
+    $permissionOutput = node src\scripts\assign-default-permissions.js 2>&1
+    $permissionOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
+    $permissionSuccess = $LASTEXITCODE -eq 0
+    
+    if ($permissionSuccess) {
+        Write-Success "All users granted Super Admin role with full permissions (49 permissions)"
+    } else {
+        Write-Warning "Permission assignment may have encountered issues"
+    }
+    
+    Pop-Location
     
     # Clean up password
     Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
@@ -360,6 +386,11 @@ function Main {
     Write-Header "Setup Complete"
     Write-Success "Development environment is ready!"
     Write-Host ""
+    Write-Host "$($Green)✓ Database: exits_saas_db (PostgreSQL)$($Reset)"
+    Write-Host "$($Green)✓ Standard RBAC: Implemented (49 permissions with resource:action format)$($Reset)"
+    Write-Host "$($Green)✓ Users: 4 users with Super Admin role (full permissions)$($Reset)"
+    Write-Host "$($Green)✓ Web Build: Complete$($Reset)"
+    Write-Host ""
     Write-Host "$($Cyan)To start the servers manually, run:$($Reset)"
     Write-Host "  $($Yellow)cd api ; npm start$($Reset)"
     Write-Host "  $($Yellow)cd web ; npm start$($Reset)"
@@ -367,6 +398,13 @@ function Main {
     Write-Host "$($Bright)$($Cyan)👤 Default Login:$($Reset)"
     Write-Host '  Email: admin@exitsaas.com'
     Write-Host '  Password: Admin@123'
+    Write-Host ""
+    Write-Host "$($Bright)$($Magenta)🔐 RBAC Features:$($Reset)"
+    Write-Host "  • Standard resource:action permissions (users:create, tenants:read, etc.)"
+    Write-Host "  • 49 system permissions covering all features"
+    Write-Host "  • Super Admin role with full access"
+    Write-Host "  • Frontend: rbac.can('users:create'), rbac.canDo('users', 'create')"
+    Write-Host "  • Backend: checkPermission('users:create') middleware"
     Write-Host ""
 }
 

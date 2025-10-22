@@ -1,9 +1,10 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService, User } from '../../../core/services/user.service';
 import { RoleService } from '../../../core/services/role.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-users-list',
@@ -18,6 +19,7 @@ import { RoleService } from '../../../core/services/role.service';
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage system and tenant users</p>
         </div>
         <button
+          *ngIf="canCreateUsers()"
           routerLink="/admin/users/new"
           class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all"
         >
@@ -209,6 +211,7 @@ import { RoleService } from '../../../core/services/role.service';
           Export CSV
         </button>
         <button
+          *ngIf="canDeleteUsers()"
           (click)="bulkDelete()"
           class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-red-700 bg-white hover:bg-red-50 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition shadow-sm"
         >
@@ -336,6 +339,7 @@ import { RoleService } from '../../../core/services/role.service';
                       Profile
                     </button>
                     <button
+                      *ngIf="canUpdateUsers()"
                       [routerLink]="'/admin/users/' + user.id"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
                       title="Edit User"
@@ -346,6 +350,7 @@ import { RoleService } from '../../../core/services/role.service';
                       Edit
                     </button>
                     <button
+                      *ngIf="canDeleteUsers()"
                       (click)="deleteUser(user)"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition"
                       title="Delete User"
@@ -399,7 +404,7 @@ import { RoleService } from '../../../core/services/role.service';
             {{ searchQuery ? 'Try a different search term' : 'Create your first user to get started' }}
           </p>
           <button
-            *ngIf="!searchQuery"
+            *ngIf="!searchQuery && canCreateUsers()"
             routerLink="/admin/users/new"
             class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
           >
@@ -426,8 +431,14 @@ export class UsersListComponent implements OnInit {
 
   constructor(
     public userService: UserService,
-    public roleService: RoleService
+    public roleService: RoleService,
+    private authService: AuthService
   ) {}
+
+  // Permission check methods
+  canCreateUsers = computed(() => this.authService.hasPermission('users:create'));
+  canUpdateUsers = computed(() => this.authService.hasPermission('users:update'));
+  canDeleteUsers = computed(() => this.authService.hasPermission('users:delete'));
 
   ngOnInit(): void {
     console.log('📋 UsersListComponent initialized');

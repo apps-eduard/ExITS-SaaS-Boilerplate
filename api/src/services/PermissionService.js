@@ -8,23 +8,37 @@ const logger = require('../utils/logger');
 
 class PermissionService {
   /**
-   * Check if user has permission to perform action on module
-   * Design: role → menu_key → action (no module_id needed)
+   * Check if user has permission to perform action on resource (Standard RBAC)
+   * @param {number} userId - User ID
+   * @param {string} resource - Resource name (e.g., 'users', 'roles')
+   * @param {string} action - Action name (e.g., 'read', 'create', 'update', 'delete')
+   * @returns {Promise<boolean>}
    */
-  static async hasPermission(userId, moduleKey, actionKey) {
+  static async hasPermission(userId, resource, action) {
     try {
+      const permissionKey = `${resource}:${action}`;
+      
       const result = await pool.query(
         `SELECT COUNT(*) as count FROM (
-          SELECT DISTINCT rp.id
+          SELECT DISTINCT rps.role_id
           FROM user_roles ur
           JOIN roles r ON ur.role_id = r.id
-          JOIN role_permissions rp ON r.id = rp.role_id
-          WHERE ur.user_id = $1 AND rp.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
+          JOIN role_permissions_standard rps ON r.id = rps.role_id
+          JOIN permissions p ON rps.permission_id = p.id
+          WHERE ur.user_id = $1 
+            AND p.permission_key = $2
+            AND r.status = 'active'
         ) AS perms`,
-        [userId, moduleKey, actionKey]
+        [userId, permissionKey]
       );
 
-      return result.rows[0].count > 0;
+      const hasAccess = result.rows[0].count > 0;
+      
+      if (!hasAccess) {
+        logger.warn(`❌ Permission denied: User ${userId} does not have ${permissionKey}`);
+      }
+
+      return hasAccess;
     } catch (err) {
       logger.error(`Permission service check error: ${err.message}`);
       return false;

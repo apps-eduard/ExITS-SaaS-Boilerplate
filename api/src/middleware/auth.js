@@ -22,9 +22,22 @@ const authMiddleware = (req, res, next) => {
 
     try {
       const decoded = verifyAccessToken(token);
-      req.user = decoded;
+      logger.info('🔐 Auth middleware - decoded token:', { 
+        id: decoded.id, 
+        userId: decoded.userId,
+        email: decoded.email,
+        tenant_id: decoded.tenant_id,
+        hasPermissions: !!decoded.permissions
+      });
+      
+      // Normalize the user object - ensure 'id' property exists
+      req.user = {
+        ...decoded,
+        id: decoded.id || decoded.userId,
+        userId: decoded.userId || decoded.id
+      };
       req.userId = decoded.userId || decoded.id;
-      req.tenantId = decoded.tenantId;
+      req.tenantId = decoded.tenantId || decoded.tenant_id;
       req.permissions = decoded.permissions || {};
       next();
     } catch (err) {

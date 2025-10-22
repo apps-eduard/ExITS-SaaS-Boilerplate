@@ -9,8 +9,8 @@ interface MenuItem {
   icon: string;
   route?: string;
   children?: MenuItem[];
-  menuKey?: string;
-  requiredAction?: string;
+  permission?: string; // Standard RBAC: "resource:action" format
+  anyPermission?: string[]; // Show if user has ANY of these permissions
 }
 
 @Component({
@@ -63,53 +63,61 @@ interface MenuItem {
 
       <!-- Navigation -->
       <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
-        @for (item of staticMenuItems(); track item.label) {
-          @if (hasMenuAccessMethod(item.menuKey)) {
-            @if (!item.children) {
-              <!-- Simple Link -->
-              <a
-                [routerLink]="item.route"
-                routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-                [routerLinkActiveOptions]="{exact: false}"
-                class="flex items-center gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
-                <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
-                <span class="font-medium truncate">{{ item.label }}</span>
-              </a>
-            } @else {
-              <!-- Expandable Group -->
-              <div>
-                <button
-                  (click)="toggleGroup(item.label)"
-                  class="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
-                    <span class="font-medium truncate">{{ item.label }}</span>
-                  </div>
-                  <svg
-                    class="w-3.5 h-3.5 transition-transform flex-shrink-0"
-                    [class.rotate-180]="expandedGroups().has(item.label)"
-                    fill="currentColor"
-                    viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                  </svg>
-                </button>
+        @if (!rbacService.permissionsLoaded()) {
+          <!-- Loading State -->
+          <div class="flex flex-col items-center justify-center py-8 px-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-3"></div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading menu...</p>
+          </div>
+        } @else {
+          @for (item of staticMenuItems(); track item.label) {
+            @if (checkMenuAccess(item)) {
+              @if (!item.children) {
+                <!-- Simple Link -->
+                <a
+                  [routerLink]="item.route"
+                  routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                  [routerLinkActiveOptions]="{exact: false}"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
+                  <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+                  <span class="font-medium truncate">{{ item.label }}</span>
+                </a>
+              } @else {
+                <!-- Expandable Group -->
+                <div>
+                  <button
+                    (click)="toggleGroup(item.label)"
+                    class="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+                      <span class="font-medium truncate">{{ item.label }}</span>
+                    </div>
+                    <svg
+                      class="w-3.5 h-3.5 transition-transform flex-shrink-0"
+                      [class.rotate-180]="expandedGroups().has(item.label)"
+                      fill="currentColor"
+                      viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                  </button>
 
-                @if (expandedGroups().has(item.label)) {
-                  <div class="mt-0.5 ml-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5">
-                    @for (child of item.children; track child.label) {
-                      @if (hasMenuAccessMethod(child.menuKey) || hasMenuAccessMethod(item.menuKey)) {
-                        <a
-                          [routerLink]="child.route"
-                          routerLinkActive="text-primary-600 dark:text-primary-400 font-semibold"
-                          class="flex items-center gap-2 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 truncate">
-                          <span class="text-base flex-shrink-0">{{ child.icon }}</span>
-                          {{ child.label }}
-                        </a>
+                  @if (expandedGroups().has(item.label)) {
+                    <div class="mt-0.5 ml-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5">
+                      @for (child of item.children; track child.label) {
+                        @if (checkMenuAccess(child)) {
+                          <a
+                            [routerLink]="child.route"
+                            routerLinkActive="text-primary-600 dark:text-primary-400 font-semibold"
+                            class="flex items-center gap-2 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 truncate">
+                            <span class="text-base flex-shrink-0">{{ child.icon }}</span>
+                            {{ child.label }}
+                          </a>
+                        }
                       }
-                    }
-                  </div>
-                }
-              </div>
+                    </div>
+                  }
+                </div>
+              }
             }
           }
         }
@@ -136,76 +144,53 @@ export class SidebarComponent {
   expandedGroups = signal(new Set<string>(['Dashboard']));
 
   staticMenuItems = signal<MenuItem[]>([
-    { label: 'Dashboard', icon: '📊', route: '/dashboard', menuKey: 'dashboard' },
+    { label: 'Dashboard', icon: '📊', route: '/dashboard', permission: 'dashboard:view' },
     {
       label: 'Tenants',
       icon: '🏢',
-      menuKey: 'tenants',
+      anyPermission: ['tenants:read', 'tenants:create', 'tenants:update'],
       children: [
-        { label: 'Overview', icon: '📋', route: '/tenants', menuKey: 'tenants-overview' },
-        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', menuKey: 'tenants-subscriptions' },
-        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', menuKey: 'tenants-usage' },
+        { label: 'Overview', icon: '📋', route: '/tenants', permission: 'tenants:read' },
+        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', permission: 'tenants:manage-subscriptions' },
+        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', permission: 'tenants:read' },
       ]
     },
     {
       label: 'Users',
       icon: '👥',
-      menuKey: 'users',
+      anyPermission: ['users:read', 'users:create', 'users:update'],
       children: [
-        { label: 'All Users', icon: '👤', route: '/admin/users', menuKey: 'users-list' },
-        { label: 'User Roles', icon: '🎭', route: '/admin/users/roles', menuKey: 'users-roles' },
-        { label: 'Invitations', icon: '✉️', route: '/admin/users/invites', menuKey: 'users-invites' },
+        { label: 'All Users', icon: '👤', route: '/admin/users', permission: 'users:read' },
+        { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', permission: 'users:invite' },
       ]
     },
     {
       label: 'Roles & Permissions',
       icon: '🔐',
       route: '/admin/roles',
-      menuKey: 'roles'
+      permission: 'roles:read'
     },
     {
       label: 'System',
       icon: '⚙️',
-      menuKey: 'system',
+      anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'],
       children: [
-        { label: 'System Health', icon: '💚', route: '/system/health', menuKey: 'system' },
-        { label: 'Performance', icon: '⚡', route: '/system/performance', menuKey: 'system' },
-        { label: 'Database', icon: '🗄️', route: '/system/database', menuKey: 'system' },
-        { label: 'API Status', icon: '🌐', route: '/system/api', menuKey: 'system' },
-      ]
-    },
-    {
-      label: 'Monitoring',
-      icon: '📈',
-      menuKey: 'monitoring',
-      children: [
-        { label: 'Error Logs', icon: '⚠️', route: '/monitoring/errors', menuKey: 'monitoring' },
-        { label: 'Audit Logs', icon: '📋', route: '/monitoring/audit', menuKey: 'monitoring' },
-        { label: 'Security Events', icon: '🔒', route: '/monitoring/security', menuKey: 'monitoring' },
-        { label: 'System Logs', icon: '📄', route: '/monitoring/logs', menuKey: 'monitoring' },
-      ]
-    },
-    {
-      label: 'Configuration',
-      icon: '🛠️',
-      menuKey: 'config',
-      children: [
-        { label: 'Email', icon: '📧', route: '/config/email', menuKey: 'config' },
-        { label: 'SMS', icon: '💬', route: '/config/sms', menuKey: 'config' },
-        { label: 'Notifications', icon: '🔔', route: '/config/notifications', menuKey: 'config' },
-        { label: 'API Keys', icon: '🔑', route: '/config/api-keys', menuKey: 'config', requiredAction: 'create' },
-        { label: 'Webhooks', icon: '🪝', route: '/config/webhooks', menuKey: 'config' },
+        { label: 'Dashboard', icon: '🏠', route: '/admin/system', anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'] },
+        { label: 'System Health', icon: '💚', route: '/admin/system/health', permission: 'system:view-health' },
+        { label: 'Performance', icon: '⚡', route: '/admin/system/performance', permission: 'system:view-performance' },
+        { label: 'Configuration', icon: '�️', route: '/admin/system/config', permission: 'system:manage-config' },
+        { label: 'System Logs', icon: '📄', route: '/admin/system/logs', permission: 'system:manage-config' },
       ]
     },
     {
       label: 'Billing',
       icon: '💰',
-      menuKey: 'billing',
+      anyPermission: ['billing:read', 'billing:manage-plans'],
       children: [
-        { label: 'Plans', icon: '📋', route: '/billing/plans', menuKey: 'billing' },
-        { label: 'Invoices', icon: '💳', route: '/billing/invoices', menuKey: 'billing' },
-        { label: 'Payments', icon: '💸', route: '/billing/payments', menuKey: 'billing' },
-        { label: 'Revenue', icon: '📊', route: '/billing/revenue', menuKey: 'billing' },
+        { label: 'Plans', icon: '📋', route: '/billing/plans', permission: 'billing:manage-plans' },
+        { label: 'Invoices', icon: '💳', route: '/billing/invoices', permission: 'billing:view-invoices' },
+        { label: 'Payments', icon: '💸', route: '/billing/payments', permission: 'billing:read' },
+        { label: 'Revenue', icon: '📊', route: '/billing/revenue', permission: 'billing:read' },
       ]
     },
   ]);
@@ -220,46 +205,57 @@ export class SidebarComponent {
     };
 
     window.addEventListener('resize', handleResize);
-    console.log('🧭 SidebarComponent initialized - RBAC support active');
-
-    // Add debug logging
-    console.log('📊 Current user:', this.authService.currentUser());
-    console.log('🔐 RBAC Service initialized');
-    console.log('📋 User permissions available:', Object.keys(this.rbacService.userPermissions()));
+    console.log('🧭 SidebarComponent initialized - Standard RBAC active');
   }
 
   /**
-   * Check if user has access to a menu - Public method for template
+   * Check if user has access to a menu item (Standard RBAC)
+   */
+  checkMenuAccess(item: MenuItem): boolean {
+    if (!this.authService.isAuthenticated()) {
+      console.log('❌ User not authenticated');
+      return false;
+    }
+
+    const permissions = this.rbacService.userPermissions();
+    console.log('🔍 Checking menu access for:', item.label, {
+      permission: item.permission,
+      anyPermission: item.anyPermission,
+      totalPermissions: permissions.size,
+      allPermissions: Array.from(permissions)
+    });
+
+    // Check specific permission
+    if (item.permission) {
+      const hasAccess = this.rbacService.can(item.permission);
+      console.log(`  → ${item.permission}: ${hasAccess}`);
+      return hasAccess;
+    }
+
+    // Check if user has ANY of the required permissions
+    if (item.anyPermission && item.anyPermission.length > 0) {
+      const hasAccess = this.rbacService.canAny(item.anyPermission);
+      console.log(`  → Any of [${item.anyPermission.join(', ')}]: ${hasAccess}`);
+      return hasAccess;
+    }
+
+    // If no permission specified, show by default
+    console.log('  → No permission required, showing by default');
+    return true;
+  }
+
+  /**
+   * LEGACY: Check if user has access to a menu - Kept for backward compatibility
+   * @deprecated Use checkMenuAccess() instead
    */
   hasMenuAccessMethod(menuKey?: string): boolean {
     if (!menuKey) return false;
-
-    // Get current permissions
-    const permissions = this.rbacService.userPermissions();
-    const hasPermissions = Object.keys(permissions).length > 0;
-
-    // Check if user is authenticated
-    const isAuthenticated = this.authService.isAuthenticated();
-
-    // If authenticated but no permissions, hide all menus (no access)
-    if (isAuthenticated && !hasPermissions) {
-      console.warn('⚠️ User authenticated but has no permissions assigned');
-      return false;
-    }
-
-    // If not authenticated and no permissions, hide menus
-    if (!isAuthenticated && !hasPermissions) {
-      return false;
-    }
-
-    // Check if user has this specific menu
-    const hasAccess = this.rbacService.hasMenuAccess(menuKey);
-    // console.log(`🔍 Menu "${menuKey}" access: ${hasAccess}`);
-    return hasAccess;
+    return this.rbacService.hasMenuAccess(menuKey);
   }
 
   /**
-   * Check if user has action on menu - Public method for template
+   * LEGACY: Check if user has action on menu
+   * @deprecated Use rbacService.can() directly
    */
   hasActionMethod(menuKey?: string, actionKey?: string): boolean {
     if (!menuKey || !actionKey) return false;

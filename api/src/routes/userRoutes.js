@@ -14,7 +14,7 @@ const router = express.Router();
 router.use(authMiddleware, tenantIsolationMiddleware);
 
 // List users
-router.get('/', rbacMiddleware(['users'], ['view']), UserController.listUsers);
+router.get('/', rbacMiddleware(['users'], ['read']), UserController.listUsers);
 
 // Create user
 router.post('/', rbacMiddleware(['users'], ['create']), UserController.createUser);
@@ -26,14 +26,14 @@ router.get('/me', UserController.getCurrentUser);
 router.get('/:id', UserController.getUser);
 
 // Update user
-router.put('/:id', rbacMiddleware(['users'], ['edit']), UserController.updateUser);
+router.put('/:id', rbacMiddleware(['users'], ['update']), UserController.updateUser);
 
 // Delete user
 router.delete('/:id', rbacMiddleware(['users'], ['delete']), UserController.deleteUser);
 
 // User roles
-router.post('/:id/roles/:roleId', rbacMiddleware(['roles'], ['edit']), UserController.assignRole);
-router.delete('/:id/roles/:roleId', rbacMiddleware(['roles'], ['edit']), UserController.removeRole);
+router.post('/:id/roles/:roleId', rbacMiddleware(['roles'], ['update']), UserController.assignRole);
+router.delete('/:id/roles/:roleId', rbacMiddleware(['roles'], ['update']), UserController.removeRole);
 router.get('/:id/permissions', UserController.getUserPermissions);
 
 module.exports = router;

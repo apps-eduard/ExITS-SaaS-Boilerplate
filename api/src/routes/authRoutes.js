@@ -18,5 +18,6 @@ router.post('/logout', authMiddleware, AuthController.logout);
 router.post('/change-password', authMiddleware, AuthController.changePassword);
 router.post('/verify-email', authMiddleware, AuthController.verifyEmail);
 router.post('/validate-token', authMiddleware, AuthController.validateToken);
+router.get('/me/permissions', authMiddleware, AuthController.getMyPermissions);
 
 module.exports = router;

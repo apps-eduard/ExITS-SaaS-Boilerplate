@@ -5,10 +5,11 @@ import { firstValueFrom } from 'rxjs';
 
 export interface Permission {
   id?: string;
-  menuKey: string;
-  actionKey: string;
-  constraints?: Record<string, any>;
-  status?: string;
+  permissionKey: string;  // Format: resource:action (e.g., 'users:create')
+  resource: string;       // e.g., 'users', 'roles', 'dashboard'
+  action: string;         // e.g., 'view', 'create', 'edit', 'delete'
+  description?: string;
+  space?: 'system' | 'tenant' | 'both';
 }
 
 export interface Role {
@@ -112,6 +113,8 @@ export class RoleService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
+      console.log('🔄 RoleService.getRole - Fetching role:', roleId);
+
       const response: any = await firstValueFrom(
         this.http.get<any>(
           `${this.apiUrl}/roles/${roleId}`,
@@ -119,15 +122,21 @@ export class RoleService {
         )
       );
 
+      console.log('📥 RoleService.getRole - Response:', response);
+
       if (response && response.success) {
+        console.log('✅ RoleService.getRole - Response data:', response.data);
+        console.log('✅ RoleService.getRole - Permissions:', response.data.permissions);
         this.currentRoleSignal.set(response.data);
-        console.log(`✅ Loaded role: ${response.data.name}`);
+        console.log(`✅ Loaded role: ${response.data.name} with ${response.data.permissions?.length || 0} permissions`);
         return response.data;
+      } else {
+        console.warn('⚠️ RoleService.getRole - Response not successful:', response);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to get role';
       this.errorSignal.set(message);
-      console.error('❌ Error getting role:', message);
+      console.error('❌ Error getting role:', message, error);
     } finally {
       this.loadingSignal.set(false);
     }
@@ -281,20 +290,20 @@ export class RoleService {
   /**
    * Assign permission to role
    */
-  async assignPermission(roleId: string, menuKey: string, actionKey: string): Promise<boolean> {
+  async assignPermission(roleId: string, permissionKey: string): Promise<boolean> {
     try {
       this.errorSignal.set(null);
 
       const response: any = await firstValueFrom(
         this.http.post<any>(
           `${this.apiUrl}/roles/${roleId}/permissions`,
-          { menuKey, actionKey },
+          { permissionKey },
           { responseType: 'json' }
         )
       );
 
       if (response && response.success) {
-        console.log(`✅ Permission assigned: ${menuKey}.${actionKey}`);
+        console.log(`✅ Permission assigned: ${permissionKey}`);
         // Reload current role to update permissions
         await this.getRole(roleId);
         return true;
@@ -311,19 +320,19 @@ export class RoleService {
   /**
    * Revoke permission from role
    */
-  async revokePermission(roleId: string, menuKey: string, actionKey: string): Promise<boolean> {
+  async revokePermission(roleId: string, permissionKey: string): Promise<boolean> {
     try {
       this.errorSignal.set(null);
 
       const response: any = await firstValueFrom(
         this.http.delete<any>(
-          `${this.apiUrl}/roles/${roleId}/permissions`,
-          { body: { menuKey, actionKey }, responseType: 'json' }
+          `${this.apiUrl}/roles/${roleId}/permissions/${permissionKey}`,
+          { responseType: 'json' }
         )
       );
 
       if (response && response.success) {
-        console.log(`✅ Permission revoked: ${menuKey}.${actionKey}`);
+        console.log(`✅ Permission revoked: ${permissionKey}`);
         // Reload current role to update permissions
         await this.getRole(roleId);
         return true;
@@ -340,7 +349,7 @@ export class RoleService {
   /**
    * Bulk assign permissions
    */
-  async bulkAssignPermissions(roleId: string, permissions: Permission[]): Promise<boolean> {
+  async bulkAssignPermissions(roleId: string, permissions: Array<{permissionKey: string} | Permission>): Promise<boolean> {
     try {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
@@ -380,10 +389,10 @@ export class RoleService {
 
     const matrix: PermissionMatrix = {};
     for (const perm of role.permissions) {
-      if (!matrix[perm.menuKey]) {
-        matrix[perm.menuKey] = {};
+      if (!matrix[perm.resource]) {
+        matrix[perm.resource] = {};
       }
-      matrix[perm.menuKey][perm.actionKey] = true;
+      matrix[perm.resource][perm.action] = true;
     }
 
     this.permissionMatrixSignal.set(matrix);
@@ -393,9 +402,9 @@ export class RoleService {
   /**
    * Check if role has permission
    */
-  hasPermission(role: Role | null, menuKey: string, actionKey: string): boolean {
+  hasPermission(role: Role | null, resource: string, action: string): boolean {
     if (!role || !role.permissions) return false;
-    return role.permissions.some(p => p.menuKey === menuKey && p.actionKey === actionKey);
+    return role.permissions.some(p => p.resource === resource && p.action === action);
   }
 
   /**
@@ -403,8 +412,8 @@ export class RoleService {
    */
   getRoleSummary(role: Role): {
     totalPermissions: number;
-    systemModules: number;
-    moduleCount: number;
+    resourceCount: number;
+    resources: string[];
     actions: string[];
     viewCount: number;
     createCount: number;
@@ -414,8 +423,8 @@ export class RoleService {
     if (!role || !role.permissions) {
       return {
         totalPermissions: 0,
-        systemModules: 0,
-        moduleCount: 0,
+        resourceCount: 0,
+        resources: [],
         actions: [],
         viewCount: 0,
         createCount: 0,
@@ -425,32 +434,64 @@ export class RoleService {
     }
 
     const actions = new Set<string>();
-    const modules = new Set<string>();
+    const resources = new Set<string>();
     let viewCount = 0;
     let createCount = 0;
     let editCount = 0;
     let deleteCount = 0;
 
     for (const perm of role.permissions) {
-      modules.add(perm.menuKey);
-      actions.add(perm.actionKey);
+      resources.add(perm.resource);
+      actions.add(perm.action);
 
-      if (perm.actionKey === 'view') viewCount++;
-      else if (perm.actionKey === 'create') createCount++;
-      else if (perm.actionKey === 'edit') editCount++;
-      else if (perm.actionKey === 'delete') deleteCount++;
+      if (perm.action === 'view' || perm.action === 'read') viewCount++;
+      else if (perm.action === 'create') createCount++;
+      else if (perm.action === 'edit' || perm.action === 'update') editCount++;
+      else if (perm.action === 'delete') deleteCount++;
     }
 
     return {
       totalPermissions: role.permissions.length,
-      systemModules: modules.size,
-      moduleCount: modules.size,
+      resourceCount: resources.size,
+      resources: Array.from(resources),
       actions: Array.from(actions),
       viewCount,
       createCount,
       editCount,
       deleteCount
     };
+  }
+
+  /**
+   * Get all available permissions
+   */
+  async getAllPermissions(space?: 'system' | 'tenant'): Promise<Permission[]> {
+    try {
+      this.loadingSignal.set(true);
+      this.errorSignal.set(null);
+
+      const options: any = { responseType: 'json' };
+      if (space) {
+        options['params'] = { space };
+      }
+
+      const response: any = await firstValueFrom(
+        this.http.get<any>(`${this.apiUrl}/roles/permissions`, options)
+      );
+
+      if (response && response.success) {
+        console.log(`📋 Loaded ${response.data?.length || 0} permissions`);
+        return response.data || [];
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load permissions';
+      this.errorSignal.set(message);
+      console.error('❌ Error loading permissions:', message);
+    } finally {
+      this.loadingSignal.set(false);
+    }
+
+    return [];
   }
 
   /**

@@ -177,27 +177,29 @@ class RBACService {
       
       const role = roleResult.rows[0];
       
-      // Get permissions for this role
+      // Get permissions for this role (Standard RBAC)
       const permQuery = `
         SELECT 
-          m.id as module_id,
-          m.menu_key,
-          m.display_name,
-          rp.action_key
-        FROM role_permissions rp
-        JOIN modules m ON rp.module_id = m.id
-        WHERE rp.role_id = $1 AND rp.status = 'active'
-        ORDER BY m.display_name, rp.action_key
+          p.id,
+          p.permission_key,
+          p.resource,
+          p.action,
+          p.description
+        FROM role_permissions_standard rps
+        JOIN permissions p ON rps.permission_id = p.id
+        WHERE rps.role_id = $1
+        ORDER BY p.resource, p.action
       `;
       
       const permResult = await db.query(permQuery, [roleId]);
       
       // Transform permissions to camelCase array format
       const permissions = permResult.rows.map(row => ({
-        moduleId: row.module_id,
-        menuKey: row.menu_key,
-        displayName: row.display_name,
-        actionKey: row.action_key,
+        id: row.id,
+        permissionKey: row.permission_key,
+        resource: row.resource,
+        action: row.action,
+        description: row.description,
       }));
       
       // Transform role to camelCase

@@ -46,22 +46,18 @@ class AuthService {
         throw new Error('Invalid credentials');
       }
 
-      // Fetch user permissions
+      // Fetch user permissions (standard RBAC format: resource:action)
       const permissionsResult = await pool.query(
-        `SELECT DISTINCT m.menu_key, rp.action_key
+        `SELECT DISTINCT p.permission_key
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rp ON r.id = rp.role_id
-         JOIN modules m ON rp.module_id = m.id
-         WHERE ur.user_id = $1 AND rp.status = $2`,
+         JOIN role_permissions_standard rps ON r.id = rps.role_id
+         JOIN permissions p ON rps.permission_id = p.id
+         WHERE ur.user_id = $1 AND r.status = $2`,
         [user.id, 'active']
       );
 
-      const permissions = permissionsResult.rows.reduce((acc, row) => {
-        if (!acc[row.menu_key]) acc[row.menu_key] = [];
-        acc[row.menu_key].push(row.action_key);
-        return acc;
-      }, {});
+      const permissions = permissionsResult.rows.map(row => row.permission_key);
 
       // Generate tokens
       const accessToken = generateAccessToken({

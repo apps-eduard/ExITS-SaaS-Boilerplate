@@ -172,6 +172,39 @@ class AuthController {
       next(err);
     }
   }
+
+  /**
+   * GET /auth/me/permissions
+   * Get current user's permissions
+   */
+  static async getMyPermissions(req, res, next) {
+    try {
+      const pool = require('../config/database');
+      const logger = require('../utils/logger');
+      logger.info('🔎 [getMyPermissions] User ID:', req.user.id);
+      const result = await pool.query(
+        `SELECT DISTINCT p.permission_key, p.resource, p.action, p.description
+         FROM user_roles ur
+         JOIN roles r ON ur.role_id = r.id
+         JOIN role_permissions_standard rps ON r.id = rps.role_id
+         JOIN permissions p ON rps.permission_id = p.id
+         WHERE ur.user_id = $1 AND r.status = $2
+         ORDER BY p.resource, p.action`,
+        [req.user.id, 'active']
+      );
+      logger.info('🔎 [getMyPermissions] SQL result:', result.rows);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        data: {
+          permissions: result.rows.map(row => row.permission_key),
+          details: result.rows,
+        },
+      });
+    } catch (err) {
+      logger.error('❌ [getMyPermissions] Error:', err);
+      next(err);
+    }
+  }
 }
 
 module.exports = AuthController;

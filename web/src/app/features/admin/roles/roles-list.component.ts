@@ -259,16 +259,16 @@ export class RolesListComponent implements OnInit {
 
   getRoleSummary(role: Role) {
     const summary = this.roleService.getRoleSummary(role);
-    const modules = new Set<string>();
+    const resources = new Set<string>();
     
     if (role.permissions) {
-      role.permissions.forEach(p => modules.add(p.menuKey));
+      role.permissions.forEach(p => resources.add(p.resource));
     }
 
     return {
       ...summary,
-      moduleCount: modules.size, // Actual unique menus
-      modules: Array.from(modules)
+      resourceCount: resources.size, // Actual unique resources
+      resources: Array.from(resources)
     };
   }
 

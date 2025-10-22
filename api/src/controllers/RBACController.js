@@ -235,7 +235,7 @@ class RBACController {
   }
 
   /**
-   * Bulk assign permissions to role
+   * Bulk assign permissions to role (Standard RBAC)
    */
   static async bulkAssignPermissions(req, res) {
     try {
@@ -246,31 +246,67 @@ class RBACController {
         return res.status(400).json({ error: 'permissions array is required' });
       }
 
-      // First, remove all existing permissions for this role
-      const deleteQuery = `
-        DELETE FROM role_permissions WHERE role_id = $1
-      `;
-      await req.app.locals.db.query(deleteQuery, [roleId]);
+      logger.info(`🔄 Bulk assigning ${permissions.length} permissions to role ${roleId}...`);
+      logger.info(`📋 Received permissions:`, JSON.stringify(permissions, null, 2));
 
-      // Then insert all new permissions
-      let count = 0;
+      // First, remove all existing permissions for this role (standard RBAC)
+      const deleteQuery = `DELETE FROM role_permissions_standard WHERE role_id = $1`;
+      await req.app.locals.db.query(deleteQuery, [roleId]);
+      logger.info(`🗑️  Cleared existing permissions for role ${roleId}`);
+
+      // Then insert all new permissions using permission_key
+      let insertedCount = 0;
+      let notFoundCount = 0;
+      
       for (const perm of permissions) {
-        if (perm.menuKey && perm.actionKey) {
-          await RBACService.assignPermissionToRole(roleId, perm.menuKey, perm.actionKey);
-          count++;
+        const { permissionKey } = perm;
+        
+        if (!permissionKey) {
+          logger.warn(`⚠️  Skipping invalid permission (missing permissionKey):`, perm);
+          continue;
         }
+
+        logger.info(`🔍 Looking up permission: ${permissionKey}`);
+
+        // Get permission ID from permissions table
+        const permResult = await req.app.locals.db.query(
+          'SELECT id FROM permissions WHERE permission_key = $1',
+          [permissionKey]
+        );
+
+        if (permResult.rows.length === 0) {
+          logger.warn(`⚠️  Permission not found in database: ${permissionKey}`);
+          notFoundCount++;
+          continue;
+        }
+
+        const permissionId = permResult.rows[0].id;
+        logger.info(`✅ Found permission ${permissionKey} with ID: ${permissionId}`);
+
+        // Insert into role_permissions_standard
+        await req.app.locals.db.query(
+          `INSERT INTO role_permissions_standard (role_id, permission_id)
+           VALUES ($1, $2)
+           ON CONFLICT (role_id, permission_id) DO NOTHING`,
+          [roleId, permissionId]
+        );
+
+        logger.info(`✅ Inserted permission ${permissionKey} for role ${roleId}`);
+        insertedCount++;
       }
 
-      logger.info(`✅ Bulk assigned ${count} permissions to role ${roleId}`);
+      logger.info(`✅ Bulk assigned ${insertedCount} permissions to role ${roleId} (${notFoundCount} not found)`);
       
       res.status(201).json({
         success: true,
-        message: `${count} permissions assigned`,
-        count,
-        data: { roleId, permissions }
+        message: `${insertedCount} permissions assigned successfully`,
+        count: insertedCount,
+        notFound: notFoundCount,
+        data: { roleId }
       });
     } catch (error) {
       logger.error('❌ Error bulk assigning permissions:', error.message);
+      logger.error(error.stack);
       res.status(500).json({ error: 'Failed to bulk assign permissions' });
     }
   }
