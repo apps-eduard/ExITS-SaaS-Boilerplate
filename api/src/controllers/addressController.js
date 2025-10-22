@@ -133,18 +133,26 @@ exports.createAddress = async (req, res) => {
   const client = await db.getClient();
   
   try {
-    const { tenant_id, id: user_id } = req.user;
+    const requesting_user_id = req.userId; // System admin or tenant admin creating the address
     const {
+      userId,
+      addressType,
+      street,
+      barangay,
+      cityMunicipality,
+      province,
+      region,
+      zipCode,
+      country,
+      isPrimary,
+      // Also support snake_case for backward compatibility
       address_type,
       is_primary,
       label,
       unit_number,
       house_number,
       street_name,
-      barangay,
       city_municipality,
-      province,
-      region,
       zip_code,
       latitude,
       longitude,
@@ -154,8 +162,29 @@ exports.createAddress = async (req, res) => {
       contact_phone
     } = req.body;
 
+    // Get the user's tenant_id to associate the address
+    const userResult = await db.query(
+      'SELECT tenant_id FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const tenant_id = userResult.rows[0].tenant_id;
+
+    // Normalize field names (support both camelCase and snake_case)
+    const finalBarangay = barangay;
+    const finalCityMunicipality = cityMunicipality || city_municipality;
+    const finalProvince = province;
+    const finalRegion = region;
+
     // Validation
-    if (!barangay || !city_municipality || !province || !region) {
+    if (!finalBarangay || !finalCityMunicipality || !finalProvince || !finalRegion) {
       return res.status(400).json({
         success: false,
         message: 'Barangay, City/Municipality, Province, and Region are required'
@@ -164,13 +193,19 @@ exports.createAddress = async (req, res) => {
 
     await client.query('BEGIN');
 
+    // Normalize values
+    const finalAddressType = addressType || address_type || 'home';
+    const finalIsPrimary = isPrimary !== undefined ? isPrimary : (is_primary || false);
+    const finalStreet = street || street_name;
+    const finalZipCode = zipCode || zip_code;
+
     // If setting as primary, unset other primary addresses
-    if (is_primary) {
+    if (finalIsPrimary) {
       await client.query(
         `UPDATE philippine_addresses 
          SET is_primary = FALSE 
          WHERE tenant_id = $1 AND address_type = $2 AND is_primary = TRUE`,
-        [tenant_id, address_type || 'home']
+        [tenant_id, finalAddressType]
       );
     }
 
@@ -180,29 +215,30 @@ exports.createAddress = async (req, res) => {
         unit_number, house_number, street_name, barangay,
         city_municipality, province, region, zip_code,
         latitude, longitude, landmark, delivery_instructions,
-        contact_person, contact_phone, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        contact_person, contact_phone, created_by, user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         tenant_id,
-        address_type || 'home',
-        is_primary || false,
+        finalAddressType,
+        finalIsPrimary,
         label,
         unit_number,
         house_number,
-        street_name,
-        barangay,
-        city_municipality,
-        province,
-        region,
-        zip_code,
+        finalStreet,
+        finalBarangay,
+        finalCityMunicipality,
+        finalProvince,
+        finalRegion,
+        finalZipCode,
         latitude,
         longitude,
         landmark,
         delivery_instructions,
         contact_person,
         contact_phone,
-        user_id
+        requesting_user_id,
+        userId // The user this address belongs to
       ]
     );
 
@@ -214,15 +250,26 @@ exports.createAddress = async (req, res) => {
       data: result.rows[0]
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     console.error('Error creating address:', error);
+    console.error('Error details:', {
+      message: error.message,
+      detail: error.detail,
+      hint: error.hint,
+      code: error.code
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create address',
-      error: error.message
+      error: error.message,
+      detail: error.detail
     });
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 };
 

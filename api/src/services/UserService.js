@@ -100,12 +100,17 @@ class UserService {
    */
   static async getUserById(userId, tenantId) {
     try {
-      const userResult = await pool.query(
-        `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
-         FROM users
-         WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)`,
-        [userId, tenantId]
-      );
+      // System admins (tenantId = null) can view any user, tenant admins can only view their own tenant users
+      const query = tenantId 
+        ? `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+           FROM users
+           WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)`
+        : `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+           FROM users
+           WHERE id = $1`;
+
+      const params = tenantId ? [userId, tenantId] : [userId];
+      const userResult = await pool.query(query, params);
 
       if (userResult.rows.length === 0) {
         throw new Error('User not found');
@@ -259,14 +264,25 @@ class UserService {
       }
 
       values.push(userId);
-      values.push(tenantId);
 
-      const query = `
-        UPDATE users
-        SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
-        WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-        RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
-      `;
+      // System admins (tenantId = null) can update any user, tenant admins can only update their own tenant users
+      let query;
+      if (tenantId) {
+        values.push(tenantId);
+        query = `
+          UPDATE users
+          SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
+          WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+        `;
+      } else {
+        query = `
+          UPDATE users
+          SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
+          WHERE id = $${paramCount}
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+        `;
+      }
 
       const result = await pool.query(query, values);
 

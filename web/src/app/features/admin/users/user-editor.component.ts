@@ -66,8 +66,7 @@ interface Tenant {
               </label>
               <input
                 name="firstName"
-                [value]="formData.firstName"
-                (input)="formData.firstName = $any($event.target).value"
+                [(ngModel)]="formData.firstName"
                 type="text"
                 placeholder="John"
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -81,8 +80,7 @@ interface Tenant {
               </label>
               <input
                 name="lastName"
-                [value]="formData.lastName"
-                (input)="formData.lastName = $any($event.target).value"
+                [(ngModel)]="formData.lastName"
                 type="text"
                 placeholder="Doe"
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -96,8 +94,7 @@ interface Tenant {
               </label>
               <input
                 name="email"
-                [value]="formData.email"
-                (input)="formData.email = $any($event.target).value"
+                [(ngModel)]="formData.email"
                 type="email"
                 placeholder="john.doe@example.com"
                 [disabled]="isEditMode()"
@@ -264,7 +261,7 @@ interface Tenant {
                   required
                 >
                   <option value="">Select region</option>
-                  <option *ngFor="let region of addressService.regionsSignal()" [value]="region.name">
+                  <option *ngFor="let region of addressService.regionsSignal()" [value]="region.code">
                     {{ region.name }}
                   </option>
                 </select>
