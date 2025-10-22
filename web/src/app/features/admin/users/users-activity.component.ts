@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { UserService } from '../../../core/services/user.service';
 import type { User } from '../../../core/services/user.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/users-sidebar.component';
 
 @Component({
@@ -104,12 +105,21 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
                     </span>
                   </td>
                   <td class="px-4 py-3 text-right">
-                    <button
-                      [routerLink]="'/admin/users/' + user.id + '/profile'"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
-                    >
-                      View
-                    </button>
+                    <div class="flex items-center justify-end gap-2">
+                      <button
+                        [routerLink]="'/admin/users/' + user.id + '/profile'"
+                        class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-300 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 transition"
+                      >
+                        👁️ View
+                      </button>
+                      <button
+                        *ngIf="canUpdateUsers()"
+                        [routerLink]="'/admin/users/' + user.id"
+                        class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
+                      >
+                        ✏️ Edit
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -123,6 +133,10 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
 })
 export class UsersActivityComponent implements OnInit {
   userService = inject(UserService);
+  private authService = inject(AuthService);
+
+  // Permission checks
+  canUpdateUsers = computed(() => this.authService.hasPermission('users:update'));
 
   constructor() {}
 

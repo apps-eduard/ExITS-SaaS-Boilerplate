@@ -18,9 +18,12 @@ import { RoleService, Role } from '../../../core/services/role.service';
         </div>
         <button 
           routerLink="/admin/roles/new"
-          class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
+          class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
         >
-          ➕ Create Role
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          Create Role
         </button>
       </div>
 
@@ -94,9 +97,12 @@ import { RoleService, Role } from '../../../core/services/role.service';
             <p class="text-xs text-yellow-700 dark:text-yellow-400">{{ roleService.errorSignal() }}</p>
             <button 
               (click)="roleService.loadRoles()"
-              class="mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700 transition"
+              class="inline-flex items-center gap-1.5 mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700 transition"
             >
-              🔄 Retry
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Retry
             </button>
           </div>
         </div>
@@ -130,13 +136,11 @@ import { RoleService, Role } from '../../../core/services/role.service';
                   </span>
                 </td>
                 <td class="px-4 py-3 text-center">
-                  <div class="flex items-center justify-center gap-3">
-                    <div class="flex items-center gap-1">
-                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                      </svg>
-                      <span class="font-semibold text-gray-900 dark:text-white">{{ getRoleSummary(role).totalPermissions }}</span>
-                    </div>
+                  <div class="flex items-center justify-center gap-1">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ role.permissions?.length || 0 }}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-center">

@@ -146,7 +146,7 @@ export class UsersSidebarComponent {
       menuKey: 'users',
       children: [
         { label: 'List Users', icon: '📋', route: '/admin/users', menuKey: 'users' },
-        { label: 'Create User', icon: '➕', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
+        { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
         { label: 'Admin Users', icon: '👑', route: '/admin/users/admins', menuKey: 'users' },
         { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
       ]

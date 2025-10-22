@@ -25,6 +25,7 @@ const auditLogRoutes = require('./routes/auditLogRoutes');
 const moduleRoutes = require('./routes/moduleRoutes');
 const rbacRoutes = require('./routes/rbacRoutes');
 const addressRoutes = require('./routes/addresses');
+const billingRoutes = require('./routes/billingRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +81,7 @@ app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/rbac', rbacRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/billing', billingRoutes);
 
 // ==================== 404 HANDLER ====================
 

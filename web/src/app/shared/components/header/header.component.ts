@@ -68,8 +68,12 @@ import { ThemeService } from '../../../core/services/theme.service';
               {{ getUserInitials() }}
             </div>
             <div class="hidden lg:block text-left">
-              <div class="text-sm font-medium text-gray-900 dark:text-white">{{ user()?.first_name }} {{ user()?.last_name }}</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">{{ user()?.role?.name || 'User' }}</div>
+              <div class="text-sm font-medium text-gray-900 dark:text-white">
+                {{ getUserDisplayName() }}
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                {{ authService.isSystemAdmin() ? 'System Admin' : 'User' }}
+              </div>
             </div>
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
@@ -82,19 +86,25 @@ import { ThemeService } from '../../../core/services/theme.service';
                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user()?.first_name }} {{ user()?.last_name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ user()?.email }}</p>
               </div>
-              <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+              <button 
+                (click)="navigateTo('/profile'); showUserMenu = false"
+                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
                 Profile
               </button>
-              <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-                Settings
-              </button>
+              @if (canAccessSettings()) {
+                <button 
+                  (click)="navigateTo('/settings'); showUserMenu = false"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  Settings
+                </button>
+              }
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
               <button
                 (click)="logout()"
@@ -123,7 +133,28 @@ export class HeaderComponent {
   getUserInitials(): string {
     const user = this.user();
     if (!user) return '?';
-    return `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
+    const firstInitial = user.first_name?.[0] || '';
+    const lastInitial = user.last_name?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase() || '??';
+  }
+
+  getUserDisplayName(): string {
+    const user = this.user();
+    if (!user) return 'User';
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    return `${firstName} ${lastName}`.trim() || user.email || 'User';
+  }
+
+  canAccessSettings(): boolean {
+    // Settings accessible to system admins or users with system:view or settings:view permission
+    return this.authService.isSystemAdmin() || 
+           this.authService.hasPermission('system:view') ||
+           this.authService.hasPermission('settings:view');
+  }
+
+  navigateTo(path: string): void {
+    this.router.navigate([path]);
   }
 
   logout() {

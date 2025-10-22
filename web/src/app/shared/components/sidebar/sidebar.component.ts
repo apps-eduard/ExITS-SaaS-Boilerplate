@@ -150,9 +150,8 @@ export class SidebarComponent {
       icon: '🏢',
       anyPermission: ['tenants:read', 'tenants:create', 'tenants:update'],
       children: [
-        { label: 'Overview', icon: '📋', route: '/tenants', permission: 'tenants:read' },
-        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', permission: 'tenants:manage-subscriptions' },
-        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', permission: 'tenants:read' },
+        { label: 'All Tenants', icon: '📋', route: '/admin/tenants', permission: 'tenants:read' },
+        { label: 'New Tenant', icon: '➕', route: '/admin/tenants/new', permission: 'tenants:create' },
       ]
     },
     {
@@ -178,7 +177,7 @@ export class SidebarComponent {
         { label: 'Dashboard', icon: '🏠', route: '/admin/system', anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'] },
         { label: 'System Health', icon: '💚', route: '/admin/system/health', permission: 'system:view-health' },
         { label: 'Performance', icon: '⚡', route: '/admin/system/performance', permission: 'system:view-performance' },
-        { label: 'Configuration', icon: '�️', route: '/admin/system/config', permission: 'system:manage-config' },
+        { label: 'Configuration', icon: '🔧', route: '/admin/system/config', permission: 'system:manage-config' },
         { label: 'System Logs', icon: '📄', route: '/admin/system/logs', permission: 'system:manage-config' },
       ]
     },
@@ -187,10 +186,10 @@ export class SidebarComponent {
       icon: '💰',
       anyPermission: ['billing:read', 'billing:manage-plans'],
       children: [
-        { label: 'Plans', icon: '📋', route: '/billing/plans', permission: 'billing:manage-plans' },
-        { label: 'Invoices', icon: '💳', route: '/billing/invoices', permission: 'billing:view-invoices' },
-        { label: 'Payments', icon: '💸', route: '/billing/payments', permission: 'billing:read' },
-        { label: 'Revenue', icon: '📊', route: '/billing/revenue', permission: 'billing:read' },
+        { label: 'Overview', icon: '📊', route: '/admin/billing', permission: 'billing:read' },
+        { label: 'Plans', icon: '📋', route: '/admin/billing/plans', permission: 'billing:manage-plans' },
+        { label: 'Subscriptions', icon: '🔄', route: '/admin/billing/subscriptions', permission: 'billing:read' },
+        { label: 'Invoices', icon: '💳', route: '/admin/billing/invoices', permission: 'billing:view-invoices' },
       ]
     },
   ]);

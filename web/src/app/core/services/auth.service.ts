@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap, catchError, of } from 'rxjs';
@@ -14,6 +14,7 @@ export interface User {
     name: string;
     permissions: string[];
   };
+  permissions?: string[]; // Permissions array from login response
 }
 
 export interface AuthResponse {
@@ -36,6 +37,9 @@ export class AuthService {
   private apiUrl = 'http://localhost:3000/api';
   currentUser = signal<User | null>(null);
   isAuthenticated = signal<boolean>(false);
+  
+  // Store permissions from login response
+  private userPermissions = signal<string[]>([]);
 
   constructor(
     private http: HttpClient,
@@ -45,19 +49,39 @@ export class AuthService {
   }
 
   login(email: string, password: string) {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
       tap(response => {
         console.log('✅ AuthService.login() received response:', response);
         if (response && response.data) {
           console.log('📝 Saving tokens to localStorage...');
           this.setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
           console.log('✅ Tokens saved. Accessing token:', this.getAccessToken()?.substring(0, 20) + '...');
-          this.currentUser.set(response.data.user);
+          
+          // Store permissions from login response
+          const permissions = response.data.permissions || [];
+          console.log('🔑 Permissions from login:', permissions);
+          this.userPermissions.set(permissions);
+          localStorage.setItem('permissions', JSON.stringify(permissions));
+          
+          // Transform API response (camelCase) to frontend format (snake_case)
+          const apiUser = response.data.user;
+          const user: User = {
+            id: apiUser.id,
+            email: apiUser.email,
+            first_name: apiUser.firstName || apiUser.first_name || '',
+            last_name: apiUser.lastName || apiUser.last_name || '',
+            tenant_id: apiUser.tenantId !== undefined ? apiUser.tenantId : apiUser.tenant_id,
+            role_id: apiUser.roleId || apiUser.role_id,
+            role: apiUser.role
+          };
+          
+          this.currentUser.set(user);
           this.isAuthenticated.set(true);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('user', JSON.stringify(user));
           console.log('✅ AuthService.login() - signals updated:', {
             isAuthenticated: this.isAuthenticated(),
-            currentUser: this.currentUser()
+            currentUser: this.currentUser(),
+            permissions: this.userPermissions()
           });
         }
       }),
@@ -82,8 +106,10 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
+    this.userPermissions.set([]);
     this.router.navigate(['/login']);
   }
 
@@ -99,12 +125,16 @@ export class AuthService {
   private loadUserFromStorage() {
     const token = this.getAccessToken();
     const userStr = localStorage.getItem('user');
+    const permissionsStr = localStorage.getItem('permissions');
 
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+        const permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
+        this.userPermissions.set(permissions);
+        console.log('🔄 Loaded from storage:', { user, permissions });
       } catch (e) {
         this.clearSession();
       }
@@ -112,8 +142,10 @@ export class AuthService {
   }
 
   hasPermission(permission: string): boolean {
-    const user = this.currentUser();
-    return user?.role?.permissions?.includes(permission) ?? false;
+    const permissions = this.userPermissions();
+    const hasIt = permissions.includes(permission);
+    console.log(`🔍 Checking permission "${permission}":`, hasIt, '| Available:', permissions);
+    return hasIt;
   }
 
   isSystemAdmin(): boolean {

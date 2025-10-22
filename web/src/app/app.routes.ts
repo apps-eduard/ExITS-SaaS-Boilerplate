@@ -21,6 +21,16 @@ export const routes: Routes = [
     canActivate: [systemAdminGuard]
   },
   {
+    path: 'profile',
+    loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'settings',
+    loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./shared/layouts/admin-layout.component').then(m => m.AdminLayoutComponent),
     canActivate: [systemAdminGuard],
@@ -50,20 +60,20 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
           },
           {
-            path: 'admins',
-            loadComponent: () => import('./features/admin/users/users-admins.component').then(m => m.UsersAdminsComponent)
-          },
-          {
-            path: 'activity',
-            loadComponent: () => import('./features/admin/users/users-activity.component').then(m => m.UsersActivityComponent)
-          },
-          {
             path: 'new',
             loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
           },
           {
             path: 'invite',
             loadComponent: () => import('./features/admin/users/user-invite.component').then(m => m.UserInviteComponent)
+          },
+          {
+            path: 'admins',
+            loadComponent: () => import('./features/admin/users/users-admins.component').then(m => m.UsersAdminsComponent)
+          },
+          {
+            path: 'activity',
+            loadComponent: () => import('./features/admin/users/users-activity.component').then(m => m.UsersActivityComponent)
           },
           {
             path: ':id',
@@ -82,6 +92,27 @@ export const routes: Routes = [
       {
         path: 'permissions',
         loadComponent: () => import('./features/admin/permissions/permissions.component').then(m => m.PermissionsComponent)
+      },
+      {
+        path: 'tenants',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/tenants/tenants-list.component').then(m => m.TenantsListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/tenants/tenant-editor.component').then(m => m.TenantEditorComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/admin/tenants/tenant-details.component').then(m => m.TenantDetailsComponent)
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/admin/tenants/tenant-editor.component').then(m => m.TenantEditorComponent)
+          }
+        ]
       },
       {
         path: 'system',
@@ -105,6 +136,27 @@ export const routes: Routes = [
           {
             path: 'logs',
             loadComponent: () => import('./features/admin/system/system-logs.component').then(m => m.SystemLogsComponent)
+          }
+        ]
+      },
+      {
+        path: 'billing',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/billing/billing-dashboard.component').then(m => m.BillingDashboardComponent)
+          },
+          {
+            path: 'plans',
+            loadComponent: () => import('./features/admin/billing/billing-plans.component').then(m => m.BillingPlansComponent)
+          },
+          {
+            path: 'subscriptions',
+            loadComponent: () => import('./features/admin/billing/billing-subscriptions.component').then(m => m.BillingSubscriptionsComponent)
+          },
+          {
+            path: 'invoices',
+            loadComponent: () => import('./features/admin/billing/billing-invoices.component').then(m => m.BillingInvoicesComponent)
           }
         ]
       }

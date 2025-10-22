@@ -21,10 +21,10 @@ import { AuthService } from '../../../core/services/auth.service';
         <button
           *ngIf="canCreateUsers()"
           routerLink="/admin/users/new"
-          class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all"
+          class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
           Create User
         </button>
@@ -185,8 +185,11 @@ import { AuthService } from '../../../core/services/auth.service';
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">&nbsp;</label>
             <button
               (click)="clearFilters()"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center justify-center gap-1.5 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
             >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
               Clear Filters
             </button>
           </div>
@@ -203,7 +206,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="flex-1"></div>
         <button
           (click)="exportSelected()"
-          class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition shadow-sm"
+          class="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition shadow-sm"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -213,7 +216,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <button
           *ngIf="canDeleteUsers()"
           (click)="bulkDelete()"
-          class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-red-700 bg-white hover:bg-red-50 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition shadow-sm"
+          class="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-red-700 bg-white hover:bg-red-50 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition shadow-sm"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -236,9 +239,12 @@ import { AuthService } from '../../../core/services/auth.service';
             <p class="text-xs text-yellow-700 dark:text-yellow-400">{{ userService.errorSignal() }}</p>
             <button
               (click)="userService.loadUsers()"
-              class="mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700 transition"
+              class="inline-flex items-center gap-1.5 mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700 transition"
             >
-              🔄 Retry
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Retry
             </button>
           </div>
         </div>
@@ -378,16 +384,22 @@ import { AuthService } from '../../../core/services/auth.service';
             <button
               (click)="previousPage()"
               [disabled]="userService.paginationSignal().page === 1"
-              class="rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
             >
-              ← Previous
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
             </button>
             <button
               (click)="nextPage()"
               [disabled]="userService.paginationSignal().page >= userService.paginationSignal().pages"
-              class="rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
             >
-              Next →
+              Next
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </div>
@@ -406,9 +418,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <button
             *ngIf="!searchQuery && canCreateUsers()"
             routerLink="/admin/users/new"
-            class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
+            class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
           >
-            ➕ Create User
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            Create User
           </button>
         </div>
       </div>

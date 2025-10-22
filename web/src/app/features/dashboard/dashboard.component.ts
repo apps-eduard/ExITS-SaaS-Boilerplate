@@ -16,15 +16,8 @@ import { AuthService } from '../../core/services/auth.service';
         <app-header (menuToggle)="toggleSidebar()"/>
         
         <main class="flex-1 overflow-y-auto p-4 lg:p-6">
-          <!-- Welcome Banner -->
-          <div class="bg-gradient-to-r from-primary-600 to-blue-600 rounded-xl p-6 text-white mb-6 shadow-lg">
-            <h1 class="text-2xl lg:text-3xl font-bold mb-2">
-              Welcome back, {{ user()?.first_name }}! 👋
-            </h1>
-            <p class="text-primary-100">Here's what's happening with your platform today</p>
-          </div>
 
-          <!-- Stats Grid -->
+        <!-- Stats Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
             @for (stat of stats; track stat.label) {
               <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
