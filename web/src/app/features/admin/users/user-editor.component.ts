@@ -2,9 +2,17 @@ import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { UserService, User, UserCreatePayload, UserUpdatePayload } from '../../../core/services/user.service';
 import { RoleService, Role } from '../../../core/services/role.service';
 import { AddressService, AddressCreatePayload } from '../../../core/services/address.service';
+
+interface Tenant {
+  id: number;
+  name: string;
+  subdomain: string;
+  status: string;
+}
 
 @Component({
   selector: 'app-user-editor',
@@ -130,7 +138,7 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
               </select>
             </div>
 
-            <!-- Tenant ID -->
+            <!-- User Type -->
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 User Type
@@ -146,6 +154,33 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 <option value="tenant">Tenant User</option>
               </select>
             </div>
+          </div>
+
+          <!-- Tenant Selection (shown only for tenant users in create mode) -->
+          <div *ngIf="userType === 'tenant' && !isEditMode()" class="mt-3">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Select Tenant <span class="text-red-500">*</span>
+            </label>
+            
+            <div *ngIf="loadingTenants()" class="text-xs text-gray-500 dark:text-gray-400 py-2">
+              Loading tenants...
+            </div>
+            
+            <select
+              *ngIf="!loadingTenants()"
+              [(ngModel)]="formData.tenantId"
+              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              required
+            >
+              <option [ngValue]="undefined">-- Select a tenant --</option>
+              <option *ngFor="let tenant of tenants()" [ngValue]="tenant.id">
+                {{ tenant.name }} ({{ tenant.subdomain }})
+              </option>
+            </select>
+            
+            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              💡 This user will only have access to the selected tenant's data
+            </p>
           </div>
         </div>
 
@@ -407,7 +442,10 @@ export class UserEditorComponent implements OnInit {
   isEditMode = signal(false);
   saving = signal(false);
   errorMessage = signal<string | null>(null);
-  userType = 'tenant'; // 'system' or 'tenant'
+  userType = 'system'; // 'system' or 'tenant' - default to system admin
+  
+  tenants = signal<Tenant[]>([]);
+  loadingTenants = signal(false);
 
   formData: any = {
     firstName: '',
@@ -441,6 +479,7 @@ export class UserEditorComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private http: HttpClient,
     public userService: UserService,
     public roleService: RoleService,
     public addressService: AddressService
@@ -450,8 +489,9 @@ export class UserEditorComponent implements OnInit {
     this.userId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(this.userId !== null && this.userId !== 'new');
 
-    // Load roles
+    // Load roles and tenants
     await this.roleService.loadRoles();
+    this.loadTenants();
 
     // Load user if editing
     if (this.isEditMode() && this.userId) {
@@ -496,6 +536,30 @@ export class UserEditorComponent implements OnInit {
     }
   }
 
+  async loadTenants() {
+    this.loadingTenants.set(true);
+    try {
+      this.http.get<any>('/api/tenants', {
+        params: { page: '1', limit: '100' }
+      }).subscribe({
+        next: (response) => {
+          if (response && response.data) {
+            this.tenants.set(response.data);
+            console.log('🏢 Loaded tenants:', response.data.length);
+          }
+          this.loadingTenants.set(false);
+        },
+        error: (error) => {
+          console.error('❌ Error loading tenants:', error);
+          this.loadingTenants.set(false);
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error loading tenants:', error);
+      this.loadingTenants.set(false);
+    }
+  }
+
   availableRoles() {
     const roles = this.roleService.rolesSignal();
     console.log('🎭 All roles:', roles);
@@ -530,14 +594,25 @@ export class UserEditorComponent implements OnInit {
     // Clear selected roles when user type changes
     this.selectedRoles.set(new Set());
 
-    // Set tenantId based on user type
-    this.formData.tenantId = this.userType === 'system' ? null : undefined;
+    // Reset tenantId based on user type
+    if (this.userType === 'system') {
+      this.formData.tenantId = null;
+    } else {
+      // For tenant users, clear the selection so user must choose
+      this.formData.tenantId = undefined;
+    }
   }
 
   isFormValid(): boolean {
     if (!this.formData.email) return false;
     if (!this.isEditMode() && !this.formData.password) return false;
     if (!this.isEditMode() && this.formData.password.length < 8) return false;
+    
+    // If creating a tenant user, tenant must be selected
+    if (!this.isEditMode() && this.userType === 'tenant' && !this.formData.tenantId) {
+      return false;
+    }
+    
     return true;
   }
 
@@ -566,8 +641,16 @@ export class UserEditorComponent implements OnInit {
           password: this.formData.password,
           firstName: this.formData.firstName,
           lastName: this.formData.lastName,
-          tenantId: this.userType === 'system' ? null : undefined
+          // Use selected tenant ID or null for system admin
+          tenantId: this.userType === 'system' ? null : this.formData.tenantId
         };
+        
+        console.log('👤 Creating user:', {
+          userType: this.userType,
+          tenantId: createPayload.tenantId,
+          email: createPayload.email
+        });
+        
         user = await this.userService.createUser(createPayload);
       }
 

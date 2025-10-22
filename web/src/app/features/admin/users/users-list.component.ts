@@ -147,6 +147,7 @@ import { AuthService } from '../../../core/services/auth.service';
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
               [(ngModel)]="filterStatus"
+              (change)="applyFilters()"
               class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="">All</option>
@@ -160,6 +161,7 @@ import { AuthService } from '../../../core/services/auth.service';
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
             <select
               [(ngModel)]="filterType"
+              (change)="applyFilters()"
               class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="">All</option>
@@ -172,6 +174,7 @@ import { AuthService } from '../../../core/services/auth.service';
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
             <select
               [(ngModel)]="filterRole"
+              (change)="applyFilters()"
               class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="">All Roles</option>
@@ -484,10 +487,22 @@ export class UsersListComponent implements OnInit {
 
     // Filter by role
     if (this.filterRole) {
-      users = users.filter(u => u.roles?.some(r => r.id === this.filterRole));
+      // Convert both to strings for comparison since select values are strings
+      users = users.filter(u => u.roles?.some(r => String(r.id) === String(this.filterRole)));
     }
 
     return users;
+  }
+
+  applyFilters(): void {
+    // Trigger change detection by accessing the getter
+    // The filteredUsers getter will automatically apply the filters
+    console.log('🔍 Filters applied:', {
+      status: this.filterStatus,
+      type: this.filterType,
+      role: this.filterRole,
+      resultCount: this.filteredUsers.length
+    });
   }
 
   clearFilters(): void {

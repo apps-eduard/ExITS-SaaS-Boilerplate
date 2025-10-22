@@ -1,6 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 interface HealthCheck {
@@ -14,7 +13,7 @@ interface HealthCheck {
 @Component({
   selector: 'app-system-health',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
     <div class="p-6 space-y-6">
       <!-- Header -->

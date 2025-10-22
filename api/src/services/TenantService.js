@@ -20,7 +20,8 @@ class TenantService {
       status: dbTenant.status,
       maxUsers: dbTenant.max_users,
       logoUrl: dbTenant.logo_url,
-      colors: dbTenant.colors,
+      primaryColor: dbTenant.primary_color,
+      secondaryColor: dbTenant.secondary_color,
       createdAt: dbTenant.created_at,
       updatedAt: dbTenant.updated_at,
       // Include counts if present
@@ -45,17 +46,18 @@ class TenantService {
       }
 
       const result = await pool.query(
-        `INSERT INTO tenants (name, subdomain, plan, status, max_users, logo_url, colors)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO tenants (name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id, name, subdomain, plan, status, max_users, created_at`,
         [
           tenantData.name,
           tenantData.subdomain,
           tenantData.plan || 'basic',
-          'active',
-          tenantData.max_users || 50,
-          tenantData.logo_url || null,
-          tenantData.colors ? JSON.stringify(tenantData.colors) : null,
+          tenantData.status || 'active',
+          tenantData.maxUsers || 10,
+          tenantData.logoUrl || null,
+          tenantData.primaryColor || null,
+          tenantData.secondaryColor || null,
         ]
       );
 
@@ -92,7 +94,7 @@ class TenantService {
   static async getTenantById(tenantId) {
     try {
       const result = await pool.query(
-        `SELECT id, name, subdomain, plan, status, max_users, logo_url, colors, created_at, updated_at
+        `SELECT id, name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color, created_at, updated_at
          FROM tenants
          WHERE id = $1`,
         [tenantId]
@@ -117,7 +119,6 @@ class TenantService {
 
       return {
         ...tenant,
-        colors: tenant.colors ? JSON.parse(tenant.colors) : null,
         user_count: parseInt(usersCountResult.rows[0].count),
         role_count: parseInt(rolesCountResult.rows[0].count),
       };
@@ -233,9 +234,14 @@ class TenantService {
         values.push(updateData.max_users);
       }
 
-      if (updateData.colors !== undefined) {
-        fieldsToUpdate.push(`colors = $${paramCount++}`);
-        values.push(updateData.colors ? JSON.stringify(updateData.colors) : null);
+      if (updateData.primaryColor !== undefined) {
+        fieldsToUpdate.push(`primary_color = $${paramCount++}`);
+        values.push(updateData.primaryColor);
+      }
+
+      if (updateData.secondaryColor !== undefined) {
+        fieldsToUpdate.push(`secondary_color = $${paramCount++}`);
+        values.push(updateData.secondaryColor);
       }
 
       values.push(tenantId);

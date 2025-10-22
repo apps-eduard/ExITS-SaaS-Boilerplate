@@ -6,7 +6,7 @@
 const TenantService = require('../services/TenantService');
 const { validateCreateTenant, validatePagination } = require('../utils/validators');
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const CONSTANTS = require('../config/constants');
 
 class TenantController {
   /**
@@ -78,13 +78,9 @@ class TenantController {
     try {
       const { page = 1, limit = 20, status = null, plan = null } = req.query;
 
-      const { error, value } = validatePagination({ page: parseInt(page), limit: parseInt(limit) });
-      if (error) {
-        error.isJoi = true;
-        return next(error);
-      }
+      const pagination = validatePagination(page, limit);
 
-      const result = await TenantService.listTenants(value.page, value.limit, status, plan);
+      const result = await TenantService.listTenants(pagination.page, pagination.limit, status, plan);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         message: 'Tenants retrieved successfully',

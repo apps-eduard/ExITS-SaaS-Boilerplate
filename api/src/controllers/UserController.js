@@ -61,7 +61,11 @@ class UserController {
 
       const pagination = validatePagination(page, limit);
 
-      const result = await UserService.listUsers(req.tenantId, pagination.page, pagination.limit, search);
+      // System admins (no tenantId) see ALL users from all tenants
+      // Tenant users only see users from their tenant
+      const includeAllTenants = !req.tenantId;
+
+      const result = await UserService.listUsers(req.tenantId, pagination.page, pagination.limit, search, includeAllTenants);
 
       res.status(HTTP_STATUS.OK).json({
         message: 'Users retrieved successfully',

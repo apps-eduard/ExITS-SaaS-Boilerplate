@@ -13,7 +13,8 @@ class UserService {
    */
   static transformUser(dbUser) {
     if (!dbUser) return null;
-    return {
+    
+    const user = {
       id: dbUser.id,
       email: dbUser.email,
       firstName: dbUser.first_name,
@@ -27,6 +28,17 @@ class UserService {
       createdAt: dbUser.created_at,
       updatedAt: dbUser.updated_at,
     };
+
+    // Add tenant information if available (from JOIN query)
+    if (dbUser.tenant_name !== undefined) {
+      user.tenant = {
+        id: dbUser.tenant_id,
+        name: dbUser.tenant_name,
+        subdomain: dbUser.tenant_subdomain
+      };
+    }
+
+    return user;
   }
 
   /**
@@ -141,27 +153,37 @@ class UserService {
   /**
    * List users with pagination
    */
-  static async listUsers(tenantId, page = 1, limit = 20, search = '') {
+  static async listUsers(tenantId, page = 1, limit = 20, search = '', includeAllTenants = false) {
     try {
       const offset = (page - 1) * limit;
 
       // Search condition
       const searchCondition = search
-        ? "AND (u.email ILIKE $4 OR u.first_name ILIKE $4 OR u.last_name ILIKE $4)"
+        ? "AND (u.email ILIKE $3 OR u.first_name ILIKE $3 OR u.last_name ILIKE $3)"
         : '';
 
+      // Tenant filter - if includeAllTenants is true, don't filter by tenant
+      const tenantFilter = includeAllTenants ? '' : 'WHERE (u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1 IS NULL))';
+
       const baseQuery = `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login_at, u.created_at
+        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login_at, u.created_at,
+               t.name as tenant_name, t.subdomain as tenant_subdomain
         FROM users u
-        WHERE (u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1 IS NULL))
+        LEFT JOIN tenants t ON u.tenant_id = t.id
+        ${tenantFilter}
         ${searchCondition}
       `;
 
       const countQuery = `SELECT COUNT(*) as total FROM (${baseQuery}) as t`;
-      const dataQuery = `${baseQuery} ORDER BY u.created_at DESC LIMIT $2 OFFSET $3`;
+      const dataQuery = `${baseQuery} ORDER BY u.created_at DESC LIMIT ${includeAllTenants ? '$1' : '$2'} OFFSET ${includeAllTenants ? '$2' : '$3'}`;
 
-      const countParams = search ? [tenantId, search] : [tenantId];
-      const dataParams = search ? [tenantId, limit, offset, `%${search}%`] : [tenantId, limit, offset];
+      const countParams = includeAllTenants 
+        ? (search ? [`%${search}%`] : [])
+        : (search ? [tenantId, `%${search}%`] : [tenantId]);
+      
+      const dataParams = includeAllTenants
+        ? (search ? [limit, offset, `%${search}%`] : [limit, offset])
+        : (search ? [tenantId, limit, offset, `%${search}%`] : [tenantId, limit, offset]);
 
       const [countResult, dataResult] = await Promise.all([
         pool.query(countQuery, countParams),
