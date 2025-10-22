@@ -553,7 +553,7 @@ export class RoleEditorComponent implements OnInit {
         });
       }
     } else {
-      // Checking - add with default view permission
+      // Checking - add with default view permission (but don't auto-check children)
       perms.set(menuKey, { menuKey, view: true, create: false, edit: false, delete: false });
     }
     this.permissions.set(perms);
@@ -653,9 +653,32 @@ export class RoleEditorComponent implements OnInit {
     console.log('Permissions Map:', this.permissions());
 
     try {
+      // Ensure parent menus are included when children are checked
+      const perms = new Map(this.permissions());
+
+      // For each menu item that has children
+      this.menuItems.forEach(parentMenu => {
+        if (parentMenu.children && parentMenu.children.length > 0) {
+          // Check if any child has permissions
+          const hasChildPermissions = parentMenu.children.some(child => perms.has(child.key));
+
+          // If children have permissions but parent doesn't, add parent with view permission
+          if (hasChildPermissions && !perms.has(parentMenu.key)) {
+            console.log(`✅ Auto-adding parent menu "${parentMenu.key}" because children have permissions`);
+            perms.set(parentMenu.key, {
+              menuKey: parentMenu.key,
+              view: true,
+              create: false,
+              edit: false,
+              delete: false
+            });
+          }
+        }
+      });
+
       // Convert permissions map to array
       const permissionsArray: any[] = [];
-      this.permissions().forEach(perm => {
+      perms.forEach(perm => {
         if (perm.view) permissionsArray.push({ menuKey: perm.menuKey, actionKey: 'view' });
         if (perm.create) permissionsArray.push({ menuKey: perm.menuKey, actionKey: 'create' });
         if (perm.edit) permissionsArray.push({ menuKey: perm.menuKey, actionKey: 'edit' });

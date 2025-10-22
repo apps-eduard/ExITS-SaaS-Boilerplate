@@ -97,7 +97,7 @@ interface MenuItem {
                 @if (expandedGroups().has(item.label)) {
                   <div class="mt-0.5 ml-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5">
                     @for (child of item.children; track child.label) {
-                      @if (hasMenuAccessMethod(child.menuKey)) {
+                      @if (hasMenuAccessMethod(child.menuKey) || hasMenuAccessMethod(item.menuKey)) {
                         <a
                           [routerLink]="child.route"
                           routerLinkActive="text-primary-600 dark:text-primary-400 font-semibold"
@@ -142,10 +142,9 @@ export class SidebarComponent {
       icon: '🏢',
       menuKey: 'tenants',
       children: [
-        { label: 'Overview', icon: '📋', route: '/tenants', menuKey: 'tenants' },
-        { label: 'Create Tenant', icon: '➕', route: '/tenants/create', menuKey: 'tenants', requiredAction: 'create' },
-        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', menuKey: 'tenants' },
-        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', menuKey: 'tenants' },
+        { label: 'Overview', icon: '📋', route: '/tenants', menuKey: 'tenants-overview' },
+        { label: 'Subscriptions', icon: '💳', route: '/tenants/subscriptions', menuKey: 'tenants-subscriptions' },
+        { label: 'Usage Analytics', icon: '📊', route: '/tenants/usage', menuKey: 'tenants-usage' },
       ]
     },
     {
@@ -153,19 +152,16 @@ export class SidebarComponent {
       icon: '👥',
       menuKey: 'users',
       children: [
-        { label: 'All Users', icon: '👤', route: '/admin/users', menuKey: 'users' },
-        { label: 'Invite User', icon: '📧', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
-        { label: 'Admin Users', icon: '👑', route: '/admin/users/admins', menuKey: 'users' },
-        { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
+        { label: 'All Users', icon: '👤', route: '/admin/users', menuKey: 'users-list' },
+        { label: 'User Roles', icon: '🎭', route: '/admin/users/roles', menuKey: 'users-roles' },
+        { label: 'Invitations', icon: '✉️', route: '/admin/users/invites', menuKey: 'users-invites' },
       ]
     },
     {
       label: 'Roles & Permissions',
       icon: '🔐',
-      menuKey: 'roles',
-      children: [
-        { label: 'Roles Management', icon: '👔', route: '/admin/roles', menuKey: 'roles' }
-      ]
+      route: '/admin/roles',
+      menuKey: 'roles'
     },
     {
       label: 'System',
