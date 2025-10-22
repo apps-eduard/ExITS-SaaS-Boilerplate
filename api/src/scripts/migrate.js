@@ -26,6 +26,7 @@ async function migrate() {
     const migrationFiles = [
       'schema.sql',
       'migration-add-philippine-addresses.sql',
+      'billing-schema.sql',
       'seed.sql'
     ];
 
