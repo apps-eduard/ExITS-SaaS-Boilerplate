@@ -8,6 +8,28 @@ const logger = require('../utils/logger');
 
 class TenantService {
   /**
+   * Transform database tenant object to camelCase
+   */
+  static transformTenant(dbTenant) {
+    if (!dbTenant) return null;
+    return {
+      id: dbTenant.id,
+      name: dbTenant.name,
+      subdomain: dbTenant.subdomain,
+      plan: dbTenant.plan,
+      status: dbTenant.status,
+      maxUsers: dbTenant.max_users,
+      logoUrl: dbTenant.logo_url,
+      colors: dbTenant.colors,
+      createdAt: dbTenant.created_at,
+      updatedAt: dbTenant.updated_at,
+      // Include counts if present
+      userCount: dbTenant.user_count,
+      roleCount: dbTenant.role_count,
+    };
+  }
+
+  /**
    * Create a new tenant
    */
   static async createTenant(tenantData, requestingUserId) {

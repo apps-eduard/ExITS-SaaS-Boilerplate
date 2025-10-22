@@ -39,6 +39,9 @@ class RBACService {
       const result = await db.query(query, [userId]);
       
       logger.info(`✅ Found ${result.rows.length} permission entries for user ${userId}`);
+      if (result.rows.length > 0) {
+        logger.info(`📋 First 3 permissions:`, result.rows.slice(0, 3));
+      }
       
       // Format permissions by menu key with action keys
       const permissions = {};
@@ -59,6 +62,7 @@ class RBACService {
       });
       
       logger.info(`📊 Formatted permissions for ${Object.keys(permissions).length} modules`);
+      logger.info(`🔑 Menu keys with access: ${Object.keys(permissions).join(', ')}`);
       
       return permissions;
     } catch (error) {
@@ -188,21 +192,27 @@ class RBACService {
       
       const permResult = await db.query(permQuery, [roleId]);
       
-      // Group permissions by module
-      const permissions = {};
-      permResult.rows.forEach(row => {
-        if (!permissions[row.menu_key]) {
-          permissions[row.menu_key] = {
-            moduleId: row.module_id,
-            displayName: row.display_name,
-            actions: []
-          };
-        }
-        permissions[row.menu_key].actions.push(row.action_key);
-      });
+      // Transform permissions to camelCase array format
+      const permissions = permResult.rows.map(row => ({
+        moduleId: row.module_id,
+        menuKey: row.menu_key,
+        displayName: row.display_name,
+        actionKey: row.action_key,
+      }));
       
-      role.permissions = permissions;
-      return role;
+      // Transform role to camelCase
+      const transformedRole = {
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        space: role.space,
+        status: role.status,
+        tenantId: role.tenant_id,
+        permissions: permissions,
+      };
+      
+      logger.info(`📋 Role ${roleId} loaded with ${permissions.length} permissions`);
+      return transformedRole;
     } catch (error) {
       logger.error('❌ Error fetching role with permissions:', error.message);
       throw error;

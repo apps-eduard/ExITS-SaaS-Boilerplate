@@ -320,7 +320,7 @@ import { RoleService } from '../../../core/services/role.service';
                 </td>
                 <td class="px-4 py-3 text-center">
                   <span class="text-xs text-gray-600 dark:text-gray-400">
-                    {{ user.lastLogin ? formatDate(user.lastLogin) : 'Never' }}
+                    {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
                   </span>
                 </td>
                 <td class="px-4 py-3">

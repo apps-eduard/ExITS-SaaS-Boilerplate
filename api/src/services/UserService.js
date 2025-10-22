@@ -168,8 +168,24 @@ class UserService {
         pool.query(dataQuery, dataParams),
       ]);
 
-      // Transform snake_case to camelCase for frontend
-      const users = dataResult.rows.map(row => this.transformUser(row));
+      // Transform snake_case to camelCase and fetch roles for each user
+      const users = await Promise.all(
+        dataResult.rows.map(async (row) => {
+          const user = this.transformUser(row);
+          
+          // Fetch roles for this user
+          const rolesQuery = `
+            SELECT r.id, r.name, r.description, r.space
+            FROM roles r
+            INNER JOIN user_roles ur ON ur.role_id = r.id
+            WHERE ur.user_id = $1
+          `;
+          const rolesResult = await pool.query(rolesQuery, [row.id]);
+          user.roles = rolesResult.rows;
+          
+          return user;
+        })
+      );
 
       return {
         users,

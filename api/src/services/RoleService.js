@@ -8,6 +8,41 @@ const logger = require('../utils/logger');
 
 class RoleService {
   /**
+   * Transform database role object to camelCase
+   */
+  static transformRole(dbRole) {
+    if (!dbRole) return null;
+    return {
+      id: dbRole.id,
+      tenantId: dbRole.tenant_id,
+      name: dbRole.name,
+      description: dbRole.description,
+      space: dbRole.space,
+      parentRoleId: dbRole.parent_role_id,
+      status: dbRole.status,
+      createdAt: dbRole.created_at,
+      updatedAt: dbRole.updated_at,
+      // Keep permissions array if it exists (will be transformed separately)
+      permissions: dbRole.permissions,
+    };
+  }
+
+  /**
+   * Transform permission object to camelCase
+   */
+  static transformPermission(dbPerm) {
+    if (!dbPerm) return null;
+    return {
+      id: dbPerm.id,
+      menuKey: dbPerm.menu_key,
+      displayName: dbPerm.display_name,
+      actionKey: dbPerm.action_key,
+      constraints: dbPerm.constraints,
+      status: dbPerm.status,
+    };
+  }
+
+  /**
    * Create a new role
    */
   static async createRole(roleData, requestingUserId, tenantId) {
@@ -30,7 +65,7 @@ class RoleService {
       await this.auditLog(requestingUserId, tenantId, 'create', 'role', role.id, roleData);
 
       logger.info(`Role created: ${role.name} (${role.id})`);
-      return role;
+      return this.transformRole(role);
     } catch (err) {
       logger.error(`Role service create error: ${err.message}`);
       throw err;
@@ -64,10 +99,15 @@ class RoleService {
         [roleId]
       );
 
-      return {
-        ...role,
-        permissions: permissionsResult.rows,
-      };
+      const transformedRole = this.transformRole(role);
+      transformedRole.permissions = permissionsResult.rows.map(p => this.transformPermission(p));
+      
+      logger.info(`📋 Role ${roleId} has ${transformedRole.permissions.length} permissions`);
+      if (transformedRole.permissions.length > 0) {
+        logger.info(`📋 First permission:`, transformedRole.permissions[0]);
+      }
+      
+      return transformedRole;
     } catch (err) {
       logger.error(`Role service get by ID error: ${err.message}`);
       throw err;
@@ -100,8 +140,10 @@ class RoleService {
         pool.query(dataQuery, dataParams),
       ]);
 
+      const transformedRoles = dataResult.rows.map(role => this.transformRole(role));
+
       return {
-        roles: dataResult.rows,
+        roles: transformedRoles,
         pagination: {
           page,
           limit,
@@ -157,8 +199,8 @@ class RoleService {
 
       await this.auditLog(requestingUserId, tenantId, 'update', 'role', roleId, updateData);
 
-      logger.info(`Role updated: ${roleId}`);
-      return result.rows[0];
+      logger.info(`✅ Role updated: ${roleId}`);
+      return this.transformRole(result.rows[0]);
     } catch (err) {
       logger.error(`Role service update error: ${err.message}`);
       throw err;

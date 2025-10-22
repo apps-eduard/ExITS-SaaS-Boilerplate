@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, effect } from '@angular/core';
+import { Component, OnInit, signal, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -470,7 +470,8 @@ export class RoleEditorComponent implements OnInit {
     public roleService: RoleService,
     private rbacService: RBACService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -491,7 +492,9 @@ export class RoleEditorComponent implements OnInit {
       this.roleDescription = role.description || '';
       this.roleSpace = role.space;
 
-      console.log('🔄 Loading role permissions:', role.permissions);
+      console.log('🔄 Loading role:', role);
+      console.log('🔄 Role permissions (raw):', role.permissions);
+      console.log('🔄 First permission example:', role.permissions?.[0]);
 
       // Load permissions into map
       const permMap = new Map<string, MenuPermission>();
@@ -500,6 +503,8 @@ export class RoleEditorComponent implements OnInit {
           // Handle both camelCase and snake_case from API
           const menuKey = (perm as any).menuKey || (perm as any).menu_key;
           const actionKey = (perm as any).actionKey || (perm as any).action_key;
+
+          console.log('🔍 Processing permission:', { perm, menuKey, actionKey });
 
           if (!menuKey || !actionKey) {
             console.warn('⚠️ Invalid permission format:', perm);
@@ -518,7 +523,15 @@ export class RoleEditorComponent implements OnInit {
       }
 
       console.log('✅ Loaded permissions map:', permMap);
+      console.log('✅ Permissions map size:', permMap.size);
+      console.log('✅ Permission menu keys:', Array.from(permMap.keys()));
+      console.log('📋 Available menu items:', this.menuItems.map(m => ({ key: m.key, label: m.label })));
+
       this.permissions.set(permMap);
+
+      // Trigger change detection to update the UI
+      this.cdr.detectChanges();
+      console.log('🔄 Change detection triggered for role editor');
     }
   }
 

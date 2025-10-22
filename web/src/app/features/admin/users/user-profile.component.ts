@@ -87,7 +87,7 @@ import { RoleService } from '../../../core/services/role.service';
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400">Last Login</p>
                   <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                    {{ user()?.lastLogin ? formatDate(user()?.lastLogin) : 'Never' }}
+                    {{ user()?.lastLoginAt ? formatDate(user()?.lastLoginAt) : 'Never' }}
                   </p>
                 </div>
               </div>

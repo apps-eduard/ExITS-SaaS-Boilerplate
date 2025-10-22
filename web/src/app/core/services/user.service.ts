@@ -21,7 +21,8 @@ export interface User {
   }>;
   createdAt?: string;
   updatedAt?: string;
-  lastLogin?: string;
+  lastLoginAt?: string;
+  emailVerified?: boolean;
 }
 
 export interface UserCreatePayload {

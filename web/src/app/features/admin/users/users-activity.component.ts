@@ -89,10 +89,10 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
                   </td>
                   <td class="px-4 py-3 text-center text-xs">
                     <div class="text-gray-900 dark:text-white font-medium">
-                      {{ formatDate(user.lastLogin) }}
+                      {{ formatDate(user.lastLoginAt) }}
                     </div>
                     <div class="text-gray-500 dark:text-gray-400 text-xs">
-                      {{ getTimeAgo(user.lastLogin) }}
+                      {{ getTimeAgo(user.lastLoginAt) }}
                     </div>
                   </td>
                   <td class="px-4 py-3 text-center text-xs text-gray-600 dark:text-gray-400">
@@ -139,14 +139,14 @@ export class UsersActivityComponent implements OnInit {
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     return this.userService.usersSignal().filter(u => {
-      if (!u.lastLogin) return false;
-      const loginTime = new Date(u.lastLogin).getTime();
+      if (!u.lastLoginAt) return false;
+      const loginTime = new Date(u.lastLoginAt).getTime();
       return loginTime >= oneDayAgo;
     }).length;
   }
 
   getNeverLoggedIn(): number {
-    return this.userService.usersSignal().filter(u => !u.lastLogin).length;
+    return this.userService.usersSignal().filter(u => !u.lastLoginAt).length;
   }
 
   getInitials(user: any): string {

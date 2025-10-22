@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -57,7 +57,9 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 First Name
               </label>
               <input
-                [(ngModel)]="formData.firstName"
+                name="firstName"
+                [value]="formData.firstName"
+                (input)="formData.firstName = $any($event.target).value"
                 type="text"
                 placeholder="John"
                 class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -70,7 +72,9 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 Last Name
               </label>
               <input
-                [(ngModel)]="formData.lastName"
+                name="lastName"
+                [value]="formData.lastName"
+                (input)="formData.lastName = $any($event.target).value"
                 type="text"
                 placeholder="Doe"
                 class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -83,7 +87,9 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 Email <span class="text-red-500">*</span>
               </label>
               <input
-                [(ngModel)]="formData.email"
+                name="email"
+                [value]="formData.email"
+                (input)="formData.email = $any($event.target).value"
                 type="email"
                 placeholder="john.doe@example.com"
                 [disabled]="isEditMode()"
@@ -98,6 +104,7 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 Password <span class="text-red-500">*</span>
               </label>
               <input
+                name="password"
                 [(ngModel)]="formData.password"
                 type="password"
                 placeholder="••••••••"
@@ -113,6 +120,7 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 Status
               </label>
               <select
+                name="status"
                 [(ngModel)]="formData.status"
                 class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               >
@@ -128,6 +136,7 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
                 User Type
               </label>
               <select
+                name="userType"
                 [(ngModel)]="userType"
                 (ngModelChange)="onUserTypeChange()"
                 [disabled]="isEditMode()"
@@ -431,6 +440,7 @@ export class UserEditorComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
     public userService: UserService,
     public roleService: RoleService,
     public addressService: AddressService
@@ -445,15 +455,28 @@ export class UserEditorComponent implements OnInit {
 
     // Load user if editing
     if (this.isEditMode() && this.userId) {
+      console.log('🔍 Loading user ID:', this.userId);
       const user = await this.userService.getUser(this.userId);
+      console.log('📦 User data received:', user);
+
       if (user) {
-        this.formData = {
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+        console.log('✅ User data found:', {
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
-          status: user.status || 'active',
-          tenantId: user.tenantId
-        };
+          status: user.status,
+          tenantId: user.tenantId,
+          roles: user.roles
+        });
+
+        // Update form data properties individually to trigger change detection
+        this.formData.firstName = user.firstName || '';
+        this.formData.lastName = user.lastName || '';
+        this.formData.email = user.email;
+        this.formData.status = user.status || 'active';
+        this.formData.tenantId = user.tenantId;
+
+        console.log('📝 Form data set to:', this.formData);
 
         // Set user type
         this.userType = user.tenantId ? 'tenant' : 'system';
@@ -461,17 +484,31 @@ export class UserEditorComponent implements OnInit {
         // Set selected roles
         if (user.roles) {
           this.selectedRoles.set(new Set(user.roles.map(r => r.id)));
+          console.log('👥 Selected roles:', Array.from(this.selectedRoles()));
         }
+
+        // Manually trigger change detection
+        this.cdr.detectChanges();
+        console.log('🔄 Change detection triggered');
+      } else {
+        console.error('❌ No user data returned from API');
       }
     }
   }
 
   availableRoles() {
     const roles = this.roleService.rolesSignal();
+    console.log('🎭 All roles:', roles);
+    console.log('👤 User type:', this.userType);
+
     if (this.userType === 'system') {
-      return roles.filter(r => r.space === 'system');
+      const systemRoles = roles.filter(r => r.space === 'system');
+      console.log('🔧 System roles:', systemRoles);
+      return systemRoles;
     } else {
-      return roles.filter(r => r.space === 'tenant');
+      const tenantRoles = roles.filter(r => r.space === 'tenant');
+      console.log('🏢 Tenant roles:', tenantRoles);
+      return tenantRoles;
     }
   }
 
@@ -535,10 +572,39 @@ export class UserEditorComponent implements OnInit {
       }
 
       if (user) {
-        // Assign roles (if any selected)
-        if (this.selectedRoles().size > 0) {
-          for (const roleId of this.selectedRoles()) {
-            await this.userService.assignRole(user.id, roleId);
+        // Update roles (if editing)
+        if (this.isEditMode() && this.userId) {
+          // Get current roles from loaded user data
+          const currentUser = await this.userService.getUser(this.userId);
+          const currentRoleIds = new Set(currentUser?.roles?.map(r => r.id) || []);
+          const selectedRoleIds = this.selectedRoles();
+
+          console.log('🔄 Updating roles:', {
+            current: Array.from(currentRoleIds),
+            selected: Array.from(selectedRoleIds)
+          });
+
+          // Remove roles that are no longer selected
+          for (const roleId of currentRoleIds) {
+            if (!selectedRoleIds.has(roleId)) {
+              console.log(`➖ Removing role ${roleId}`);
+              await this.userService.removeRole(user.id, roleId);
+            }
+          }
+
+          // Add newly selected roles
+          for (const roleId of selectedRoleIds) {
+            if (!currentRoleIds.has(roleId)) {
+              console.log(`➕ Adding role ${roleId}`);
+              await this.userService.assignRole(user.id, roleId);
+            }
+          }
+        } else if (!this.isEditMode()) {
+          // For new users, just assign selected roles
+          if (this.selectedRoles().size > 0) {
+            for (const roleId of this.selectedRoles()) {
+              await this.userService.assignRole(user.id, roleId);
+            }
           }
         }
 
