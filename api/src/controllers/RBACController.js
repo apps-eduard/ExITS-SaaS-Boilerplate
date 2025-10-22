@@ -163,6 +163,44 @@ class RBACController {
   }
 
   /**
+   * Toggle role status (enable/disable)
+   */
+  static async toggleRoleStatus(req, res) {
+    try {
+      const { roleId } = req.params;
+      
+      // Get current status
+      const getQuery = `SELECT status FROM roles WHERE id = $1`;
+      const currentRole = await req.app.locals.db.query(getQuery, [roleId]);
+      
+      if (currentRole.rows.length === 0) {
+        return res.status(404).json({ error: 'Role not found' });
+      }
+
+      const currentStatus = currentRole.rows[0].status;
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      
+      const updateQuery = `
+        UPDATE roles
+        SET status = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id, name, description, space, status
+      `;
+
+      const result = await req.app.locals.db.query(updateQuery, [newStatus, roleId]);
+      
+      logger.info(`✅ Role status toggled: ${roleId} (${currentStatus} → ${newStatus})`);
+      res.json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      logger.error('❌ Error toggling role status:', error.message);
+      res.status(500).json({ error: 'Failed to toggle role status' });
+    }
+  }
+
+  /**
    * Assign permission to role
    */
   static async assignPermission(req, res) {

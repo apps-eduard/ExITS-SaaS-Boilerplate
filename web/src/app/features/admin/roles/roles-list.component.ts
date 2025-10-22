@@ -35,20 +35,20 @@ import { RoleService, Role } from '../../../core/services/role.service';
             </p>
           </div>
           <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">System</p>
-            <p class="text-lg font-bold text-purple-600 dark:text-purple-400">
-              {{ roleService.systemRolesComputed().length }}
+            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Active</p>
+            <p class="text-lg font-bold text-green-600 dark:text-green-400">
+              {{ getActiveRoles() }}
             </p>
           </div>
           <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Tenant</p>
-            <p class="text-lg font-bold text-blue-600 dark:text-blue-400">
-              {{ roleService.tenantRolesComputed().length }}
+            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Disabled</p>
+            <p class="text-lg font-bold text-gray-600 dark:text-gray-400">
+              {{ getInactiveRoles() }}
             </p>
           </div>
           <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
             <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total Perms</p>
-            <p class="text-lg font-bold text-green-600 dark:text-green-400">
+            <p class="text-lg font-bold text-blue-600 dark:text-blue-400">
               {{ getTotalPermissions() }}
             </p>
           </div>
@@ -102,84 +102,94 @@ import { RoleService, Role } from '../../../core/services/role.service';
         </div>
       </div>
 
-      <!-- Roles Grid -->
-      <div *ngIf="!roleService.loadingSignal() && filteredRoles().length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div *ngFor="let role of filteredRoles()" 
-             class="rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900 hover:shadow-md transition-shadow">
-          
-          <!-- Role Header -->
-          <div class="flex items-start justify-between mb-2">
-            <div class="flex-1">
-              <div class="flex items-center gap-2">
-                <h3 class="font-semibold text-gray-900 dark:text-white">{{ role.name }}</h3>
-                <span [class]="'px-2 py-0.5 rounded text-xs font-medium ' + (role.space === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300')">
-                  {{ role.space | uppercase }}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ role.description || 'No description' }}</p>
-            </div>
-            <div class="flex gap-1">
-              <button
-                [routerLink]="'/admin/roles/' + role.id"
-                class="rounded p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition"
-                title="Edit Role"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                (click)="deleteRole(role)"
-                class="rounded p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition"
-                title="Delete Role"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Permission Summary -->
-          <div class="grid grid-cols-4 gap-2 mb-2">
-            <div class="text-center p-2 rounded bg-gray-50 dark:bg-gray-800">
-              <p class="text-lg font-bold text-gray-900 dark:text-white">{{ getRoleSummary(role).totalPermissions }}</p>
-              <p class="text-xs text-gray-600 dark:text-gray-400">Total</p>
-            </div>
-            <div class="text-center p-2 rounded bg-blue-50 dark:bg-blue-900/20">
-              <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ getRoleSummary(role).viewCount }}</p>
-              <p class="text-xs text-blue-600 dark:text-blue-400">View</p>
-            </div>
-            <div class="text-center p-2 rounded bg-green-50 dark:bg-green-900/20">
-              <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ getRoleSummary(role).createCount }}</p>
-              <p class="text-xs text-green-600 dark:text-green-400">Create</p>
-            </div>
-            <div class="text-center p-2 rounded bg-orange-50 dark:bg-orange-900/20">
-              <p class="text-lg font-bold text-orange-600 dark:text-orange-400">{{ getRoleSummary(role).editCount + getRoleSummary(role).deleteCount }}</p>
-              <p class="text-xs text-orange-600 dark:text-orange-400">Modify</p>
-            </div>
-          </div>
-
-          <!-- Module Coverage -->
-          <div class="border-t border-gray-200 dark:border-gray-700 pt-2">
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-gray-600 dark:text-gray-400">Module Access:</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ getRoleSummary(role).moduleCount }} menus</span>
-            </div>
-            <div class="mt-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-blue-600 dark:bg-blue-400 transition-all"
-                [style.width.%]="(getRoleSummary(role).moduleCount / 42) * 100"
-              ></div>
-            </div>
-            <!-- Module Badges -->
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span *ngFor="let module of getRoleSummary(role).modules" 
-                    class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                {{ module }}
-              </span>
-            </div>
-          </div>
+      <!-- Roles Table -->
+      <div *ngIf="!roleService.loadingSignal() && filteredRoles().length > 0" class="rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Role Name</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Description</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Space</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Permissions</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let role of filteredRoles()" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-gray-900 dark:text-white">{{ role.name }}</div>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="text-gray-600 dark:text-gray-400 max-w-xs truncate">{{ role.description || '—' }}</div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (role.space === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300')">
+                    {{ role.space | uppercase }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <div class="flex items-center justify-center gap-3">
+                    <div class="flex items-center gap-1">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ getRoleSummary(role).totalPermissions }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button
+                    (click)="toggleRoleStatus(role)"
+                    [class]="'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ' + (role.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600')"
+                    [title]="role.status === 'active' ? 'Click to disable' : 'Click to enable'"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path *ngIf="role.status === 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path *ngIf="role.status !== 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ role.status === 'active' ? 'Active' : 'Disabled' }}
+                  </button>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      (click)="toggleRoleStatus(role)"
+                      [class]="'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition ' + (role.status === 'active' ? 'text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50' : 'text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50')"
+                      [title]="role.status === 'active' ? 'Disable role' : 'Enable role'"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path *ngIf="role.status === 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        <path *ngIf="role.status !== 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {{ role.status === 'active' ? 'Disable' : 'Enable' }}
+                    </button>
+                    <button
+                      [routerLink]="'/admin/roles/' + role.id"
+                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
+                      title="Edit Role"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      (click)="deleteRole(role)"
+                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition"
+                      title="Delete Role"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -268,6 +278,14 @@ export class RolesListComponent implements OnInit {
     }, 0);
   }
 
+  getActiveRoles(): number {
+    return this.roleService.rolesSignal().filter(r => r.status === 'active').length;
+  }
+
+  getInactiveRoles(): number {
+    return this.roleService.rolesSignal().filter(r => r.status === 'inactive').length;
+  }
+
   clearFilters(): void {
     this.searchQuery.set('');
     this.filterSpace.set('');
@@ -285,6 +303,24 @@ export class RolesListComponent implements OnInit {
       const success = await this.roleService.deleteRole(role.id);
       if (success) {
         console.log(`✅ Role deleted: ${role.name}`);
+      }
+    }
+  }
+
+  async toggleRoleStatus(role: Role): Promise<void> {
+    const action = role.status === 'active' ? 'disable' : 'enable';
+    const confirmed = confirm(
+      `${action === 'disable' ? '⚠️' : '✅'} ${action === 'disable' ? 'Disable' : 'Enable'} Role: ${role.name}\n\n` +
+      `${action === 'disable' 
+        ? 'Users with this role will lose access to its permissions.' 
+        : 'Users with this role will regain access to its permissions.'}\n\n` +
+      `Are you sure you want to ${action} this role?`
+    );
+    
+    if (confirmed) {
+      const success = await this.roleService.toggleRoleStatus(role.id);
+      if (success) {
+        console.log(`✅ Role ${action}d: ${role.name}`);
       }
     }
   }

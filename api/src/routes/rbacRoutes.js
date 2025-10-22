@@ -61,6 +61,12 @@ router.get('/roles/:roleId', RBACController.getRole);
  */
 router.put('/roles/:roleId', RBACController.updateRole);
 
+/**
+ * PATCH /api/rbac/roles/:roleId/toggle-status
+ * Toggle role status (enable/disable)
+ */
+router.patch('/roles/:roleId/toggle-status', RBACController.toggleRoleStatus);
+
 // ==================== PERMISSIONS ====================
 /**
  * POST /api/rbac/roles/:roleId/permissions

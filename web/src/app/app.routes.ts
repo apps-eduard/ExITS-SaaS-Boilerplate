@@ -39,6 +39,31 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'users',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
+          },
+          {
+            path: 'invite',
+            loadComponent: () => import('./features/admin/users/user-invite.component').then(m => m.UserInviteComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
+          },
+          {
+            path: ':id/profile',
+            loadComponent: () => import('./features/admin/users/user-profile.component').then(m => m.UserProfileComponent)
+          }
+        ]
+      },
+      {
         path: 'modules',
         loadComponent: () => import('./features/admin/modules/modules-list.component').then(m => m.ModulesListComponent)
       },

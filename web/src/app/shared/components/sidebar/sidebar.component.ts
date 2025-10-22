@@ -152,10 +152,10 @@ export class SidebarComponent {
       icon: '👥',
       menuKey: 'users',
       children: [
-        { label: 'All Users', icon: '👤', route: '/users', menuKey: 'users' },
-        { label: 'Invite User', icon: '📧', route: '/users/invite', menuKey: 'users', requiredAction: 'create' },
-        { label: 'Admin Users', icon: '👑', route: '/users/admins', menuKey: 'users' },
-        { label: 'User Activity', icon: '👣', route: '/users/activity', menuKey: 'users' },
+        { label: 'All Users', icon: '👤', route: '/admin/users', menuKey: 'users' },
+        { label: 'Invite User', icon: '📧', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
+        { label: 'Admin Users', icon: '👑', route: '/admin/users/admins', menuKey: 'users' },
+        { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
       ]
     },
     {

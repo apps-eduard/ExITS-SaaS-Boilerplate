@@ -16,6 +16,7 @@ export interface Role {
   name: string;
   description?: string;
   space: 'system' | 'tenant';
+  status?: 'active' | 'inactive';
   parentRoleId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -234,6 +235,42 @@ export class RoleService {
       const message = error instanceof Error ? error.message : 'Failed to delete role';
       this.errorSignal.set(message);
       console.error('❌ Error deleting role:', message);
+    } finally {
+      this.loadingSignal.set(false);
+    }
+
+    return false;
+  }
+
+  /**
+   * Toggle role status (enable/disable)
+   */
+  async toggleRoleStatus(roleId: string): Promise<boolean> {
+    try {
+      this.loadingSignal.set(true);
+      this.errorSignal.set(null);
+
+      const response: any = await firstValueFrom(
+        this.http.patch<any>(
+          `${this.apiUrl}/roles/${roleId}/toggle-status`,
+          {},
+          { responseType: 'json' }
+        )
+      );
+
+      if (response && response.success) {
+        const updated = response.data;
+        // Update in signal
+        this.rolesSignal.set(
+          this.rolesSignal().map(r => r.id === roleId ? { ...r, status: updated.status } : r)
+        );
+        console.log(`✅ Role status toggled: ${roleId} → ${updated.status}`);
+        return true;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to toggle role status';
+      this.errorSignal.set(message);
+      console.error('❌ Error toggling role status:', message);
     } finally {
       this.loadingSignal.set(false);
     }
