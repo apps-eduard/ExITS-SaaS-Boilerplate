@@ -10,7 +10,7 @@ Scripts and documentation for Docker containerization and deployment.
 - `web/Dockerfile` - Web container build
 - `nginx/` - Nginx configuration
 
-## Quick Start
+<!-- ## Quick Start -->
 
 ### 1. Setup Environment
 ```bash

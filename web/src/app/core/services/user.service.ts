@@ -53,7 +53,7 @@ export interface PaginatedUsers {
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = '/api/users';
+  private apiUrl = 'http://localhost:3000/api/users';
 
   // Signals
   usersSignal = signal<User[]>([]);
@@ -69,10 +69,10 @@ export class UserService {
 
   // Computed signals
   userCountComputed = computed(() => this.paginationSignal().total);
-  activeUsersComputed = computed(() => 
+  activeUsersComputed = computed(() =>
     this.usersSignal().filter(u => u.status === 'active')
   );
-  inactiveUsersComputed = computed(() => 
+  inactiveUsersComputed = computed(() =>
     this.usersSignal().filter(u => u.status === 'inactive' || u.status === 'suspended')
   );
 

@@ -26,26 +26,32 @@ class UserService {
       // Hash password
       const passwordHash = await bcrypt.hash(userData.password, 10);
 
+      // Handle both camelCase and snake_case field names
+      const firstName = userData.firstName || userData.first_name || '';
+      const lastName = userData.lastName || userData.last_name || '';
+      const userTenantId = userData.tenantId !== undefined ? userData.tenantId : (userData.tenant_id !== undefined ? userData.tenant_id : tenantId);
+
       const result = await pool.query(
         `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, email, first_name, last_name, status, created_at`,
-        [tenantId, userData.email, passwordHash, userData.first_name, userData.last_name, 'active', false]
+        [userTenantId, userData.email, passwordHash, firstName, lastName, userData.status || 'active', false]
       );
 
       const user = result.rows[0];
 
-      // Assign role if provided
-      if (userData.role_id) {
+      // Assign role if provided (handle both camelCase and snake_case)
+      const roleId = userData.roleId || userData.role_id;
+      if (roleId) {
         await pool.query(
           `INSERT INTO user_roles (user_id, role_id)
            VALUES ($1, $2)`,
-          [user.id, userData.role_id]
+          [user.id, roleId]
         );
       }
 
       // Audit log
-      await this.auditLog(requestingUserId, tenantId, 'create', 'user', user.id, userData);
+      await this.auditLog(requestingUserId, userTenantId, 'create', 'user', user.id, userData);
 
       logger.info(`User created: ${user.email}`);
       return user;
@@ -123,9 +129,9 @@ class UserService {
         : '';
 
       const baseQuery = `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.status, u.email_verified, u.last_login_at, u.created_at
+        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login_at, u.created_at
         FROM users u
-        WHERE u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1::uuid IS NULL)
+        WHERE (u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1 IS NULL))
         ${searchCondition}
       `;
 
@@ -140,8 +146,22 @@ class UserService {
         pool.query(dataQuery, dataParams),
       ]);
 
+      // Transform snake_case to camelCase for frontend
+      const users = dataResult.rows.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        status: user.status,
+        emailVerified: user.email_verified,
+        lastLoginAt: user.last_login_at,
+        createdAt: user.created_at,
+        tenantId: user.tenant_id,
+      }));
+
       return {
-        users: dataResult.rows,
+        users,
         pagination: {
           page,
           limit,
@@ -313,7 +333,7 @@ class UserService {
       await pool.query(
         `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'active']
+        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'success']
       );
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);

@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-exitsaas}
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
       POSTGRES_INITDB_ARGS: '-c max_connections=100'
     ports:
       - '${DB_PORT:-5432}:5432'
@@ -38,7 +38,7 @@ services:
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-exitsaas}
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-admin
       DB_POOL_SIZE: 20
       JWT_SECRET: ${JWT_SECRET:-your-secret-key}
       JWT_EXPIRY: ${JWT_EXPIRY:-24h}

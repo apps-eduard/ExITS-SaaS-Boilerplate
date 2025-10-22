@@ -69,7 +69,7 @@ import { RoleService } from '../../../core/services/role.service';
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400">User ID</p>
                   <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                    {{ user()?.id.substring(0, 8) }}...
+                    {{ user()?.id ?? 'N/A' }}
                   </p>
                 </div>
                 <div>
@@ -100,7 +100,7 @@ import { RoleService } from '../../../core/services/role.service';
           <!-- Roles -->
           <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Assigned Roles</h3>
-            
+
             <div *ngIf="user()?.roles && user()!.roles!.length > 0" class="space-y-2">
               <div *ngFor="let role of user()?.roles" class="flex items-center justify-between p-3 rounded border border-gray-200 dark:border-gray-700">
                 <div>
@@ -165,7 +165,7 @@ import { RoleService } from '../../../core/services/role.service';
           <!-- Activity Stats -->
           <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Activity Overview</h3>
-            
+
             <div class="space-y-4">
               <div class="flex items-center justify-between p-3 rounded bg-gray-50 dark:bg-gray-800">
                 <div class="flex items-center gap-3">
@@ -218,7 +218,7 @@ import { RoleService } from '../../../core/services/role.service';
         <!-- Tenant Information (if tenant user) -->
         <div *ngIf="user()?.tenantId" class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tenant Information</h3>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Tenant Name</p>
@@ -229,7 +229,7 @@ import { RoleService } from '../../../core/services/role.service';
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Tenant ID</p>
               <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                {{ user()?.tenantId.substring(0, 8) }}...
+                {{ (user()?.tenantId?.substring(0, 8) ?? 'N/A') }}...
               </p>
             </div>
             <div>
@@ -242,7 +242,7 @@ import { RoleService } from '../../../core/services/role.service';
         <!-- Recent Activity Log -->
         <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
-          
+
           <div class="space-y-3">
             <div class="flex items-start gap-3 p-3 rounded bg-gray-50 dark:bg-gray-800">
               <div class="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
@@ -292,7 +292,7 @@ export class UserProfileComponent implements OnInit {
 
   async ngOnInit() {
     this.userId = this.route.snapshot.paramMap.get('id');
-    
+
     if (this.userId) {
       await this.roleService.loadRoles();
       const user = await this.userService.getUser(this.userId);
@@ -305,7 +305,7 @@ export class UserProfileComponent implements OnInit {
   getInitials(): string {
     const u = this.user();
     if (!u) return '?';
-    
+
     if (u.firstName && u.lastName) {
       return `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
     }
@@ -348,27 +348,27 @@ export class UserProfileComponent implements OnInit {
 
   async addRole() {
     if (!this.selectedRoleToAdd || !this.userId) return;
-    
+
     await this.userService.assignRole(this.userId, this.selectedRoleToAdd);
-    
+
     // Reload user
     const updatedUser = await this.userService.getUser(this.userId);
     if (updatedUser) {
       this.user.set(updatedUser);
     }
-    
+
     this.showAddRole.set(false);
     this.selectedRoleToAdd = '';
   }
 
   async removeRole(roleId: string) {
     if (!this.userId) return;
-    
+
     const confirmed = confirm('Remove this role from the user?');
     if (!confirmed) return;
-    
+
     await this.userService.removeRole(this.userId, roleId);
-    
+
     // Reload user
     const updatedUser = await this.userService.getUser(this.userId);
     if (updatedUser) {

@@ -14,7 +14,7 @@ interface MenuItem {
 }
 
 @Component({
-  selector: 'app-tenant-sidebar',
+  selector: 'app-users-sidebar',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
@@ -33,28 +33,28 @@ interface MenuItem {
       <div class="flex h-full flex-col">
         <!-- Logo -->
         <div class="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm">
-            T
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-teal-600 text-white font-bold text-sm">
+            👥
           </div>
           <div class="flex-1 min-w-0">
             <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">
-              {{ tenantName() }}
+              User Management
             </h2>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Tenant Portal</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Admin Portal</p>
           </div>
         </div>
 
         <!-- User Info -->
         <div class="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
           <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 text-xs font-semibold">
               {{ getUserInitials() }}
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-xs font-medium text-gray-900 dark:text-white truncate">
                 {{ authService.currentUser()?.email }}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Tenant User</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">System Admin</p>
             </div>
           </div>
         </div>
@@ -67,7 +67,7 @@ interface MenuItem {
               <a
                 *ngIf="hasMenuAccessMethod(item.menuKey)"
                 [routerLink]="item.route"
-                routerLinkActive="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                routerLinkActive="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                 [routerLinkActiveOptions]="{exact: false}"
                 (click)="closeMenu()"
                 class="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition"
@@ -102,7 +102,7 @@ interface MenuItem {
                 <a
                   *ngFor="let child of item.children"
                   [routerLink]="child.route"
-                  routerLinkActive="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                  routerLinkActive="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                   (click)="closeMenu()"
                   [class.hidden]="!hasMenuAccessMethod(child.menuKey) || (child.requiredAction && !hasActionMethod(child.menuKey, child.requiredAction))"
                   class="flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition"
@@ -130,84 +130,44 @@ interface MenuItem {
   `,
   styles: []
 })
-export class TenantSidebarComponent {
+export class UsersSidebarComponent {
   authService = inject(AuthService);
   rbacService = inject(RBACService);
 
   isOpen = signal(false);
   isDesktop = signal(window.innerWidth >= 1024);
-  expandedGroups = signal(new Set<string>(['Dashboard']));
-
-  tenantName = signal('My Tenant'); // TODO: Get from tenant service
+  expandedGroups = signal(new Set<string>(['Users']));
 
   menuItems = signal<MenuItem[]>([
-    { label: 'Dashboard', icon: '📊', route: '/tenant/dashboard', menuKey: 'tenant-dashboard' },
-    {
-      label: 'Overview',
-      icon: '📈',
-      menuKey: 'tenant-overview',
-      children: [
-        { label: 'Overview', icon: '📋', route: '/tenant/overview', menuKey: 'tenant-overview' },
-        { label: 'Reports', icon: '📊', route: '/tenant/overview/reports', menuKey: 'tenant-overview' },
-      ]
-    },
+    { label: 'All Users', icon: '👥', route: '/admin/users', menuKey: 'users' },
     {
       label: 'Users',
-      icon: '👥',
-      menuKey: 'tenant-users',
+      icon: '👤',
+      menuKey: 'users',
       children: [
-        { label: 'List Users', icon: '👤', route: '/tenant/users', menuKey: 'tenant-users' },
-        { label: 'Create User', icon: '➕', route: '/tenant/users/create', menuKey: 'tenant-users', requiredAction: 'create' },
-        { label: 'Assign Roles', icon: '🔐', route: '/tenant/users/assign-roles', menuKey: 'tenant-users' },
+        { label: 'List Users', icon: '📋', route: '/admin/users', menuKey: 'users' },
+        { label: 'Create User', icon: '➕', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
+        { label: 'Admin Users', icon: '👑', route: '/admin/users/admins', menuKey: 'users' },
+        { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
       ]
     },
     {
       label: 'Roles & Permissions',
       icon: '🔐',
-      menuKey: 'tenant-roles',
+      menuKey: 'roles',
       children: [
-        { label: 'Role Management', icon: '👔', route: '/tenant/roles', menuKey: 'tenant-roles' },
-        { label: 'Assign Permissions', icon: '🔑', route: '/tenant/roles/permissions', menuKey: 'tenant-roles' },
+        { label: 'Role Management', icon: '👔', route: '/admin/roles', menuKey: 'roles' },
+        { label: 'Permissions', icon: '🔑', route: '/admin/roles/permissions', menuKey: 'roles' },
       ]
     },
     {
-      label: 'Modules',
-      icon: '🧩',
-      menuKey: 'tenant-modules',
+      label: 'Audit',
+      icon: '📋',
+      menuKey: 'audit',
       children: [
-        { label: 'Money Loan', icon: '💰', route: '/tenant/modules/money-loan', menuKey: 'module-money-loan' },
-        { label: 'BNPL', icon: '💳', route: '/tenant/modules/bnpl', menuKey: 'module-bnpl' },
-        { label: 'Pawnshop', icon: '💎', route: '/tenant/modules/pawnshop', menuKey: 'module-pawnshop' },
-      ]
-    },
-    {
-      label: 'Transactions',
-      icon: '💸',
-      menuKey: 'tenant-transactions',
-      children: [
-        { label: 'Loans', icon: '💰', route: '/tenant/transactions/loans', menuKey: 'tenant-transactions' },
-        { label: 'Payments', icon: '💳', route: '/tenant/transactions/payments', menuKey: 'tenant-transactions' },
-        { label: 'Receipts', icon: '🧾', route: '/tenant/transactions/receipts', menuKey: 'tenant-transactions' },
-      ]
-    },
-    {
-      label: 'Reports',
-      icon: '📊',
-      menuKey: 'tenant-reports',
-      children: [
-        { label: 'Financial Reports', icon: '💵', route: '/tenant/reports/financial', menuKey: 'tenant-reports' },
-        { label: 'User Reports', icon: '👥', route: '/tenant/reports/users', menuKey: 'tenant-reports' },
-        { label: 'Module Reports', icon: '🧩', route: '/tenant/reports/modules', menuKey: 'tenant-reports' },
-      ]
-    },
-    {
-      label: 'Settings',
-      icon: '⚙️',
-      menuKey: 'tenant-settings',
-      children: [
-        { label: 'Tenant Info', icon: '🏢', route: '/tenant/settings/info', menuKey: 'tenant-settings' },
-        { label: 'Branches', icon: '🏪', route: '/tenant/settings/branches', menuKey: 'tenant-settings' },
-        { label: 'Module Config', icon: '🛠️', route: '/tenant/settings/modules', menuKey: 'tenant-settings' },
+        { label: 'Audit Logs', icon: '📝', route: '/monitoring/audit', menuKey: 'monitoring' },
+        { label: 'Activity Logs', icon: '📊', route: '/monitoring/activity', menuKey: 'monitoring' },
+        { label: 'Security Events', icon: '🔒', route: '/monitoring/security', menuKey: 'monitoring' },
       ]
     },
   ]);
@@ -222,7 +182,7 @@ export class TenantSidebarComponent {
     };
 
     window.addEventListener('resize', handleResize);
-    console.log('🧭 TenantSidebarComponent initialized');
+    console.log('🧭 UsersSidebarComponent initialized');
   }
 
   getUserInitials(): string {
@@ -236,13 +196,6 @@ export class TenantSidebarComponent {
 
   hasMenuAccessMethod(menuKey?: string): boolean {
     if (!menuKey) return false;
-
-    // For tenant users, show all menus by default (demo mode until roles are assigned)
-    const isTenantUser = this.authService.isTenantUser();
-    if (isTenantUser) {
-      console.log(`🔓 Tenant user - showing menu: ${menuKey} (demo mode)`);
-      return true;
-    }
 
     const permissions = this.rbacService.userPermissions();
     const hasPermissions = Object.keys(permissions).length > 0;
@@ -258,9 +211,9 @@ export class TenantSidebarComponent {
   hasActionMethod(menuKey?: string, actionKey?: string): boolean {
     if (!menuKey || !actionKey) return false;
 
-    // For tenant users in demo mode, allow all actions
-    const isTenantUser = this.authService.isTenantUser();
-    if (isTenantUser) {
+    // Demo mode - allow all actions
+    const permissions = this.rbacService.userPermissions();
+    if (Object.keys(permissions).length === 0) {
       return true;
     }
 

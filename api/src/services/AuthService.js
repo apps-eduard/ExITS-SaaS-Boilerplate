@@ -157,7 +157,7 @@ class AuthService {
       const result = await pool.query(
         `UPDATE sessions SET status = $1 WHERE user_id = $2 AND status = $3
          RETURNING user_id, tenant_id`,
-        ['inactive', userId, 'active']
+        ['revoked', userId, 'active']
       );
 
       if (result.rows.length > 0) {

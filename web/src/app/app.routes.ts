@@ -46,6 +46,18 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
           },
           {
+            path: 'all',
+            loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
+          },
+          {
+            path: 'admins',
+            loadComponent: () => import('./features/admin/users/users-admins.component').then(m => m.UsersAdminsComponent)
+          },
+          {
+            path: 'activity',
+            loadComponent: () => import('./features/admin/users/users-activity.component').then(m => m.UsersActivityComponent)
+          },
+          {
             path: 'new',
             loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
           },

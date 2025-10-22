@@ -49,7 +49,9 @@ export class AuthService {
       tap(response => {
         console.log('✅ AuthService.login() received response:', response);
         if (response && response.data) {
+          console.log('📝 Saving tokens to localStorage...');
           this.setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+          console.log('✅ Tokens saved. Accessing token:', this.getAccessToken()?.substring(0, 20) + '...');
           this.currentUser.set(response.data.user);
           this.isAuthenticated.set(true);
           localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -97,7 +99,7 @@ export class AuthService {
   private loadUserFromStorage() {
     const token = this.getAccessToken();
     const userStr = localStorage.getItem('user');
-    
+
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);

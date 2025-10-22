@@ -46,7 +46,7 @@ export interface PermissionMatrix {
   providedIn: 'root'
 })
 export class RoleService {
-  private apiUrl = '/api/rbac';
+  private apiUrl = 'http://localhost:3000/api/rbac';
 
   // Signals
   rolesSignal = signal<Role[]>([]);
@@ -57,10 +57,10 @@ export class RoleService {
 
   // Computed signals
   roleCountComputed = computed(() => this.rolesSignal().length);
-  systemRolesComputed = computed(() => 
+  systemRolesComputed = computed(() =>
     this.rolesSignal().filter(r => r.space === 'system')
   );
-  tenantRolesComputed = computed(() => 
+  tenantRolesComputed = computed(() =>
     this.rolesSignal().filter(r => r.space === 'tenant')
   );
 
@@ -434,7 +434,7 @@ export class RoleService {
     for (const perm of role.permissions) {
       modules.add(perm.menuKey);
       actions.add(perm.actionKey);
-      
+
       if (perm.actionKey === 'view') viewCount++;
       else if (perm.actionKey === 'create') createCount++;
       else if (perm.actionKey === 'edit') editCount++;

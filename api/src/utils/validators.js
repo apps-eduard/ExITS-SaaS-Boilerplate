@@ -14,10 +14,20 @@ class Validators {
     const schema = Joi.object({
       email: Joi.string().email().required(),
       password: Joi.string().min(6).required(),
-      first_name: Joi.string().required(),
-      last_name: Joi.string().required(),
-      role_id: Joi.number().required(),
-    });
+      // Support both camelCase and snake_case
+      firstName: Joi.string().optional(),
+      first_name: Joi.string().optional(),
+      lastName: Joi.string().optional(),
+      last_name: Joi.string().optional(),
+      // Make role_id optional since roles are assigned separately
+      role_id: Joi.number().optional(),
+      roleId: Joi.number().optional(),
+      // Optional tenant_id for system users
+      tenantId: Joi.number().allow(null).optional(),
+      tenant_id: Joi.number().allow(null).optional(),
+      status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
+    }).or('firstName', 'first_name') // At least one first name required
+      .or('lastName', 'last_name');   // At least one last name required
     return schema.validate(data);
   }
 

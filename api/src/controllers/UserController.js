@@ -6,7 +6,7 @@
 const UserService = require('../services/UserService');
 const { validateCreateUser, validatePagination } = require('../utils/validators');
 const logger = require('../utils/logger');
-const { CONSTANTS } = require('../config/constants');
+const { HTTP_STATUS } = require('../config/constants');
 
 class UserController {
   /**
@@ -23,7 +23,7 @@ class UserController {
 
       const result = await UserService.createUser(value, req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.CREATED).json({
+      res.status(HTTP_STATUS.CREATED).json({
         message: 'User created successfully',
         data: result,
       });
@@ -42,7 +42,7 @@ class UserController {
 
       const result = await UserService.getUserById(id, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'User retrieved successfully',
         data: result,
       });
@@ -59,15 +59,11 @@ class UserController {
     try {
       const { page = 1, limit = 20, search = '' } = req.query;
 
-      const { error, value } = validatePagination({ page: parseInt(page), limit: parseInt(limit) });
-      if (error) {
-        error.isJoi = true;
-        return next(error);
-      }
+      const pagination = validatePagination(page, limit);
 
-      const result = await UserService.listUsers(req.tenantId, value.page, value.limit, search);
+      const result = await UserService.listUsers(req.tenantId, pagination.page, pagination.limit, search);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'Users retrieved successfully',
         data: result.users,
         pagination: result.pagination,
@@ -87,7 +83,7 @@ class UserController {
 
       const result = await UserService.updateUser(id, req.body, req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'User updated successfully',
         data: result,
       });
@@ -106,7 +102,7 @@ class UserController {
 
       const result = await UserService.deleteUser(id, req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'User deleted successfully',
         data: result,
       });
@@ -125,7 +121,7 @@ class UserController {
 
       const result = await UserService.assignRole(id, roleId, req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'Role assigned successfully',
         data: result,
       });
@@ -144,7 +140,7 @@ class UserController {
 
       const result = await UserService.removeRole(id, roleId, req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'Role removed successfully',
         data: result,
       });
@@ -163,7 +159,7 @@ class UserController {
 
       const result = await UserService.getUserPermissions(id);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'Permissions retrieved successfully',
         data: result,
       });
@@ -180,7 +176,7 @@ class UserController {
     try {
       const result = await UserService.getUserById(req.userId, req.tenantId);
 
-      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+      res.status(HTTP_STATUS.OK).json({
         message: 'Current user retrieved successfully',
         data: result,
       });

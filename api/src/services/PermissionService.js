@@ -9,6 +9,7 @@ const logger = require('../utils/logger');
 class PermissionService {
   /**
    * Check if user has permission to perform action on module
+   * Design: role → menu_key → action (no module_id needed)
    */
   static async hasPermission(userId, moduleKey, actionKey) {
     try {
@@ -18,8 +19,7 @@ class PermissionService {
           FROM user_roles ur
           JOIN roles r ON ur.role_id = r.id
           JOIN role_permissions rp ON r.id = rp.role_id
-          JOIN modules m ON rp.module_id = m.id
-          WHERE ur.user_id = $1 AND m.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
+          WHERE ur.user_id = $1 AND rp.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
         ) AS perms`,
         [userId, moduleKey, actionKey]
       );
@@ -33,15 +33,15 @@ class PermissionService {
 
   /**
    * Get all user permissions grouped by module
+   * Design: role → menu_key → action (no module_id needed)
    */
   static async getUserPermissions(userId) {
     try {
       const result = await pool.query(
-        `SELECT DISTINCT m.menu_key, rp.action_key
+        `SELECT DISTINCT rp.menu_key, rp.action_key
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
          JOIN role_permissions rp ON r.id = rp.role_id
-         JOIN modules m ON rp.module_id = m.id
          WHERE ur.user_id = $1 AND rp.status = 'active'`,
         [userId]
       );
@@ -142,6 +142,7 @@ class PermissionService {
 
   /**
    * Check permission with constraints
+   * Design: role → menu_key → action (no module_id needed)
    */
   static async checkPermissionWithConstraints(userId, moduleKey, actionKey, context = {}) {
     try {
@@ -150,8 +151,7 @@ class PermissionService {
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
          JOIN role_permissions rp ON r.id = rp.role_id
-         JOIN modules m ON rp.module_id = m.id
-         WHERE ur.user_id = $1 AND m.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
+         WHERE ur.user_id = $1 AND rp.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
          LIMIT 1`,
         [userId, moduleKey, actionKey]
       );

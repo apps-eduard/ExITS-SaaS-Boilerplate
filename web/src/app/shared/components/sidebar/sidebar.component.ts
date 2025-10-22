@@ -37,7 +37,7 @@ interface MenuItem {
       [class.h-screen]="!isDesktop()"
       [class.-translate-x-full]="!isOpen() && !isDesktop()"
       [class.translate-x-0]="isOpen() || isDesktop()">
-      
+
       <!-- Logo -->
       <div class="h-14 flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-2">
@@ -93,7 +93,7 @@ interface MenuItem {
                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                   </svg>
                 </button>
-                
+
                 @if (expandedGroups().has(item.label)) {
                   <div class="mt-0.5 ml-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-0.5">
                     @for (child of item.children; track child.label) {
@@ -101,7 +101,8 @@ interface MenuItem {
                         <a
                           [routerLink]="child.route"
                           routerLinkActive="text-primary-600 dark:text-primary-400 font-semibold"
-                          class="block px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 truncate">
+                          class="flex items-center gap-2 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 truncate">
+                          <span class="text-base flex-shrink-0">{{ child.icon }}</span>
                           {{ child.label }}
                         </a>
                       }
@@ -129,11 +130,11 @@ interface MenuItem {
 export class SidebarComponent {
   authService = inject(AuthService);
   rbacService = inject(RBACService);
-  
+
   isOpen = signal(false);
   isDesktop = signal(window.innerWidth >= 1024);
   expandedGroups = signal(new Set<string>(['Dashboard']));
-  
+
   staticMenuItems = signal<MenuItem[]>([
     { label: 'Dashboard', icon: '📊', route: '/dashboard', menuKey: 'dashboard' },
     {
@@ -221,7 +222,7 @@ export class SidebarComponent {
         this.isOpen.set(false);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     console.log('🧭 SidebarComponent initialized - RBAC support active');
 
@@ -236,17 +237,17 @@ export class SidebarComponent {
    */
   hasMenuAccessMethod(menuKey?: string): boolean {
     if (!menuKey) return false;
-    
+
     // Get current permissions
     const permissions = this.rbacService.userPermissions();
     const hasPermissions = Object.keys(permissions).length > 0;
-    
+
     // If no permissions loaded yet, show all menus (demo mode)
     if (!hasPermissions) {
       console.log('⚠️ No permissions loaded, showing all menus (demo mode)');
       return true;
     }
-    
+
     // Check if user has this menu
     const hasAccess = this.rbacService.hasMenuAccess(menuKey);
     console.log(`🔍 Menu "${menuKey}" access: ${hasAccess}`);
