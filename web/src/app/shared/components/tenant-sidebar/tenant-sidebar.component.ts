@@ -237,32 +237,12 @@ export class TenantSidebarComponent {
   hasMenuAccessMethod(menuKey?: string): boolean {
     if (!menuKey) return false;
 
-    // For tenant users, show all menus by default (demo mode until roles are assigned)
-    const isTenantUser = this.authService.isTenantUser();
-    if (isTenantUser) {
-      console.log(`🔓 Tenant user - showing menu: ${menuKey} (demo mode)`);
-      return true;
-    }
-
     const permissions = this.rbacService.userPermissions();
-    const hasPermissions = Object.keys(permissions).length > 0;
-
-    // Demo mode - show all
-    if (!hasPermissions) {
-      return true;
-    }
-
     return this.rbacService.hasMenuAccess(menuKey);
   }
 
   hasActionMethod(menuKey?: string, actionKey?: string): boolean {
     if (!menuKey || !actionKey) return false;
-
-    // For tenant users in demo mode, allow all actions
-    const isTenantUser = this.authService.isTenantUser();
-    if (isTenantUser) {
-      return true;
-    }
 
     return this.rbacService.hasAction(menuKey, actionKey);
   }

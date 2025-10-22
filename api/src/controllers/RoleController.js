@@ -142,6 +142,34 @@ class RoleController {
   }
 
   /**
+   * POST /roles/:id/permissions/bulk
+   * Bulk assign permissions to role (replaces existing)
+   */
+  static async bulkAssignPermissions(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { permissions } = req.body;
+
+      if (!Array.isArray(permissions)) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          error: 'Permissions must be an array',
+        });
+      }
+
+      const result = await RoleService.bulkAssignPermissions(id, permissions, req.userId, req.tenantId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        message: `${result.count} permissions assigned successfully`,
+        count: result.count,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * DELETE /roles/:id/permissions/:moduleId/:actionKey
    * Revoke permission from role
    */

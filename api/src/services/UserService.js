@@ -9,6 +9,27 @@ const logger = require('../utils/logger');
 
 class UserService {
   /**
+   * Transform database user object to camelCase
+   */
+  static transformUser(dbUser) {
+    if (!dbUser) return null;
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.first_name,
+      lastName: dbUser.last_name,
+      fullName: `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim(),
+      tenantId: dbUser.tenant_id,
+      status: dbUser.status,
+      emailVerified: dbUser.email_verified,
+      mfaEnabled: dbUser.mfa_enabled,
+      lastLoginAt: dbUser.last_login_at,
+      createdAt: dbUser.created_at,
+      updatedAt: dbUser.updated_at,
+    };
+  }
+
+  /**
    * Create a new user
    */
   static async createUser(userData, requestingUserId, tenantId) {
@@ -34,11 +55,12 @@ class UserService {
       const result = await pool.query(
         `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, email, first_name, last_name, status, created_at`,
+         RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, created_at, updated_at`,
         [userTenantId, userData.email, passwordHash, firstName, lastName, userData.status || 'active', false]
       );
 
-      const user = result.rows[0];
+      const dbUser = result.rows[0];
+      const user = this.transformUser(dbUser);
 
       // Assign role if provided (handle both camelCase and snake_case)
       const roleId = userData.roleId || userData.role_id;
@@ -67,7 +89,7 @@ class UserService {
   static async getUserById(userId, tenantId) {
     try {
       const userResult = await pool.query(
-        `SELECT id, email, first_name, last_name, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+        `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
          FROM users
          WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)`,
         [userId, tenantId]
@@ -77,7 +99,7 @@ class UserService {
         throw new Error('User not found');
       }
 
-      const user = userResult.rows[0];
+      const user = this.transformUser(userResult.rows[0]);
 
       // Get user roles
       const rolesResult = await pool.query(
@@ -147,18 +169,7 @@ class UserService {
       ]);
 
       // Transform snake_case to camelCase for frontend
-      const users = dataResult.rows.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        status: user.status,
-        emailVerified: user.email_verified,
-        lastLoginAt: user.last_login_at,
-        createdAt: user.created_at,
-        tenantId: user.tenant_id,
-      }));
+      const users = dataResult.rows.map(row => this.transformUser(row));
 
       return {
         users,
@@ -184,19 +195,24 @@ class UserService {
       const values = [];
       let paramCount = 1;
 
-      if (updateData.first_name !== undefined) {
+      // Handle both camelCase and snake_case
+      const firstName = updateData.firstName || updateData.first_name;
+      const lastName = updateData.lastName || updateData.last_name;
+      const status = updateData.status;
+
+      if (firstName !== undefined) {
         fieldsToUpdate.push(`first_name = $${paramCount++}`);
-        values.push(updateData.first_name);
+        values.push(firstName);
       }
 
-      if (updateData.last_name !== undefined) {
+      if (lastName !== undefined) {
         fieldsToUpdate.push(`last_name = $${paramCount++}`);
-        values.push(updateData.last_name);
+        values.push(lastName);
       }
 
-      if (updateData.status !== undefined) {
+      if (status !== undefined) {
         fieldsToUpdate.push(`status = $${paramCount++}`);
-        values.push(updateData.status);
+        values.push(status);
       }
 
       if (updateData.mfa_enabled !== undefined) {
@@ -211,7 +227,7 @@ class UserService {
         UPDATE users
         SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
         WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-        RETURNING id, email, first_name, last_name, status
+        RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
       `;
 
       const result = await pool.query(query, values);
@@ -220,10 +236,12 @@ class UserService {
         throw new Error('User not found');
       }
 
+      const user = this.transformUser(result.rows[0]);
+
       await this.auditLog(requestingUserId, tenantId, 'update', 'user', userId, updateData);
 
       logger.info(`User updated: ${userId}`);
-      return result.rows[0];
+      return user;
     } catch (err) {
       logger.error(`User service update error: ${err.message}`);
       throw err;

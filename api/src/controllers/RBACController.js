@@ -12,7 +12,16 @@ class RBACController {
    */
   static async getMyPermissions(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.userId || req.user?.id;
+      
+      if (!userId) {
+        logger.error('❌ No userId found in request');
+        return res.status(401).json({ 
+          success: false,
+          error: 'User not authenticated' 
+        });
+      }
+      
       const permissions = await RBACService.getUserPermissions(userId);
       
       res.json({

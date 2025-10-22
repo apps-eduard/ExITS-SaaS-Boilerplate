@@ -226,6 +226,77 @@ class RoleService {
   }
 
   /**
+   * Bulk assign permissions to role (replaces all existing permissions)
+   */
+  static async bulkAssignPermissions(roleId, permissions, requestingUserId, tenantId) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // First, delete all existing permissions for this role
+      await client.query(
+        'DELETE FROM role_permissions WHERE role_id = $1',
+        [roleId]
+      );
+
+      // Then, insert all new permissions
+      let insertedCount = 0;
+      
+      for (const perm of permissions) {
+        const { menuKey, actionKey } = perm;
+        
+        if (!menuKey || !actionKey) {
+          logger.warn(`Skipping invalid permission: ${JSON.stringify(perm)}`);
+          continue;
+        }
+
+        // Get the module ID from the modules table
+        const moduleResult = await client.query(
+          'SELECT id FROM modules WHERE menu_key = $1',
+          [menuKey],
+        );
+
+        if (moduleResult.rows.length === 0) {
+          logger.warn(`Module not found for menu_key: ${menuKey}`);
+          continue;
+        }
+
+        const moduleId = moduleResult.rows[0].id;
+
+        // Insert the permission
+        await client.query(
+          `INSERT INTO role_permissions (role_id, module_id, action_key, status)
+           VALUES ($1, $2, $3, 'active')
+           ON CONFLICT (role_id, module_id, action_key) DO UPDATE SET status = 'active'`,
+          [roleId, moduleId, actionKey]
+        );
+
+        insertedCount++;
+      }
+
+      await client.query('COMMIT');
+
+      await this.auditLog(requestingUserId, tenantId, 'bulk_assign_permissions', 'role', roleId, {
+        permissions_count: insertedCount,
+      });
+
+      logger.info(`Bulk assigned ${insertedCount} permissions to role ${roleId}`);
+
+      return {
+        count: insertedCount,
+        message: `${insertedCount} permissions assigned successfully`,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      logger.error(`Role service bulk assign permissions error: ${err.message}`);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Revoke permission from role
    */
   static async revokePermission(roleId, moduleId, actionKey, requestingUserId, tenantId) {

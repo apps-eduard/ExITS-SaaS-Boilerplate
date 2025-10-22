@@ -12,7 +12,7 @@ build/
 out/
 
 # Environment
-.env
+# .env
 .env.local
 .env.*.local
 .env.production.local

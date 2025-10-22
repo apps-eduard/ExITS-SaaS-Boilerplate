@@ -20,8 +20,20 @@ async function simpleSeed() {
   try {
     console.log('🌱 Starting comprehensive seed...\n');
 
+    // CLEANUP: Remove admin@exitsaas.com users that were created by seed.sql
+    console.log('0. Cleaning up duplicate users...');
+    await client.query(`
+      DELETE FROM user_roles WHERE user_id IN (
+        SELECT id FROM users WHERE email = 'admin@exitsaas.com'
+      )
+    `);
+    await client.query(`
+      DELETE FROM users WHERE email = 'admin@exitsaas.com'
+    `);
+    console.log(`✅ Cleaned up duplicate admin users`);
+
     // Create tenants
-    console.log('1. Creating tenants...');
+    console.log('\n1. Creating tenants...');
     await client.query(`
       INSERT INTO tenants (name, subdomain, plan, status, max_users)
       VALUES
@@ -41,7 +53,7 @@ async function simpleSeed() {
 
     // Create system admin
     console.log('\n2. Creating system admin...');
-    const adminPassword = await bcrypt.hash('Admin@123456', 10);
+    const adminPassword = await bcrypt.hash('Admin@123', 10);
     await client.query(`
       INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -53,7 +65,7 @@ async function simpleSeed() {
 
     // Create tenant admins
     console.log('\n3. Creating tenant admins...');
-    const tenantPassword = await bcrypt.hash('TenantAdmin@123456', 10);
+    const tenantPassword = await bcrypt.hash('Admin@123', 10);
     const tenantIds = tenantsRes.rows.map(t => t.id);
     
     for (let i = 0; i < tenantIds.length; i++) {
@@ -161,6 +173,28 @@ async function simpleSeed() {
       // Settings
       { menu_key: 'settings', action: 'view' },
       { menu_key: 'settings', action: 'edit' },
+      
+      // Modules
+      { menu_key: 'modules', action: 'view' },
+      { menu_key: 'modules', action: 'create' },
+      { menu_key: 'modules', action: 'edit' },
+      { menu_key: 'modules', action: 'delete' },
+      
+      // System
+      { menu_key: 'system', action: 'view' },
+      { menu_key: 'system', action: 'edit' },
+      
+      // Monitoring
+      { menu_key: 'monitoring', action: 'view' },
+      { menu_key: 'monitoring', action: 'export' },
+      
+      // Configuration
+      { menu_key: 'config', action: 'view' },
+      { menu_key: 'config', action: 'edit' },
+      
+      // Billing
+      { menu_key: 'billing', action: 'view' },
+      { menu_key: 'billing', action: 'edit' },
     ];
 
     // Clear existing permissions for System Administrator
@@ -169,10 +203,12 @@ async function simpleSeed() {
     let systemPermCount = 0;
     for (const perm of systemPermissions) {
       await client.query(`
-        INSERT INTO role_permissions (role_id, menu_key, action_key, status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO role_permissions (role_id, module_id, menu_key, action_key, status)
+        SELECT $1, m.id, m.menu_key, $2, 'active'
+        FROM modules m
+        WHERE m.menu_key = $3 AND m.status = 'active'
         ON CONFLICT (role_id, COALESCE(menu_key, ''), action_key) DO NOTHING
-      `, [systemAdminRoleId, perm.menu_key, perm.action, 'active']);
+      `, [systemAdminRoleId, perm.action, perm.menu_key]);
       systemPermCount++;
     }
     console.log(`✅ Created ${systemPermCount} permissions for System Administrator`);
@@ -212,10 +248,12 @@ async function simpleSeed() {
 
       for (const perm of tenantPermissions) {
         await client.query(`
-          INSERT INTO role_permissions (role_id, menu_key, action_key, status)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO role_permissions (role_id, module_id, menu_key, action_key, status)
+          SELECT $1, m.id, m.menu_key, $2, 'active'
+          FROM modules m
+          WHERE m.menu_key = $3 AND m.status = 'active'
           ON CONFLICT (role_id, COALESCE(menu_key, ''), action_key) DO NOTHING
-        `, [tenantRoleId, perm.menu_key, perm.action, 'active']);
+        `, [tenantRoleId, perm.action, perm.menu_key]);
         tenantPermCount++;
       }
     }
@@ -278,10 +316,10 @@ async function simpleSeed() {
 
     console.log('\n✅ Seed completed successfully!');
     console.log('\n📝 Login Credentials:');
-    console.log('   System Admin: admin@exitsaas.com / Admin@123456');
-    console.log('   Tenant Admin 1: admin-1@example.com / TenantAdmin@123456');
-    console.log('   Tenant Admin 2: admin-2@example.com / TenantAdmin@123456');
-    console.log('   Tenant Admin 3: admin-3@example.com / TenantAdmin@123456');
+    console.log('   System Admin: admin@exitsaas.com / Admin@123');
+    console.log('   Tenant Admin 1: admin-1@example.com / Admin@123');
+    console.log('   Tenant Admin 2: admin-2@example.com / Admin@123');
+    console.log('   Tenant Admin 3: admin-3@example.com / Admin@123');
     console.log('\n📊 Summary:');
     console.log(`   - ${tenantsRes.rows.length} tenants created`);
     console.log(`   - ${usersRes.rows.length} users created`);

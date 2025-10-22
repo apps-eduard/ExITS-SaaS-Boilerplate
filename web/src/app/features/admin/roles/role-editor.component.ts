@@ -43,7 +43,7 @@ interface MenuPermission {
             </p>
           </div>
         </div>
-        
+
         <div *ngIf="getTotalSelectedMenus() > 0" class="px-3 py-1 rounded bg-blue-50 dark:bg-blue-900/20">
           <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
             {{ getTotalPermissions() }} permissions on {{ getTotalSelectedMenus() }} menus
@@ -66,12 +66,12 @@ interface MenuPermission {
 
       <!-- Form -->
       <div *ngIf="!roleService.loadingSignal()" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        
+
         <!-- Role Info (1 column) -->
         <div class="lg:col-span-1">
           <div class="rounded border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 sticky top-4">
             <h2 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Role Details</h2>
-            
+
             <div class="space-y-3">
               <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -111,13 +111,13 @@ interface MenuPermission {
 
             <!-- Quick Actions -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              <button 
+              <button
                 (click)="selectAllMenus()"
                 class="w-full rounded bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition"
               >
                 ✓ Select All Menus
               </button>
-              <button 
+              <button
                 (click)="clearAll()"
                 class="w-full rounded bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 transition"
               >
@@ -136,14 +136,14 @@ interface MenuPermission {
 
             <!-- Save Button -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button 
+              <button
                 (click)="saveRole()"
                 [disabled]="!canSave()"
                 class="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition"
               >
                 {{ isEditing() ? '💾 Update' : '✅ Create' }}
               </button>
-              <button 
+              <button
                 routerLink="/admin/roles"
                 class="w-full mt-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 transition"
               >
@@ -156,7 +156,7 @@ interface MenuPermission {
         <!-- Permission Matrix (3 columns) -->
         <div class="lg:col-span-3">
           <div class="rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-            
+
             <!-- Header -->
             <div class="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
               <div class="flex items-center justify-between">
@@ -169,17 +169,17 @@ interface MenuPermission {
 
             <!-- Permission Grid -->
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
-              
+
               <!-- Each Menu Item -->
               <div *ngFor="let menu of menuItems" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                
+
                 <!-- Parent Menu Row -->
                 <div class="flex items-center px-4 py-3">
-                  
+
                   <!-- Menu Selection (Left) -->
                   <div class="flex-1 flex items-center gap-3">
                     <label class="flex items-center gap-2 cursor-pointer">
-                      <input 
+                      <input
                         type="checkbox"
                         [checked]="isMenuSelected(menu.key)"
                         (change)="toggleMenu(menu.key)"
@@ -188,9 +188,9 @@ interface MenuPermission {
                       <span class="text-lg">{{ menu.icon }}</span>
                       <span class="text-sm font-medium text-gray-900 dark:text-white">{{ menu.label }}</span>
                     </label>
-                    
+
                     <!-- Expand/Collapse for parents with children -->
-                    <button 
+                    <button
                       *ngIf="menu.children && menu.children.length > 0"
                       (click)="toggleExpanded(menu.key)"
                       class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -204,7 +204,7 @@ interface MenuPermission {
                   <!-- Permissions (Right) -->
                   <div *ngIf="isMenuSelected(menu.key)" class="flex items-center gap-4">
                     <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input 
+                      <input
                         type="checkbox"
                         [checked]="getPermission(menu.key, 'view')"
                         (change)="togglePermission(menu.key, 'view')"
@@ -213,7 +213,7 @@ interface MenuPermission {
                       <span class="text-xs text-blue-600 dark:text-blue-400">👁️ View</span>
                     </label>
                     <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input 
+                      <input
                         type="checkbox"
                         [checked]="getPermission(menu.key, 'create')"
                         (change)="togglePermission(menu.key, 'create')"
@@ -222,7 +222,7 @@ interface MenuPermission {
                       <span class="text-xs text-green-600 dark:text-green-400">➕ Create</span>
                     </label>
                     <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input 
+                      <input
                         type="checkbox"
                         [checked]="getPermission(menu.key, 'edit')"
                         (change)="togglePermission(menu.key, 'edit')"
@@ -231,7 +231,7 @@ interface MenuPermission {
                       <span class="text-xs text-orange-600 dark:text-orange-400">✏️ Edit</span>
                     </label>
                     <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input 
+                      <input
                         type="checkbox"
                         [checked]="getPermission(menu.key, 'delete')"
                         (change)="togglePermission(menu.key, 'delete')"
@@ -248,11 +248,11 @@ interface MenuPermission {
                 <!-- Child Menu Rows (Indented) -->
                 <div *ngIf="menu.children && isExpanded(menu.key)" class="bg-gray-50 dark:bg-gray-800/30">
                   <div *ngFor="let child of menu.children" class="flex items-center px-4 py-2 pl-12 border-t border-gray-200 dark:border-gray-700">
-                    
+
                     <!-- Child Menu Selection -->
                     <div class="flex-1 flex items-center gap-2">
                       <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
+                        <input
                           type="checkbox"
                           [checked]="isMenuSelected(child.key)"
                           (change)="toggleMenu(child.key)"
@@ -266,7 +266,7 @@ interface MenuPermission {
                     <!-- Child Permissions -->
                     <div *ngIf="isMenuSelected(child.key)" class="flex items-center gap-4">
                       <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input 
+                        <input
                           type="checkbox"
                           [checked]="getPermission(child.key, 'view')"
                           (change)="togglePermission(child.key, 'view')"
@@ -275,7 +275,7 @@ interface MenuPermission {
                         <span class="text-xs text-blue-600 dark:text-blue-400">👁️</span>
                       </label>
                       <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input 
+                        <input
                           type="checkbox"
                           [checked]="getPermission(child.key, 'create')"
                           (change)="togglePermission(child.key, 'create')"
@@ -284,7 +284,7 @@ interface MenuPermission {
                         <span class="text-xs text-green-600 dark:text-green-400">➕</span>
                       </label>
                       <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input 
+                        <input
                           type="checkbox"
                           [checked]="getPermission(child.key, 'edit')"
                           (change)="togglePermission(child.key, 'edit')"
@@ -293,7 +293,7 @@ interface MenuPermission {
                         <span class="text-xs text-orange-600 dark:text-orange-400">✏️</span>
                       </label>
                       <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input 
+                        <input
                           type="checkbox"
                           [checked]="getPermission(child.key, 'delete')"
                           (change)="togglePermission(child.key, 'delete')"
@@ -357,9 +357,9 @@ export class RoleEditorComponent implements OnInit {
   menuItems: MenuItem[] = [
     // System-level menus
     { key: 'dashboard', label: '📊 System Dashboard', icon: '📊' },
-    { 
-      key: 'tenants', 
-      label: '🏢 Tenants Management', 
+    {
+      key: 'tenants',
+      label: '🏢 Tenants Management',
       icon: '🏢',
       children: [
         { key: 'tenants-overview', label: 'Overview', icon: '📋' },
@@ -367,9 +367,9 @@ export class RoleEditorComponent implements OnInit {
         { key: 'tenants-usage', label: 'Usage Analytics', icon: '📊' }
       ]
     },
-    { 
-      key: 'users', 
-      label: '👥 System Users', 
+    {
+      key: 'users',
+      label: '👥 System Users',
       icon: '👥',
       children: [
         { key: 'users-list', label: 'All Users', icon: '👤' },
@@ -377,9 +377,9 @@ export class RoleEditorComponent implements OnInit {
         { key: 'users-invites', label: 'Invitations', icon: '✉️' }
       ]
     },
-    { 
-      key: 'roles', 
-      label: '🔐 Roles & Permissions', 
+    {
+      key: 'roles',
+      label: '🔐 Roles & Permissions',
       icon: '🔐',
       children: [
         { key: 'roles-list', label: 'Roles', icon: '🎭' },
@@ -390,20 +390,20 @@ export class RoleEditorComponent implements OnInit {
     { key: 'monitoring', label: '📈 Monitoring', icon: '📈' },
     { key: 'config', label: '🔧 Configuration', icon: '🔧' },
     { key: 'billing', label: '💰 Billing', icon: '💰' },
-    
+
     // Tenant-level menus
     { key: 'tenant-dashboard', label: '📊 Tenant Dashboard', icon: '📊' },
-    { 
-      key: 'tenant-overview', 
-      label: '📈 Tenant Overview', 
+    {
+      key: 'tenant-overview',
+      label: '📈 Tenant Overview',
       icon: '📈',
       children: [
         { key: 'tenant-overview-reports', label: 'Reports', icon: '📊' }
       ]
     },
-    { 
-      key: 'tenant-users', 
-      label: '👥 Tenant Users', 
+    {
+      key: 'tenant-users',
+      label: '👥 Tenant Users',
       icon: '👥',
       children: [
         { key: 'tenant-users-list', label: 'List Users', icon: '👤' },
@@ -411,18 +411,18 @@ export class RoleEditorComponent implements OnInit {
         { key: 'tenant-users-assign', label: 'Assign Roles', icon: '🔐' }
       ]
     },
-    { 
-      key: 'tenant-roles', 
-      label: '🔐 Tenant Roles', 
+    {
+      key: 'tenant-roles',
+      label: '🔐 Tenant Roles',
       icon: '🔐',
       children: [
         { key: 'tenant-roles-manage', label: 'Role Management', icon: '👔' },
         { key: 'tenant-roles-permissions', label: 'Assign Permissions', icon: '🔑' }
       ]
     },
-    { 
-      key: 'tenant-modules', 
-      label: '🧩 Business Modules', 
+    {
+      key: 'tenant-modules',
+      label: '🧩 Business Modules',
       icon: '🧩',
       children: [
         { key: 'module-money-loan', label: 'Money Loan', icon: '💰' },
@@ -430,9 +430,9 @@ export class RoleEditorComponent implements OnInit {
         { key: 'module-pawnshop', label: 'Pawnshop', icon: '💎' }
       ]
     },
-    { 
-      key: 'tenant-transactions', 
-      label: '💸 Transactions', 
+    {
+      key: 'tenant-transactions',
+      label: '💸 Transactions',
       icon: '💸',
       children: [
         { key: 'tenant-transactions-loans', label: 'Loans', icon: '💰' },
@@ -440,9 +440,9 @@ export class RoleEditorComponent implements OnInit {
         { key: 'tenant-transactions-receipts', label: 'Receipts', icon: '🧾' }
       ]
     },
-    { 
-      key: 'tenant-reports', 
-      label: '📊 Reports', 
+    {
+      key: 'tenant-reports',
+      label: '📊 Reports',
       icon: '📊',
       children: [
         { key: 'tenant-reports-financial', label: 'Financial Reports', icon: '💵' },
@@ -450,9 +450,9 @@ export class RoleEditorComponent implements OnInit {
         { key: 'tenant-reports-modules', label: 'Module Reports', icon: '🧩' }
       ]
     },
-    { 
-      key: 'tenant-settings', 
-      label: '⚙️ Tenant Settings', 
+    {
+      key: 'tenant-settings',
+      label: '⚙️ Tenant Settings',
       icon: '⚙️',
       children: [
         { key: 'tenant-settings-info', label: 'Tenant Info', icon: '🏢' },
@@ -491,20 +491,33 @@ export class RoleEditorComponent implements OnInit {
       this.roleDescription = role.description || '';
       this.roleSpace = role.space;
 
+      console.log('🔄 Loading role permissions:', role.permissions);
+
       // Load permissions into map
       const permMap = new Map<string, MenuPermission>();
-      if (role.permissions) {
+      if (role.permissions && Array.isArray(role.permissions)) {
         for (const perm of role.permissions) {
-          if (!permMap.has(perm.menuKey)) {
-            permMap.set(perm.menuKey, { menuKey: perm.menuKey, view: false, create: false, edit: false, delete: false });
+          // Handle both camelCase and snake_case from API
+          const menuKey = (perm as any).menuKey || (perm as any).menu_key;
+          const actionKey = (perm as any).actionKey || (perm as any).action_key;
+
+          if (!menuKey || !actionKey) {
+            console.warn('⚠️ Invalid permission format:', perm);
+            continue;
           }
-          const menuPerm = permMap.get(perm.menuKey)!;
-          if (perm.actionKey === 'view') menuPerm.view = true;
-          if (perm.actionKey === 'create') menuPerm.create = true;
-          if (perm.actionKey === 'edit') menuPerm.edit = true;
-          if (perm.actionKey === 'delete') menuPerm.delete = true;
+
+          if (!permMap.has(menuKey)) {
+            permMap.set(menuKey, { menuKey: menuKey, view: false, create: false, edit: false, delete: false });
+          }
+          const menuPerm = permMap.get(menuKey)!;
+          if (actionKey === 'view') menuPerm.view = true;
+          if (actionKey === 'create') menuPerm.create = true;
+          if (actionKey === 'edit') menuPerm.edit = true;
+          if (actionKey === 'delete') menuPerm.delete = true;
         }
       }
+
+      console.log('✅ Loaded permissions map:', permMap);
       this.permissions.set(permMap);
     }
   }
@@ -518,7 +531,7 @@ export class RoleEditorComponent implements OnInit {
     if (perms.has(menuKey)) {
       // Unchecking - remove this menu and all its children
       perms.delete(menuKey);
-      
+
       // Find and remove all children of this menu
       const menu = this.menuItems.find(m => m.key === menuKey);
       if (menu && menu.children) {
@@ -572,7 +585,7 @@ export class RoleEditorComponent implements OnInit {
     };
     this.menuItems.forEach(menu => addMenu(menu));
     this.permissions.set(perms);
-    
+
     // Expand all parents
     const expanded = new Set<string>();
     this.menuItems.forEach(menu => {
@@ -662,10 +675,10 @@ export class RoleEditorComponent implements OnInit {
           space: this.roleSpace
         };
         console.log('📤 Payload:', payload);
-        
+
         const created = await this.roleService.createRole(payload);
         console.log('📥 Create response:', created);
-        
+
         if (created) {
           console.log('✅ Role created with ID:', created.id);
           console.log('🔄 Now assigning permissions...');

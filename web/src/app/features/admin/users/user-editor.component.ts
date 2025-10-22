@@ -4,6 +4,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService, User, UserCreatePayload, UserUpdatePayload } from '../../../core/services/user.service';
 import { RoleService, Role } from '../../../core/services/role.service';
+import { AddressService, AddressCreatePayload } from '../../../core/services/address.service';
 
 @Component({
   selector: 'app-user-editor',
@@ -48,7 +49,7 @@ import { RoleService, Role } from '../../../core/services/role.service';
         <!-- Basic Information -->
         <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- First Name -->
             <div>
@@ -142,7 +143,7 @@ import { RoleService, Role } from '../../../core/services/role.service';
         <!-- Role Assignment -->
         <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Role Assignment</h2>
-          
+
           <div *ngIf="roleService.loadingSignal()" class="text-center py-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">Loading roles...</p>
           </div>
@@ -173,6 +174,204 @@ import { RoleService, Role } from '../../../core/services/role.service';
           </div>
         </div>
 
+        <!-- Address Information (Optional) -->
+        <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Address Information</h2>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                [(ngModel)]="includeAddress"
+                class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Add address</span>
+            </label>
+          </div>
+
+          <div *ngIf="includeAddress" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Address Type -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Address Type <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="addressData.addressType"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                >
+                  <option value="">Select type</option>
+                  <option value="home">Home</option>
+                  <option value="work">Work</option>
+                  <option value="billing">Billing</option>
+                  <option value="shipping">Shipping</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <!-- Region -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Region <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="addressData.region"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                >
+                  <option value="">Select region</option>
+                  <option *ngFor="let region of addressService.regionsSignal()" [value]="region.name">
+                    {{ region.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Province -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Province <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="addressData.province"
+                  type="text"
+                  placeholder="e.g., Metro Manila"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                />
+              </div>
+
+              <!-- City/Municipality -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  City/Municipality <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="addressData.cityMunicipality"
+                  type="text"
+                  placeholder="e.g., Quezon City"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                />
+              </div>
+
+              <!-- Barangay -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Barangay <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="addressData.barangay"
+                  type="text"
+                  placeholder="e.g., Barangay Commonwealth"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                />
+              </div>
+
+              <!-- Zip Code -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Zip Code
+                </label>
+                <input
+                  [(ngModel)]="addressData.zipCode"
+                  type="text"
+                  placeholder="e.g., 1121"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <!-- Street -->
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Street Address <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="addressData.street"
+                  type="text"
+                  placeholder="e.g., 123 Main Street, Subdivision Name"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  required
+                />
+              </div>
+
+              <!-- Landmark -->
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Landmark (Optional)
+                </label>
+                <input
+                  [(ngModel)]="addressData.landmark"
+                  type="text"
+                  placeholder="e.g., Near SM Mall, Across McDonald's"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <!-- Contact Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contact Name
+                </label>
+                <input
+                  [(ngModel)]="addressData.contactName"
+                  type="text"
+                  placeholder="Contact person name"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <!-- Contact Phone -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contact Phone
+                </label>
+                <input
+                  [(ngModel)]="addressData.contactPhone"
+                  type="tel"
+                  placeholder="e.g., +63 912 345 6789"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <!-- Notes -->
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  [(ngModel)]="addressData.notes"
+                  rows="2"
+                  placeholder="Additional delivery instructions or notes"
+                  class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                ></textarea>
+              </div>
+
+              <!-- Set as Primary -->
+              <div class="md:col-span-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="addressData.isPrimary"
+                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Set as primary address</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+              <p class="text-xs text-blue-700 dark:text-blue-300">
+                <strong>Note:</strong> Philippine address format follows: Street → Barangay → City/Municipality → Province → Region
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="!includeAddress" class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+            Address can be added later in the user profile
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex items-center justify-end gap-3">
           <button
@@ -200,7 +399,7 @@ export class UserEditorComponent implements OnInit {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   userType = 'tenant'; // 'system' or 'tenant'
-  
+
   formData: any = {
     firstName: '',
     lastName: '',
@@ -212,11 +411,29 @@ export class UserEditorComponent implements OnInit {
 
   selectedRoles = signal<Set<string>>(new Set());
 
+  // Address fields
+  includeAddress = false;
+  addressData: any = {
+    addressType: 'home',
+    street: '',
+    barangay: '',
+    cityMunicipality: '',
+    province: '',
+    region: '',
+    zipCode: '',
+    landmark: '',
+    isPrimary: true,
+    contactPhone: '',
+    contactName: '',
+    notes: ''
+  };
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     public userService: UserService,
-    public roleService: RoleService
+    public roleService: RoleService,
+    public addressService: AddressService
   ) {}
 
   async ngOnInit() {
@@ -237,10 +454,10 @@ export class UserEditorComponent implements OnInit {
           status: user.status || 'active',
           tenantId: user.tenantId
         };
-        
+
         // Set user type
         this.userType = user.tenantId ? 'tenant' : 'system';
-        
+
         // Set selected roles
         if (user.roles) {
           this.selectedRoles.set(new Set(user.roles.map(r => r.id)));
@@ -275,7 +492,7 @@ export class UserEditorComponent implements OnInit {
   onUserTypeChange() {
     // Clear selected roles when user type changes
     this.selectedRoles.set(new Set());
-    
+
     // Set tenantId based on user type
     this.formData.tenantId = this.userType === 'system' ? null : undefined;
   }
@@ -325,6 +542,33 @@ export class UserEditorComponent implements OnInit {
           }
         }
 
+        // Create address if included
+        if (this.includeAddress && this.isAddressValid()) {
+          try {
+            const addressPayload: AddressCreatePayload = {
+              userId: user.id,
+              addressType: this.addressData.addressType,
+              street: this.addressData.street,
+              barangay: this.addressData.barangay,
+              cityMunicipality: this.addressData.cityMunicipality,
+              province: this.addressData.province,
+              region: this.addressData.region,
+              zipCode: this.addressData.zipCode || undefined,
+              country: 'Philippines',
+              landmark: this.addressData.landmark || undefined,
+              isPrimary: this.addressData.isPrimary,
+              contactPhone: this.addressData.contactPhone || undefined,
+              contactName: this.addressData.contactName || undefined,
+              notes: this.addressData.notes || undefined
+            };
+            await this.addressService.createAddress(addressPayload);
+            console.log('✅ Address created successfully');
+          } catch (addressError) {
+            console.error('⚠️ User created but address failed:', addressError);
+            // Don't fail the whole operation if address creation fails
+          }
+        }
+
         console.log('✅ User saved successfully');
         this.router.navigate(['/admin/users']);
       } else {
@@ -336,6 +580,19 @@ export class UserEditorComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  isAddressValid(): boolean {
+    if (!this.includeAddress) return true;
+
+    return !!(
+      this.addressData.addressType &&
+      this.addressData.street &&
+      this.addressData.barangay &&
+      this.addressData.cityMunicipality &&
+      this.addressData.province &&
+      this.addressData.region
+    );
   }
 
   goBack() {

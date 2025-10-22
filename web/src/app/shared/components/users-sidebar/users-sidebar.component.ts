@@ -197,25 +197,11 @@ export class UsersSidebarComponent {
   hasMenuAccessMethod(menuKey?: string): boolean {
     if (!menuKey) return false;
 
-    const permissions = this.rbacService.userPermissions();
-    const hasPermissions = Object.keys(permissions).length > 0;
-
-    // Demo mode - show all
-    if (!hasPermissions) {
-      return true;
-    }
-
     return this.rbacService.hasMenuAccess(menuKey);
   }
 
   hasActionMethod(menuKey?: string, actionKey?: string): boolean {
     if (!menuKey || !actionKey) return false;
-
-    // Demo mode - allow all actions
-    const permissions = this.rbacService.userPermissions();
-    if (Object.keys(permissions).length === 0) {
-      return true;
-    }
 
     return this.rbacService.hasAction(menuKey, actionKey);
   }

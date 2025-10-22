@@ -1,4 +1,4 @@
-# ExITS SaaS - Complete Setup Script (Simplified)
+﻿# ExITS SaaS - Complete Setup Script (Simplified)
 # This script sets up the entire development environment
 
 param(
@@ -14,11 +14,33 @@ $Green = "`e[32m"
 $Yellow = "`e[33m"
 $Cyan = "`e[36m"
 $Magenta = "`e[35m"
+$Red = "`e[31m"
+$Blue = "`e[34m"
+$Gray = "`e[90m"
 
-function Write-Success { Write-Host "$($Green)??? $args$($Reset)" }
-function Write-Info { Write-Host "$($Cyan)??? $args$($Reset)" }
-function Write-Warning { Write-Host "$($Yellow)??? $args$($Reset)" }
-function Write-Error-Custom { Write-Host "$($Magenta)??? $args$($Reset)" }
+function Write-Success { 
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "$($Gray)[$timestamp]$($Reset) $($Green)✓ $args$($Reset)" 
+}
+function Write-Info { 
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "$($Gray)[$timestamp]$($Reset) $($Cyan)ℹ $args$($Reset)" 
+}
+function Write-Warning { 
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "$($Gray)[$timestamp]$($Reset) $($Yellow)⚠ $args$($Reset)" 
+}
+function Write-Error-Custom { 
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "$($Gray)[$timestamp]$($Reset) $($Red)✗ $args$($Reset)" 
+}
+function Write-Step { 
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "$($Gray)[$timestamp]$($Reset) $($Blue)→ $args$($Reset)" 
+}
+function Write-Separator {
+    Write-Host "$($Gray)────────────────────────────────────────────────────────────$($Reset)"
+}
 
 function Show-Banner {
     Clear-Host
@@ -56,39 +78,46 @@ function Install-Dependencies {
     Write-Header "Installing Dependencies"
     
     # API
-    Write-Info "Installing API dependencies..."
+    Write-Step "Checking API dependencies..."
     Push-Location api
     if (!(Test-Path "node_modules")) {
-        npm install
+        Write-Info "Installing API dependencies (this may take a few minutes)..."
+        $output = npm install 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "API dependencies installed"
+            Write-Success "API dependencies installed successfully"
         } else {
             Write-Error-Custom "API install failed"
+            Write-Host "$($Red)Error output:$($Reset)"
+            $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
             Pop-Location
             return $false
         }
     } else {
-        Write-Success "API dependencies already installed"
+        Write-Success "API dependencies already installed (node_modules exists)"
     }
     Pop-Location
     
     # Web
-    Write-Info "Installing Web dependencies..."
+    Write-Step "Checking Web dependencies..."
     Push-Location web
     if (!(Test-Path "node_modules")) {
-        npm install
+        Write-Info "Installing Web dependencies (this may take a few minutes)..."
+        $output = npm install 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "Web dependencies installed"
+            Write-Success "Web dependencies installed successfully"
         } else {
             Write-Error-Custom "Web install failed"
+            Write-Host "$($Red)Error output:$($Reset)"
+            $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
             Pop-Location
             return $false
         }
     } else {
-        Write-Success "Web dependencies already installed"
+        Write-Success "Web dependencies already installed (node_modules exists)"
     }
     Pop-Location
     
+    Write-Success "All dependencies are ready"
     return $true
 }
 
@@ -96,7 +125,7 @@ function Install-Dependencies {
 function Setup-Database {
     Write-Header "Setting Up Database"
     
-    Write-Info "Reading database credentials from .env file..."
+    Write-Step "Reading database credentials from .env file..."
     # Read DB password from .env file
     $dbPassword = 'admin'  # Default
     if (Test-Path "api\.env") {
@@ -104,71 +133,83 @@ function Setup-Database {
         $passwordLine = $envContent | Where-Object { $_ -match '^DB_PASSWORD=' }
         if ($passwordLine) {
             $dbPassword = ($passwordLine -split '=',2)[1].Trim()
+            Write-Info "Found DB password in api\.env"
         }
     }
     
-    Write-Info "Checking PostgreSQL connection..."
+    Write-Step "Testing PostgreSQL connection..."
     $env:PGPASSWORD = $dbPassword
     
     # Test connection first
-    $testResult = psql -U postgres -h localhost -p 5432 -c 'SELECT version();' 2>&1
+    $testResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c 'SELECT version();' 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Cannot connect to PostgreSQL. Make sure PostgreSQL is running."
-        Write-Host "  Error: $testResult"
-        Write-Host "  Using password from api\.env (DB_PASSWORD=$dbPassword)"
+        Write-Host "$($Red)Connection details:$($Reset)"
+        Write-Host "  Host: localhost:5432"
+        Write-Host "  User: postgres"
+        Write-Host "  Password: $dbPassword (from api\.env)"
+        Write-Host "$($Red)Error: $testResult$($Reset)"
         Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
         return $false
     }
     
-    Write-Success "Connected to PostgreSQL"
+    Write-Success "Connected to PostgreSQL successfully"
     
-    Write-Info "Terminating existing database connections..."
+    Write-Step "Terminating existing database connections..."
     # Terminate all connections to the database
     $terminateCmd = 'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ''exits_saas_db'' AND pid <> pg_backend_pid();'
-    psql -U postgres -h localhost -p 5432 -c $terminateCmd 2>&1 | Out-Null
+    $terminateResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $terminateCmd 2>&1
+    Write-Info "Connection termination completed"
     
     # Wait for connections to close
     Start-Sleep -Seconds 1
     
-    Write-Info "Dropping existing database..."
+    Write-Step "Dropping existing database (if exists)..."
     # Drop the database
     $dropCmd = 'DROP DATABASE IF EXISTS exits_saas_db;'
-    $dropResult = psql -U postgres -h localhost -p 5432 -c $dropCmd 2>&1 | Out-String
+    $dropResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $dropCmd 2>&1 | Out-String
     
     if ($LASTEXITCODE -ne 0) {
         # Check if error is just "database does not exist"
         if ($dropResult -match "does not exist") {
-            Write-Info "Database does not exist (this is fine)"
+            Write-Info "Database does not exist (this is fine, creating fresh)"
         } else {
-            Write-Error-Custom "Failed to drop database: $dropResult"
+            Write-Error-Custom "Failed to drop database"
+            Write-Host "$($Red)$dropResult$($Reset)"
             Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
             return $false
         }
     } else {
-        Write-Success "Database dropped"
+        Write-Success "Existing database dropped successfully"
     }
     
-    Write-Info "Creating fresh database..."
+    Write-Step "Creating fresh database 'exits_saas_db'..."
     # Create fresh database
     $createCmd = 'CREATE DATABASE exits_saas_db;'
-    $createResult = psql -U postgres -h localhost -p 5432 -c $createCmd 2>&1
-    
-    Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+    $createResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $createCmd 2>&1
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Failed to create database"
+        Write-Host "$($Red)$createResult$($Reset)"
+        Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
         return $false
     }
     
-    Write-Success "Database created"
+    Write-Success "Database 'exits_saas_db' created successfully"
     
-    Write-Info "Running database migrations..."
+    # Wait a moment for database to be fully available
+    Start-Sleep -Seconds 2
+    
+    Write-Step "Running database migrations..."
     Push-Location api
     
+    # Keep password set for migration
+    $env:PGPASSWORD = $dbPassword
+    
     # Ensure .env file exists with correct database name
-    Write-Info "Checking for .env file..."
+    Write-Step "Verifying .env configuration..."
     if (!(Test-Path ".env")) {
-        Write-Info "Creating .env file..."
+        Write-Info "Creating .env file with default configuration..."
         $envContent = @"
 NODE_ENV=development
 PORT=3000
@@ -194,50 +235,61 @@ EMAIL_PASSWORD=your-app-password
 EMAIL_FROM=noreply@exits-saas.com
 "@
         $envContent | Out-File -FilePath ".env" -Encoding UTF8
-        Write-Success ".env file created"
+        Write-Success ".env file created with default values"
     } else {
-        Write-Success ".env file exists"
+        Write-Success ".env file already exists"
     }
     
     # Run migrations using the migrate script
-    Write-Info "Executing migrations (this may take a moment)..."
-    npm run migrate 2>&1 | ForEach-Object { Write-Host $_ }
+    Write-Info "Executing database migrations (this may take a moment)..."
+    Write-Host "$($Gray)  Migration output:$($Reset)"
+    $migrateOutput = npm run migrate 2>&1
+    $migrateOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
     $migrateSuccess = $LASTEXITCODE -eq 0
     
     if (!$migrateSuccess) {
         Pop-Location
         Write-Error-Custom "Database migration failed"
-        Write-Host "Please check that PostgreSQL is running and the database 'exits_saas_db' was created."
+        Write-Host "$($Yellow)Please check that PostgreSQL is running and the database 'exits_saas_db' was created.$($Reset)"
         return $false
     }
     
-    Write-Success "Database schema created"
+    Write-Success "Database schema created successfully"
     
-    Write-Info "Applying database fixes and enhancements..."
+    Write-Step "Applying database fixes and enhancements..."
     
     # Run the database fixes script
-    node src\scripts\apply-db-fixes.js 2>&1 | Out-Null
+    $fixOutput = node src\scripts\apply-db-fixes.js 2>&1
     $fixResult = $LASTEXITCODE
     
     if ($fixResult -eq 0) {
-        Write-Success "Database fixes applied"
+        Write-Success "Database fixes applied successfully"
     } else {
         Write-Warning "Some database fixes may have failed (this might be okay if already applied)"
+        if ($fixOutput) {
+            Write-Host "$($Gray)  Fix output: $fixOutput$($Reset)"
+        }
     }
     
-    Write-Info "Seeding database with test data..."
-    node simple-seed.js 2>&1 | ForEach-Object { Write-Host $_ }
+    Write-Step "Seeding database with test data..."
+    Write-Host "$($Gray)  Seed output:$($Reset)"
+    $seedOutput = node simple-seed.js 2>&1
+    $seedOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
     $seedSuccess = $LASTEXITCODE -eq 0
     
     Pop-Location
     
     if (!$seedSuccess) {
         Write-Error-Custom "Database seeding failed"
-        Write-Host "The database tables may not have been created. Please verify the migration output above."
+        Write-Host "$($Yellow)The database tables may not have been created. Please verify the migration output above.$($Reset)"
         return $false
     }
     
-    Write-Success "Database seeded successfully (users created)"
+    Write-Success "Database seeded successfully with test users and data"
+    
+    # Clean up password
+    Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+    
     return $true
 }
 
@@ -245,61 +297,33 @@ EMAIL_FROM=noreply@exits-saas.com
 function Build-Web {
     Write-Header "Building Web Application"
     
-    Write-Info "Ensuring proxy configuration exists..."
+    Write-Step "Ensuring proxy configuration exists..."
     Push-Location web
     
     # Create proxy.conf.json if it doesn't exist
     if (!(Test-Path "proxy.conf.json")) {
         $proxyContent = '{"/api": {"target": "http://localhost:3000","secure": false,"logLevel": "debug","changeOrigin": true}}'
         $proxyContent | Out-File -FilePath "proxy.conf.json" -Encoding UTF8
-        Write-Success "Created proxy configuration"
+        Write-Success "Created proxy configuration (proxy.conf.json)"
     } else {
-        Write-Success "Proxy configuration exists"
+        Write-Success "Proxy configuration already exists"
     }
     
-    Write-Info "Building Angular application..."
-    npm run build 2>&1 | Out-Null
+    Write-Step "Building Angular application (this may take a few minutes)..."
+    $buildOutput = npm run build 2>&1
     $buildSuccess = $LASTEXITCODE -eq 0
-    Pop-Location
     
     if ($buildSuccess) {
         Write-Success "Web application built successfully"
-        return $true
+        Write-Host "$($Gray)  Build artifacts are ready in web/dist/$($Reset)"
     } else {
         Write-Error-Custom "Web build failed"
-        return $false
+        Write-Host "$($Red)Build output (last 30 lines):$($Reset)"
+        $buildOutput | Select-Object -Last 30 | ForEach-Object { Write-Host "  $_" }
     }
-}
-
-# Start servers
-function Start-Servers {
-    Write-Header "Starting Development Servers"
     
-    Write-Info "Starting API server (npm start)..."
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd api; npm start"
-    
-    Start-Sleep -Seconds 3
-    
-    Write-Info "Starting Web server (npm start)..."
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd web; npm start"
-    
-    Start-Sleep -Seconds 5
-    
-    Write-Header "Development Environment Ready"
-    Write-Host "$($Green)??? All servers are running!$($Reset)"
-    Write-Host ""
-    Write-Host "$($Cyan)Access Points:$($Reset)"
-    Write-Host "  ???? Web Application: $($Yellow)http://localhost:4200$($Reset)"
-    Write-Host "  ???? API Backend:     $($Yellow)http://localhost:3000/api$($Reset)"
-    Write-Host ""
-    Write-Host "$($Cyan)Test Accounts:$($Reset)"
-    Write-Host '  ???? System Admin:   admin@exitsaas.com / Admin@123456'
-    Write-Host '  ???? Tenant 1 Admin: admin-1@example.com / TenantAdmin@123456'
-    Write-Host '  ???? Tenant 2 Admin: admin-2@example.com / TenantAdmin@123456'
-    Write-Host '  ???? Tenant 3 Admin: admin-3@example.com / TenantAdmin@123456'
-    Write-Host ""
-    Write-Host "$($Yellow)Press Ctrl+C in each terminal to stop the servers$($Reset)"
-    Write-Host ""
+    Pop-Location
+    return $buildSuccess
 }
 
 # Main
@@ -307,30 +331,44 @@ function Main {
     Show-Banner
     
     Write-Header "Checking Prerequisites"
-    if (!(Test-NodeJs)) { return }
+    Write-Step "Verifying Node.js installation..."
+    if (!(Test-NodeJs)) { 
+        Write-Error-Custom "Prerequisites check failed. Please install Node.js and try again."
+        return 
+    }
     Write-Success "All prerequisites met!"
     
     if (!$SkipInstall) {
-        if (!(Install-Dependencies)) { return }
+        if (!(Install-Dependencies)) { 
+            Write-Error-Custom "Dependency installation failed. Setup cannot continue."
+            return 
+        }
     } else {
-        Write-Info "Skipping dependency installation"
+        Write-Info "Skipping dependency installation (--SkipInstall flag used)"
     }
     
-    if (!(Setup-Database)) { return }
-    if (!(Build-Web)) { return }
-    
-    if (!$NoStart) {
-        Start-Servers
-    } else {
-        Write-Header "Setup Complete"
-        Write-Success "Development environment is ready!"
-        Write-Host "Run to start servers:"
-        $cmd1 = '  cd api ; npm start'
-        $cmd2 = '  cd web ; npm start'
-        Write-Host ($Cyan + $cmd1 + $Reset)
-        Write-Host ($Cyan + $cmd2 + $Reset)
-        Write-Host ""
+    if (!(Setup-Database)) { 
+        Write-Error-Custom "Database setup failed. Setup cannot continue."
+        return 
     }
+    
+    if (!(Build-Web)) { 
+        Write-Error-Custom "Web build failed. Setup cannot continue."
+        return 
+    }
+    
+    Write-Header "Setup Complete"
+    Write-Success "Development environment is ready!"
+    Write-Host ""
+    Write-Host "$($Cyan)To start the servers manually, run:$($Reset)"
+    Write-Host "  $($Yellow)cd api ; npm start$($Reset)"
+    Write-Host "  $($Yellow)cd web ; npm start$($Reset)"
+    Write-Host ""
+    Write-Host "$($Bright)$($Cyan)👤 Default Login:$($Reset)"
+    Write-Host '  Email: admin@exitsaas.com'
+    Write-Host '  Password: Admin@123'
+    Write-Host ""
 }
 
 Main
+

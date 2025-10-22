@@ -21,30 +21,43 @@ async function migrate() {
   const client = await pool.connect();
   try {
     console.log('Starting database migration...');
-    const schemaSql = fs.readFileSync(
-      path.join(__dirname, 'schema.sql'),
-      'utf-8'
-    );
 
-    // Split by semicolon and execute each statement
-    const statements = schemaSql
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0);
+    // Migration files to run in order
+    const migrationFiles = [
+      'schema.sql',
+      'migration-add-philippine-addresses.sql',
+      'seed.sql'
+    ];
 
-    for (const statement of statements) {
-      try {
-        await client.query(statement);
-      } catch (err) {
-        // Ignore "already exists" errors for idempotency
-        if (!err.message.includes('already exists')) {
-          throw err;
+    for (const migrationFile of migrationFiles) {
+      console.log(`\n📄 Running migration: ${migrationFile}`);
+      const migrationSql = fs.readFileSync(
+        path.join(__dirname, migrationFile),
+        'utf-8'
+      );
+
+      // Split by semicolon and execute each statement
+      const statements = migrationSql
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0);
+
+      for (const statement of statements) {
+        try {
+          await client.query(statement);
+        } catch (err) {
+          // Ignore "already exists" errors for idempotency
+          if (!err.message.includes('already exists') && !err.message.includes('does not exist')) {
+            throw err;
+          }
+          console.log(`ℹ  ${err.message.split('\n')[0]}`);
         }
-        console.log(`ℹ  ${err.message.split('\n')[0]}`);
       }
+
+      console.log(`✅ Migration ${migrationFile} completed successfully!`);
     }
 
-    console.log('✅ Database migration completed successfully!');
+    console.log('\n🎉 All database migrations completed successfully!');
   } catch (err) {
     console.error('❌ Migration failed:', err.message);
     process.exit(1);

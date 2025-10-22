@@ -31,6 +31,7 @@ router.delete('/:id', rbacMiddleware(['roles'], ['delete']), RoleController.dele
 // Permissions
 router.get('/:id/permissions', rbacMiddleware(['roles'], ['view']), RoleController.getRolePermissions);
 router.post('/:id/permissions', rbacMiddleware(['roles'], ['edit']), RoleController.grantPermission);
+router.post('/:id/permissions/bulk', rbacMiddleware(['roles'], ['edit']), RoleController.bulkAssignPermissions);
 router.delete('/:id/permissions/:moduleId/:actionKey', rbacMiddleware(['roles'], ['edit']), RoleController.revokePermission);
 
 // Permission matrix

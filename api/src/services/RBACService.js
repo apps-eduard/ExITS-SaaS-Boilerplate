@@ -14,6 +14,8 @@ class RBACService {
    */
   static async getUserPermissions(userId) {
     try {
+      logger.info(`🔍 Fetching permissions for user: ${userId}`);
+      
       const query = `
         SELECT DISTINCT
           m.menu_key,
@@ -36,11 +38,14 @@ class RBACService {
       
       const result = await db.query(query, [userId]);
       
+      logger.info(`✅ Found ${result.rows.length} permission entries for user ${userId}`);
+      
       // Format permissions by menu key with action keys
       const permissions = {};
       result.rows.forEach(row => {
         if (!permissions[row.menu_key]) {
           permissions[row.menu_key] = {
+            menuKey: row.menu_key,
             displayName: row.display_name,
             icon: row.icon,
             routePath: row.route_path,
@@ -52,6 +57,8 @@ class RBACService {
         }
         permissions[row.menu_key].actionKeys.push(row.action_key);
       });
+      
+      logger.info(`📊 Formatted permissions for ${Object.keys(permissions).length} modules`);
       
       return permissions;
     } catch (error) {

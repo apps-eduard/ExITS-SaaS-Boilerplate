@@ -242,15 +242,23 @@ export class SidebarComponent {
     const permissions = this.rbacService.userPermissions();
     const hasPermissions = Object.keys(permissions).length > 0;
 
-    // If no permissions loaded yet, show all menus (demo mode)
-    if (!hasPermissions) {
-      console.log('⚠️ No permissions loaded, showing all menus (demo mode)');
-      return true;
+    // Check if user is authenticated
+    const isAuthenticated = this.authService.isAuthenticated();
+
+    // If authenticated but no permissions, hide all menus (no access)
+    if (isAuthenticated && !hasPermissions) {
+      console.warn('⚠️ User authenticated but has no permissions assigned');
+      return false;
     }
 
-    // Check if user has this menu
+    // If not authenticated and no permissions, hide menus
+    if (!isAuthenticated && !hasPermissions) {
+      return false;
+    }
+
+    // Check if user has this specific menu
     const hasAccess = this.rbacService.hasMenuAccess(menuKey);
-    console.log(`🔍 Menu "${menuKey}" access: ${hasAccess}`);
+    // console.log(`🔍 Menu "${menuKey}" access: ${hasAccess}`);
     return hasAccess;
   }
 

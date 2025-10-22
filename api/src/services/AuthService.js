@@ -98,13 +98,15 @@ class AuthService {
       // Audit log
       await this.auditLog(user.id, user.tenant_id, 'login', 'user', user.id, {}, ipAddress);
 
+      // Transform user to camelCase for frontend
       return {
         user: {
           id: user.id,
           email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          tenant_id: user.tenant_id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          tenantId: user.tenant_id,
         },
         tokens: { accessToken, refreshToken },
         permissions,

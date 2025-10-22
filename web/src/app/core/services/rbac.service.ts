@@ -46,10 +46,10 @@ export class RBACService {
   userPermissions = signal<Record<string, Permission>>({});
   allModules = signal<Module[]>([]);
   allRoles = signal<Role[]>([]);
-  
+
   // Computed
   menuKeys = computed(() => Object.keys(this.userPermissions()));
-  
+
   constructor() {
     // Auto-fetch permissions when user logs in
     effect(() => {
@@ -57,28 +57,18 @@ export class RBACService {
         this.loadUserPermissions();
         this.loadModules();
       } else {
-        // Default permissions for unauthenticated or demo purposes
-        this.setDefaultPermissions();
+        // Clear permissions for unauthenticated users
+        this.userPermissions.set({});
       }
     });
   }
 
   /**
-   * Set default/mock permissions for demo
+   * Set default/mock permissions for demo (DEPRECATED - no longer used)
    */
   private setDefaultPermissions() {
-    const defaultPermissions: Record<string, Permission> = {
-      'dashboard': { menuKey: 'dashboard', displayName: 'Dashboard', icon: '📊', routePath: '/dashboard', componentName: 'DashboardComponent', space: 'system', actionKeys: ['view'], availableActions: ['view'] },
-      'tenants': { menuKey: 'tenants', displayName: 'Tenants', icon: '🏢', routePath: '/tenants', componentName: 'TenantsComponent', space: 'system', actionKeys: ['view', 'create', 'edit', 'delete'], availableActions: ['view', 'create', 'edit', 'delete'] },
-      'users': { menuKey: 'users', displayName: 'Users', icon: '👥', routePath: '/users', componentName: 'UsersComponent', space: 'system', actionKeys: ['view', 'create', 'edit', 'delete'], availableActions: ['view', 'create', 'edit', 'delete'] },
-      'roles': { menuKey: 'roles', displayName: 'Roles & Permissions', icon: '🔐', routePath: '/roles', componentName: 'RolesComponent', space: 'system', actionKeys: ['view', 'create', 'edit', 'delete'], availableActions: ['view', 'create', 'edit', 'delete'] },
-      'system': { menuKey: 'system', displayName: 'System', icon: '⚙️', routePath: '/system', componentName: 'SystemComponent', space: 'system', actionKeys: ['view'], availableActions: ['view'] },
-      'monitoring': { menuKey: 'monitoring', displayName: 'Monitoring', icon: '📈', routePath: '/monitoring', componentName: 'MonitoringComponent', space: 'system', actionKeys: ['view'], availableActions: ['view'] },
-      'config': { menuKey: 'config', displayName: 'Configuration', icon: '🛠️', routePath: '/config', componentName: 'ConfigComponent', space: 'system', actionKeys: ['view', 'edit', 'create'], availableActions: ['view', 'edit', 'create'] },
-      'billing': { menuKey: 'billing', displayName: 'Billing', icon: '💰', routePath: '/billing', componentName: 'BillingComponent', space: 'system', actionKeys: ['view', 'edit'], availableActions: ['view', 'edit'] },
-    };
-    this.userPermissions.set(defaultPermissions);
-    console.log('🧭 Default permissions loaded (demo mode)');
+    // No longer using demo mode - enforce RBAC for all users
+    this.userPermissions.set({});
   }
 
   /**
@@ -86,11 +76,11 @@ export class RBACService {
    */
   loadUserPermissions() {
     if (!this.authService.isAuthenticated()) {
-      console.log('🧭 User not authenticated, using default permissions');
-      this.setDefaultPermissions();
+      console.log('🧭 User not authenticated, clearing permissions');
+      this.userPermissions.set({});
       return;
     }
-    
+
     this.http.get<any>(`${this.apiUrl}/my-permissions`).subscribe({
       next: (response) => {
         console.log('🔐 Permissions loaded from API:', response.data);
@@ -98,14 +88,15 @@ export class RBACService {
           this.userPermissions.set(response.data.permissions);
           console.log('✅ User permissions set:', Object.keys(response.data.permissions));
         } else {
-          console.warn('⚠️ Empty permissions from API, falling back to defaults');
-          this.setDefaultPermissions();
+          console.warn('⚠️ No permissions granted to this user');
+          this.userPermissions.set({});
         }
       },
       error: (error) => {
         console.error('❌ Failed to load permissions from API:', error);
-        console.log('🔄 Falling back to default permissions');
-        this.setDefaultPermissions();
+        // Don't fall back to defaults for authenticated users - they should have explicit permissions
+        console.warn('⚠️ User has no accessible permissions');
+        this.userPermissions.set({});
       }
     });
   }

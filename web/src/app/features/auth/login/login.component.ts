@@ -128,10 +128,10 @@ export class LoginComponent {
   loading = signal(false);
 
   testAccounts = [
-    { email: 'admin@exitsaas.com', password: 'Admin@123456', label: 'System Admin' },
-    { email: 'admin-1@example.com', password: 'TenantAdmin@123456', label: 'Tenant 1 Admin' },
-    { email: 'admin-2@example.com', password: 'TenantAdmin@123456', label: 'Tenant 2 Admin' },
-    { email: 'admin-3@example.com', password: 'TenantAdmin@123456', label: 'Tenant 3 Admin' }
+    { email: 'admin@exitsaas.com', password: 'Admin@123', label: 'System Admin' },
+    { email: 'admin-1@example.com', password: 'Admin@123', label: 'Tenant 1 Admin' },
+    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant 2 Admin' },
+    { email: 'admin-3@example.com', password: 'Admin@123', label: 'Tenant 3 Admin' }
   ];
 
   fillCredentials(account: any) {
@@ -153,15 +153,15 @@ export class LoginComponent {
         console.log('Login successful:', response);
         console.log('isAuthenticated:', this.authService.isAuthenticated());
         this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
-        
+
         // Route based on user type
         const user = response.data.user;
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
         const targetRoute = isSystemAdmin ? '/dashboard' : '/tenant/dashboard';
-        
+
         console.log('User type:', isSystemAdmin ? 'System Admin' : 'Tenant User');
         console.log('Redirecting to:', targetRoute);
-        
+
         // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {
           this.router.navigate([targetRoute]).then(success => {
