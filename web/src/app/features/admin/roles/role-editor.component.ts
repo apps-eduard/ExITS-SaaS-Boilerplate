@@ -450,7 +450,7 @@ export class RoleEditorComponent implements OnInit {
     const hasName = this.roleName.trim().length > 0;
     const hasPermissions = this.getTotalSelectedPermissions() > 0;
     const hasTenantIfNeeded = this.roleSpace === 'system' || (this.roleSpace === 'tenant' && this.selectedTenantId !== null);
-    
+
     return hasName && hasPermissions && hasTenantIfNeeded;
   }
 
@@ -493,15 +493,15 @@ export class RoleEditorComponent implements OnInit {
           description: this.roleDescription,
           space: this.roleSpace
         };
-        
+
         // Add tenant_id if creating a tenant role
         if (this.roleSpace === 'tenant' && this.selectedTenantId) {
           // Ensure tenant_id is a number
-          payload.tenant_id = typeof this.selectedTenantId === 'string' 
-            ? parseInt(this.selectedTenantId, 10) 
+          payload.tenant_id = typeof this.selectedTenantId === 'string'
+            ? parseInt(this.selectedTenantId, 10)
             : this.selectedTenantId;
         }
-        
+
         console.log('📤 Payload:', payload);
         console.log('📤 Tenant ID type:', typeof payload.tenant_id);
 
