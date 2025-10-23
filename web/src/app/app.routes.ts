@@ -131,15 +131,15 @@ export const routes: Routes = [
           },
           {
             path: 'new',
-            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+            loadComponent: () => import('./features/admin/products/product-new.component').then(m => m.ProductNewComponent)
           },
           {
             path: 'mapping',
-            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+            loadComponent: () => import('./features/admin/products/product-mapping.component').then(m => m.ProductMappingComponent)
           },
           {
             path: 'settings',
-            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+            loadComponent: () => import('./features/admin/products/product-settings.component').then(m => m.ProductSettingsComponent)
           }
         ]
       },
@@ -169,6 +169,27 @@ export const routes: Routes = [
           {
             path: 'renewal-settings',
             loadComponent: () => import('./features/admin/subscriptions/renewal-settings.component').then(m => m.RenewalSettingsComponent)
+          }
+        ]
+      },
+      {
+        path: 'reports',
+        children: [
+          {
+            path: 'tenant-usage',
+            loadComponent: () => import('./features/admin/reports/tenant-usage.component').then(m => m.TenantUsageComponent)
+          },
+          {
+            path: 'revenue',
+            loadComponent: () => import('./features/admin/reports/revenue-reports.component').then(m => m.RevenueReportsComponent)
+          },
+          {
+            path: 'product-adoption',
+            loadComponent: () => import('./features/admin/reports/product-adoption.component').then(m => m.ProductAdoptionComponent)
+          },
+          {
+            path: 'activity-logs',
+            loadComponent: () => import('./features/admin/reports/system-activity-logs.component').then(m => m.SystemActivityLogsComponent)
           }
         ]
       },
