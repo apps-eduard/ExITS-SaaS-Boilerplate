@@ -86,6 +86,10 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'recycle-bin',
+        loadComponent: () => import('./features/admin/recycle-bin/recycle-bin.component').then(m => m.RecycleBinComponent)
+      },
+      {
         path: 'modules',
         loadComponent: () => import('./features/admin/modules/modules-list.component').then(m => m.ModulesListComponent)
       },

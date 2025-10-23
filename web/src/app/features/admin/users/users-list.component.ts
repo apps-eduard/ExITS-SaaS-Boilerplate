@@ -151,10 +151,11 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
               (change)="applyFilters()"
               class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
-              <option value="">All</option>
+              <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
+              <option value="deleted">Deleted</option>
             </select>
           </div>
 
@@ -360,7 +361,7 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
                       Edit
                     </button>
                     <button
-                      *ngIf="canUpdateUsers()"
+                      *ngIf="canUpdateUsers() && user.status !== 'deleted'"
                       (click)="toggleUserStatus(user)"
                       [class]="user.status === 'active'
                         ? 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 transition'
@@ -376,7 +377,7 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
                       {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
                     </button>
                     <button
-                      *ngIf="canDeleteUsers()"
+                      *ngIf="canDeleteUsers() && user.status !== 'deleted'"
                       (click)="deleteUser(user)"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition"
                       title="Delete User"
@@ -492,6 +493,9 @@ export class UsersListComponent implements OnInit {
     // Filter by status
     if (this.filterStatus) {
       users = users.filter(u => u.status === this.filterStatus);
+    } else {
+      // By default, exclude deleted users (they will be shown in the Recycle Bin)
+      users = users.filter(u => u.status !== 'deleted');
     }
 
     // Filter by type (system/tenant)

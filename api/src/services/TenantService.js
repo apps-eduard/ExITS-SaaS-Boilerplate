@@ -336,6 +336,30 @@ class TenantService {
   }
 
   /**
+   * Restore tenant (from soft delete)
+   */
+  static async restoreTenant(tenantId, requestingUserId) {
+    try {
+      const result = await pool.query(
+        `UPDATE tenants SET status = 'active', updated_at = NOW() WHERE id = $1 AND status = 'deleted' RETURNING *`,
+        [tenantId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Tenant not found or not deleted');
+      }
+
+      const tenant = this.transformTenant(result.rows[0]);
+
+      logger.info(`Tenant restored: ${tenantId}`);
+      return tenant;
+    } catch (err) {
+      logger.error(`Tenant service restore error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
    * Get tenant statistics
    */
   static async getTenantStats(tenantId) {

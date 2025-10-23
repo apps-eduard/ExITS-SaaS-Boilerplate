@@ -66,6 +66,7 @@ interface Pagination {
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
                 <option value="trial">Trial</option>
+                <option value="deleted">Deleted</option>
               </select>
             </div>
 

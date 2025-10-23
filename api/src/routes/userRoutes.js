@@ -31,6 +31,9 @@ router.put('/:id', rbacMiddleware(['users'], ['update']), UserController.updateU
 // Delete user
 router.delete('/:id', rbacMiddleware(['users'], ['delete']), UserController.deleteUser);
 
+// Restore user
+router.put('/:id/restore', rbacMiddleware(['users'], ['update']), UserController.restoreUser);
+
 // User roles
 router.post('/:id/roles/:roleId', rbacMiddleware(['roles'], ['update']), UserController.assignRole);
 router.delete('/:id/roles/:roleId', rbacMiddleware(['roles'], ['update']), UserController.removeRole);

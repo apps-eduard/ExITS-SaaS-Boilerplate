@@ -150,8 +150,9 @@ export class SidebarComponent {
       icon: '🏢',
       anyPermission: ['tenants:read', 'tenants:create', 'tenants:update'],
       children: [
-        { label: 'All Tenants', icon: '📋', route: '/admin/tenants', permission: 'tenants:read' },
+        { label: 'All Tenants', icon: '🆕', route: '/admin/tenants', permission: 'tenants:read' },
         { label: 'New Tenant', icon: '➕', route: '/admin/tenants/new', permission: 'tenants:create' },
+        { label: 'Tenant Settings', icon: '⚙️', route: '/admin/tenants/settings', permission: 'tenants:update' },
       ]
     },
     {
@@ -161,36 +162,51 @@ export class SidebarComponent {
       children: [
         { label: 'All Users', icon: '👤', route: '/admin/users', permission: 'users:read' },
         { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', permission: 'users:invite' },
+        { label: 'Roles & Permissions', icon: '🧩', route: '/admin/roles', permission: 'roles:read' },
       ]
     },
     {
-      label: 'Roles & Permissions',
-      icon: '🔐',
-      route: '/admin/roles',
-      permission: 'roles:read'
+      label: 'Products',
+      icon: '🧩',
+      anyPermission: ['products:read', 'products:create', 'products:update'],
+      children: [
+        { label: 'Add Product', icon: '➕', route: '/admin/products/new', permission: 'products:create' },
+        { label: 'Product Catalog', icon: '�', route: '/admin/products', permission: 'products:read' },
+        { label: 'Product Mapping', icon: '🔗', route: '/admin/products/mapping', permission: 'products:update' },
+        { label: 'Product Settings', icon: '⚙️', route: '/admin/products/settings', permission: 'products:update' },
+      ]
     },
     {
-      label: 'System',
+      label: 'Subscriptions & Billing',
+      icon: '💳',
+      anyPermission: ['billing:read', 'billing:manage-plans', 'subscriptions:read'],
+      children: [
+        { label: 'All Subscriptions', icon: '🧾', route: '/admin/subscriptions', permission: 'subscriptions:read' },
+        { label: 'New Subscription', icon: '➕', route: '/admin/subscriptions/new', permission: 'subscriptions:create' },
+        { label: 'Plan Templates', icon: '�', route: '/admin/billing/plans', permission: 'billing:manage-plans' },
+        { label: 'Billing Overview', icon: '💰', route: '/admin/billing', permission: 'billing:read' },
+        { label: 'Invoices', icon: '�', route: '/admin/billing/invoices', permission: 'billing:view-invoices' },
+        { label: 'Renewal Settings', icon: '⚙️', route: '/admin/billing/renewal', permission: 'billing:manage-plans' },
+      ]
+    },
+    {
+      label: 'Settings',
       icon: '⚙️',
       anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'],
       children: [
-        { label: 'Dashboard', icon: '🏠', route: '/admin/system', anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'] },
-        { label: 'System Health', icon: '💚', route: '/admin/system/health', permission: 'system:view-health' },
-        { label: 'Performance', icon: '⚡', route: '/admin/system/performance', permission: 'system:view-performance' },
+        { label: 'Platform Config', icon: '🌐', route: '/admin/settings/platform', permission: 'system:manage-config' },
         { label: 'Configuration', icon: '🔧', route: '/admin/system/config', permission: 'system:manage-config' },
-        { label: 'System Logs', icon: '📄', route: '/admin/system/logs', permission: 'system:manage-config' },
+        { label: 'Notification Rules', icon: '�', route: '/admin/settings/notifications', permission: 'system:manage-config' },
+        { label: 'System Logs', icon: '🧾', route: '/admin/system/logs', permission: 'system:manage-config' },
+        { label: 'System Backups', icon: '🧱', route: '/admin/settings/backups', permission: 'system:manage-config' },
+        { label: 'Security Policies', icon: '�️', route: '/admin/settings/security', permission: 'system:manage-config' },
       ]
     },
     {
-      label: 'Billing',
-      icon: '💰',
-      anyPermission: ['billing:read', 'billing:manage-plans'],
-      children: [
-        { label: 'Overview', icon: '📊', route: '/admin/billing', permission: 'billing:read' },
-        { label: 'Plans', icon: '📋', route: '/admin/billing/plans', permission: 'billing:manage-plans' },
-        { label: 'Subscriptions', icon: '🔄', route: '/admin/billing/subscriptions', permission: 'billing:read' },
-        { label: 'Invoices', icon: '💳', route: '/admin/billing/invoices', permission: 'billing:view-invoices' },
-      ]
+      label: 'Recycle Bin',
+      icon: '♻️',
+      route: '/admin/recycle-bin',
+      anyPermission: ['users:update', 'tenants:update']
     },
   ]);
 

@@ -170,6 +170,25 @@ class TenantController {
   }
 
   /**
+   * PUT /tenants/:id/restore
+   * Restore tenant (from soft delete)
+   */
+  static async restoreTenant(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const result = await TenantService.restoreTenant(id, req.userId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Tenant restored successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /tenants/:id/stats
    * Get tenant statistics
    */

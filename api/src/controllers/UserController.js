@@ -116,6 +116,25 @@ class UserController {
   }
 
   /**
+   * PUT /users/:id/restore
+   * Restore user (from soft delete)
+   */
+  static async restoreUser(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const result = await UserService.restoreUser(id, req.userId, req.tenantId);
+
+      res.status(HTTP_STATUS.OK).json({
+        message: 'User restored successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * POST /users/:id/roles/:roleId
    * Assign role to user
    */

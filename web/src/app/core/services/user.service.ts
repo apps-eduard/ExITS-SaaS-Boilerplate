@@ -8,7 +8,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   fullName?: string;
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'deleted';
   tenantId?: string | null;
   tenant?: {
     id: string;
@@ -21,6 +21,7 @@ export interface User {
   }>;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
   lastLoginAt?: string;
   emailVerified?: boolean;
 }
@@ -37,7 +38,7 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   email?: string;
-  status?: 'active' | 'inactive' | 'suspended';
+  status?: 'active' | 'inactive' | 'suspended' | 'deleted';
 }
 
 export interface PaginatedUsers {
@@ -234,6 +235,39 @@ export class UserService {
     }
 
     return false;
+  }
+
+  /**
+   * Restore user (from soft delete)
+   */
+  async restoreUser(userId: string): Promise<User | null> {
+    try {
+      this.loadingSignal.set(true);
+      this.errorSignal.set(null);
+
+      const response: any = await firstValueFrom(
+        this.http.put<any>(`${this.apiUrl}/${userId}/restore`, {})
+      );
+
+      if (response && response.data) {
+        const restoredUser = response.data;
+        // Update the user in the list
+        this.usersSignal.set(
+          this.usersSignal().map(u => u.id === userId ? restoredUser : u)
+        );
+        console.log(`✅ User restored: ${userId}`);
+        return restoredUser;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to restore user';
+      this.errorSignal.set(message);
+      console.error('❌ Error restoring user:', message);
+      throw error;
+    } finally {
+      this.loadingSignal.set(false);
+    }
+
+    return null;
   }
 
   /**

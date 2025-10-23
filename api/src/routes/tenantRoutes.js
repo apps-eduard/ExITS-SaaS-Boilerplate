@@ -37,6 +37,9 @@ router.put('/:id/activate', rbacMiddleware(['tenants'], ['update']), TenantContr
 // Delete tenant
 router.delete('/:id', rbacMiddleware(['tenants'], ['delete']), TenantController.deleteTenant);
 
+// Restore tenant
+router.put('/:id/restore', rbacMiddleware(['tenants'], ['update']), TenantController.restoreTenant);
+
 // Get tenant stats
 router.get('/:id/stats', rbacMiddleware(['tenants'], ['read']), TenantController.getTenantStats);
 
