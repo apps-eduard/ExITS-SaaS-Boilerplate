@@ -1,0 +1,307 @@
+<div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <div class="flex items-center justify-center gap-2 mb-4">
+        <div class="h-10 w-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-xl">E</span>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-white">Exits LMS</h1>
+          <p class="text-xs text-gray-400">Get Started in Minutes</p>
+        </div>
+      </div>
+      <p class="text-gray-400 mb-2">Welcome to your onboarding journey</p>
+    </div>
+
+    <!-- Stepper Progress -->
+    <div class="mb-12">
+      <div class="flex justify-between mb-4">
+        <div *ngFor="let step of onboardingSteps; let i = index"
+             class="flex-1"
+             [class.cursor-pointer]="step.step <= currentStep()">
+          <div class="flex flex-col items-center"
+               (click)="goToStep(step.step)">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 transition-all"
+                 [class.bg-gradient-to-r]="step.step < currentStep() || step.completed"
+                 [class.from-green-600]="step.step < currentStep() || step.completed"
+                 [class.to-green-700]="step.step < currentStep() || step.completed"
+                 [class.text-white]="step.step < currentStep() || step.completed"
+                 [class.bg-gradient-to-r]="step.step === currentStep()"
+                 [class.from-purple-600]="step.step === currentStep()"
+                 [class.to-purple-700]="step.step === currentStep()"
+                 [class.text-white]="step.step === currentStep()"
+                 [class.bg-gray-700]="step.step > currentStep()">
+              {{ step.step < currentStep() || step.completed ? '✓' : step.step }}
+            </div>
+            <div class="text-center">
+              <p class="text-xs font-semibold text-white">{{ step.title }}</p>
+              <p class="text-xs text-gray-400">{{ step.description }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Line -->
+      <div class="flex gap-0">
+        <div *ngFor="let i of [0,1,2,3]; let last = last"
+             class="flex-1 h-1 rounded-full transition-all"
+             [class.bg-gradient-to-r]="i < (currentStep() - 1)"
+             [class.from-green-600]="i < (currentStep() - 1)"
+             [class.to-green-700]="i < (currentStep() - 1)"
+             [class.bg-gray-700]="i >= (currentStep() - 1)"
+             [class.mr-1]="!last"></div>
+      </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="bg-gray-800/50 border border-gray-700 rounded-xl p-8">
+      <!-- Error Message -->
+      <div *ngIf="error()" class="mb-6 p-4 bg-red-900/30 border border-red-700 rounded-lg">
+        <p class="text-sm text-red-300">❌ {{ error() }}</p>
+      </div>
+
+      <!-- Success Message -->
+      <div *ngIf="success()" class="mb-6 p-4 bg-green-900/30 border border-green-700 rounded-lg">
+        <p class="text-sm text-green-300">✅ Account created successfully! Redirecting to login...</p>
+      </div>
+
+      <!-- Step 1: Admin Account -->
+      <ng-container *ngIf="currentStep() === 1">
+      <form [formGroup]="signupForm" class="space-y-4">
+        <h2 class="text-2xl font-bold text-white mb-6">Create Your Admin Account</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">First Name *</label>
+            <input type="text" formControlName="firstName" placeholder="John"
+              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              [class.border-red-600]="isFieldInvalid(this.signupForm, 'firstName')" />
+            <p *ngIf="isFieldInvalid(this.signupForm, 'firstName')" class="mt-1 text-xs text-red-400">
+              {{ getFieldError(this.signupForm, 'firstName') }}</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">Last Name *</label>
+            <input type="text" formControlName="lastName" placeholder="Doe"
+              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              [class.border-red-600]="isFieldInvalid(this.signupForm, 'lastName')" />
+            <p *ngIf="isFieldInvalid(this.signupForm, 'lastName')" class="mt-1 text-xs text-red-400">
+              {{ getFieldError(this.signupForm, 'lastName') }}</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-2">Email *</label>
+          <input type="email" formControlName="email" placeholder="john@example.com"
+            class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+            [class.border-red-600]="isFieldInvalid(this.signupForm, 'email')" />
+          <p *ngIf="isFieldInvalid(this.signupForm, 'email')" class="mt-1 text-xs text-red-400">
+            {{ getFieldError(this.signupForm, 'email') }}</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-2">Password (minimum 8 characters) *</label>
+          <input type="password" formControlName="password" placeholder="Enter password" minlength="8"
+            class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+            [class.border-red-600]="isFieldInvalid(this.signupForm, 'password')" />
+          <p *ngIf="isFieldInvalid(this.signupForm, 'password')" class="mt-1 text-xs text-red-400">
+            {{ getFieldError(this.signupForm, 'password') }}</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-2">Confirm Password *</label>
+          <input type="password" formControlName="confirmPassword" placeholder="Confirm password" minlength="8"
+            class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+            [class.border-red-600]="isFieldInvalid(this.signupForm, 'confirmPassword')" />
+          <p *ngIf="isFieldInvalid(this.signupForm, 'confirmPassword')" class="mt-1 text-xs text-red-400">
+            {{ getFieldError(this.signupForm, 'confirmPassword') }}</p>
+        </div>
+
+        <div class="flex items-start gap-3 p-4 bg-gray-900/50 rounded-lg">
+          <input type="checkbox" formControlName="agreeToTerms" class="mt-1 w-4 h-4 rounded" />
+          <label class="text-xs text-gray-300">
+            I agree to the <a href="#" class="text-purple-400 hover:underline">Terms of Service</a> and
+            <a href="#" class="text-purple-400 hover:underline">Privacy Policy</a>
+          </label>
+        </div>
+        <p *ngIf="isFieldInvalid(this.signupForm, 'agreeToTerms')" class="text-xs text-red-400">
+          You must agree to the terms to continue</p>
+      </form>
+      </ng-container>
+
+      <!-- Step 2: Organization Details -->
+      <ng-container *ngIf="currentStep() === 2">
+      <form [formGroup]="tenantForm" class="space-y-4">
+        <h2 class="text-2xl font-bold text-white mb-6">Organization Details</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">Organization Name *</label>
+            <input type="text" formControlName="organizationName" placeholder="My Lending Company"
+              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+              [class.border-red-600]="isFieldInvalid(this.tenantForm, 'organizationName')" />
+            <p *ngIf="isFieldInvalid(this.tenantForm, 'organizationName')" class="mt-1 text-xs text-red-400">
+              {{ getFieldError(this.tenantForm, 'organizationName') }}</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">Subdomain (Optional)</label>
+            <div class="relative">
+              <input type="text" formControlName="subdomain" placeholder="mydomain"
+                class="w-full px-4 py-2 pr-32 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                [class.border-red-600]="isFieldInvalid(this.tenantForm, 'subdomain')" />
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-xs text-gray-500 pointer-events-none">
+                .exits-lms.com
+              </div>
+            </div>
+            <p *ngIf="isFieldInvalid(this.tenantForm, 'subdomain')" class="mt-1 text-xs text-red-400">
+              {{ getFieldError(this.tenantForm, 'subdomain') }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">Industry *</label>
+            <select formControlName="industry"
+              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+              [class.border-red-600]="isFieldInvalid(this.tenantForm, 'industry')">
+              <option value="">Select Industry</option>
+              <option value="microfinance">Microfinance</option>
+              <option value="pawnshop">Pawnshop</option>
+              <option value="retail">Retail</option>
+              <option value="other">Other</option>
+            </select>
+            <p *ngIf="isFieldInvalid(this.tenantForm, 'industry')" class="mt-1 text-xs text-red-400">
+              {{ getFieldError(this.tenantForm, 'industry') }}</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-2">Country</label>
+            <input type="text" formControlName="country" [disabled]="true"
+              class="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed" />
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-700">
+          <h3 class="text-lg font-semibold text-white mb-4">Contact Person</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-2">First Name *</label>
+              <input type="text" formControlName="contactFirstName" placeholder="First name"
+                class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                [class.border-red-600]="isFieldInvalid(this.tenantForm, 'contactFirstName')" />
+              <p *ngIf="isFieldInvalid(this.tenantForm, 'contactFirstName')" class="mt-1 text-xs text-red-400">
+                {{ getFieldError(this.tenantForm, 'contactFirstName') }}</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-2">Last Name *</label>
+              <input type="text" formControlName="contactLastName" placeholder="Last name"
+                class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                [class.border-red-600]="isFieldInvalid(this.tenantForm, 'contactLastName')" />
+              <p *ngIf="isFieldInvalid(this.tenantForm, 'contactLastName')" class="mt-1 text-xs text-red-400">
+                {{ getFieldError(this.tenantForm, 'contactLastName') }}</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-2">Email *</label>
+              <input type="email" formControlName="contactEmail" placeholder="contact@company.com"
+                class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                [class.border-red-600]="isFieldInvalid(this.tenantForm, 'contactEmail')" />
+              <p *ngIf="isFieldInvalid(this.tenantForm, 'contactEmail')" class="mt-1 text-xs text-red-400">
+                {{ getFieldError(this.tenantForm, 'contactEmail') }}</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-2">Phone *</label>
+              <input type="tel" formControlName="contactPhone" placeholder="+63 (2) 1234-5678"
+                class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                [class.border-red-600]="isFieldInvalid(this.tenantForm, 'contactPhone')" />
+              <p *ngIf="isFieldInvalid(this.tenantForm, 'contactPhone')" class="mt-1 text-xs text-red-400">
+                {{ getFieldError(this.tenantForm, 'contactPhone') }}</p>
+            </div>
+          </div>
+        </div>
+      </form>
+      </ng-container>
+
+      <ng-container *ngIf="currentStep() === 3">
+        <h2 class="text-2xl font-bold text-white mb-2">Choose Your Features</h2>
+        <p class="text-gray-400 text-sm mb-6">Select the features that match your business needs. You can add more later.</p>
+
+        <div class="grid md:grid-cols-3 gap-4">
+          <div *ngFor="let feature of features"
+               (click)="toggleFeature(feature.id)"
+               [ngClass]="getFeatureCardClasses(feature)">
+            <div class="flex items-start justify-between mb-3">
+              <div class="text-4xl">{{ feature.icon }}</div>
+              <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                   [ngClass]="getFeatureCheckboxClasses(feature)">
+                <svg *ngIf="feature.selected" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-lg font-bold text-white">{{ feature.name }}</h3>
+            <p class="text-xs text-gray-400 mt-2">{{ getFeatureDescription(feature.id) }}</p>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Step 4: Complete -->
+      <div *ngIf="currentStep() === 4" class="text-center py-12">
+        <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-white mb-4">All Set! 🎉</h2>
+        <p class="text-gray-400 mb-8">Your account has been created successfully. You'll receive a welcome email shortly.</p>
+        <div class="bg-gray-900/50 border border-gray-700 rounded-lg p-6 text-left">
+          <p class="text-sm text-gray-300 mb-4"><strong>Next Steps:</strong></p>
+          <ol class="space-y-2 text-sm text-gray-400">
+            <li>✓ Check your email for confirmation</li>
+            <li>✓ Sign in with your credentials</li>
+            <li>✓ Complete your profile setup</li>
+            <li>✓ Start managing your operations</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
+        <button *ngIf="currentStep() > 1 && !success()" (click)="previousStep()"
+          class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-all">
+          ← Back
+        </button>
+        <div *ngIf="!success()" class="ml-auto"></div>
+
+        <button *ngIf="currentStep() < 4 && !success()" (click)="nextStep()"
+          class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-lg text-white font-medium rounded-lg transition-all transform hover:scale-105">
+          Next →
+        </button>
+
+        <button *ngIf="currentStep() === 4 && !success()" (click)="completeSignup()" [disabled]="loading()"
+          class="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:shadow-lg text-white font-medium rounded-lg transition-all transform hover:scale-105 disabled:opacity-50">
+          {{ loading() ? '⏳ Creating Account...' : '✨ Create Account' }}
+        </button>
+
+        <a *ngIf="success()" routerLink="/login"
+          class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-lg text-white font-medium rounded-lg transition-all">
+          Go to Login →
+        </a>
+      </div>
+
+      <!-- Sign In Link -->
+      <div class="mt-6 text-center border-t border-gray-700 pt-6">
+        <p class="text-gray-400 text-sm">
+          Already have an account?
+          <a routerLink="/login" class="text-purple-400 hover:text-purple-300 font-medium">
+            Sign in here
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>

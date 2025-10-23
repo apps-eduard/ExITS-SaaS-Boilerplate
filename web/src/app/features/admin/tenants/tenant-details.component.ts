@@ -16,6 +16,14 @@ interface Tenant {
   updated_at: string;
   user_count: number;
   role_count: number;
+  // Contact Person
+  contact_person?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  // Product Enablement
+  money_loan_enabled?: boolean;
+  bnpl_enabled?: boolean;
+  pawnshop_enabled?: boolean;
 }
 
 interface TenantStats {
@@ -125,6 +133,59 @@ interface TenantStats {
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Updated</p>
                   <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(tenant()?.updated_at || '') }}</p>
+                </div>
+              </div>
+
+              <!-- Contact Person Section -->
+              <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <span>👤</span>
+                  Contact Person
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Name</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ tenant()?.contact_person || 'Not provided' }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ tenant()?.contact_email || 'Not provided' }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ tenant()?.contact_phone || 'Not provided' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Enabled Products Section -->
+              <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <span>🎯</span>
+                  Enabled Products
+                </h4>
+                <div class="flex flex-wrap gap-2">
+                  <span *ngIf="tenant()?.money_loan_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
+                    <span>💵</span>
+                    Money Loan
+                  </span>
+                  <span *ngIf="tenant()?.bnpl_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span>💳</span>
+                    BNPL
+                  </span>
+                  <span *ngIf="tenant()?.pawnshop_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                    <span>💎</span>
+                    Pawnshop
+                  </span>
+                  <span *ngIf="!tenant()?.money_loan_enabled && !tenant()?.bnpl_enabled && !tenant()?.pawnshop_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                    No products enabled
+                  </span>
                 </div>
               </div>
             </div>

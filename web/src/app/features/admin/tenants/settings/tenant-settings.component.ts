@@ -59,7 +59,7 @@ import { FormsModule } from '@angular/forms';
                 <input
                   type="text"
                   placeholder="Enter organization name"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
+                  class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
               </div>
 
               <!-- Contact Details -->
@@ -71,7 +71,7 @@ import { FormsModule } from '@angular/forms';
                   <input
                     type="email"
                     placeholder="contact@company.com"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
+                    class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -80,7 +80,7 @@ import { FormsModule } from '@angular/forms';
                   <input
                     type="tel"
                     placeholder="+1 (555) 000-0000"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
+                    class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
                 </div>
               </div>
 
@@ -114,7 +114,7 @@ import { FormsModule } from '@angular/forms';
                     <input
                       type="text"
                       value="#3B82F6"
-                      class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                      class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                   </div>
                 </div>
               </div>
@@ -173,81 +173,102 @@ import { FormsModule } from '@angular/forms';
         </div>
       }
 
-      <!-- User & Role Policy Section -->
-      @if (activeSection() === 'policies') {
-        <div class="space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <span>👥</span>
-              User & Role Policies
-            </h2>
-
-            <div class="space-y-6">
-              <!-- Password Rules -->
-              <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Password Rules</h3>
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Minimum Password Length</span>
-                    <input type="number" value="8" min="6" max="32" class="w-20 px-2 py-1 border rounded text-sm">
-                  </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Require Special Characters</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked class="sr-only peer">
-                      <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Password Expiry (days)</span>
-                    <input type="number" value="90" min="0" max="365" class="w-20 px-2 py-1 border rounded text-sm">
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2FA Toggle -->
-              <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Two-Factor Authentication</h3>
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Enforce 2FA for All Users</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" class="sr-only peer">
-                      <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">2FA for Admin Only</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked class="sr-only peer">
-                      <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Role Permissions -->
-              <div>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Role Permissions</h3>
-                <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Configure role-based permissions from the
-                    <a href="/admin/roles" class="text-primary-600 hover:underline">Roles & Permissions</a> page.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-
       <!-- Product Configuration Section -->
       @if (activeSection() === 'products') {
         <div class="space-y-6">
+          <!-- Product Enablement -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span>🎯</span>
+              Active Products
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enable or disable products for this tenant. Disabled products will not be accessible to users.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Money Loan Product -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors"
+                   [class.bg-primary-50]="productSettings().money_loan_enabled"
+                   [class.dark:bg-primary-900/20]="productSettings().money_loan_enabled">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl">💵</span>
+                    <div>
+                      <h3 class="font-semibold text-gray-900 dark:text-white">Money Loan</h3>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Quick cash loans</p>
+                    </div>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox"
+                         [checked]="productSettings().money_loan_enabled"
+                         (change)="toggleProduct('money_loan_enabled')"
+                         class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                  <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    {{ productSettings().money_loan_enabled ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </label>
+              </div>
+
+              <!-- BNPL Product -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors"
+                   [class.bg-primary-50]="productSettings().bnpl_enabled"
+                   [class.dark:bg-primary-900/20]="productSettings().bnpl_enabled">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl">💳</span>
+                    <div>
+                      <h3 class="font-semibold text-gray-900 dark:text-white">BNPL</h3>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Buy Now Pay Later</p>
+                    </div>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox"
+                         [checked]="productSettings().bnpl_enabled"
+                         (change)="toggleProduct('bnpl_enabled')"
+                         class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                  <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    {{ productSettings().bnpl_enabled ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </label>
+              </div>
+
+              <!-- Pawnshop Product -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors"
+                   [class.bg-primary-50]="productSettings().pawnshop_enabled"
+                   [class.dark:bg-primary-900/20]="productSettings().pawnshop_enabled">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl">💎</span>
+                    <div>
+                      <h3 class="font-semibold text-gray-900 dark:text-white">Pawnshop</h3>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Collateral-based loans</p>
+                    </div>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox"
+                         [checked]="productSettings().pawnshop_enabled"
+                         (change)="toggleProduct('pawnshop_enabled')"
+                         class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                  <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    {{ productSettings().pawnshop_enabled ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Configuration Rules -->
           <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <span>💰</span>
-              Product Configuration
+              Product Configuration Rules
             </h2>
 
             <div class="space-y-6">
@@ -261,19 +282,19 @@ import { FormsModule } from '@angular/forms';
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Interest Rate (%)</label>
-                      <input type="number" value="5.5" step="0.1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="5.5" step="0.1" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Maximum Loan Amount</label>
-                      <input type="number" value="50000" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="50000" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Minimum Loan Amount</label>
-                      <input type="number" value="1000" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="1000" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Maximum Term (months)</label>
-                      <input type="number" value="24" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="24" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                   </div>
                 </div>
@@ -289,19 +310,19 @@ import { FormsModule } from '@angular/forms';
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Maximum Installments</label>
-                      <input type="number" value="12" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="12" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Processing Fee (%)</label>
-                      <input type="number" value="2.5" step="0.1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="2.5" step="0.1" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Late Payment Fee</label>
-                      <input type="number" value="50" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="50" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Grace Period (days)</label>
-                      <input type="number" value="3" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="3" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                   </div>
                 </div>
@@ -317,7 +338,7 @@ import { FormsModule } from '@angular/forms';
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Valuation Formula</label>
-                      <select class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <select class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         <option>Market Price × 0.7</option>
                         <option>Market Price × 0.8</option>
                         <option>Custom Formula</option>
@@ -325,15 +346,15 @@ import { FormsModule } from '@angular/forms';
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Storage Fee (per month)</label>
-                      <input type="number" value="20" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="20" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Redemption Period (days)</label>
-                      <input type="number" value="30" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="30" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Interest Rate (%/month)</label>
-                      <input type="number" value="3" step="0.1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <input type="number" value="3" step="0.1" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                   </div>
                 </div>
@@ -402,7 +423,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="space-y-3">
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Days Before Payment Reminder</span>
-                    <input type="number" value="3" class="w-20 px-2 py-1 border rounded text-sm">
+                    <input type="number" value="3" class="w-20 px-2 py-1 text-xs border rounded">
                   </div>
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Send Reminder via Email</span>
@@ -427,7 +448,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="space-y-3">
                   <div>
                     <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Email Footer Text</label>
-                    <textarea rows="3" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Add your company footer..."></textarea>
+                    <textarea rows="3" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Add your company footer..."></textarea>
                   </div>
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Include Company Logo in Emails</span>
@@ -459,7 +480,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="space-y-3">
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Session Timeout (minutes)</span>
-                    <input type="number" value="30" min="5" max="480" class="w-24 px-2 py-1 border rounded text-sm">
+                    <input type="number" value="30" min="5" max="480" class="w-24 px-2 py-1 text-xs border rounded">
                   </div>
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Auto-logout on Inactivity</span>
@@ -477,7 +498,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="space-y-3">
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Maximum Active Devices per User</span>
-                    <input type="number" value="3" min="1" max="10" class="w-20 px-2 py-1 border rounded text-sm">
+                    <input type="number" value="3" min="1" max="10" class="w-20 px-2 py-1 text-xs border rounded">
                   </div>
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Require Device Approval</span>
@@ -502,7 +523,7 @@ import { FormsModule } from '@angular/forms';
                   </div>
                   <div>
                     <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Allowed IP Addresses</label>
-                    <textarea rows="4" class="w-full px-3 py-2 border rounded-lg text-sm font-mono" placeholder="192.168.1.1&#10;10.0.0.0/24&#10;172.16.0.1"></textarea>
+                    <textarea rows="4" class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono" placeholder="192.168.1.1&#10;10.0.0.0/24&#10;172.16.0.1"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Enter one IP address or CIDR range per line</p>
                   </div>
                 </div>
@@ -537,9 +558,25 @@ export class TenantSettingsComponent {
   sections = [
     { id: 'organization', label: 'Organization Info', icon: '🏷️' },
     { id: 'branches', label: 'Branches', icon: '🌍' },
-    { id: 'policies', label: 'User & Role Policy', icon: '👥' },
     { id: 'products', label: 'Product Config', icon: '💰' },
     { id: 'notifications', label: 'Templates & Notifications', icon: '🧾' },
     { id: 'security', label: 'Security', icon: '🛡️' }
   ];
+
+  // Product enablement settings
+  productSettings = signal({
+    money_loan_enabled: true,
+    bnpl_enabled: true,
+    pawnshop_enabled: false
+  });
+
+  toggleProduct(product: 'money_loan_enabled' | 'bnpl_enabled' | 'pawnshop_enabled') {
+    this.productSettings.update(settings => ({
+      ...settings,
+      [product]: !settings[product]
+    }));
+
+    // TODO: Call API to save product settings
+    console.log('Product settings updated:', this.productSettings());
+  }
 }
