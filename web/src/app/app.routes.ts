@@ -144,6 +144,35 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'subscriptions',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/subscriptions/subscriptions-list.component').then(m => m.SubscriptionsListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/subscriptions/subscription-new.component').then(m => m.SubscriptionNewComponent)
+          },
+          {
+            path: 'plans',
+            loadComponent: () => import('./features/admin/subscriptions/plan-templates.component').then(m => m.PlanTemplatesComponent)
+          },
+          {
+            path: 'billing',
+            loadComponent: () => import('./features/admin/subscriptions/billing-overview.component').then(m => m.BillingOverviewComponent)
+          },
+          {
+            path: 'invoices',
+            loadComponent: () => import('./features/admin/subscriptions/invoices.component').then(m => m.InvoicesComponent)
+          },
+          {
+            path: 'renewal-settings',
+            loadComponent: () => import('./features/admin/subscriptions/renewal-settings.component').then(m => m.RenewalSettingsComponent)
+          }
+        ]
+      },
+      {
         path: 'system',
         children: [
           {

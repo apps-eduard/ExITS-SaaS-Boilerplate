@@ -181,12 +181,12 @@ export class SidebarComponent {
       icon: '💳',
       anyPermission: ['billing:read', 'billing:manage-plans', 'subscriptions:read'],
       children: [
-        { label: 'All Subscriptions', icon: '📋', route: '/admin/subscriptions', permission: 'subscriptions:read' },
+        { label: 'All Subscriptions', icon: '🧾', route: '/admin/subscriptions', permission: 'subscriptions:read' },
         { label: 'New Subscription', icon: '➕', route: '/admin/subscriptions/new', permission: 'subscriptions:create' },
-        { label: 'Plan Templates', icon: '📄', route: '/admin/billing/plans', permission: 'billing:manage-plans' },
-        { label: 'Billing Overview', icon: '💰', route: '/admin/billing', permission: 'billing:read' },
-        { label: 'Invoices', icon: '🧾', route: '/admin/billing/invoices', permission: 'billing:view-invoices' },
-        { label: 'Renewal Settings', icon: '🔄', route: '/admin/billing/renewal', permission: 'billing:manage-plans' },
+        { label: 'Plan Templates', icon: '�', route: '/admin/subscriptions/plans', permission: 'billing:manage-plans' },
+        { label: 'Billing Overview', icon: '💰', route: '/admin/subscriptions/billing', permission: 'billing:read' },
+        { label: 'Invoices', icon: '💳', route: '/admin/subscriptions/invoices', permission: 'billing:view-invoices' },
+        { label: 'Renewal Settings', icon: '⚙️', route: '/admin/subscriptions/renewal-settings', permission: 'billing:manage-plans' },
       ]
     },
     {
