@@ -109,12 +109,37 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/tenants/tenant-editor.component').then(m => m.TenantEditorComponent)
           },
           {
+            path: 'settings',
+            loadComponent: () => import('./features/admin/tenants/settings/tenant-settings.component').then(m => m.TenantSettingsComponent)
+          },
+          {
             path: ':id',
             loadComponent: () => import('./features/admin/tenants/tenant-details.component').then(m => m.TenantDetailsComponent)
           },
           {
             path: ':id/edit',
             loadComponent: () => import('./features/admin/tenants/tenant-editor.component').then(m => m.TenantEditorComponent)
+          }
+        ]
+      },
+      {
+        path: 'products',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+          },
+          {
+            path: 'mapping',
+            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+          },
+          {
+            path: 'settings',
+            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
           }
         ]
       },

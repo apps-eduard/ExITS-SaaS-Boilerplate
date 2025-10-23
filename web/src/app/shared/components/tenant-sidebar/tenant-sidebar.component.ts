@@ -143,51 +143,34 @@ export class TenantSidebarComponent {
   menuItems = signal<MenuItem[]>([
     { label: 'Dashboard', icon: '📊', route: '/tenant/dashboard', menuKey: 'tenant-dashboard' },
     {
-      label: 'Overview',
-      icon: '📈',
-      menuKey: 'tenant-overview',
-      children: [
-        { label: 'Overview', icon: '📋', route: '/tenant/overview', menuKey: 'tenant-overview' },
-        { label: 'Reports', icon: '📊', route: '/tenant/overview/reports', menuKey: 'tenant-overview' },
-      ]
-    },
-    {
       label: 'Users',
       icon: '👥',
       menuKey: 'tenant-users',
       children: [
-        { label: 'List Users', icon: '👤', route: '/tenant/users', menuKey: 'tenant-users' },
-        { label: 'Create User', icon: '➕', route: '/tenant/users/create', menuKey: 'tenant-users', requiredAction: 'create' },
-        { label: 'Assign Roles', icon: '🔐', route: '/tenant/users/assign-roles', menuKey: 'tenant-users' },
+        { label: 'All Users', icon: '👤', route: '/tenant/users', menuKey: 'tenant-users' },
+        { label: 'Invite User', icon: '➕', route: '/tenant/users/invite', menuKey: 'tenant-users', requiredAction: 'create' },
+        { label: 'Roles & Permissions', icon: '🧩', route: '/tenant/roles', menuKey: 'tenant-roles' },
       ]
     },
     {
-      label: 'Roles & Permissions',
-      icon: '🔐',
-      menuKey: 'tenant-roles',
-      children: [
-        { label: 'Role Management', icon: '👔', route: '/tenant/roles', menuKey: 'tenant-roles' },
-        { label: 'Assign Permissions', icon: '🔑', route: '/tenant/roles/permissions', menuKey: 'tenant-roles' },
-      ]
-    },
-    {
-      label: 'Modules',
+      label: 'Products',
       icon: '🧩',
-      menuKey: 'tenant-modules',
+      menuKey: 'tenant-products',
       children: [
-        { label: 'Money Loan', icon: '💰', route: '/tenant/modules/money-loan', menuKey: 'module-money-loan' },
-        { label: 'BNPL', icon: '💳', route: '/tenant/modules/bnpl', menuKey: 'module-bnpl' },
-        { label: 'Pawnshop', icon: '💎', route: '/tenant/modules/pawnshop', menuKey: 'module-pawnshop' },
+        { label: 'My Product Catalog', icon: '�', route: '/tenant/products', menuKey: 'tenant-products' },
+        { label: 'Product Settings / Features', icon: '�', route: '/tenant/products/settings', menuKey: 'tenant-products' },
+        { label: 'Product Configuration', icon: '⚙️', route: '/tenant/products/config', menuKey: 'tenant-products' },
       ]
     },
     {
-      label: 'Transactions',
-      icon: '💸',
-      menuKey: 'tenant-transactions',
+      label: 'Subscriptions & Billing',
+      icon: '💳',
+      menuKey: 'tenant-billing',
       children: [
-        { label: 'Loans', icon: '💰', route: '/tenant/transactions/loans', menuKey: 'tenant-transactions' },
-        { label: 'Payments', icon: '💳', route: '/tenant/transactions/payments', menuKey: 'tenant-transactions' },
-        { label: 'Receipts', icon: '🧾', route: '/tenant/transactions/receipts', menuKey: 'tenant-transactions' },
+        { label: 'My Subscriptions', icon: '🧾', route: '/tenant/subscriptions', menuKey: 'tenant-billing' },
+        { label: 'Billing Overview', icon: '💰', route: '/tenant/billing', menuKey: 'tenant-billing' },
+        { label: 'Invoices', icon: '💳', route: '/tenant/billing/invoices', menuKey: 'tenant-billing' },
+        { label: 'Renewal Settings', icon: '⚙️', route: '/tenant/billing/renewal', menuKey: 'tenant-billing' },
       ]
     },
     {
@@ -195,20 +178,17 @@ export class TenantSidebarComponent {
       icon: '📊',
       menuKey: 'tenant-reports',
       children: [
-        { label: 'Financial Reports', icon: '💵', route: '/tenant/reports/financial', menuKey: 'tenant-reports' },
-        { label: 'User Reports', icon: '👥', route: '/tenant/reports/users', menuKey: 'tenant-reports' },
-        { label: 'Module Reports', icon: '🧩', route: '/tenant/reports/modules', menuKey: 'tenant-reports' },
+        { label: 'Product Usage', icon: '📈', route: '/tenant/reports/product-usage', menuKey: 'tenant-reports' },
+        { label: 'User Activity', icon: '🧍‍♂️', route: '/tenant/reports/user-activity', menuKey: 'tenant-reports' },
+        { label: 'Billing / Payment Summary', icon: '💰', route: '/tenant/reports/billing-summary', menuKey: 'tenant-reports' },
+        { label: 'Transaction History', icon: '🧾', route: '/tenant/reports/transactions', menuKey: 'tenant-reports' },
       ]
     },
     {
-      label: 'Settings',
-      icon: '⚙️',
-      menuKey: 'tenant-settings',
-      children: [
-        { label: 'Tenant Info', icon: '🏢', route: '/tenant/settings/info', menuKey: 'tenant-settings' },
-        { label: 'Branches', icon: '🏪', route: '/tenant/settings/branches', menuKey: 'tenant-settings' },
-        { label: 'Module Config', icon: '🛠️', route: '/tenant/settings/modules', menuKey: 'tenant-settings' },
-      ]
+      label: 'Recycle Bin',
+      icon: '♻️',
+      route: '/tenant/recycle-bin',
+      menuKey: 'tenant-recycle-bin'
     },
   ]);
 

@@ -196,8 +196,22 @@ interface ResourceGroup {
             <div class="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
               <div class="flex items-center justify-between">
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Permissions Matrix</h2>
-                <div class="text-xs text-gray-500 dark:text-gray-400">
-                  Standard RBAC (resource:action format)
+                <div class="flex items-center gap-3">
+                  <!-- Space Filter -->
+                  <div class="flex items-center gap-2">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Filter by Space:</label>
+                    <select
+                      [(ngModel)]="spaceFilter"
+                      class="text-xs rounded border border-gray-300 bg-white px-2 py-1 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="all">All</option>
+                      <option value="system">System</option>
+                      <option value="tenant">Tenant</option>
+                    </select>
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Standard RBAC (resource:action format)
+                  </div>
                 </div>
               </div>
             </div>
@@ -281,6 +295,7 @@ export class RoleEditorComponent implements OnInit {
   selectedTenantIds = signal<number[]>([]); // Used for creating (multiple tenants)
   tenants = signal<any[]>([]);
   loadingTenants = signal(false);
+  spaceFilter: 'all' | 'system' | 'tenant' = 'all'; // Filter for permission matrix
 
   // Resource groups with available permissions
   resourceGroups: ResourceGroup[] = [
@@ -290,6 +305,11 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'users', displayName: 'Users (System)', description: 'System-wide user management', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'system' },
     { resource: 'roles', displayName: 'Roles & Permissions', description: 'Role and permission management', actions: ['read', 'create', 'update', 'delete', 'assign-permissions'], category: 'system' },
     { resource: 'permissions', displayName: 'Permissions', description: 'Permission management', actions: ['view', 'assign'], category: 'system' },
+    { resource: 'products', displayName: 'Products', description: 'Product catalog and management', actions: ['read', 'create', 'update', 'delete', 'manage-catalog', 'manage-mapping', 'manage-settings'], category: 'system' },
+    { resource: 'subscriptions', displayName: 'Subscriptions', description: 'Subscription management', actions: ['read', 'create', 'update', 'delete', 'manage-plans', 'manage-renewals'], category: 'system' },
+    { resource: 'reports', displayName: 'Reports & Analytics', description: 'System reports and analytics', actions: ['view', 'export', 'tenant-usage', 'revenue', 'product-adoption', 'activity-logs'], category: 'system' },
+    { resource: 'analytics', displayName: 'Analytics', description: 'Analytics dashboard', actions: ['view'], category: 'system' },
+    { resource: 'recycle-bin', displayName: 'Recycle Bin', description: 'Deleted items recovery', actions: ['view', 'restore', 'permanent-delete'], category: 'system' },
     { resource: 'system', displayName: 'System Settings', description: 'System configuration', actions: ['view-health', 'view-performance', 'manage-config'], category: 'system' },
     { resource: 'monitoring', displayName: 'Monitoring', description: 'System monitoring', actions: ['view'], category: 'system' },
     { resource: 'billing', displayName: 'Billing', description: 'Billing and invoices', actions: ['read', 'manage-plans', 'view-invoices'], category: 'system' },
@@ -298,26 +318,38 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'tenant-dashboard', displayName: 'Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant' },
     { resource: 'tenant-users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'tenant' },
     { resource: 'tenant-roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
+    { resource: 'tenant-products', displayName: 'Tenant Products', description: 'Tenant product catalog', actions: ['read', 'configure', 'manage-settings'], category: 'tenant' },
+    { resource: 'tenant-billing', displayName: 'Tenant Billing', description: 'Tenant billing and subscriptions', actions: ['read', 'view-subscriptions', 'view-invoices', 'manage-renewals', 'view-overview'], category: 'tenant' },
+    { resource: 'tenant-reports', displayName: 'Tenant Reports', description: 'Tenant reports and analytics', actions: ['view', 'product-usage', 'user-activity', 'billing-summary', 'transactions', 'export'], category: 'tenant' },
+    { resource: 'tenant-recycle-bin', displayName: 'Tenant Recycle Bin', description: 'Tenant deleted items recovery', actions: ['view', 'restore', 'view-history'], category: 'tenant' },
     { resource: 'tenant-settings', displayName: 'Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant' },
 
     // Business modules
     { resource: 'loans', displayName: 'Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse'], category: 'business' },
     { resource: 'payments', displayName: 'Payments', description: 'Payment processing', actions: ['read', 'create', 'update', 'delete'], category: 'business' },
-    { resource: 'reports', displayName: 'Reports', description: 'Reporting and analytics', actions: ['read', 'export', 'financial'], category: 'business' },
   ];
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
 
-  // Filtered resource groups based on selected space
+  // Filtered resource groups based on selected space and space filter
   get filteredResourceGroups(): ResourceGroup[] {
-    if (this.roleSpace === 'system') {
-      // System roles can see all permissions
-      return this.resourceGroups;
-    } else {
-      // Tenant roles should only see tenant and business permissions
-      return this.resourceGroups.filter(group => group.category !== 'system');
+    let groups = this.resourceGroups;
+
+    // First filter by role space (tenant roles can't see system permissions)
+    if (this.roleSpace === 'tenant') {
+      groups = groups.filter(group => group.category !== 'system');
     }
+
+    // Then apply the space filter
+    if (this.spaceFilter === 'system') {
+      groups = groups.filter(group => group.category === 'system');
+    } else if (this.spaceFilter === 'tenant') {
+      groups = groups.filter(group => group.category === 'tenant' || group.category === 'business');
+    }
+    // If 'all', show all available groups (already filtered by role space above)
+
+    return groups;
   }
 
   constructor(
