@@ -67,7 +67,7 @@ interface Pagination {
                 <option value="trial">Trial</option>
               </select>
             </div>
-            
+
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Plan</label>
               <select
@@ -81,7 +81,7 @@ interface Pagination {
                 <option value="enterprise">Enterprise</option>
               </select>
             </div>
-            
+
             <div class="md:col-span-2">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
               <input
@@ -109,7 +109,7 @@ interface Pagination {
             </div>
           </div>
         </div>
-        
+
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
@@ -121,7 +121,7 @@ interface Pagination {
             </div>
           </div>
         </div>
-        
+
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center flex-shrink-0">
@@ -133,7 +133,7 @@ interface Pagination {
             </div>
           </div>
         </div>
-        
+
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
@@ -168,9 +168,9 @@ interface Pagination {
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subdomain</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -202,7 +202,7 @@ interface Pagination {
                     <span class="text-xs text-gray-600 dark:text-gray-400">{{ formatDate(tenant.created_at) }}</span>
                   </td>
                   <td class="px-4 py-2.5">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center justify-center gap-2">
                       <a
                         [routerLink]="['/admin/tenants', tenant.id]"
                         class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium"
@@ -226,15 +226,20 @@ interface Pagination {
                         Edit
                       </button>
                       <button
-                        *ngIf="canUpdateTenants() && tenant.status === 'active'"
-                        (click)="suspendTenant(tenant)"
-                        class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-medium"
-                        title="Suspend tenant"
+                        *ngIf="canUpdateTenants()"
+                        (click)="toggleTenantStatus(tenant)"
+                        [class]="tenant.status === 'active'
+                          ? 'inline-flex items-center gap-1 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-xs font-medium'
+                          : 'inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-xs font-medium'"
+                        [title]="tenant.status === 'active' ? 'Suspend tenant' : 'Activate tenant'"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg *ngIf="tenant.status === 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
-                        Suspend
+                        <svg *ngIf="tenant.status !== 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ tenant.status === 'active' ? 'Suspend' : 'Activate' }}
                       </button>
                     </div>
                   </td>
@@ -295,14 +300,14 @@ export class TenantsListComponent implements OnInit {
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
-  
+
   filters = {
     status: '',
     plan: ''
   };
-  
+
   searchQuery = '';
-  
+
   pagination = signal<Pagination>({
     page: 1,
     limit: 20,
@@ -378,21 +383,33 @@ export class TenantsListComponent implements OnInit {
     this.loadTenants();
   }
 
-  suspendTenant(tenant: Tenant): void {
-    if (!confirm(`Are you sure you want to suspend "${tenant.name}"?`)) {
+  toggleTenantStatus(tenant: Tenant): void {
+    const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'suspend';
+
+    if (!confirm(`Are you sure you want to ${action} "${tenant.name}"?`)) {
       return;
     }
 
-    this.http.put<any>(`/api/tenants/${tenant.id}/suspend`, { reason: 'Manual suspension' }).subscribe({
+    const endpoint = newStatus === 'active'
+      ? `/api/tenants/${tenant.id}/activate`
+      : `/api/tenants/${tenant.id}/suspend`;
+
+    this.http.put<any>(endpoint, { reason: `Manual ${action}` }).subscribe({
       next: () => {
         this.loadTenants();
-        alert('Tenant suspended successfully');
+        alert(`Tenant ${action}d successfully`);
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to suspend tenant');
-        console.error('Error suspending tenant:', err);
+        alert(err.error?.message || `Failed to ${action} tenant`);
+        console.error(`Error ${action}ing tenant:`, err);
       }
     });
+  }
+
+  suspendTenant(tenant: Tenant): void {
+    // Legacy method - redirect to toggleTenantStatus
+    this.toggleTenantStatus(tenant);
   }
 
   getStatusClass(status: string): string {

@@ -96,13 +96,41 @@ class RBACController {
    */
   static async createRole(req, res) {
     try {
-      const { name, description, space } = req.body;
-      const tenantId = space === 'tenant' ? req.user.tenant_id : null;
+      const { name, description, space, tenant_id } = req.body;
       
-      logger.info(`📝 Creating role: ${name}, space: ${space}, tenant: ${tenantId}`);
+      logger.info('📥 Request body:', req.body);
+      logger.info('🔍 Extracted tenant_id from body:', tenant_id, 'type:', typeof tenant_id);
+      
+      // Determine tenant_id based on space and user context
+      let finalTenantId = null;
+      
+      if (space === 'tenant') {
+        // For tenant roles, use tenant_id from request body (if provided by system admin)
+        // or from the authenticated user's tenant
+        // Convert string to number if needed
+        const bodyTenantId = tenant_id ? parseInt(tenant_id, 10) : null;
+        finalTenantId = bodyTenantId || req.user?.tenant_id || req.tenantId;
+        
+        logger.info('🔍 Final tenant_id resolved:', finalTenantId, 'type:', typeof finalTenantId);
+        
+        if (!finalTenantId) {
+          logger.warn('⚠️  Tenant role creation requires tenant_id');
+          return res.status(400).json({ 
+            error: 'Tenant ID required', 
+            message: 'Tenant roles must be associated with a tenant. Please specify tenant_id or use a tenant user account.',
+          });
+        }
+      }
+      
+      logger.info(`📝 Creating role: ${name}, space: ${space}, tenant: ${finalTenantId}`);
       
       if (!name || !space) {
         return res.status(400).json({ error: 'Name and space are required' });
+      }
+
+      // Validate space value
+      if (!['system', 'tenant'].includes(space)) {
+        return res.status(400).json({ error: 'Space must be either "system" or "tenant"' });
       }
 
       // Check if database is available
@@ -114,15 +142,15 @@ class RBACController {
       const query = `
         INSERT INTO roles (name, description, space, status, tenant_id)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, name, description, space, status
+        RETURNING id, name, description, space, status, tenant_id
       `;
 
-      const result = await req.app.locals.db.query(query, [name, description, space, 'active', tenantId]);
+      const result = await req.app.locals.db.query(query, [name, description, space, 'active', finalTenantId]);
       logger.info(`✅ Role created: ${name} with ID: ${result.rows[0].id}`);
       
       res.status(201).json({
         success: true,
-        data: result.rows[0]
+        data: result.rows[0],
       });
     } catch (error) {
       // Handle duplicate role name
@@ -130,7 +158,16 @@ class RBACController {
         logger.warn(`⚠️  Duplicate role name: ${req.body.name}`);
         return res.status(409).json({ 
           error: 'Role already exists', 
-          message: `A role named "${req.body.name}" already exists in this ${req.body.space} space.`
+          message: `A role named "${req.body.name}" already exists in this ${req.body.space} space.`,
+        });
+      }
+
+      // Handle constraint violations
+      if (error.code === '23514') {
+        logger.warn(`⚠️  Constraint violation: ${error.message}`);
+        return res.status(400).json({ 
+          error: 'Invalid role configuration', 
+          message: 'System roles must not have a tenant_id, and tenant roles must have a tenant_id.',
         });
       }
 

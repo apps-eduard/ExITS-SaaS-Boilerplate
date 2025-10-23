@@ -37,7 +37,7 @@ export class AuthService {
   private apiUrl = 'http://localhost:3000/api';
   currentUser = signal<User | null>(null);
   isAuthenticated = signal<boolean>(false);
-  
+
   // Store permissions from login response
   private userPermissions = signal<string[]>([]);
 
@@ -56,13 +56,13 @@ export class AuthService {
           console.log('📝 Saving tokens to localStorage...');
           this.setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
           console.log('✅ Tokens saved. Accessing token:', this.getAccessToken()?.substring(0, 20) + '...');
-          
+
           // Store permissions from login response
           const permissions = response.data.permissions || [];
           console.log('🔑 Permissions from login:', permissions);
           this.userPermissions.set(permissions);
           localStorage.setItem('permissions', JSON.stringify(permissions));
-          
+
           // Transform API response (camelCase) to frontend format (snake_case)
           const apiUser = response.data.user;
           const user: User = {
@@ -74,7 +74,7 @@ export class AuthService {
             role_id: apiUser.roleId || apiUser.role_id,
             role: apiUser.role
           };
-          
+
           this.currentUser.set(user);
           this.isAuthenticated.set(true);
           localStorage.setItem('user', JSON.stringify(user));
@@ -130,7 +130,14 @@ export class AuthService {
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
-        const permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
+        let permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
+
+        // Ensure permissions is always an array
+        if (!Array.isArray(permissions)) {
+          console.warn('⚠️ Permissions from storage is not an array, converting:', typeof permissions);
+          permissions = [];
+        }
+
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
         this.userPermissions.set(permissions);
@@ -143,6 +150,13 @@ export class AuthService {
 
   hasPermission(permission: string): boolean {
     const permissions = this.userPermissions();
+
+    // Handle if permissions is not an array (defensive check)
+    if (!Array.isArray(permissions)) {
+      console.error('❌ Permissions is not an array:', typeof permissions, permissions);
+      return false;
+    }
+
     const hasIt = permissions.includes(permission);
     console.log(`🔍 Checking permission "${permission}":`, hasIt, '| Available:', permissions);
     return hasIt;

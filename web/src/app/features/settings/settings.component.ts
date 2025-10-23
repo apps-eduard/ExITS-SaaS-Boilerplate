@@ -1,14 +1,23 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { HeaderComponent } from '../../shared/components/header/header.component';
+import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, HeaderComponent, SidebarComponent],
   template: `
-    <div class="p-4 space-y-4 max-w-6xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <app-sidebar #sidebar/>
+
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <app-header (menuToggle)="toggleSidebar()"/>
+
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6">
+          <div class="space-y-4 max-w-6xl mx-auto">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
@@ -44,7 +53,7 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Settings Grid (only shown if user has access) -->
       <div *ngIf="canAccessSettings()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <!-- System Settings -->
-        <div *ngIf="authService.hasPermission('system:view')" 
+        <div *ngIf="authService.hasPermission('system:view')"
              routerLink="/admin/system"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -61,7 +70,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- User Management -->
-        <div *ngIf="authService.hasPermission('users:view')" 
+        <div *ngIf="authService.hasPermission('users:view')"
              routerLink="/admin/users"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -78,7 +87,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- Role Management -->
-        <div *ngIf="authService.hasPermission('roles:view')" 
+        <div *ngIf="authService.hasPermission('roles:view')"
              routerLink="/admin/roles"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -95,7 +104,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- Tenant Management -->
-        <div *ngIf="authService.hasPermission('tenants:view')" 
+        <div *ngIf="authService.hasPermission('tenants:view')"
              routerLink="/admin/tenants"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -112,7 +121,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- Audit Logs -->
-        <div *ngIf="authService.hasPermission('audit:view')" 
+        <div *ngIf="authService.hasPermission('audit:view')"
              routerLink="/admin/audit-logs"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -129,7 +138,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- Modules -->
-        <div *ngIf="authService.hasPermission('modules:view')" 
+        <div *ngIf="authService.hasPermission('modules:view')"
              routerLink="/admin/modules"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -146,7 +155,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- Billing -->
-        <div *ngIf="authService.hasPermission('billing:read')" 
+        <div *ngIf="authService.hasPermission('billing:read')"
              routerLink="/admin/billing"
              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
           <div class="flex items-start gap-3">
@@ -190,19 +199,29 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </div>
     </div>
+        </main>
+      </div>
+    </div>
   `
 })
 export class SettingsComponent {
+  @ViewChild('sidebar') sidebar!: SidebarComponent;
   authService = inject(AuthService);
   router = inject(Router);
 
   canAccessSettings(): boolean {
-    return this.authService.isSystemAdmin() || 
+    return this.authService.isSystemAdmin() ||
            this.authService.hasPermission('system:view') ||
            this.authService.hasPermission('settings:view');
   }
 
   goBack(): void {
     this.router.navigate(['/']);
+  }
+
+  toggleSidebar() {
+    if (this.sidebar) {
+      this.sidebar.isOpen.update(v => !v);
+    }
   }
 }

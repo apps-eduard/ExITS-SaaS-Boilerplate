@@ -273,7 +273,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Roles</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Last Login</th>
-                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -336,7 +336,7 @@ import { AuthService } from '../../../core/services/auth.service';
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <div class="flex items-center justify-end gap-2">
+                  <div class="flex items-center justify-center gap-2">
                     <button
                       [routerLink]="'/admin/users/' + user.id + '/profile'"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-300 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 transition"
@@ -357,6 +357,22 @@ import { AuthService } from '../../../core/services/auth.service';
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                       Edit
+                    </button>
+                    <button
+                      *ngIf="canUpdateUsers()"
+                      (click)="toggleUserStatus(user)"
+                      [class]="user.status === 'active'
+                        ? 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 transition'
+                        : 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 transition'"
+                      [title]="user.status === 'active' ? 'Disable User' : 'Enable User'"
+                    >
+                      <svg *ngIf="user.status === 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      <svg *ngIf="user.status !== 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {{ user.status === 'active' ? 'Disable' : 'Enable' }}
                     </button>
                     <button
                       *ngIf="canDeleteUsers()"
@@ -654,6 +670,31 @@ export class UsersListComponent implements OnInit {
     if (diffDays < 7) return `${diffDays}d ago`;
 
     return d.toLocaleDateString();
+  }
+
+  async toggleUserStatus(user: User): Promise<void> {
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'Enable' : 'Disable';
+
+    const confirmed = confirm(
+      `${action} User: ${user.email}\n\n` +
+      `This will ${action.toLowerCase()} the user account.\n` +
+      `Are you sure you want to proceed?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Update user status via API
+      await this.userService.updateUser(user.id, { status: newStatus });
+      console.log(`✅ User ${user.email} ${action.toLowerCase()}d successfully`);
+
+      // Refresh the user list
+      await this.userService.loadUsers();
+    } catch (error) {
+      console.error(`❌ Error ${action.toLowerCase()}ing user:`, error);
+      alert(`Failed to ${action.toLowerCase()} user. Please try again.`);
+    }
   }
 
   async deleteUser(user: User): Promise<void> {

@@ -378,15 +378,17 @@ class RBACService {
       `;
       
       const params = [];
-      if (tenantId === null) {
-        query += ` AND r.space = 'system'`;
-      } else {
+      
+      // System admins (tenantId === null) can see all roles
+      // Tenant users can only see their tenant roles + system roles
+      if (tenantId !== null) {
         query += ` AND (r.space = 'system' OR r.tenant_id = $1)`;
         params.push(tenantId);
       }
+      // If tenantId is null (system admin), no additional filter - show all roles
       
       query += ` GROUP BY r.id, r.name, r.description, r.space, r.status, r.tenant_id`;
-      query += ` ORDER BY r.name`;
+      query += ` ORDER BY r.space DESC, r.name`;  // System roles first, then tenant roles
       
       const result = await db.query(query, params);
       return result.rows;

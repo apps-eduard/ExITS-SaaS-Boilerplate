@@ -1,7 +1,8 @@
-import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { RoleService, Role, Permission } from '../../../core/services/role.service';
 
 interface ResourceGroup {
@@ -98,6 +99,28 @@ interface ResourceGroup {
                   <option value="system">System</option>
                   <option value="tenant">Tenant</option>
                 </select>
+                <p *ngIf="roleSpace === 'tenant'" class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                  ℹ️ Tenant roles can only access tenant and business permissions
+                </p>
+              </div>
+
+              <!-- Tenant Selector (only for tenant roles) -->
+              <div *ngIf="roleSpace === 'tenant' && !isEditing()">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tenant <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="selectedTenantId"
+                  class="w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                >
+                  <option [value]="null">Select a tenant...</option>
+                  <option *ngFor="let tenant of tenants()" [value]="tenant.id">
+                    {{ tenant.name }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Select which tenant this role belongs to
+                </p>
               </div>
             </div>
 
@@ -122,6 +145,7 @@ interface ResourceGroup {
               <p class="text-xs font-medium text-yellow-800 dark:text-yellow-300 mb-1">Required:</p>
               <ul class="text-xs text-yellow-700 dark:text-yellow-400 space-y-0.5">
                 <li *ngIf="!roleName.trim()">• Role name</li>
+                <li *ngIf="roleSpace === 'tenant' && !selectedTenantId">• Select a tenant</li>
                 <li *ngIf="getTotalSelectedPermissions() === 0">• At least 1 permission</li>
               </ul>
             </div>
@@ -163,14 +187,14 @@ interface ResourceGroup {
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
 
               <!-- Each Resource Group -->
-              <div *ngFor="let group of resourceGroups" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+              <div *ngFor="let group of filteredResourceGroups" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
 
                 <!-- Resource Header -->
                 <div class="flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/30">
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
                       <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ group.displayName }}</span>
-                      <span class="text-xs px-2 py-0.5 rounded-full" 
+                      <span class="text-xs px-2 py-0.5 rounded-full"
                             [class]="group.category === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : group.category === 'tenant' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'">
                         {{ group.category }}
                       </span>
@@ -187,7 +211,7 @@ interface ResourceGroup {
                         (change)="togglePermission(group.resource, action)"
                         class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600"
                       />
-                      <span class="text-xs font-medium" 
+                      <span class="text-xs font-medium"
                             [class]="getActionColor(action)">
                         {{ action }}
                       </span>
@@ -233,7 +257,10 @@ export class RoleEditorComponent implements OnInit {
   roleId: string | null = null;
   roleName = '';
   roleDescription = '';
-  roleSpace: 'system' | 'tenant' = 'tenant';
+  roleSpace: 'system' | 'tenant' = 'system';
+  selectedTenantId: number | null = null;
+  tenants = signal<any[]>([]);
+  loadingTenants = signal(false);
 
   // Resource groups with available permissions
   resourceGroups: ResourceGroup[] = [
@@ -246,13 +273,13 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'system', displayName: 'System Settings', description: 'System configuration', actions: ['view-health', 'view-performance', 'manage-config'], category: 'system' },
     { resource: 'monitoring', displayName: 'Monitoring', description: 'System monitoring', actions: ['view'], category: 'system' },
     { resource: 'billing', displayName: 'Billing', description: 'Billing and invoices', actions: ['read', 'manage-plans', 'view-invoices'], category: 'system' },
-    
+
     // Tenant level
     { resource: 'tenant-dashboard', displayName: 'Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant' },
     { resource: 'tenant-users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'tenant' },
     { resource: 'tenant-roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
     { resource: 'tenant-settings', displayName: 'Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant' },
-    
+
     // Business modules
     { resource: 'loans', displayName: 'Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse'], category: 'business' },
     { resource: 'payments', displayName: 'Payments', description: 'Payment processing', actions: ['read', 'create', 'update', 'delete'], category: 'business' },
@@ -262,14 +289,27 @@ export class RoleEditorComponent implements OnInit {
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
 
+  // Filtered resource groups based on selected space
+  get filteredResourceGroups(): ResourceGroup[] {
+    if (this.roleSpace === 'system') {
+      // System roles can see all permissions
+      return this.resourceGroups;
+    } else {
+      // Tenant roles should only see tenant and business permissions
+      return this.resourceGroups.filter(group => group.category !== 'system');
+    }
+  }
+
   constructor(
     public roleService: RoleService,
     private route: ActivatedRoute,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
+    this.loadTenants();
     this.route.params.subscribe(params => {
       if (params['id'] && params['id'] !== 'new') {
         this.isEditing.set(true);
@@ -279,13 +319,27 @@ export class RoleEditorComponent implements OnInit {
     });
   }
 
+  loadTenants(): void {
+    this.loadingTenants.set(true);
+    this.http.get<any>('http://localhost:3000/api/tenants').subscribe({
+      next: (response) => {
+        this.tenants.set(response.data || response);
+        this.loadingTenants.set(false);
+      },
+      error: (error) => {
+        console.error('Failed to load tenants:', error);
+        this.loadingTenants.set(false);
+      }
+    });
+  }
+
   async loadRole(): Promise<void> {
     if (!this.roleId) return;
     console.log('🔄 Loading role ID:', this.roleId);
-    
+
     const role = await this.roleService.getRole(this.roleId);
     console.log('🔄 Role data received:', role);
-    
+
     if (role) {
       this.roleName = role.name;
       this.roleDescription = role.description || '';
@@ -326,13 +380,13 @@ export class RoleEditorComponent implements OnInit {
   togglePermission(resource: string, action: string): void {
     const permKey = `${resource}:${action}`;
     const perms = new Set(this.selectedPermissions());
-    
+
     if (perms.has(permKey)) {
       perms.delete(permKey);
     } else {
       perms.add(permKey);
     }
-    
+
     this.selectedPermissions.set(perms);
   }
 
@@ -393,7 +447,11 @@ export class RoleEditorComponent implements OnInit {
   }
 
   canSave(): boolean {
-    return this.roleName.trim().length > 0 && this.getTotalSelectedPermissions() > 0;
+    const hasName = this.roleName.trim().length > 0;
+    const hasPermissions = this.getTotalSelectedPermissions() > 0;
+    const hasTenantIfNeeded = this.roleSpace === 'system' || (this.roleSpace === 'tenant' && this.selectedTenantId !== null);
+    
+    return hasName && hasPermissions && hasTenantIfNeeded;
   }
 
   async saveRole(): Promise<void> {
@@ -430,12 +488,22 @@ export class RoleEditorComponent implements OnInit {
         }
       } else {
         console.log('➕ Creating new role...');
-        const payload = {
+        const payload: any = {
           name: this.roleName,
           description: this.roleDescription,
           space: this.roleSpace
         };
+        
+        // Add tenant_id if creating a tenant role
+        if (this.roleSpace === 'tenant' && this.selectedTenantId) {
+          // Ensure tenant_id is a number
+          payload.tenant_id = typeof this.selectedTenantId === 'string' 
+            ? parseInt(this.selectedTenantId, 10) 
+            : this.selectedTenantId;
+        }
+        
         console.log('📤 Payload:', payload);
+        console.log('📤 Tenant ID type:', typeof payload.tenant_id);
 
         const created = await this.roleService.createRole(payload);
         console.log('📥 Create response:', created);
