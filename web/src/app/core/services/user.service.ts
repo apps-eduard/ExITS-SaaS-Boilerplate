@@ -321,4 +321,15 @@ export class UserService {
 
     return false;
   }
+
+  /**
+   * Check if email already exists
+   */
+  checkEmail(email: string, tenantId?: string) {
+    const params: any = { email };
+    if (tenantId) {
+      params.tenantId = tenantId;
+    }
+    return this.http.get<{ exists: boolean; message?: string }>(`${this.apiUrl}/check-email`, { params });
+  }
 }

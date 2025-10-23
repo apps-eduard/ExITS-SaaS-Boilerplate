@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RBACService } from '../../../core/services/rbac.service';
+import { TenantService } from '../../../core/services/tenant.service';
 
 interface MenuItem {
   label: string;
@@ -130,15 +131,16 @@ interface MenuItem {
   `,
   styles: []
 })
-export class TenantSidebarComponent {
+export class TenantSidebarComponent implements OnInit {
   authService = inject(AuthService);
   rbacService = inject(RBACService);
+  tenantService = inject(TenantService);
 
   isOpen = signal(false);
   isDesktop = signal(window.innerWidth >= 1024);
   expandedGroups = signal(new Set<string>(['Dashboard']));
 
-  tenantName = signal('My Tenant'); // TODO: Get from tenant service
+  tenantName = signal('My Tenant'); // Will be loaded from API
 
   menuItems = signal<MenuItem[]>([
     { label: 'Dashboard', icon: '📊', route: '/tenant/dashboard', menuKey: 'tenant-dashboard' },
@@ -203,6 +205,24 @@ export class TenantSidebarComponent {
 
     window.addEventListener('resize', handleResize);
     console.log('🧭 TenantSidebarComponent initialized');
+  }
+
+  ngOnInit(): void {
+    // Load tenant name when component initializes
+    const tenantId = this.authService.currentUser()?.tenant_id;
+    if (tenantId) {
+      this.tenantService.getTenantById(tenantId).subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            this.tenantName.set(response.data.name);
+            console.log('✅ Loaded tenant name:', response.data.name);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Failed to load tenant details:', error);
+        }
+      });
+    }
   }
 
   getUserInitials(): string {

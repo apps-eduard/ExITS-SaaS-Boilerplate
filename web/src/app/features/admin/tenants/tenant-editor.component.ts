@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { ProductSubscriptionService, SubscriptionPlan, ProductSubscription } from '../../../core/services/product-subscription.service';
+import { forkJoin } from 'rxjs';
 
 interface TenantForm {
   name: string;
@@ -23,6 +25,12 @@ interface TenantForm {
   money_loan_enabled: boolean;
   bnpl_enabled: boolean;
   pawnshop_enabled: boolean;
+}
+
+interface ProductSubscriptionForm {
+  subscription_plan_id: number | null;
+  billing_cycle: 'monthly' | 'yearly';
+  starts_at: string;
 }
 
 @Component({
@@ -272,6 +280,46 @@ interface TenantForm {
                     {{ form.money_loan_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
+
+                <!-- Subscription Configuration -->
+                <div *ngIf="form.money_loan_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
+                  
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <select [(ngModel)]="productSubscriptions.money_loan.subscription_plan_id"
+                            name="money_loan_plan"
+                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500">
+                      <option [value]="null">Select plan</option>
+                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
+                      <select [(ngModel)]="productSubscriptions.money_loan.billing_cycle"
+                              name="money_loan_billing"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                      <input type="date"
+                             [(ngModel)]="productSubscriptions.money_loan.starts_at"
+                             name="money_loan_start"
+                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+
+                  <div *ngIf="existingProductSubscriptions().get('money_loan')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    ℹ️ Current: {{ existingProductSubscriptions().get('money_loan')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('money_loan')?.status }})
+                  </div>
+                </div>
               </div>
 
               <!-- BNPL -->
@@ -297,6 +345,46 @@ interface TenantForm {
                     {{ form.bnpl_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
+
+                <!-- Subscription Configuration -->
+                <div *ngIf="form.bnpl_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
+                  
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <select [(ngModel)]="productSubscriptions.bnpl.subscription_plan_id"
+                            name="bnpl_plan"
+                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                      <option [value]="null">Select plan</option>
+                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
+                      <select [(ngModel)]="productSubscriptions.bnpl.billing_cycle"
+                              name="bnpl_billing"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                      <input type="date"
+                             [(ngModel)]="productSubscriptions.bnpl.starts_at"
+                             name="bnpl_start"
+                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+
+                  <div *ngIf="existingProductSubscriptions().get('bnpl')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    ℹ️ Current: {{ existingProductSubscriptions().get('bnpl')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('bnpl')?.status }})
+                  </div>
+                </div>
               </div>
 
               <!-- Pawnshop -->
@@ -322,6 +410,46 @@ interface TenantForm {
                     {{ form.pawnshop_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
+
+                <!-- Subscription Configuration -->
+                <div *ngIf="form.pawnshop_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
+                  
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <select [(ngModel)]="productSubscriptions.pawnshop.subscription_plan_id"
+                            name="pawnshop_plan"
+                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                      <option [value]="null">Select plan</option>
+                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
+                      <select [(ngModel)]="productSubscriptions.pawnshop.billing_cycle"
+                              name="pawnshop_billing"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                      <input type="date"
+                             [(ngModel)]="productSubscriptions.pawnshop.starts_at"
+                             name="pawnshop_start"
+                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                  </div>
+
+                  <div *ngIf="existingProductSubscriptions().get('pawnshop')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    ℹ️ Current: {{ existingProductSubscriptions().get('pawnshop')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('pawnshop')?.status }})
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -408,12 +536,17 @@ export class TenantEditorComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private productSubscriptionService = inject(ProductSubscriptionService);
 
   tenantId = signal<number | null>(null);
   isEditMode = signal(false);
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
+  
+  // Subscription plans and product subscriptions
+  subscriptionPlans = signal<SubscriptionPlan[]>([]);
+  existingProductSubscriptions = signal<Map<string, ProductSubscription>>(new Map());
 
   form: TenantForm = {
     name: '',
@@ -434,14 +567,68 @@ export class TenantEditorComponent implements OnInit {
     pawnshop_enabled: false
   };
 
+  // Product subscription forms
+  productSubscriptions: {
+    money_loan: ProductSubscriptionForm;
+    bnpl: ProductSubscriptionForm;
+    pawnshop: ProductSubscriptionForm;
+  } = {
+    money_loan: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] },
+    bnpl: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] },
+    pawnshop: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] }
+  };
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
+    
+    // Load subscription plans
+    this.loadSubscriptionPlans();
+    
     if (id && id !== 'new') {
       this.tenantId.set(parseInt(id));
       this.isEditMode.set(true);
       this.loadTenant();
+      this.loadProductSubscriptions();
     }
     console.log('🏢 TenantEditorComponent initialized', { isEdit: this.isEditMode() });
+  }
+
+  loadSubscriptionPlans(): void {
+    this.productSubscriptionService.getSubscriptionPlans().subscribe({
+      next: (response) => {
+        this.subscriptionPlans.set(response.data);
+        console.log('📋 Subscription plans loaded:', response.data);
+      },
+      error: (err) => {
+        console.error('Error loading subscription plans:', err);
+      }
+    });
+  }
+
+  loadProductSubscriptions(): void {
+    if (!this.tenantId()) return;
+
+    this.productSubscriptionService.getTenantProductSubscriptions(this.tenantId()!).subscribe({
+      next: (response) => {
+        const subscriptionsMap = new Map<string, ProductSubscription>();
+        response.data.forEach(sub => {
+          subscriptionsMap.set(sub.product_type, sub);
+          // Populate form with existing subscription data
+          if (this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions]) {
+            this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions] = {
+              subscription_plan_id: sub.subscription_plan_id,
+              billing_cycle: sub.billing_cycle,
+              starts_at: sub.starts_at.split('T')[0]
+            };
+          }
+        });
+        this.existingProductSubscriptions.set(subscriptionsMap);
+        console.log('📦 Product subscriptions loaded:', subscriptionsMap);
+      },
+      error: (err) => {
+        console.error('Error loading product subscriptions:', err);
+      }
+    });
   }
 
   loadTenant(): void {
@@ -489,8 +676,14 @@ export class TenantEditorComponent implements OnInit {
     request.subscribe({
       next: (response) => {
         console.log('Tenant saved:', response);
-        this.saving.set(false);
-        this.router.navigate(['/admin/tenants']);
+        
+        // If editing, handle product subscriptions
+        if (this.isEditMode() && this.tenantId()) {
+          this.handleProductSubscriptions(this.tenantId()!);
+        } else {
+          this.saving.set(false);
+          this.router.navigate(['/admin/tenants']);
+        }
       },
       error: (err) => {
         this.error.set(err.error?.message || 'Failed to save tenant');
@@ -498,5 +691,76 @@ export class TenantEditorComponent implements OnInit {
         console.error('Error saving tenant:', err);
       }
     });
+  }
+
+  handleProductSubscriptions(tenantId: number): void {
+    const subscriptionRequests: any[] = [];
+
+    // Handle each product
+    const products: Array<keyof typeof this.productSubscriptions> = ['money_loan', 'bnpl', 'pawnshop'];
+    
+    products.forEach(productType => {
+      const isEnabled = this.form[`${productType}_enabled` as keyof TenantForm];
+      const subForm = this.productSubscriptions[productType];
+      const existingSub = this.existingProductSubscriptions().get(productType);
+
+      if (isEnabled && subForm.subscription_plan_id) {
+        // Product is enabled and has a plan selected
+        if (existingSub) {
+          // Update existing subscription
+          subscriptionRequests.push(
+            this.productSubscriptionService.updateProductSubscription(
+              tenantId,
+              productType,
+              {
+                subscription_plan_id: subForm.subscription_plan_id,
+                billing_cycle: subForm.billing_cycle
+              }
+            )
+          );
+        } else {
+          // Create new subscription
+          subscriptionRequests.push(
+            this.productSubscriptionService.subscribeToProduct(tenantId, {
+              product_type: productType,
+              subscription_plan_id: subForm.subscription_plan_id,
+              billing_cycle: subForm.billing_cycle,
+              starts_at: subForm.starts_at
+            })
+          );
+        }
+      } else if (!isEnabled && existingSub) {
+        // Product is disabled but has existing subscription - cancel it
+        subscriptionRequests.push(
+          this.productSubscriptionService.unsubscribeFromProduct(tenantId, productType)
+        );
+      }
+    });
+
+    // Execute all subscription requests
+    if (subscriptionRequests.length > 0) {
+      forkJoin(subscriptionRequests).subscribe({
+        next: (results) => {
+          console.log('Product subscriptions updated:', results);
+          this.saving.set(false);
+          this.router.navigate(['/admin/tenants']);
+        },
+        error: (err) => {
+          this.error.set('Tenant saved, but failed to update product subscriptions: ' + (err.error?.message || 'Unknown error'));
+          this.saving.set(false);
+          console.error('Error updating product subscriptions:', err);
+        }
+      });
+    } else {
+      this.saving.set(false);
+      this.router.navigate(['/admin/tenants']);
+    }
+  }
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(price);
   }
 }

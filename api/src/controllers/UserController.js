@@ -52,6 +52,28 @@ class UserController {
   }
 
   /**
+   * GET /users/check-email
+   * Query param: email, optional tenantId (to scope to tenant)
+   * Returns { exists: boolean }
+   */
+  static async checkEmail(req, res, next) {
+    try {
+      const { email } = req.query;
+      const tenantId = req.query.tenantId || req.tenantId || null;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const exists = await UserService.emailExists(email, tenantId);
+
+      res.status(200).json({ exists });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /users
    * List all users with pagination
    */

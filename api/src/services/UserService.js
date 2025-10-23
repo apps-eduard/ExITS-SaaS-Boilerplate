@@ -156,6 +156,31 @@ class UserService {
   }
 
   /**
+   * Check if an email exists. If tenantId is provided, return true if any user with that email exists
+   * within the same tenant or as a system user. If tenantId is null, check globally.
+   */
+  static async emailExists(email, tenantId = null) {
+    try {
+      let query;
+      let params;
+      if (tenantId) {
+        // For tenant-scoped check, allow system users and tenant users with same tenant
+        query = `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) AND (tenant_id = $2 OR tenant_id IS NULL) LIMIT 1`;
+        params = [email, tenantId];
+      } else {
+        query = `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`;
+        params = [email];
+      }
+
+      const result = await pool.query(query, params);
+      return result.rows.length > 0;
+    } catch (err) {
+      logger.error(`User service emailExists error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
    * List users with pagination
    */
   static async listUsers(tenantId, page = 1, limit = 20, search = '', includeAllTenants = false) {

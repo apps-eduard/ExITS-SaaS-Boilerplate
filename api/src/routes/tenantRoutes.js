@@ -12,6 +12,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/by-subdomain/:subdomain', TenantController.getTenantBySubdomain);
+router.post('/create', TenantController.createTenant); // Public tenant registration
 
 // Protected routes (system admin only)
 router.use(authMiddleware, tenantIsolationMiddleware);

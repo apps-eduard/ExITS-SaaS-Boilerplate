@@ -35,11 +35,11 @@ async function simpleSeed() {
     // Create tenants
     console.log('\n1. Creating tenants...');
     await client.query(`
-      INSERT INTO tenants (name, subdomain, plan, status, max_users)
+      INSERT INTO tenants (name, subdomain, plan, status, max_users, contact_person, contact_email, contact_phone, money_loan_enabled, bnpl_enabled, pawnshop_enabled)
       VALUES
-      ('ACME Corporation', 'acme', 'pro', 'active', 100),
-      ('TechStartup Inc', 'techstartup', 'basic', 'active', 50),
-      ('Enterprise Corp', 'enterprise', 'enterprise', 'active', 500)
+      ('ACME Corporation', 'acme', 'pro', 'active', 100, 'John Doe', 'john.doe@acme.com', '+63-917-123-4567', true, false, false),
+      ('TechStartup Inc', 'techstartup', 'starter', 'active', 50, 'Jane Smith', 'jane.smith@techstartup.com', '+63-918-234-5678', true, false, false),
+      ('Enterprise Corp', 'enterprise', 'enterprise', 'active', 500, 'Bob Johnson', 'bob.johnson@enterprise.com', '+63-919-345-6789', true, false, false)
       ON CONFLICT (subdomain) DO NOTHING
     `);
     

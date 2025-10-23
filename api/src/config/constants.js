@@ -61,9 +61,10 @@ module.exports = {
   SESSION_EXPIRED: 'expired',
 
   // Tenant Plans
-  PLAN_BASIC: 'basic',
+  PLAN_STARTER: 'starter',
   PLAN_PRO: 'pro',
   PLAN_ENTERPRISE: 'enterprise',
+  PLAN_TRIAL: 'trial',
 
   // Tenant Status
   TENANT_ACTIVE: 'active',

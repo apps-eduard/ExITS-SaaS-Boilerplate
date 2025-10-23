@@ -16,6 +16,9 @@ router.use(authMiddleware, tenantIsolationMiddleware);
 // List users
 router.get('/', rbacMiddleware(['users'], ['read']), UserController.listUsers);
 
+// Email existence check (non-auth required? keep with auth to get tenant scope)
+router.get('/check-email', UserController.checkEmail);
+
 // Create user
 router.post('/', rbacMiddleware(['users'], ['create']), UserController.createUser);
 

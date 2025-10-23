@@ -44,8 +44,39 @@ class Validators {
     const schema = Joi.object({
       name: Joi.string().required(),
       subdomain: Joi.string().required(),
-      plan: Joi.string().valid('basic', 'pro', 'enterprise').required(),
+      plan: Joi.string().optional(), // Allow any plan name (validated against DB)
+      subscriptionPlan: Joi.string().optional(), // Allow any plan name (validated against DB)
+      planId: Joi.number().optional(),
+      billingCycle: Joi.string().valid('monthly', 'yearly').optional(),
+      status: Joi.string().valid('active', 'suspended', 'deleted').optional(),
+      industry: Joi.string().optional(),
       billing_email: Joi.string().email().optional(),
+      maxUsers: Joi.number().optional(),
+      logoUrl: Joi.string().uri().optional(),
+      primaryColor: Joi.string().optional(),
+      secondaryColor: Joi.string().optional(),
+      // Contact info
+      contactFirstName: Joi.string().optional(),
+      contactLastName: Joi.string().optional(),
+      contactEmail: Joi.string().email().optional(),
+      contactPhone: Joi.string().optional(),
+      // Address
+      street_address: Joi.string().allow('').optional(),
+      barangay: Joi.string().allow('').optional(),
+      city: Joi.string().allow('').optional(),
+      province: Joi.string().allow('').optional(),
+      region: Joi.string().allow('').optional(),
+      postal_code: Joi.string().allow('').optional(),
+      country: Joi.string().optional(),
+      // Feature flags
+      money_loan_enabled: Joi.boolean().optional(),
+      bnpl_enabled: Joi.boolean().optional(),
+      pawnshop_enabled: Joi.boolean().optional(),
+      // Admin user
+      adminFirstName: Joi.string().when('adminEmail', { is: Joi.exist(), then: Joi.required() }),
+      adminLastName: Joi.string().when('adminEmail', { is: Joi.exist(), then: Joi.required() }),
+      adminEmail: Joi.string().email().optional(),
+      adminPassword: Joi.string().min(8).when('adminEmail', { is: Joi.exist(), then: Joi.required() })
     });
     return schema.validate(data);
   }

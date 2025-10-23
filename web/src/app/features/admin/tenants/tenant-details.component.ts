@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
 
 interface Tenant {
   id: number;
@@ -24,6 +25,17 @@ interface Tenant {
   money_loan_enabled?: boolean;
   bnpl_enabled?: boolean;
   pawnshop_enabled?: boolean;
+  // Subscription Plan Details
+  subscription_plan?: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    billing_cycle: string;
+    features: string[];
+    max_users: number | null;
+    max_storage_gb: number;
+  };
 }
 
 interface TenantStats {
@@ -164,29 +176,195 @@ interface TenantStats {
                 </div>
               </div>
 
-              <!-- Enabled Products Section -->
+              <!-- Product Subscriptions Section -->
               <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <span>🎯</span>
-                  Enabled Products
+                  <span>📦</span>
+                  Product Subscriptions
                 </h4>
-                <div class="flex flex-wrap gap-2">
-                  <span *ngIf="tenant()?.money_loan_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                    <span>💵</span>
-                    Money Loan
-                  </span>
-                  <span *ngIf="tenant()?.bnpl_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    <span>💳</span>
-                    BNPL
-                  </span>
-                  <span *ngIf="tenant()?.pawnshop_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                    <span>💎</span>
-                    Pawnshop
-                  </span>
-                  <span *ngIf="!tenant()?.money_loan_enabled && !tenant()?.bnpl_enabled && !tenant()?.pawnshop_enabled" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                    No products enabled
-                  </span>
+                
+                <!-- No products enabled -->
+                <div *ngIf="!tenant()?.money_loan_enabled && !tenant()?.bnpl_enabled && !tenant()?.pawnshop_enabled" 
+                     class="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <p class="text-sm text-gray-500 dark:text-gray-400">No products enabled for this tenant</p>
                 </div>
+
+                <!-- Product subscription cards -->
+                <div class="space-y-3">
+                  <!-- Money Loan Product -->
+                  <div *ngIf="tenant()?.money_loan_enabled" class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-green-200 dark:border-green-700">
+                          💵
+                        </div>
+                        <div>
+                          <h5 class="text-base font-bold text-gray-900 dark:text-white">Money Loan</h5>
+                          <p class="text-xs text-gray-600 dark:text-gray-400">Quick cash loans</p>
+                        </div>
+                      </div>
+                      <span *ngIf="getProductSubscription('money_loan')" 
+                            class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
+                            [ngClass]="getStatusBadgeClass(getProductSubscription('money_loan')?.status || '')">
+                        {{ getProductSubscription('money_loan')?.status?.toUpperCase() }}
+                      </span>
+                    </div>
+                    
+                    <div *ngIf="getProductSubscription('money_loan'); else noSubscription">
+                      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('money_loan')?.subscription_plan?.name }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
+                          <p class="text-sm font-bold text-green-600 dark:text-green-400">
+                            ₱{{ formatPrice(getProductSubscription('money_loan')?.price || 0) }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('money_loan')?.billing_cycle }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                            {{ formatDate(getProductSubscription('money_loan')?.starts_at || '') }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
+                        <p class="text-xs text-gray-700 dark:text-gray-300">
+                          {{ getProductSubscription('money_loan')?.subscription_plan?.description }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- BNPL Product -->
+                  <div *ngIf="tenant()?.bnpl_enabled" class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-blue-200 dark:border-blue-700">
+                          💳
+                        </div>
+                        <div>
+                          <h5 class="text-base font-bold text-gray-900 dark:text-white">BNPL</h5>
+                          <p class="text-xs text-gray-600 dark:text-gray-400">Buy Now Pay Later</p>
+                        </div>
+                      </div>
+                      <span *ngIf="getProductSubscription('bnpl')" 
+                            class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
+                            [ngClass]="getStatusBadgeClass(getProductSubscription('bnpl')?.status || '')">
+                        {{ getProductSubscription('bnpl')?.status?.toUpperCase() }}
+                      </span>
+                    </div>
+                    
+                    <div *ngIf="getProductSubscription('bnpl'); else noSubscription">
+                      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('bnpl')?.subscription_plan?.name }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
+                          <p class="text-sm font-bold text-blue-600 dark:text-blue-400">
+                            ₱{{ formatPrice(getProductSubscription('bnpl')?.price || 0) }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('bnpl')?.billing_cycle }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                            {{ formatDate(getProductSubscription('bnpl')?.starts_at || '') }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
+                        <p class="text-xs text-gray-700 dark:text-gray-300">
+                          {{ getProductSubscription('bnpl')?.subscription_plan?.description }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Pawnshop Product -->
+                  <div *ngIf="tenant()?.pawnshop_enabled" class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-purple-200 dark:border-purple-700">
+                          💎
+                        </div>
+                        <div>
+                          <h5 class="text-base font-bold text-gray-900 dark:text-white">Pawnshop</h5>
+                          <p class="text-xs text-gray-600 dark:text-gray-400">Collateral loans</p>
+                        </div>
+                      </div>
+                      <span *ngIf="getProductSubscription('pawnshop')" 
+                            class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
+                            [ngClass]="getStatusBadgeClass(getProductSubscription('pawnshop')?.status || '')">
+                        {{ getProductSubscription('pawnshop')?.status?.toUpperCase() }}
+                      </span>
+                    </div>
+                    
+                    <div *ngIf="getProductSubscription('pawnshop'); else noSubscription">
+                      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('pawnshop')?.subscription_plan?.name }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
+                          <p class="text-sm font-bold text-purple-600 dark:text-purple-400">
+                            ₱{{ formatPrice(getProductSubscription('pawnshop')?.price || 0) }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                            {{ getProductSubscription('pawnshop')?.billing_cycle }}
+                          </p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
+                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                            {{ formatDate(getProductSubscription('pawnshop')?.starts_at || '') }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
+                        <p class="text-xs text-gray-700 dark:text-gray-300">
+                          {{ getProductSubscription('pawnshop')?.subscription_plan?.description }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No subscription template -->
+                <ng-template #noSubscription>
+                  <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
+                    <p class="text-xs text-yellow-800 dark:text-yellow-300">
+                      ⚠️ Product is enabled but no subscription plan is assigned. Please edit the tenant to configure a subscription.
+                    </p>
+                  </div>
+                </ng-template>
               </div>
             </div>
           </div>
@@ -342,9 +520,11 @@ interface TenantStats {
 export class TenantDetailsComponent implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
+  private productSubscriptionService = inject(ProductSubscriptionService);
 
   tenant = signal<Tenant | null>(null);
   stats = signal<TenantStats | null>(null);
+  productSubscriptions = signal<ProductSubscription[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
 
@@ -353,8 +533,67 @@ export class TenantDetailsComponent implements OnInit {
     if (id) {
       this.loadTenant(parseInt(id));
       this.loadStats(parseInt(id));
+      this.loadProductSubscriptions(parseInt(id));
     }
     console.log('🏢 TenantDetailsComponent initialized');
+  }
+
+  loadProductSubscriptions(tenantId: number): void {
+    this.productSubscriptionService.getTenantProductSubscriptions(tenantId).subscribe({
+      next: (response) => {
+        this.productSubscriptions.set(response.data);
+        console.log('📦 Product subscriptions loaded:', response.data);
+      },
+      error: (err) => {
+        console.error('Error loading product subscriptions:', err);
+      }
+    });
+  }
+
+  getProductSubscription(productType: string): ProductSubscription | undefined {
+    return this.productSubscriptions().find(sub => sub.product_type === productType);
+  }
+
+  getProductIcon(productType: string): string {
+    switch (productType) {
+      case 'money_loan': return '💵';
+      case 'bnpl': return '💳';
+      case 'pawnshop': return '💎';
+      default: return '📦';
+    }
+  }
+
+  getProductName(productType: string): string {
+    switch (productType) {
+      case 'money_loan': return 'Money Loan';
+      case 'bnpl': return 'BNPL';
+      case 'pawnshop': return 'Pawnshop';
+      default: return productType;
+    }
+  }
+
+  getProductColor(productType: string): string {
+    switch (productType) {
+      case 'money_loan': return 'green';
+      case 'bnpl': return 'blue';
+      case 'pawnshop': return 'purple';
+      default: return 'gray';
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+      case 'suspended':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+      case 'cancelled':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+      case 'expired':
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400';
+    }
   }
 
   loadTenant(id: number): void {
@@ -432,12 +671,30 @@ export class TenantDetailsComponent implements OnInit {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    // For subscription dates, show short format
+    if (dateString.includes('T')) {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    // For date-only format (YYYY-MM-DD)
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short',
+      day: 'numeric'
     });
+  }
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
   }
 }

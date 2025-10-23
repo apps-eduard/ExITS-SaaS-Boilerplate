@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TenantService } from '../../core/services/tenant.service';
+import { SubscriptionService, SubscriptionPlan } from '../../core/services/subscription.service';
+import { UserService } from '../../core/services/user.service';
+import { debounceTime, Subject } from 'rxjs';
 
 interface OnboardingStep {
   step: number;
@@ -30,8 +33,9 @@ export class SignupComponent implements OnInit {
   readonly onboardingSteps: OnboardingStep[] = [
     { step: 1, title: 'Admin Account', description: 'Create your admin account', completed: false },
     { step: 2, title: 'Organization', description: 'Enter your organization details', completed: false },
-    { step: 3, title: 'Features', description: 'Choose your initial features', completed: false },
-    { step: 4, title: 'Complete', description: 'Setup complete!', completed: false }
+    { step: 3, title: 'Choose Plan', description: 'Select your subscription plan', completed: false },
+    { step: 4, title: 'Features', description: 'Customize your features', completed: false },
+    { step: 5, title: 'Complete', description: 'Setup complete!', completed: false }
   ];
 
   readonly features = [
@@ -40,17 +44,95 @@ export class SignupComponent implements OnInit {
     { id: 'bnpl', name: 'BNPL', icon: '🛒', selected: false }
   ];
 
+  // Subscription plans
+  readonly subscriptionPlans = signal<SubscriptionPlan[]>([]);
+  readonly loadingPlans = signal(false);
+  readonly selectedPlan = signal<SubscriptionPlan | null>(null);
+  readonly selectedBillingCycle = signal<'monthly' | 'yearly'>('monthly');
+
+  // Email validation signals
+  readonly emailExists = signal(false);
+  readonly emailCheckInProgress = signal(false);
+  readonly emailCheckError = signal('');
+  private emailCheckSubject = new Subject<string>();
+
   constructor(
     private fb: FormBuilder,
     private tenantService: TenantService,
+    private subscriptionService: SubscriptionService,
+    private userService: UserService,
     private router: Router
   ) {
     this.initializeSignupForm();
     this.initializeTenantForm();
+    this.setupEmailValidation();
   }
 
   ngOnInit(): void {
-    // Form is initialized in constructor
+    // Load subscription plans
+    this.loadSubscriptionPlans();
+  }
+
+  loadSubscriptionPlans(): void {
+    this.loadingPlans.set(true);
+    this.subscriptionService.getPlans().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.subscriptionPlans.set(response.data);
+          // Auto-select Free plan by default
+          const freePlan = response.data.find(p => p.name.toLowerCase() === 'free');
+          if (freePlan) {
+            this.selectedPlan.set(freePlan);
+          }
+        }
+        this.loadingPlans.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading subscription plans:', error);
+        this.loadingPlans.set(false);
+      }
+    });
+  }
+
+  selectPlan(plan: SubscriptionPlan): void {
+    this.selectedPlan.set(plan);
+    console.log('📦 Selected plan:', plan.name, `$${plan.price}/${plan.billing_cycle}`);
+  }
+
+  toggleBillingCycle(): void {
+    const current = this.selectedBillingCycle();
+    this.selectedBillingCycle.set(current === 'monthly' ? 'yearly' : 'monthly');
+  }
+
+  getYearlyPrice(monthlyPrice: number): number {
+    return monthlyPrice * 12 * 0.8; // 20% discount for yearly
+  }
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
+  }
+
+  // Feature checking helpers for templates
+  hasFeature(plan: SubscriptionPlan, keyword: string): boolean {
+    if (!plan || !plan.features) return false;
+    return plan.features.some((f: string) => f.toLowerCase().includes(keyword.toLowerCase()));
+  }
+
+  hasAPIAccess(plan: SubscriptionPlan): boolean {
+    return this.hasFeature(plan, 'api');
+  }
+
+  hasPrioritySupport(plan: SubscriptionPlan): boolean {
+    return this.hasFeature(plan, 'priority') || this.hasFeature(plan, '24/7');
+  }
+
+  hasAdvancedAnalytics(plan: SubscriptionPlan): boolean {
+    return this.hasFeature(plan, 'analytics') || this.hasFeature(plan, 'advanced');
   }
 
   initializeSignupForm(): void {
@@ -87,6 +169,60 @@ export class SignupComponent implements OnInit {
     return password.value === confirmPassword.value ? null : { passwordMismatch: true };
   }
 
+  setupEmailValidation(): void {
+    this.emailCheckSubject.pipe(
+      debounceTime(450)
+    ).subscribe(email => {
+      this.checkEmailExists(email);
+    });
+  }
+
+  onEmailBlur(): void {
+    const email = this.signupForm.get('email')?.value;
+    if (email && this.signupForm.get('email')?.valid) {
+      this.checkEmailExists(email);
+    }
+  }
+
+  onEmailInput(): void {
+    const email = this.signupForm.get('email')?.value;
+    if (email && email.includes('@')) {
+      this.emailCheckSubject.next(email);
+    } else {
+      this.emailExists.set(false);
+      this.emailCheckError.set('');
+    }
+  }
+
+  checkEmailExists(email: string): void {
+    if (!email || !this.signupForm.get('email')?.valid) {
+      return;
+    }
+
+    this.emailCheckInProgress.set(true);
+    this.emailCheckError.set('');
+
+    this.userService.checkEmail(email).subscribe({
+      next: (response) => {
+        this.emailExists.set(response.exists || false);
+        this.emailCheckInProgress.set(false);
+      },
+      error: (error) => {
+        console.error('Email check error:', error);
+        this.emailCheckError.set('Unable to verify email. Please try again.');
+        this.emailCheckInProgress.set(false);
+      }
+    });
+  }
+
+  getPasswordMismatchError(): string {
+    const confirmPassword = this.signupForm.get('confirmPassword');
+    if (confirmPassword?.touched && this.signupForm.errors?.['passwordMismatch']) {
+      return 'Passwords do not match';
+    }
+    return '';
+  }
+
   goToStep(step: number): void {
     if (step < this.currentStep() || step === 1) {
       this.currentStep.set(step);
@@ -101,6 +237,12 @@ export class SignupComponent implements OnInit {
       Object.keys(this.signupForm.controls).forEach(key => {
         this.signupForm.get(key)?.markAsTouched();
       });
+      return;
+    }
+
+    // Check if email already exists before proceeding
+    if (current === 1 && this.emailExists()) {
+      this.error.set('This email is already registered. Please use a different email.');
       return;
     }
 
@@ -121,7 +263,13 @@ export class SignupComponent implements OnInit {
       return;
     }
 
-    if (current < 4) {
+    // Validate plan selection on step 3
+    if (current === 3 && !this.selectedPlan()) {
+      this.error.set('Please select a subscription plan');
+      return;
+    }
+
+    if (current < 5) {
       this.onboardingSteps[current - 1].completed = true;
       this.currentStep.set(current + 1);
       this.error.set('');
@@ -167,13 +315,20 @@ export class SignupComponent implements OnInit {
       selectedFeatures: selectedFeatures
     });
 
+    // Get selected plan details
+    const selectedPlan = this.selectedPlan();
+    const planName = selectedPlan?.name.toLowerCase() || 'free';
+    const planId = selectedPlan?.id || null;
+
     // Create tenant with admin user
     const createTenantPayload = {
       name: tenantData.organizationName,
       subdomain: tenantData.subdomain,
       industry: tenantData.industry,
-      subscriptionPlan: 'trial',
-      status: 'trial',
+      subscriptionPlan: planName,
+      planId: planId,
+      billingCycle: this.selectedBillingCycle(),
+      // status: removed - defaults to 'active' on backend
       contactFirstName: tenantData.contactFirstName,
       contactLastName: tenantData.contactLastName,
       contactEmail: tenantData.contactEmail,

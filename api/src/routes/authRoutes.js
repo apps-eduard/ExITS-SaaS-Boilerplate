@@ -4,6 +4,7 @@
 
 const express = require('express');
 const AuthController = require('../controllers/AuthController');
+const UserController = require('../controllers/UserController');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -12,6 +13,8 @@ const router = express.Router();
 router.post('/login', AuthController.login);
 router.post('/forgot-password', AuthController.requestPasswordReset);
 router.post('/refresh', AuthController.refreshToken);
+// Email existence check for registration (public - no auth required)
+router.get('/check-email', UserController.checkEmail);
 
 // Protected routes (auth required)
 router.post('/logout', authMiddleware, AuthController.logout);

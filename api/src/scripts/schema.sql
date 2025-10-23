@@ -6,14 +6,14 @@ CREATE TYPE tenant_status AS ENUM ('active', 'suspended', 'deleted');
 CREATE TYPE session_status AS ENUM ('active', 'revoked', 'expired');
 CREATE TYPE audit_status AS ENUM ('success', 'failure', 'pending');
 CREATE TYPE permission_status AS ENUM ('active', 'conditional', 'revoked');
-CREATE TYPE tenant_plan AS ENUM ('basic', 'pro', 'enterprise');
+CREATE TYPE tenant_plan AS ENUM ('starter', 'pro', 'enterprise', 'trial');
 
 -- Tenants table
 CREATE TABLE IF NOT EXISTS tenants (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   subdomain VARCHAR(100) UNIQUE NOT NULL,
-  plan tenant_plan NOT NULL DEFAULT 'basic',
+  plan tenant_plan NOT NULL DEFAULT 'starter',
   status tenant_status NOT NULL DEFAULT 'active',
   logo_url VARCHAR(500),
   primary_color VARCHAR(7),
@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS tenants (
   data_residency VARCHAR(50) DEFAULT 'US',
   billing_email VARCHAR(255),
   metadata JSONB DEFAULT '{}',
+  contact_person VARCHAR(255),
+  contact_email VARCHAR(255),
+  contact_phone VARCHAR(50),
+  money_loan_enabled BOOLEAN DEFAULT FALSE,
+  bnpl_enabled BOOLEAN DEFAULT FALSE,
+  pawnshop_enabled BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   

@@ -31,12 +31,16 @@ class TenantService {
   }
 
   /**
-   * Create a new tenant
+   * Create a new tenant with admin user
    */
   static async createTenant(tenantData, requestingUserId) {
+    const client = await pool.connect();
+    
     try {
+      await client.query('BEGIN');
+
       // Check if subdomain is already taken
-      const existingTenant = await pool.query(
+      const existingTenant = await client.query(
         `SELECT id FROM tenants WHERE subdomain = $1`,
         [tenantData.subdomain]
       );
@@ -45,19 +49,50 @@ class TenantService {
         throw new Error('Subdomain already taken');
       }
 
-      const result = await pool.query(
-        `INSERT INTO tenants (name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      // Check if admin email already exists
+      if (tenantData.adminEmail) {
+        const existingUser = await client.query(
+          `SELECT id FROM users WHERE LOWER(email) = LOWER($1)`,
+          [tenantData.adminEmail]
+        );
+
+        if (existingUser.rows.length > 0) {
+          throw new Error('Admin email already registered');
+        }
+      }
+
+      // Validate and get plan name (handle both 'plan' and 'subscriptionPlan' fields)
+      const requestedPlan = tenantData.plan || tenantData.subscriptionPlan || 'starter';
+      
+      // Validate plan exists in database (case-insensitive match)
+      const planCheck = await client.query(
+        `SELECT name FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
+        [requestedPlan]
+      );
+
+      if (planCheck.rows.length === 0) {
+        throw new Error(`Invalid subscription plan: ${requestedPlan}. Plan does not exist or is inactive.`);
+      }
+
+      // Use the plan name directly from database (should match tenant_plan ENUM)
+      const plan = planCheck.rows[0].name;
+
+      const result = await client.query(
+        `INSERT INTO tenants (name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color, money_loan_enabled, bnpl_enabled, pawnshop_enabled)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING id, name, subdomain, plan, status, max_users, created_at`,
         [
           tenantData.name,
           tenantData.subdomain,
-          tenantData.plan || 'basic',
+          plan,
           tenantData.status || 'active',
           tenantData.maxUsers || 10,
           tenantData.logoUrl || null,
           tenantData.primaryColor || null,
           tenantData.secondaryColor || null,
+          tenantData.money_loan_enabled || false,
+          tenantData.bnpl_enabled || false,
+          tenantData.pawnshop_enabled || false,
         ]
       );
 
@@ -71,20 +106,62 @@ class TenantService {
         { name: 'Viewer', description: 'Read-only access', space: 'tenant' },
       ];
 
+      let tenantAdminRoleId = null;
       for (const role of defaultRoles) {
-        await pool.query(
+        const roleResult = await client.query(
           `INSERT INTO roles (tenant_id, name, description, space)
-           VALUES ($1, $2, $3, $4)`,
+           VALUES ($1, $2, $3, $4)
+           RETURNING id`,
           [tenant.id, role.name, role.description, role.space]
         );
+        
+        // Save the Tenant Admin role ID for assigning to the admin user
+        if (role.name === 'Tenant Admin') {
+          tenantAdminRoleId = roleResult.rows[0].id;
+        }
       }
 
+      // Create admin user if admin details provided
+      if (tenantData.adminEmail && tenantData.adminPassword) {
+        const bcrypt = require('bcrypt');
+        const hashedPassword = await bcrypt.hash(tenantData.adminPassword, 10);
+
+        const userResult = await client.query(
+          `INSERT INTO users (email, password_hash, first_name, last_name, tenant_id, status)
+           VALUES ($1, $2, $3, $4, $5, 'active')
+           RETURNING id, email, first_name, last_name`,
+          [
+            tenantData.adminEmail,
+            hashedPassword,
+            tenantData.adminFirstName || '',
+            tenantData.adminLastName || '',
+            tenant.id
+          ]
+        );
+
+        const adminUser = userResult.rows[0];
+
+        // Assign Tenant Admin role to the admin user
+        if (tenantAdminRoleId) {
+          await client.query(
+            `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`,
+            [adminUser.id, tenantAdminRoleId]
+          );
+        }
+
+        logger.info(`Tenant admin user created: ${adminUser.email} for tenant ${tenant.name}`);
+      }
+
+      await client.query('COMMIT');
       logger.info(`Tenant created: ${tenant.name} (${tenant.id})`);
 
       return tenant;
     } catch (err) {
+      await client.query('ROLLBACK');
       logger.error(`Tenant service create error: ${err.message}`);
       throw err;
+    } finally {
+      client.release();
     }
   }
 
@@ -94,9 +171,16 @@ class TenantService {
   static async getTenantById(tenantId) {
     try {
       const result = await pool.query(
-        `SELECT id, name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color, created_at, updated_at
-         FROM tenants
-         WHERE id = $1`,
+        `SELECT t.id, t.name, t.subdomain, t.plan, t.status, t.max_users, t.logo_url, 
+                t.primary_color, t.secondary_color, t.created_at, t.updated_at,
+                t.contact_person, t.contact_email, t.contact_phone,
+                t.money_loan_enabled, t.bnpl_enabled, t.pawnshop_enabled,
+                sp.id as plan_id, sp.name as plan_name, sp.description as plan_description,
+                sp.price, sp.billing_cycle, sp.features, sp.max_users as plan_max_users,
+                sp.max_storage_gb
+         FROM tenants t
+         LEFT JOIN subscription_plans sp ON LOWER(sp.name) = LOWER(t.plan::text) AND sp.status = 'active'
+         WHERE t.id = $1`,
         [tenantId]
       );
 
@@ -118,9 +202,35 @@ class TenantService {
       );
 
       return {
-        ...tenant,
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        plan: tenant.plan,
+        status: tenant.status,
+        max_users: tenant.max_users,
+        logo_url: tenant.logo_url,
+        primary_color: tenant.primary_color,
+        secondary_color: tenant.secondary_color,
+        contact_person: tenant.contact_person,
+        contact_email: tenant.contact_email,
+        contact_phone: tenant.contact_phone,
+        created_at: tenant.created_at,
+        updated_at: tenant.updated_at,
+        money_loan_enabled: tenant.money_loan_enabled,
+        bnpl_enabled: tenant.bnpl_enabled,
+        pawnshop_enabled: tenant.pawnshop_enabled,
         user_count: parseInt(usersCountResult.rows[0].count),
         role_count: parseInt(rolesCountResult.rows[0].count),
+        subscription_plan: tenant.plan_id ? {
+          id: tenant.plan_id,
+          name: tenant.plan_name,
+          description: tenant.plan_description,
+          price: parseFloat(tenant.price),
+          billing_cycle: tenant.billing_cycle,
+          features: tenant.features,
+          max_users: tenant.plan_max_users,
+          max_storage_gb: tenant.max_storage_gb
+        } : null
       };
     } catch (err) {
       logger.error(`Tenant service get by ID error: ${err.message}`);
@@ -210,6 +320,8 @@ class TenantService {
    */
   static async updateTenant(tenantId, updateData, requestingUserId) {
     try {
+      logger.info('Update tenant data received:', JSON.stringify(updateData));
+      
       const fieldsToUpdate = [];
       const values = [];
       let paramCount = 1;
@@ -234,14 +346,54 @@ class TenantService {
         values.push(updateData.max_users);
       }
 
-      if (updateData.primaryColor !== undefined) {
+      // Handle colors object or direct primaryColor/secondaryColor
+      if (updateData.colors?.primary !== undefined || updateData.primaryColor !== undefined) {
         fieldsToUpdate.push(`primary_color = $${paramCount++}`);
-        values.push(updateData.primaryColor);
+        values.push(updateData.colors?.primary || updateData.primaryColor);
       }
 
-      if (updateData.secondaryColor !== undefined) {
+      if (updateData.colors?.secondary !== undefined || updateData.secondaryColor !== undefined) {
         fieldsToUpdate.push(`secondary_color = $${paramCount++}`);
-        values.push(updateData.secondaryColor);
+        values.push(updateData.colors?.secondary || updateData.secondaryColor);
+      }
+
+      if (updateData.logo_url !== undefined) {
+        fieldsToUpdate.push(`logo_url = $${paramCount++}`);
+        values.push(updateData.logo_url);
+      }
+
+      if (updateData.contact_person !== undefined) {
+        fieldsToUpdate.push(`contact_person = $${paramCount++}`);
+        values.push(updateData.contact_person);
+      }
+
+      if (updateData.contact_email !== undefined) {
+        fieldsToUpdate.push(`contact_email = $${paramCount++}`);
+        values.push(updateData.contact_email);
+      }
+
+      if (updateData.contact_phone !== undefined) {
+        fieldsToUpdate.push(`contact_phone = $${paramCount++}`);
+        values.push(updateData.contact_phone);
+      }
+
+      if (updateData.money_loan_enabled !== undefined) {
+        fieldsToUpdate.push(`money_loan_enabled = $${paramCount++}`);
+        values.push(updateData.money_loan_enabled);
+      }
+
+      if (updateData.bnpl_enabled !== undefined) {
+        fieldsToUpdate.push(`bnpl_enabled = $${paramCount++}`);
+        values.push(updateData.bnpl_enabled);
+      }
+
+      if (updateData.pawnshop_enabled !== undefined) {
+        fieldsToUpdate.push(`pawnshop_enabled = $${paramCount++}`);
+        values.push(updateData.pawnshop_enabled);
+      }
+
+      if (fieldsToUpdate.length === 0) {
+        throw new Error('No fields to update');
       }
 
       values.push(tenantId);
@@ -250,7 +402,9 @@ class TenantService {
         UPDATE tenants
         SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
         WHERE id = $${paramCount}
-        RETURNING id, name, subdomain, plan, status, max_users
+        RETURNING id, name, subdomain, plan, status, max_users, logo_url, 
+                  contact_person, contact_email, contact_phone,
+                  money_loan_enabled, bnpl_enabled, pawnshop_enabled
       `;
 
       const result = await pool.query(query, values);

@@ -37,25 +37,36 @@ async function migrate() {
         'utf-8'
       );
 
-      // Split by semicolon and execute each statement
-      const statements = migrationSql
-        .split(';')
-        .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0);
+      try {
+        // For billing-schema.sql, run the entire file as one query (contains functions with $$ delimiters)
+        if (migrationFile === 'billing-schema.sql') {
+          await client.query(migrationSql);
+          console.log(`✅ Migration ${migrationFile} completed successfully!`);
+        } else {
+          // Split by semicolon and execute each statement for other files
+          const statements = migrationSql
+            .split(';')
+            .map(stmt => stmt.trim())
+            .filter(stmt => stmt.length > 0);
 
-      for (const statement of statements) {
-        try {
-          await client.query(statement);
-        } catch (err) {
-          // Ignore "already exists" errors for idempotency
-          if (!err.message.includes('already exists') && !err.message.includes('does not exist')) {
-            throw err;
+          for (const statement of statements) {
+            try {
+              await client.query(statement);
+            } catch (err) {
+              // Ignore "already exists" errors for idempotency
+              if (!err.message.includes('already exists') && !err.message.includes('does not exist')) {
+                throw err;
+              }
+              console.log(`ℹ  ${err.message.split('\n')[0]}`);
+            }
           }
-          console.log(`ℹ  ${err.message.split('\n')[0]}`);
-        }
-      }
 
-      console.log(`✅ Migration ${migrationFile} completed successfully!`);
+          console.log(`✅ Migration ${migrationFile} completed successfully!`);
+        }
+      } catch (err) {
+        console.error(`❌ Migration ${migrationFile} failed:`, err.message);
+        throw err;
+      }
     }
 
     console.log('\n🎉 All database migrations completed successfully!');

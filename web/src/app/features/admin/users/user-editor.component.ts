@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -95,12 +96,19 @@ interface Tenant {
               <input
                 name="email"
                 [(ngModel)]="formData.email"
+                (ngModelChange)="onEmailChange($event)"
+                (blur)="onEmailBlur()"
                 type="email"
                 placeholder="john.doe@example.com"
                 [disabled]="isEditMode()"
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-700"
                 required
               />
+              <div class="mt-1 text-xs">
+                <span *ngIf="emailCheckInProgress()" class="text-gray-500">Checking email...</span>
+                <span *ngIf="emailExists()" class="text-red-600">This email is already registered</span>
+                <span *ngIf="emailCheckError()" class="text-yellow-600">{{ emailCheckError() }}</span>
+              </div>
             </div>
 
             <!-- Password (Create only) -->
@@ -459,6 +467,11 @@ export class UserEditorComponent implements OnInit {
 
   tenants = signal<Tenant[]>([]);
   loadingTenants = signal(false);
+  // Email validation/check signals
+  emailExists = signal(false);
+  emailCheckInProgress = signal(false);
+  emailCheckError = signal<string | null>(null);
+  private _emailDebounceTimer: any = null;
 
   formData: any = {
     firstName: '',
@@ -574,24 +587,17 @@ export class UserEditorComponent implements OnInit {
   }
 
   availableRoles() {
-    const roles = this.roleService.rolesSignal();
-    console.log('🎭 All roles:', roles);
-    console.log('👤 User type:', this.userType);
-    console.log('🏢 User tenant ID:', this.formData.tenantId);
+    const roles = this.roleService.rolesSignal() || [];
 
+    // System users can only have system roles
     if (this.userType === 'system') {
-      // System users can only have system roles
-      const systemRoles = roles.filter(r => r.space === 'system');
-      console.log('🔧 System roles:', systemRoles);
-      return systemRoles;
-    } else {
-      // Tenant users can only have tenant roles that belong to their tenant
-      const tenantRoles = roles.filter(r =>
-        r.space === 'tenant' && r.tenantId === this.formData.tenantId
-      );
-      console.log('🏢 Tenant roles for tenant', this.formData.tenantId, ':', tenantRoles);
-      return tenantRoles;
+      return roles.filter(r => r.space === 'system');
     }
+
+    // Tenant users can only have tenant roles that belong to their tenant
+    if (!this.formData.tenantId) return [];
+    const tenantRoles = roles.filter(r => r.space === 'tenant' && r.tenantId === this.formData.tenantId);
+    return tenantRoles;
   }
 
   getTenantName(): string {
@@ -629,6 +635,55 @@ export class UserEditorComponent implements OnInit {
     }
   }
 
+  // Called when the email input changes (debounced)
+  onEmailChange(value: string) {
+    // If editing and email equals original, clear checks
+    if (this.isEditMode() && this.formData.email && value && value.toLowerCase() === this.formData.email.toLowerCase()) {
+      this.emailExists.set(false);
+      this.emailCheckError.set(null);
+      return;
+    }
+
+    // debounce
+    if (this._emailDebounceTimer) clearTimeout(this._emailDebounceTimer);
+    this._emailDebounceTimer = setTimeout(() => this.performEmailCheck(value), 450);
+  }
+
+  onEmailBlur() {
+    if (this._emailDebounceTimer) {
+      clearTimeout(this._emailDebounceTimer);
+      this._emailDebounceTimer = null;
+    }
+    // immediate check on blur
+    this.performEmailCheck(this.formData.email || '');
+  }
+
+  private async performEmailCheck(email: string) {
+    this.emailCheckError.set(null);
+    this.emailCheckInProgress.set(false);
+    if (!email || email.trim().length === 0) {
+      this.emailExists.set(false);
+      return;
+    }
+
+    this.emailCheckInProgress.set(true);
+    try {
+      const params: any = { email };
+      if (this.userType === 'tenant' && this.formData.tenantId) params.tenantId = this.formData.tenantId;
+      // Use public auth endpoint for email check
+      const resp: any = await firstValueFrom(this.http.get('/api/auth/check-email', { params }));
+      const exists = !!resp?.exists;
+      this.emailExists.set(exists);
+    } catch (err: any) {
+      console.error('Email check failed', err);
+      this.emailCheckError.set(err?.message || 'Failed to validate email');
+      this.emailExists.set(false);
+    } finally {
+      this.emailCheckInProgress.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
   isFormValid(): boolean {
     if (!this.formData.email) return false;
     if (!this.isEditMode() && !this.formData.password) return false;
@@ -644,6 +699,12 @@ export class UserEditorComponent implements OnInit {
 
   async save() {
     if (!this.isFormValid() || this.saving()) return;
+
+    // Prevent creating a user if email already exists
+    if (!this.isEditMode() && this.emailExists()) {
+      this.errorMessage.set('Email already exists. Please use a different email.');
+      return;
+    }
 
     this.saving.set(true);
     this.errorMessage.set(null);

@@ -5,30 +5,36 @@ import { catchError, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.getAccessToken();
+  
+  // Public routes that don't need authentication
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/auth/refresh',
+    '/api/auth/forgot-password',
+    '/api/auth/check-email',
+    '/api/tenants/create', // Public tenant registration
+    '/api/tenants/by-subdomain', // Public subdomain lookup
+    '/api/subscriptions/plans' // Public subscription plans for signup
+  ];
 
-  // Debug: Check localStorage directly
-  const storedToken = localStorage.getItem('access_token');
+  const isPublicRoute = publicRoutes.some(route => req.url.includes(route));
 
-  console.log('🔐 Auth Interceptor - Full Debug:', {
-    url: req.url,
-    hasToken: !!token,
-    tokenLength: token?.length || 0,
-    storedToken: !!storedToken,
-    storedTokenLength: storedToken?.length || 0,
-    isAuthenticated: authService.isAuthenticated(),
-    currentUser: authService.currentUser()?.email
-  });
+  // Only add token for non-public routes
+  if (!isPublicRoute) {
+    const token = authService.getAccessToken();
 
-  if (token) {
-    req = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    console.log('✅ Authorization header added');
+    if (token) {
+      req = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      console.log('✅ Authorization header added for:', req.url);
+    } else {
+      console.log('⚠️ No token available for protected route:', req.url);
+    }
   } else {
-    console.warn('❌ No token found! Stored token in localStorage:', !!storedToken);
+    console.log('🔓 Public route, skipping auth:', req.url);
   }
 
   return next(req).pipe(
@@ -38,9 +44,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         url: req.url,
         message: error.message
       });
-      if (error.status === 401) {
+      
+      // Only attempt logout if we're authenticated and got 401
+      if (error.status === 401 && authService.isAuthenticated()) {
         console.log('⚠️ 401 Unauthorized - logging out');
-        authService.logout().subscribe();
+        authService.logout().subscribe({
+          error: (logoutError) => {
+            console.error('Logout failed:', logoutError);
+            // Clear local state even if logout API fails
+            localStorage.clear();
+          }
+        });
       }
       return throwError(() => error);
     })

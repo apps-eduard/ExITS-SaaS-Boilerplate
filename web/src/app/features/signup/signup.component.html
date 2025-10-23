@@ -94,8 +94,25 @@
         <div>
           <label class="block text-xs font-medium text-gray-300 mb-2">Email *</label>
           <input type="email" formControlName="email" placeholder="john@example.com"
+            (blur)="onEmailBlur()"
+            (input)="onEmailInput()"
             class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
-            [class.border-red-600]="isFieldInvalid(this.signupForm, 'email')" />
+            [class.border-red-600]="isFieldInvalid(this.signupForm, 'email') || emailExists()"
+            [class.border-green-600]="signupForm.get('email')?.valid && !emailExists() && !emailCheckInProgress()" />
+          
+          <!-- Email validation feedback -->
+          <p *ngIf="emailCheckInProgress()" class="mt-1 text-xs text-blue-400">
+            🔄 Checking email availability...
+          </p>
+          <p *ngIf="emailExists() && !emailCheckInProgress()" class="mt-1 text-xs text-red-400">
+            ❌ This email is already registered. Please use a different email or <a routerLink="/login" class="underline">login here</a>.
+          </p>
+          <p *ngIf="signupForm.get('email')?.valid && !emailExists() && !emailCheckInProgress() && signupForm.get('email')?.value" class="mt-1 text-xs text-green-400">
+            ✅ Email is available
+          </p>
+          <p *ngIf="emailCheckError()" class="mt-1 text-xs text-orange-400">
+            ⚠️ {{ emailCheckError() }}
+          </p>
           <p *ngIf="isFieldInvalid(this.signupForm, 'email')" class="mt-1 text-xs text-red-400">
             {{ getFieldError(this.signupForm, 'email') }}</p>
         </div>
@@ -113,8 +130,17 @@
           <label class="block text-xs font-medium text-gray-300 mb-2">Confirm Password *</label>
           <input type="password" formControlName="confirmPassword" placeholder="Confirm password" minlength="8"
             class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
-            [class.border-red-600]="isFieldInvalid(this.signupForm, 'confirmPassword')" />
-          <p *ngIf="isFieldInvalid(this.signupForm, 'confirmPassword')" class="mt-1 text-xs text-red-400">
+            [class.border-red-600]="isFieldInvalid(this.signupForm, 'confirmPassword') || getPasswordMismatchError()"
+            [class.border-green-600]="signupForm.get('confirmPassword')?.valid && !getPasswordMismatchError() && signupForm.get('confirmPassword')?.value" />
+          
+          <!-- Password match feedback -->
+          <p *ngIf="getPasswordMismatchError()" class="mt-1 text-xs text-red-400">
+            ❌ {{ getPasswordMismatchError() }}
+          </p>
+          <p *ngIf="signupForm.get('confirmPassword')?.valid && !getPasswordMismatchError() && signupForm.get('confirmPassword')?.value && signupForm.get('password')?.value" class="mt-1 text-xs text-green-400">
+            ✅ Passwords match
+          </p>
+          <p *ngIf="isFieldInvalid(this.signupForm, 'confirmPassword') && !getPasswordMismatchError()" class="mt-1 text-xs text-red-400">
             {{ getFieldError(this.signupForm, 'confirmPassword') }}</p>
         </div>
 
@@ -227,7 +253,197 @@
       </form>
       </ng-container>
 
+      <!-- Step 3: Choose Plan -->
       <ng-container *ngIf="currentStep() === 3">
+        <h2 class="text-2xl font-bold text-white mb-2">Choose Your Plan</h2>
+        <p class="text-gray-400 text-sm mb-6">Select a subscription plan that fits your needs. Start with our free tier or unlock premium features.</p>
+
+        <!-- Billing Cycle Toggle -->
+        <div class="flex justify-center mb-8">
+          <div class="inline-flex items-center bg-gray-900/50 border border-gray-700 rounded-lg p-1">
+            <button type="button"
+                    (click)="toggleBillingCycle()"
+                    [class.bg-purple-600]="selectedBillingCycle() === 'monthly'"
+                    [class.text-white]="selectedBillingCycle() === 'monthly'"
+                    [class.text-gray-400]="selectedBillingCycle() !== 'monthly'"
+                    class="px-6 py-2 rounded-md font-medium transition-all">
+              Monthly
+            </button>
+            <button type="button"
+                    (click)="toggleBillingCycle()"
+                    [class.bg-purple-600]="selectedBillingCycle() === 'yearly'"
+                    [class.text-white]="selectedBillingCycle() === 'yearly'"
+                    [class.text-gray-400]="selectedBillingCycle() !== 'yearly'"
+                    class="px-6 py-2 rounded-md font-medium transition-all relative">
+              Yearly
+              <span class="absolute -top-2 -right-2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                Save 20%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pricing Cards Grid -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div *ngFor="let plan of subscriptionPlans()"
+               (click)="selectPlan(plan)"
+               class="relative cursor-pointer bg-gray-900/50 border-2 rounded-xl p-6 transition-all transform hover:scale-105 hover:shadow-xl"
+               [class.border-purple-500]="selectedPlan()?.id === plan.id"
+               [class.border-gray-700]="selectedPlan()?.id !== plan.id"
+               [class.shadow-lg]="selectedPlan()?.id === plan.id"
+               [class.shadow-purple-500/50]="selectedPlan()?.id === plan.id">
+            
+            <!-- Selected Checkmark -->
+            <div *ngIf="selectedPlan()?.id === plan.id"
+                 class="absolute top-4 right-4 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+
+            <!-- Trial Badge for Paid Plans -->
+            <div *ngIf="plan.price > 0" class="mb-4">
+              <span class="inline-flex items-center gap-1 bg-green-900/30 border border-green-700 text-green-300 text-xs px-3 py-1 rounded-full font-medium">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                14 Days Free Trial
+              </span>
+            </div>
+
+            <!-- Plan Name -->
+            <h3 class="text-xl font-bold text-white mb-2">{{ plan.name }}</h3>
+            
+            <!-- Plan Description -->
+            <p class="text-xs text-gray-400 mb-4 min-h-[2.5rem]">{{ plan.description }}</p>
+
+            <!-- Pricing -->
+            <div class="mb-6">
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-bold text-white">
+                  {{ plan.price === 0 ? 'Free' : formatPrice(selectedBillingCycle() === 'yearly' ? getYearlyPrice(plan.price) : plan.price) }}
+                </span>
+                <span *ngIf="plan.price > 0" class="text-sm text-gray-400">
+                  /{{ selectedBillingCycle() === 'yearly' ? 'year' : 'month' }}
+                </span>
+              </div>
+              <p *ngIf="selectedBillingCycle() === 'yearly' && plan.price > 0" class="text-xs text-gray-500 mt-1">
+                Billed annually ({{ formatPrice(plan.price * 12) }}/year)
+              </p>
+            </div>
+
+            <!-- Features List -->
+            <div class="space-y-3 mb-6">
+              <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span class="text-sm text-gray-300">Up to {{ plan.max_users === -1 ? 'Unlimited' : plan.max_users }} users</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span class="text-sm text-gray-300">{{ plan.max_storage_gb === -1 ? 'Unlimited' : (plan.max_storage_gb + ' GB') }} storage</span>
+              </div>
+              <div *ngFor="let feature of plan.features" class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span class="text-sm text-gray-300">{{ feature }}</span>
+              </div>
+            </div>
+
+            <!-- Select Button -->
+            <button type="button"
+                    (click)="selectPlan(plan); $event.stopPropagation()"
+                    class="w-full py-2 rounded-lg font-medium transition-all"
+                    [class.bg-purple-600]="selectedPlan()?.id === plan.id"
+                    [class.hover:bg-purple-700]="selectedPlan()?.id === plan.id"
+                    [class.text-white]="selectedPlan()?.id === plan.id"
+                    [class.bg-gray-800]="selectedPlan()?.id !== plan.id"
+                    [class.hover:bg-gray-700]="selectedPlan()?.id !== plan.id"
+                    [class.text-gray-300]="selectedPlan()?.id !== plan.id">
+              {{ selectedPlan()?.id === plan.id ? 'Selected ✓' : 'Select Plan' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Plan Comparison Table -->
+        <div class="bg-gray-900/30 border border-gray-700 rounded-xl overflow-hidden">
+          <div class="px-6 py-4 bg-gray-800/50 border-b border-gray-700">
+            <h3 class="text-lg font-bold text-white">Compare Plans</h3>
+            <p class="text-xs text-gray-400 mt-1">See what's included in each tier</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-700">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400">Feature</th>
+                  <th *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center text-xs font-medium text-gray-400">
+                    {{ plan.name }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-700/50">
+                  <td class="px-6 py-3 text-sm text-gray-300">Users</td>
+                  <td *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center text-sm text-gray-300">
+                    {{ plan.max_users === -1 ? 'Unlimited' : plan.max_users }}
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-700/50">
+                  <td class="px-6 py-3 text-sm text-gray-300">Storage</td>
+                  <td *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center text-sm text-gray-300">
+                    {{ plan.max_storage_gb === -1 ? 'Unlimited' : (plan.max_storage_gb + ' GB') }}
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-700/50">
+                  <td class="px-6 py-3 text-sm text-gray-300">API Access</td>
+                  <td *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center">
+                    <span *ngIf="hasAPIAccess(plan)" class="text-green-400">✓</span>
+                    <span *ngIf="!hasAPIAccess(plan)" class="text-gray-600">✗</span>
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-700/50">
+                  <td class="px-6 py-3 text-sm text-gray-300">Priority Support</td>
+                  <td *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center">
+                    <span *ngIf="hasPrioritySupport(plan)" class="text-green-400">✓</span>
+                    <span *ngIf="!hasPrioritySupport(plan)" class="text-gray-600">✗</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-3 text-sm text-gray-300">Advanced Analytics</td>
+                  <td *ngFor="let plan of subscriptionPlans()" class="px-6 py-3 text-center">
+                    <span *ngIf="hasAdvancedAnalytics(plan)" class="text-green-400">✓</span>
+                    <span *ngIf="!hasAdvancedAnalytics(plan)" class="text-gray-600">✗</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Trial Information -->
+        <div class="mt-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+              <h4 class="text-sm font-semibold text-blue-300 mb-1">About Free Trials</h4>
+              <p class="text-xs text-blue-200">
+                All paid plans include a 14-day free trial. No credit card required to start.
+                You can cancel anytime during the trial period without being charged.
+                After the trial, you'll be billed {{ selectedBillingCycle() }} unless you cancel.
+              </p>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Step 4: Choose Features -->
+      <ng-container *ngIf="currentStep() === 4">
         <h2 class="text-2xl font-bold text-white mb-2">Choose Your Features</h2>
         <p class="text-gray-400 text-sm mb-6">Select the features that match your business needs. You can add more later.</p>
 
@@ -250,8 +466,8 @@
         </div>
       </ng-container>
 
-      <!-- Step 4: Complete -->
-      <div *ngIf="currentStep() === 4" class="text-center py-12">
+      <!-- Step 5: Complete -->
+      <div *ngIf="currentStep() === 5" class="text-center py-12">
         <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center">
           <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -278,12 +494,12 @@
         </button>
         <div *ngIf="!success()" class="ml-auto"></div>
 
-        <button *ngIf="currentStep() < 4 && !success()" (click)="nextStep()"
+        <button *ngIf="currentStep() < 5 && !success()" (click)="nextStep()"
           class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-lg text-white font-medium rounded-lg transition-all transform hover:scale-105">
           Next →
         </button>
 
-        <button *ngIf="currentStep() === 4 && !success()" (click)="completeSignup()" [disabled]="loading()"
+        <button *ngIf="currentStep() === 5 && !success()" (click)="completeSignup()" [disabled]="loading()"
           class="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:shadow-lg text-white font-medium rounded-lg transition-all transform hover:scale-105 disabled:opacity-50">
           {{ loading() ? '⏳ Creating Account...' : '✨ Create Account' }}
         </button>
