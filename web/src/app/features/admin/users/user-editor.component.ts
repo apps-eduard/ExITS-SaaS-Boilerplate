@@ -151,6 +151,22 @@ interface Tenant {
                 <option value="tenant">Tenant User</option>
               </select>
             </div>
+
+            <!-- Tenant Info (read-only for edit mode) -->
+            <div *ngIf="userType === 'tenant' && isEditMode()">
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tenant
+              </label>
+              <div class="flex items-center gap-2 w-full rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-xs text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span class="font-medium">{{ getTenantName() }}</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Tenant cannot be changed after user creation
+              </p>
+            </div>
           </div>
 
           <!-- Tenant Selection (shown only for tenant users in create mode) -->
@@ -158,11 +174,11 @@ interface Tenant {
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Select Tenant <span class="text-red-500">*</span>
             </label>
-            
+
             <div *ngIf="loadingTenants()" class="text-xs text-gray-500 dark:text-gray-400 py-2">
               Loading tenants...
             </div>
-            
+
             <select
               *ngIf="!loadingTenants()"
               [(ngModel)]="formData.tenantId"
@@ -174,7 +190,7 @@ interface Tenant {
                 {{ tenant.name }} ({{ tenant.subdomain }})
               </option>
             </select>
-            
+
             <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
               💡 This user will only have access to the selected tenant's data
             </p>
@@ -440,7 +456,7 @@ export class UserEditorComponent implements OnInit {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   userType = 'system'; // 'system' or 'tenant' - default to system admin
-  
+
   tenants = signal<Tenant[]>([]);
   loadingTenants = signal(false);
 
@@ -561,16 +577,29 @@ export class UserEditorComponent implements OnInit {
     const roles = this.roleService.rolesSignal();
     console.log('🎭 All roles:', roles);
     console.log('👤 User type:', this.userType);
+    console.log('🏢 User tenant ID:', this.formData.tenantId);
 
     if (this.userType === 'system') {
+      // System users can only have system roles
       const systemRoles = roles.filter(r => r.space === 'system');
       console.log('🔧 System roles:', systemRoles);
       return systemRoles;
     } else {
-      const tenantRoles = roles.filter(r => r.space === 'tenant');
-      console.log('🏢 Tenant roles:', tenantRoles);
+      // Tenant users can only have tenant roles that belong to their tenant
+      const tenantRoles = roles.filter(r =>
+        r.space === 'tenant' && r.tenantId === this.formData.tenantId
+      );
+      console.log('🏢 Tenant roles for tenant', this.formData.tenantId, ':', tenantRoles);
       return tenantRoles;
     }
+  }
+
+  getTenantName(): string {
+    if (!this.formData.tenantId) {
+      return 'No tenant assigned';
+    }
+    const tenant = this.tenants().find(t => t.id === this.formData.tenantId);
+    return tenant ? `${tenant.name} (${tenant.subdomain})` : 'Unknown tenant';
   }
 
   isRoleSelected(roleId: string): boolean {
@@ -604,12 +633,12 @@ export class UserEditorComponent implements OnInit {
     if (!this.formData.email) return false;
     if (!this.isEditMode() && !this.formData.password) return false;
     if (!this.isEditMode() && this.formData.password.length < 8) return false;
-    
+
     // If creating a tenant user, tenant must be selected
     if (!this.isEditMode() && this.userType === 'tenant' && !this.formData.tenantId) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -641,13 +670,13 @@ export class UserEditorComponent implements OnInit {
           // Use selected tenant ID or null for system admin
           tenantId: this.userType === 'system' ? null : this.formData.tenantId
         };
-        
+
         console.log('👤 Creating user:', {
           userType: this.userType,
           tenantId: createPayload.tenantId,
           email: createPayload.email
         });
-        
+
         user = await this.userService.createUser(createPayload);
       }
 

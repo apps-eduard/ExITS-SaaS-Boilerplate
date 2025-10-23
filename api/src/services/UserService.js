@@ -263,6 +263,14 @@ class UserService {
         values.push(updateData.mfa_enabled);
       }
 
+      // Check if there are fields to update
+      if (fieldsToUpdate.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      // Always update updated_at
+      fieldsToUpdate.push('updated_at = NOW()');
+
       values.push(userId);
 
       // System admins (tenantId = null) can update any user, tenant admins can only update their own tenant users
@@ -271,14 +279,14 @@ class UserService {
         values.push(tenantId);
         query = `
           UPDATE users
-          SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
+          SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
           RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
         `;
       } else {
         query = `
           UPDATE users
-          SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
+          SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount}
           RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
         `;
@@ -322,6 +330,32 @@ class UserService {
       return { message: 'User deleted successfully' };
     } catch (err) {
       logger.error(`User service delete error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Restore user (from soft delete)
+   */
+  static async restoreUser(userId, requestingUserId, tenantId) {
+    try {
+      const result = await pool.query(
+        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at`,
+        [userId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('User not found or not deleted');
+      }
+
+      const user = this.transformUser(result.rows[0]);
+
+      await this.auditLog(requestingUserId, tenantId, 'restore', 'user', userId, {});
+
+      logger.info(`User restored: ${userId}`);
+      return user;
+    } catch (err) {
+      logger.error(`User service restore error: ${err.message}`);
       throw err;
     }
   }

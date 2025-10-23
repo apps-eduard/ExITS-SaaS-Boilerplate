@@ -5,6 +5,7 @@
 
 const RBACService = require('../services/RBACService');
 const logger = require('../utils/logger');
+const db = require('../config/database');
 
 class RBACController {
   /**
@@ -61,15 +62,32 @@ class RBACController {
   static async getRoles(req, res) {
     try {
       const tenantId = req.user.tenant_id;
+      logger.info(`📋 Fetching roles for tenant: ${tenantId}`);
       const roles = await RBACService.getAllRoles(tenantId);
+      logger.info(`✅ Fetched ${roles.length} roles`);
+      
+      // Transform snake_case to camelCase for frontend
+      const transformedRoles = roles.map(role => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        space: role.space,
+        status: role.status,
+        tenantId: role.tenant_id,
+        tenantName: role.tenant_name,
+        permissionCount: role.permission_count,
+        permissions: role.permissions
+      }));
       
       res.json({
         success: true,
-        data: roles
+        data: transformedRoles,
       });
     } catch (error) {
-      logger.error('❌ Error fetching roles:', error.message);
-      res.status(500).json({ error: 'Failed to fetch roles' });
+      logger.error('❌ Error fetching roles:', error);
+      logger.error('❌ Error message:', error.message);
+      logger.error('❌ Error stack:', error.stack);
+      res.status(500).json({ error: 'Failed to fetch roles', details: error.message });
     }
   }
 
@@ -216,8 +234,8 @@ class RBACController {
       const { roleId } = req.params;
       
       // Get current status
-      const getQuery = `SELECT status FROM roles WHERE id = $1`;
-      const currentRole = await req.app.locals.db.query(getQuery, [roleId]);
+      const getQuery = 'SELECT status FROM roles WHERE id = $1';
+      const currentRole = await db.query(getQuery, [roleId]);
       
       if (currentRole.rows.length === 0) {
         return res.status(404).json({ error: 'Role not found' });
@@ -230,15 +248,25 @@ class RBACController {
         UPDATE roles
         SET status = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-        RETURNING id, name, description, space, status
+        RETURNING id, name, description, space, status, tenant_id
       `;
 
-      const result = await req.app.locals.db.query(updateQuery, [newStatus, roleId]);
+      const result = await db.query(updateQuery, [newStatus, roleId]);
       
       logger.info(`✅ Role status toggled: ${roleId} (${currentStatus} → ${newStatus})`);
+      
+      // Transform to camelCase
+      const role = result.rows[0];
       res.json({
         success: true,
-        data: result.rows[0]
+        data: {
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          space: role.space,
+          status: role.status,
+          tenantId: role.tenant_id,
+        },
       });
     } catch (error) {
       logger.error('❌ Error toggling role status:', error.message);

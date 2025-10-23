@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RoleService, Role } from '../../../core/services/role.service';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 
 @Component({
   selector: 'app-roles-list',
@@ -16,7 +17,7 @@ import { RoleService, Role } from '../../../core/services/role.service';
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Role Management</h1>
           <p class="text-xs text-gray-500 dark:text-gray-400">Define roles and control access permissions across your system</p>
         </div>
-        <button 
+        <button
           routerLink="/admin/roles/new"
           class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
         >
@@ -58,16 +59,26 @@ import { RoleService, Role } from '../../../core/services/role.service';
         </div>
 
         <!-- Filters -->
-        <div class="lg:col-span-4 grid grid-cols-2 gap-2">
+        <div class="lg:col-span-4 grid grid-cols-3 gap-2">
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Filter by Space</label>
-            <select 
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Space</label>
+            <select
               [(ngModel)]="filterSpace"
               class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="">All</option>
               <option value="system">System</option>
               <option value="tenant">Tenant</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tenant</label>
+            <select
+              [(ngModel)]="filterTenant"
+              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">All</option>
+              <option *ngFor="let tenant of availableTenants()" [value]="tenant">{{ tenant }}</option>
             </select>
           </div>
           <div>
@@ -95,7 +106,7 @@ import { RoleService, Role } from '../../../core/services/role.service';
           <div>
             <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Unable to load roles</p>
             <p class="text-xs text-yellow-700 dark:text-yellow-400">{{ roleService.errorSignal() }}</p>
-            <button 
+            <button
               (click)="roleService.loadRoles()"
               class="inline-flex items-center gap-1.5 mt-2 rounded bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700 transition"
             >
@@ -117,6 +128,7 @@ import { RoleService, Role } from '../../../core/services/role.service';
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Role Name</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Description</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Space</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Tenant</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Permissions</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
@@ -134,6 +146,14 @@ import { RoleService, Role } from '../../../core/services/role.service';
                   <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (role.space === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300')">
                     {{ role.space | uppercase }}
                   </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="text-sm text-gray-900 dark:text-white">
+                    {{ role.tenantName || '—' }}
+                  </div>
+                  <div *ngIf="role.space === 'system'" class="text-xs text-gray-500 dark:text-gray-400">
+                    All tenants
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-center">
                   <div class="flex items-center justify-center gap-1">
@@ -209,14 +229,14 @@ import { RoleService, Role } from '../../../core/services/role.service';
           <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
             {{ roleService.rolesSignal().length === 0 ? 'Create your first role to start managing permissions' : 'Try adjusting your search or filter criteria' }}
           </p>
-          <button 
+          <button
             *ngIf="roleService.rolesSignal().length === 0"
             routerLink="/admin/roles/new"
             class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
           >
             ➕ Create First Role
           </button>
-          <button 
+          <button
             *ngIf="roleService.rolesSignal().length > 0"
             (click)="clearFilters()"
             class="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 transition"
@@ -232,21 +252,39 @@ import { RoleService, Role } from '../../../core/services/role.service';
 export class RolesListComponent implements OnInit {
   searchQuery = signal('');
   filterSpace = signal<'' | 'system' | 'tenant'>('');
+  filterTenant = signal('');
+
+  // Get unique tenant names from roles
+  availableTenants = computed(() => {
+    const tenants = new Set<string>();
+    this.roleService.rolesSignal().forEach(role => {
+      if (role.tenantName) {
+        tenants.add(role.tenantName);
+      }
+    });
+    return Array.from(tenants).sort();
+  });
 
   filteredRoles = computed(() => {
     let roles = this.roleService.rolesSignal();
-    
+
     // Filter by space
     const space = this.filterSpace();
     if (space) {
       roles = roles.filter(r => r.space === space);
     }
 
+    // Filter by tenant
+    const tenant = this.filterTenant();
+    if (tenant) {
+      roles = roles.filter(r => r.tenantName === tenant);
+    }
+
     // Filter by search query
     const query = this.searchQuery().toLowerCase();
     if (query) {
-      roles = roles.filter(r => 
-        r.name.toLowerCase().includes(query) || 
+      roles = roles.filter(r =>
+        r.name.toLowerCase().includes(query) ||
         (r.description && r.description.toLowerCase().includes(query))
       );
     }
@@ -254,7 +292,10 @@ export class RolesListComponent implements OnInit {
     return roles;
   });
 
-  constructor(public roleService: RoleService) {}
+  constructor(
+    public roleService: RoleService,
+    private confirmationService: ConfirmationService
+  ) {}
 
   ngOnInit(): void {
     console.log('📋 RolesListComponent initialized');
@@ -264,7 +305,7 @@ export class RolesListComponent implements OnInit {
   getRoleSummary(role: Role) {
     const summary = this.roleService.getRoleSummary(role);
     const resources = new Set<string>();
-    
+
     if (role.permissions) {
       role.permissions.forEach(p => resources.add(p.resource));
     }
@@ -293,16 +334,19 @@ export class RolesListComponent implements OnInit {
   clearFilters(): void {
     this.searchQuery.set('');
     this.filterSpace.set('');
+    this.filterTenant.set('');
   }
 
   async deleteRole(role: Role): Promise<void> {
-    const confirmed = confirm(
-      `⚠️ Delete Role: ${role.name}\n\n` +
-      `This will remove the role and all its permissions.\n` +
-      `Users assigned to this role will lose their access.\n\n` +
-      `Are you sure you want to proceed?`
-    );
-    
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Delete Role',
+      message: `Are you sure you want to delete "${role.name}"? This will remove the role and all its permissions. Users assigned to this role will lose their access.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+      icon: 'trash'
+    });
+
     if (confirmed) {
       const success = await this.roleService.deleteRole(role.id);
       if (success) {
@@ -313,14 +357,20 @@ export class RolesListComponent implements OnInit {
 
   async toggleRoleStatus(role: Role): Promise<void> {
     const action = role.status === 'active' ? 'disable' : 'enable';
-    const confirmed = confirm(
-      `${action === 'disable' ? '⚠️' : '✅'} ${action === 'disable' ? 'Disable' : 'Enable'} Role: ${role.name}\n\n` +
-      `${action === 'disable' 
-        ? 'Users with this role will lose access to its permissions.' 
-        : 'Users with this role will regain access to its permissions.'}\n\n` +
-      `Are you sure you want to ${action} this role?`
-    );
-    
+
+    const confirmed = await this.confirmationService.confirm({
+      title: `${action === 'disable' ? 'Disable' : 'Enable'} Role`,
+      message: `Are you sure you want to ${action} "${role.name}"? ${
+        action === 'disable'
+          ? 'Users with this role will lose access to its permissions.'
+          : 'Users with this role will regain access to its permissions.'
+      }`,
+      confirmText: action === 'disable' ? 'Disable' : 'Enable',
+      cancelText: 'Cancel',
+      type: action === 'disable' ? 'warning' : 'success',
+      icon: action === 'disable' ? 'disable' : 'enable'
+    });
+
     if (confirmed) {
       const success = await this.roleService.toggleRoleStatus(role.id);
       if (success) {

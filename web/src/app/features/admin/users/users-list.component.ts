@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { UserService, User } from '../../../core/services/user.service';
 import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 
 @Component({
   selector: 'app-users-list',
@@ -364,7 +365,7 @@ import { AuthService } from '../../../core/services/auth.service';
                       [class]="user.status === 'active'
                         ? 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 transition'
                         : 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 transition'"
-                      [title]="user.status === 'active' ? 'Disable User' : 'Enable User'"
+                      [title]="user.status === 'active' ? 'Suspend User' : 'Enable User'"
                     >
                       <svg *ngIf="user.status === 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
@@ -372,7 +373,7 @@ import { AuthService } from '../../../core/services/auth.service';
                       <svg *ngIf="user.status !== 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {{ user.status === 'active' ? 'Disable' : 'Enable' }}
+                      {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
                     </button>
                     <button
                       *ngIf="canDeleteUsers()"
@@ -466,7 +467,8 @@ export class UsersListComponent implements OnInit {
   constructor(
     public userService: UserService,
     public roleService: RoleService,
-    private authService: AuthService
+    private authService: AuthService,
+    private confirmationService: ConfirmationService
   ) {}
 
   // Permission check methods
@@ -673,38 +675,52 @@ export class UsersListComponent implements OnInit {
   }
 
   async toggleUserStatus(user: User): Promise<void> {
-    const newStatus = user.status === 'active' ? 'inactive' : 'active';
-    const action = newStatus === 'active' ? 'Enable' : 'Disable';
+    const newStatus = user.status === 'active' ? 'suspended' : 'active';
+    const action = newStatus === 'active' ? 'enable' : 'suspend';
 
-    const confirmed = confirm(
-      `${action} User: ${user.email}\n\n` +
-      `This will ${action.toLowerCase()} the user account.\n` +
-      `Are you sure you want to proceed?`
-    );
+    const confirmed = await this.confirmationService.confirm({
+      title: `${action === 'enable' ? 'Enable' : 'Suspend'} User`,
+      message: `Are you sure you want to ${action} ${user.email}? This will ${action} their account access.`,
+      confirmText: action === 'enable' ? 'Enable' : 'Suspend',
+      cancelText: 'Cancel',
+      type: action === 'enable' ? 'success' : 'warning',
+      icon: action === 'enable' ? 'check' : 'warning'
+    });
 
     if (!confirmed) return;
 
     try {
       // Update user status via API
       await this.userService.updateUser(user.id, { status: newStatus });
-      console.log(`✅ User ${user.email} ${action.toLowerCase()}d successfully`);
+      console.log(`✅ User ${user.email} ${action}ed successfully`);
 
       // Refresh the user list
       await this.userService.loadUsers();
     } catch (error) {
-      console.error(`❌ Error ${action.toLowerCase()}ing user:`, error);
-      alert(`Failed to ${action.toLowerCase()} user. Please try again.`);
+      console.error(`❌ Error ${action}ing user:`, error);
+      await this.confirmationService.confirm({
+        title: 'Error',
+        message: `Failed to ${action} user. Please try again.`,
+        confirmText: 'OK',
+        type: 'danger',
+        icon: 'error'
+      });
     }
   }
 
   async deleteUser(user: User): Promise<void> {
-    const confirmed = confirm(
-      `⚠️ Delete User: ${user.email}\n\n` +
-      `This will permanently remove the user account.\n` +
-      `Are you sure you want to proceed?`
-    );
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Delete User',
+      message: `Are you sure you want to delete ${user.email}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+      icon: 'trash'
+    });
 
-    if (confirmed) {
+    if (!confirmed) return;
+
+    try {
       const success = await this.userService.deleteUser(user.id);
       if (success) {
         console.log(`✅ User deleted: ${user.email}`);
@@ -715,6 +731,15 @@ export class UsersListComponent implements OnInit {
           this.searchQuery
         );
       }
+    } catch (error) {
+      console.error('❌ Error deleting user:', error);
+      await this.confirmationService.confirm({
+        title: 'Error',
+        message: 'Failed to delete user. Please try again.',
+        confirmText: 'OK',
+        type: 'danger',
+        icon: 'error'
+      });
     }
   }
 }

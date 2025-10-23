@@ -19,6 +19,8 @@ export interface Role {
   space: 'system' | 'tenant';
   status?: 'active' | 'inactive';
   parentRoleId?: string;
+  tenantId?: number | null;
+  tenantName?: string | null;
   createdAt?: string;
   updatedAt?: string;
   permissions?: Permission[];

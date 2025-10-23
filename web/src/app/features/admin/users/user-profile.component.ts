@@ -4,6 +4,7 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService, User } from '../../../core/services/user.service';
 import { RoleService } from '../../../core/services/role.service';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -16,19 +17,24 @@ import { RoleService } from '../../../core/services/role.service';
         <div class="flex items-center gap-2">
           <button
             (click)="goBack()"
-            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            title="Back to users list"
           >
-            <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white">User Profile</h1>
         </div>
         <button
           [routerLink]="'/admin/users/' + userId"
-          class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition"
+          class="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition"
+          title="Edit user profile"
         >
-          ✏️ Edit Profile
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit Profile
         </button>
       </div>
 
@@ -102,63 +108,104 @@ import { RoleService } from '../../../core/services/role.service';
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Assigned Roles</h3>
 
             <div *ngIf="user()?.roles && user()!.roles!.length > 0" class="space-y-2">
-              <div *ngFor="let role of user()?.roles" class="flex items-center justify-between p-3 rounded border border-gray-200 dark:border-gray-700">
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">{{ role.name }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ role.space }} role</p>
+              <div *ngFor="let role of user()?.roles" class="flex items-center justify-between p-2.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ role.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ role.space }} role</p>
+                  </div>
                 </div>
                 <button
                   (click)="removeRole(role.id)"
-                  class="text-red-600 hover:text-red-700 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                  class="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition text-xs font-medium"
                   title="Remove role"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
+                  Remove
                 </button>
               </div>
             </div>
 
-            <div *ngIf="!user()?.roles || user()!.roles!.length === 0" class="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
+            <div *ngIf="!user()?.roles || user()!.roles!.length === 0" class="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
               No roles assigned
             </div>
 
             <button
               (click)="showAddRole.set(true)"
-              class="mt-4 w-full rounded border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800 transition"
+              class="mt-4 w-full flex items-center justify-center gap-1.5 rounded border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800 transition"
             >
-              + Add Role
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Role
             </button>
 
             <!-- Add Role Modal -->
             <div *ngIf="showAddRole()" class="mt-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
               <div class="flex items-center justify-between mb-3">
-                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Select Role</h4>
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Select Roles (Multi-select)</h4>
                 <button
-                  (click)="showAddRole.set(false)"
-                  class="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                  (click)="closeAddRoleModal()"
+                  class="text-gray-500 hover:text-gray-700 dark:text-gray-400 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                  title="Close"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <select
-                [(ngModel)]="selectedRoleToAdd"
-                class="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white mb-2"
-              >
-                <option value="">Select a role...</option>
-                <option *ngFor="let role of availableRolesToAdd()" [value]="role.id">
-                  {{ role.name }} ({{ role.space }})
-                </option>
-              </select>
-              <button
-                (click)="addRole()"
-                [disabled]="!selectedRoleToAdd"
-                class="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                Add Role
-              </button>
+
+              <!-- Roles Checkbox List -->
+              <div class="max-h-60 overflow-y-auto space-y-1 mb-3 border border-gray-200 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700">
+                <div *ngIf="availableRolesToAdd().length === 0" class="text-center py-4 text-xs text-gray-500 dark:text-gray-400">
+                  No available roles to assign
+                </div>
+                <label
+                  *ngFor="let role of availableRolesToAdd()"
+                  class="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                  [class.bg-blue-50]="isRoleSelectedToAdd(role.id)"
+                  [class.dark:bg-blue-900/20]="isRoleSelectedToAdd(role.id)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isRoleSelectedToAdd(role.id)"
+                    (change)="toggleRoleSelection(role.id)"
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500 dark:border-gray-500 dark:bg-gray-600"
+                  />
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ role.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ role.space }} role</p>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex gap-2">
+                <button
+                  (click)="closeAddRoleModal()"
+                  class="flex-1 flex items-center justify-center gap-1.5 rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancel
+                </button>
+                <button
+                  (click)="addRole()"
+                  [disabled]="selectedRolesToAdd().size === 0"
+                  class="flex-1 flex items-center justify-center gap-1.5 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Add {{ selectedRolesToAdd().size }} Role{{ selectedRolesToAdd().size !== 1 ? 's' : '' }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -215,30 +262,6 @@ import { RoleService } from '../../../core/services/role.service';
           </div>
         </div>
 
-        <!-- Tenant Information (if tenant user) -->
-        <div *ngIf="user()?.tenantId" class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tenant Information</h3>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Tenant Name</p>
-              <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                {{ user()?.tenant?.name || 'N/A' }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Tenant ID</p>
-              <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                {{ (user()?.tenantId?.substring(0, 8) ?? 'N/A') }}...
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Subscription</p>
-              <p class="text-sm font-medium text-gray-900 dark:text-white mt-1">Active</p>
-            </div>
-          </div>
-        </div>
-
         <!-- Recent Activity Log -->
         <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
@@ -282,12 +305,14 @@ export class UserProfileComponent implements OnInit {
   user = signal<User | null>(null);
   showAddRole = signal(false);
   selectedRoleToAdd = '';
+  selectedRolesToAdd = signal<Set<string>>(new Set());
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     public userService: UserService,
-    public roleService: RoleService
+    public roleService: RoleService,
+    private confirmationService: ConfirmationService
   ) {}
 
   async ngOnInit() {
@@ -342,14 +367,50 @@ export class UserProfileComponent implements OnInit {
   availableRolesToAdd() {
     const userRoleIds = this.user()?.roles?.map(r => r.id) || [];
     const userType = this.user()?.tenantId ? 'tenant' : 'system';
+    const userTenantId = this.user()?.tenantId;
+
     return this.roleService.rolesSignal()
-      .filter(r => r.space === userType && !userRoleIds.includes(r.id));
+      .filter(r => {
+        // Filter out already assigned roles
+        if (userRoleIds.includes(r.id)) return false;
+
+        // For system users, show only system roles
+        if (userType === 'system') {
+          return r.space === 'system';
+        }
+
+        // For tenant users, show only roles from their specific tenant
+        return r.space === 'tenant' && r.tenantId === userTenantId;
+      });
+  }
+
+  toggleRoleSelection(roleId: string) {
+    const selected = this.selectedRolesToAdd();
+    if (selected.has(roleId)) {
+      selected.delete(roleId);
+    } else {
+      selected.add(roleId);
+    }
+    this.selectedRolesToAdd.set(new Set(selected));
+  }
+
+  isRoleSelectedToAdd(roleId: string): boolean {
+    return this.selectedRolesToAdd().has(roleId);
+  }
+
+  closeAddRoleModal() {
+    this.showAddRole.set(false);
+    this.selectedRolesToAdd.set(new Set());
   }
 
   async addRole() {
-    if (!this.selectedRoleToAdd || !this.userId) return;
+    const rolesToAdd = Array.from(this.selectedRolesToAdd());
+    if (rolesToAdd.length === 0 || !this.userId) return;
 
-    await this.userService.assignRole(this.userId, this.selectedRoleToAdd);
+    // Assign all selected roles
+    for (const roleId of rolesToAdd) {
+      await this.userService.assignRole(this.userId, roleId);
+    }
 
     // Reload user
     const updatedUser = await this.userService.getUser(this.userId);
@@ -358,13 +419,22 @@ export class UserProfileComponent implements OnInit {
     }
 
     this.showAddRole.set(false);
-    this.selectedRoleToAdd = '';
+    this.selectedRolesToAdd.set(new Set());
   }
 
   async removeRole(roleId: string) {
     if (!this.userId) return;
 
-    const confirmed = confirm('Remove this role from the user?');
+    const role = this.user()?.roles?.find(r => r.id === roleId);
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Remove Role',
+      message: `Are you sure you want to remove the role "${role?.name}" from this user?`,
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      type: 'danger',
+      icon: 'trash'
+    });
+
     if (!confirmed) return;
 
     await this.userService.removeRole(this.userId, roleId);

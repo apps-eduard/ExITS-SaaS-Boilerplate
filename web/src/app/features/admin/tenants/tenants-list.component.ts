@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 
 interface Tenant {
   id: number;
@@ -241,6 +242,17 @@ interface Pagination {
                         </svg>
                         {{ tenant.status === 'active' ? 'Suspend' : 'Activate' }}
                       </button>
+                      <button
+                        *ngIf="canDeleteTenants()"
+                        (click)="deleteTenant(tenant)"
+                        class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-medium"
+                        title="Delete tenant"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -296,6 +308,7 @@ interface Pagination {
 export class TenantsListComponent implements OnInit {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private confirmationService = inject(ConfirmationService);
 
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
@@ -383,25 +396,34 @@ export class TenantsListComponent implements OnInit {
     this.loadTenants();
   }
 
-  toggleTenantStatus(tenant: Tenant): void {
+  async toggleTenantStatus(tenant: Tenant): Promise<void> {
     const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
     const action = newStatus === 'active' ? 'activate' : 'suspend';
 
-    if (!confirm(`Are you sure you want to ${action} "${tenant.name}"?`)) {
+    const confirmed = await this.confirmationService.confirm({
+      title: `${action === 'activate' ? 'Activate' : 'Suspend'} Tenant`,
+      message: `Are you sure you want to ${action} "${tenant.name}"?${
+        action === 'suspend'
+          ? ' Users will lose access to this tenant.'
+          : ' Users will regain access to this tenant.'
+      }`,
+      confirmText: action === 'activate' ? 'Activate' : 'Suspend',
+      cancelText: 'Cancel',
+      type: action === 'activate' ? 'success' : 'warning',
+      icon: action === 'activate' ? 'enable' : 'disable'
+    });
+
+    if (!confirmed) {
       return;
     }
 
-    const endpoint = newStatus === 'active'
-      ? `/api/tenants/${tenant.id}/activate`
-      : `/api/tenants/${tenant.id}/suspend`;
+    const endpoint = `/api/tenants/${tenant.id}/${action}`;
 
     this.http.put<any>(endpoint, { reason: `Manual ${action}` }).subscribe({
       next: () => {
         this.loadTenants();
-        alert(`Tenant ${action}d successfully`);
       },
       error: (err) => {
-        alert(err.error?.message || `Failed to ${action} tenant`);
         console.error(`Error ${action}ing tenant:`, err);
       }
     });
@@ -410,6 +432,34 @@ export class TenantsListComponent implements OnInit {
   suspendTenant(tenant: Tenant): void {
     // Legacy method - redirect to toggleTenantStatus
     this.toggleTenantStatus(tenant);
+  }
+
+  async deleteTenant(tenant: Tenant): Promise<void> {
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Delete Tenant',
+      message: `Are you sure you want to delete "${tenant.name}"? This will mark the tenant and all associated data as deleted. This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+      icon: 'trash'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await this.http.delete<any>(`/api/tenants/${tenant.id}`).toPromise();
+      console.log(`✅ Tenant deleted: ${tenant.name}`);
+      this.loadTenants();
+    } catch (error) {
+      console.error('❌ Error deleting tenant:', error);
+      await this.confirmationService.confirm({
+        title: 'Error',
+        message: 'Failed to delete tenant. Please try again.',
+        confirmText: 'OK',
+        type: 'danger',
+        icon: 'error'
+      });
+    }
   }
 
   getStatusClass(status: string): string {

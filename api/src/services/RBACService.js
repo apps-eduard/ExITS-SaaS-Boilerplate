@@ -355,8 +355,9 @@ class RBACService {
    * Get all roles for a tenant or system
    */
   static async getAllRoles(tenantId = null) {
+    let query = '';
     try {
-      let query = `
+      query = `
         SELECT 
           r.id, 
           r.name, 
@@ -364,36 +365,44 @@ class RBACService {
           r.space, 
           r.status, 
           r.tenant_id,
-          COUNT(DISTINCT rp.id) as permission_count,
+          t.name as tenant_name,
+          COUNT(DISTINCT rps.permission_id) as permission_count,
           json_agg(
             DISTINCT jsonb_build_object(
-              'menuKey', COALESCE(m.menu_key, rp.menu_key),
-              'actionKey', rp.action_key
+              'permissionKey', p.permission_key,
+              'resource', p.resource,
+              'action', p.action
             )
-          ) FILTER (WHERE rp.id IS NOT NULL) as permissions
+          ) FILTER (WHERE rps.permission_id IS NOT NULL) as permissions
         FROM roles r
-        LEFT JOIN role_permissions rp ON r.id = rp.role_id AND rp.status = 'active'
-        LEFT JOIN modules m ON rp.module_id = m.id
-        WHERE r.status = 'active'
+        LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+        LEFT JOIN permissions p ON rps.permission_id = p.id
+        LEFT JOIN tenants t ON r.tenant_id = t.id
       `;
       
       const params = [];
+      const whereClauses = [];
       
       // System admins (tenantId === null) can see all roles
       // Tenant users can only see their tenant roles + system roles
       if (tenantId !== null) {
-        query += ` AND (r.space = 'system' OR r.tenant_id = $1)`;
+        whereClauses.push(`(r.space = 'system' OR r.tenant_id = $1)`);
         params.push(tenantId);
       }
-      // If tenantId is null (system admin), no additional filter - show all roles
       
-      query += ` GROUP BY r.id, r.name, r.description, r.space, r.status, r.tenant_id`;
-      query += ` ORDER BY r.space DESC, r.name`;  // System roles first, then tenant roles
+      if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+      }
+      
+      query += ` GROUP BY r.id, r.name, r.description, r.space, r.status, r.tenant_id, t.name`;
+      query += ` ORDER BY r.status DESC, r.space DESC, r.name`;  // Active first, then system roles, then alphabetically
       
       const result = await db.query(query, params);
       return result.rows;
     } catch (error) {
       logger.error('❌ Error fetching all roles:', error.message);
+      logger.error('❌ Stack trace:', error.stack);
+      logger.error('❌ SQL query:', query);
       throw error;
     }
   }

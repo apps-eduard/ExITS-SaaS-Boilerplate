@@ -291,6 +291,51 @@ class TenantService {
   }
 
   /**
+   * Activate tenant
+   */
+  static async activateTenant(tenantId, requestingUserId) {
+    try {
+      const result = await pool.query(
+        `UPDATE tenants SET status = 'active', updated_at = NOW() WHERE id = $1
+         RETURNING id, name, status`,
+        [tenantId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Tenant not found');
+      }
+
+      logger.info(`Tenant activated: ${tenantId}`);
+      return result.rows[0];
+    } catch (err) {
+      logger.error(`Tenant service activate error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Delete tenant (soft delete)
+   */
+  static async deleteTenant(tenantId, requestingUserId) {
+    try {
+      const result = await pool.query(
+        `UPDATE tenants SET status = 'deleted', updated_at = NOW() WHERE id = $1 RETURNING id`,
+        [tenantId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Tenant not found');
+      }
+
+      logger.info(`Tenant deleted: ${tenantId}`);
+      return { message: 'Tenant deleted successfully' };
+    } catch (err) {
+      logger.error(`Tenant service delete error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
    * Get tenant statistics
    */
   static async getTenantStats(tenantId) {

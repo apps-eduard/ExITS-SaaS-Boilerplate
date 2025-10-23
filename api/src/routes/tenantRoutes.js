@@ -31,6 +31,12 @@ router.put('/:id', rbacMiddleware(['tenants'], ['update']), TenantController.upd
 // Suspend tenant
 router.put('/:id/suspend', rbacMiddleware(['tenants'], ['update']), TenantController.suspendTenant);
 
+// Activate tenant
+router.put('/:id/activate', rbacMiddleware(['tenants'], ['update']), TenantController.activateTenant);
+
+// Delete tenant
+router.delete('/:id', rbacMiddleware(['tenants'], ['delete']), TenantController.deleteTenant);
+
 // Get tenant stats
 router.get('/:id/stats', rbacMiddleware(['tenants'], ['read']), TenantController.getTenantStats);
 

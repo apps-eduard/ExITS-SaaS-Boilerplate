@@ -104,23 +104,42 @@ interface ResourceGroup {
                 </p>
               </div>
 
-              <!-- Tenant Selector (only for tenant roles) -->
-              <div *ngIf="roleSpace === 'tenant' && !isEditing()">
+              <!-- Tenant Selector (for tenant roles) -->
+              <div *ngIf="roleSpace === 'tenant'">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tenant <span class="text-red-500">*</span>
+                  Tenants <span class="text-red-500">*</span>
                 </label>
-                <select
-                  [(ngModel)]="selectedTenantId"
-                  class="w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                >
-                  <option [value]="null">Select a tenant...</option>
-                  <option *ngFor="let tenant of tenants()" [value]="tenant.id">
-                    {{ tenant.name }}
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Select which tenant this role belongs to
-                </p>
+
+                <!-- Multi-select for creating new tenant role -->
+                <div *ngIf="!isEditing()" class="space-y-2">
+                  <div class="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-800">
+                    <label *ngFor="let tenant of tenants()" class="flex items-center gap-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700 px-2 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [checked]="selectedTenantIds().includes(tenant.id)"
+                        (change)="toggleTenant(tenant.id)"
+                        class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span class="text-sm text-gray-900 dark:text-white">{{ tenant.name }}</span>
+                    </label>
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Select one or more tenants to apply this role to
+                  </p>
+                </div>
+
+                <!-- Read-only display for editing existing tenant role -->
+                <div *ngIf="isEditing()">
+                  <input
+                    type="text"
+                    [value]="getCurrentTenantName()"
+                    disabled
+                    class="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Tenant assignment cannot be changed when editing
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -145,7 +164,7 @@ interface ResourceGroup {
               <p class="text-xs font-medium text-yellow-800 dark:text-yellow-300 mb-1">Required:</p>
               <ul class="text-xs text-yellow-700 dark:text-yellow-400 space-y-0.5">
                 <li *ngIf="!roleName.trim()">• Role name</li>
-                <li *ngIf="roleSpace === 'tenant' && !selectedTenantId">• Select a tenant</li>
+                <li *ngIf="roleSpace === 'tenant' && !isEditing() && selectedTenantIds().length === 0">• Select at least one tenant</li>
                 <li *ngIf="getTotalSelectedPermissions() === 0">• At least 1 permission</li>
               </ul>
             </div>
@@ -258,7 +277,8 @@ export class RoleEditorComponent implements OnInit {
   roleName = '';
   roleDescription = '';
   roleSpace: 'system' | 'tenant' = 'system';
-  selectedTenantId: number | null = null;
+  selectedTenantId: number | null = null; // Used for editing (single tenant)
+  selectedTenantIds = signal<number[]>([]); // Used for creating (multiple tenants)
   tenants = signal<any[]>([]);
   loadingTenants = signal(false);
 
@@ -344,6 +364,12 @@ export class RoleEditorComponent implements OnInit {
       this.roleName = role.name;
       this.roleDescription = role.description || '';
       this.roleSpace = role.space;
+
+      // Load tenant ID if this is a tenant role
+      if (role.tenantId) {
+        this.selectedTenantId = role.tenantId;
+        console.log('✅ Loaded tenant ID:', this.selectedTenantId);
+      }
 
       console.log('🔄 Role permissions array:', role.permissions);
       console.log('🔄 Permissions is array?', Array.isArray(role.permissions));
@@ -449,14 +475,28 @@ export class RoleEditorComponent implements OnInit {
   canSave(): boolean {
     const hasName = this.roleName.trim().length > 0;
     const hasPermissions = this.getTotalSelectedPermissions() > 0;
-    const hasTenantIfNeeded = this.roleSpace === 'system' || (this.roleSpace === 'tenant' && this.selectedTenantId !== null);
+
+    // For editing: tenant roles already have tenant_id from DB
+    // For creating: tenant roles need at least one tenant selected
+    let hasTenantIfNeeded = true;
+    if (this.roleSpace === 'tenant' && !this.isEditing()) {
+      hasTenantIfNeeded = this.selectedTenantIds().length > 0;
+    }
 
     return hasName && hasPermissions && hasTenantIfNeeded;
   }
 
   async saveRole(): Promise<void> {
     if (!this.canSave()) {
-      alert('Please provide a role name and select at least one permission');
+      let message = 'Please provide: ';
+      const missing = [];
+      if (!this.roleName.trim()) missing.push('role name');
+      if (this.getTotalSelectedPermissions() === 0) missing.push('at least one permission');
+      if (this.roleSpace === 'tenant' && !this.isEditing() && this.selectedTenantIds().length === 0) {
+        missing.push('at least one tenant');
+      }
+      message += missing.join(', ');
+      alert(message);
       return;
     }
 
@@ -488,42 +528,79 @@ export class RoleEditorComponent implements OnInit {
         }
       } else {
         console.log('➕ Creating new role...');
-        const payload: any = {
-          name: this.roleName,
-          description: this.roleDescription,
-          space: this.roleSpace
-        };
 
-        // Add tenant_id if creating a tenant role
-        if (this.roleSpace === 'tenant' && this.selectedTenantId) {
-          // Ensure tenant_id is a number
-          payload.tenant_id = typeof this.selectedTenantId === 'string'
-            ? parseInt(this.selectedTenantId, 10)
-            : this.selectedTenantId;
-        }
+        // For tenant roles with multiple tenants selected, create a role for each tenant
+        if (this.roleSpace === 'tenant' && this.selectedTenantIds().length > 0) {
+          let successCount = 0;
 
-        console.log('📤 Payload:', payload);
-        console.log('📤 Tenant ID type:', typeof payload.tenant_id);
+          for (const tenantId of this.selectedTenantIds()) {
+            const payload: any = {
+              name: this.roleName,
+              description: this.roleDescription,
+              space: this.roleSpace,
+              tenant_id: tenantId
+            };
 
-        const created = await this.roleService.createRole(payload);
-        console.log('📥 Create response:', created);
+            console.log('📤 Creating role for tenant:', tenantId);
+            const created = await this.roleService.createRole(payload);
 
-        if (created) {
-          console.log('✅ Role created with ID:', created.id);
-          console.log('🔄 Now assigning permissions...');
-          const bulkResult = await this.roleService.bulkAssignPermissions(created.id, permissionsArray);
-          console.log('📥 Bulk permissions result:', bulkResult);
-          console.log('✅ All done, navigating...');
-          this.router.navigate(['/admin/roles']);
+            if (created) {
+              console.log('✅ Role created with ID:', created.id);
+              await this.roleService.bulkAssignPermissions(created.id, permissionsArray);
+              successCount++;
+            } else {
+              console.error('❌ Failed to create role for tenant:', tenantId);
+            }
+          }
+
+          if (successCount > 0) {
+            console.log(`✅ Successfully created ${successCount} role(s)`);
+            this.router.navigate(['/admin/roles']);
+          } else {
+            alert('Failed to create roles for selected tenants');
+          }
         } else {
-          const errorMsg = this.roleService.errorSignal() || 'Failed to create role';
-          console.error('❌ Create failed:', errorMsg);
-          alert(errorMsg);
+          // System role - no tenant ID needed
+          const payload: any = {
+            name: this.roleName,
+            description: this.roleDescription,
+            space: this.roleSpace
+          };
+
+          console.log('📤 Payload:', payload);
+          const created = await this.roleService.createRole(payload);
+
+          if (created) {
+            console.log('✅ Role created with ID:', created.id);
+            await this.roleService.bulkAssignPermissions(created.id, permissionsArray);
+            this.router.navigate(['/admin/roles']);
+          } else {
+            const errorMsg = this.roleService.errorSignal() || 'Failed to create role';
+            console.error('❌ Create failed:', errorMsg);
+            alert(errorMsg);
+          }
         }
       }
     } catch (error) {
       console.error('❌ Exception in saveRole:', error);
       alert('Error saving role: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+  }
+
+  // Toggle tenant selection (for multi-select)
+  toggleTenant(tenantId: number): void {
+    const current = this.selectedTenantIds();
+    if (current.includes(tenantId)) {
+      this.selectedTenantIds.set(current.filter(id => id !== tenantId));
+    } else {
+      this.selectedTenantIds.set([...current, tenantId]);
+    }
+  }
+
+  // Get tenant name for read-only display during edit
+  getCurrentTenantName(): string {
+    if (!this.selectedTenantId) return 'No tenant assigned';
+    const tenant = this.tenants().find(t => t.id === this.selectedTenantId);
+    return tenant ? tenant.name : `Tenant ID: ${this.selectedTenantId}`;
   }
 }

@@ -132,6 +132,44 @@ class TenantController {
   }
 
   /**
+   * PUT /tenants/:id/activate
+   * Activate a tenant
+   */
+  static async activateTenant(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const result = await TenantService.activateTenant(id, req.userId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Tenant activated successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * DELETE /tenants/:id
+   * Delete tenant (soft delete)
+   */
+  static async deleteTenant(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const result = await TenantService.deleteTenant(id, req.userId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Tenant deleted successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /tenants/:id/stats
    * Get tenant statistics
    */
