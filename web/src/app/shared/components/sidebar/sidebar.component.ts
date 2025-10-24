@@ -177,6 +177,19 @@ export class SidebarComponent {
       ]
     },
     {
+      label: 'Money Loan',
+      icon: '💰',
+      anyPermission: ['money_loan:view', 'money_loan:customers:view', 'money_loan:loans:view'],
+      children: [
+        { label: 'Overview', icon: '📊', route: '/admin/money-loan/overview', permission: 'money_loan:view' },
+        { label: 'Customers', icon: '👥', route: '/admin/money-loan/customers', permission: 'money_loan:customers:view' },
+        { label: 'All Loans', icon: '📝', route: '/admin/money-loan/loans', permission: 'money_loan:loans:view' },
+        { label: 'Record Payment', icon: '💳', route: '/admin/money-loan/payments/record', permission: 'money_loan:payments:create' },
+        { label: 'Collections', icon: '🔔', route: '/admin/money-loan/collections', permission: 'money_loan:view' },
+        { label: 'Reports', icon: '📈', route: '/admin/money-loan/reports', permission: 'money_loan:view' },
+      ]
+    },
+    {
       label: 'Subscriptions & Billing',
       icon: '💳',
       anyPermission: ['billing:read', 'billing:manage-plans', 'subscriptions:read'],

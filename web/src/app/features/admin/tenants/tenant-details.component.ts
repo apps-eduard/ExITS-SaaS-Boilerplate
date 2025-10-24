@@ -10,31 +10,36 @@ interface Tenant {
   subdomain: string;
   plan: string;
   status: string;
-  max_users: number;
-  logo_url?: string;
-  colors?: any;
-  created_at: string;
-  updated_at: string;
-  user_count: number;
-  role_count: number;
+  maxUsers: number;
+  logoUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  colors?: {
+    primary?: string;
+    secondary?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  userCount: number;
+  roleCount: number;
   // Contact Person
-  contact_person?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  // Product Enablement
-  money_loan_enabled?: boolean;
-  bnpl_enabled?: boolean;
-  pawnshop_enabled?: boolean;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  // Product Enablement (camelCase from API)
+  moneyLoanEnabled?: boolean;
+  bnplEnabled?: boolean;
+  pawnshopEnabled?: boolean;
   // Subscription Plan Details
-  subscription_plan?: {
+  subscriptionPlan?: {
     id: number;
     name: string;
     description: string;
     price: number;
-    billing_cycle: string;
+    billingCycle: string;
     features: string[];
-    max_users: number | null;
-    max_storage_gb: number;
+    maxUsers: number | null;
+    maxStorageGb: number;
   };
 }
 
@@ -104,10 +109,10 @@ interface TenantStats {
             </div>
             <div class="p-6 space-y-4">
               <div class="flex items-start gap-4">
-                <div *ngIf="tenant()?.logo_url" class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900 overflow-hidden">
-                  <img [src]="tenant()?.logo_url" [alt]="tenant()?.name" class="w-full h-full object-cover" />
+                <div *ngIf="tenant()?.logoUrl" class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900 overflow-hidden">
+                  <img [src]="tenant()?.logoUrl" [alt]="tenant()?.name" class="w-full h-full object-cover" />
                 </div>
-                <div *ngIf="!tenant()?.logo_url" class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div *ngIf="!tenant()?.logoUrl" class="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
                   <span class="text-2xl">🏢</span>
                 </div>
                 <div class="flex-1">
@@ -132,7 +137,7 @@ interface TenantStats {
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">User Limit</p>
                   <p class="text-sm font-medium text-gray-900 dark:text-white">
-                    {{ tenant()?.user_count }} / {{ tenant()?.max_users }}
+                    {{ tenant()?.userCount }} / {{ tenant()?.maxUsers }}
                     <span class="text-xs text-gray-500 dark:text-gray-400">
                       ({{ getUsagePercentage() }}%)
                     </span>
@@ -140,11 +145,11 @@ interface TenantStats {
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Created</p>
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(tenant()?.created_at || '') }}</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(tenant()?.createdAt || '') }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Updated</p>
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(tenant()?.updated_at || '') }}</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(tenant()?.updatedAt || '') }}</p>
                 </div>
               </div>
 
@@ -158,19 +163,19 @@ interface TenantStats {
                   <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Name</p>
                     <p class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ tenant()?.contact_person || 'Not provided' }}
+                      {{ tenant()?.contactPerson || 'Not provided' }}
                     </p>
                   </div>
                   <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
                     <p class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ tenant()?.contact_email || 'Not provided' }}
+                      {{ tenant()?.contactEmail || 'Not provided' }}
                     </p>
                   </div>
                   <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</p>
                     <p class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ tenant()?.contact_phone || 'Not provided' }}
+                      {{ tenant()?.contactPhone || 'Not provided' }}
                     </p>
                   </div>
                 </div>
@@ -189,7 +194,7 @@ interface TenantStats {
             <div class="p-4">
                 
                 <!-- No products enabled -->
-                <div *ngIf="!tenant()?.money_loan_enabled && !tenant()?.bnpl_enabled && !tenant()?.pawnshop_enabled" 
+                <div *ngIf="!tenant()?.moneyLoanEnabled && !tenant()?.bnplEnabled && !tenant()?.pawnshopEnabled" 
                      class="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <p class="text-sm text-gray-500 dark:text-gray-400">No products enabled for this tenant</p>
                 </div>
@@ -197,7 +202,7 @@ interface TenantStats {
                 <!-- Product subscription cards -->
                 <div class="space-y-3">
                   <!-- Money Loan Product -->
-                  <div *ngIf="tenant()?.money_loan_enabled" class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                  <div *ngIf="tenant()?.moneyLoanEnabled" class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
                     <div class="flex items-start justify-between mb-3">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-green-200 dark:border-green-700">
@@ -246,7 +251,7 @@ interface TenantStats {
                   </div>
 
                   <!-- BNPL Product -->
-                  <div *ngIf="tenant()?.bnpl_enabled" class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                  <div *ngIf="tenant()?.bnplEnabled" class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                     <div class="flex items-start justify-between mb-3">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-blue-200 dark:border-blue-700">
@@ -295,7 +300,7 @@ interface TenantStats {
                   </div>
 
                   <!-- Pawnshop Product -->
-                  <div *ngIf="tenant()?.pawnshop_enabled" class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                  <div *ngIf="tenant()?.pawnshopEnabled" class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                     <div class="flex items-start justify-between mb-3">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl border border-purple-200 dark:border-purple-700">
@@ -364,7 +369,7 @@ interface TenantStats {
           <div class="p-6">
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ tenant()?.user_count }} of {{ tenant()?.max_users }} users
+                {{ tenant()?.userCount }} of {{ tenant()?.maxUsers }} users
               </span>
               <span class="text-sm font-semibold" [ngClass]="getUsageColor()">
                 {{ getUsagePercentage() }}%
@@ -518,8 +523,8 @@ export class TenantDetailsComponent implements OnInit {
 
   getUsagePercentage(): number {
     const t = this.tenant();
-    if (!t || !t.max_users) return 0;
-    return Math.round((t.user_count / t.max_users) * 100);
+    if (!t || !t.maxUsers) return 0;
+    return Math.round((t.userCount / t.maxUsers) * 100);
   }
 
   getUsageColor(): string {

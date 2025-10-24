@@ -282,6 +282,20 @@ EMAIL_FROM=noreply@exits-saas.com
     Write-Success "Database seeded successfully with tenants, users, roles and permissions"
     Write-Host "$($Bright)$($Green)  ✅ All data populated using Knex seed system (98 permissions assigned)$($Reset)"
     
+    Write-Step "Seeding test customer accounts..."
+    Write-Host "$($Gray)  Customer seed output:$($Reset)"
+    $customerSeedOutput = npx knex seed:run --specific=06_customer_portal_access.js 2>&1
+    $customerSeedOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
+    $customerSeedSuccess = $LASTEXITCODE -eq 0
+    
+    if ($customerSeedSuccess) {
+        Write-Success "Test customer accounts created successfully"
+        Write-Host "$($Bright)$($Green)  ✅ 3 test customers with portal access created$($Reset)"
+    } else {
+        Write-Warning "Customer account seeding failed (non-critical)"
+        Write-Host "$($Yellow)  You can run 'npx knex seed:run --specific=06_customer_portal_access.js' manually later$($Reset)"
+    }
+    
     Pop-Location
     
     # Clean up password
@@ -459,9 +473,16 @@ function Main {
     Write-Host "  $($Yellow)cd web ; npm start$($Reset)"
     Write-Host ""
     Write-Host "$($Bright)$($Cyan)🔐 Secure Login Credentials:$($Reset)"
+    Write-Host "  $($Bright)Staff/Admin Login:$($Reset)"
     Write-Host "  System Admin: admin@exitsaas.com / Admin@123"
     Write-Host "  Tenant Admin 1: admin-1@example.com / Admin@123"
     Write-Host "  Tenant Admin 2: admin-2@example.com / Admin@123"
+    Write-Host ""
+    Write-Host "  $($Bright)Customer Portal Login (Password: Customer@123):$($Reset)"
+    Write-Host "  1. juan.delacruz@test.com   - Juan Dela Cruz"
+    Write-Host "  2. maria.santos@test.com    - Maria Santos"
+    Write-Host "  3. pedro.gonzales@test.com  - Pedro Gonzales"
+    Write-Host "  Customer Portal: http://localhost:4200/customer/login"
     Write-Host ""
     Write-Host "$($Bright)$($Magenta)🔐 RBAC Features:$($Reset)"
     Write-Host "  • Standard resource:action permissions (users:create, tenants:read, etc.)"

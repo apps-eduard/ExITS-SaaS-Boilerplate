@@ -46,4 +46,8 @@ export class ThemeService {
     console.log('🎨 ThemeService.toggle() called, current:', this.isDark());
     this.isDark.update(v => !v);
   }
+
+  isDarkMode() {
+    return this.isDark();
+  }
 }

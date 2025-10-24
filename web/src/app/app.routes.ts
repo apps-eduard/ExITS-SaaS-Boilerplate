@@ -19,6 +19,47 @@ export const routes: Routes = [
     canActivate: [noAuthGuard]
   },
   {
+    path: 'customer/login',
+    loadComponent: () => import('./features/auth/customer-login/customer-login.component').then(m => m.CustomerLoginComponent)
+  },
+  {
+    path: 'customer',
+    loadComponent: () => import('./features/products/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/customer/customer-dashboard.component').then(m => m.CustomerDashboardComponent)
+      }
+    ]
+  },
+  {
+    path: 'products/money-loan/customer',
+    loadComponent: () => import('./features/products/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/products/money-loan/customer/customer-dashboard.component').then(m => m.CustomerDashboardComponent)
+      },
+      {
+        path: 'loans',
+        loadComponent: () => import('./features/products/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
+      },
+      {
+        path: 'apply',
+        loadComponent: () => import('./features/products/money-loan/customer/apply-loan.component').then(m => m.ApplyLoanComponent)
+      },
+      {
+        path: 'payment',
+        loadComponent: () => import('./features/products/money-loan/customer/make-payment.component').then(m => m.CustomerMakePaymentComponent)
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      }
+    ]
+  },
+  {
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [systemAdminGuard]
@@ -145,6 +186,10 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/products/product-settings.component').then(m => m.ProductSettingsComponent)
           }
         ]
+      },
+      {
+        path: 'money-loan',
+        loadChildren: () => import('./admin/modules/money-loan/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
       },
       {
         path: 'subscriptions',
