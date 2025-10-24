@@ -55,6 +55,27 @@ class SubscriptionPlanController {
       next(error);
     }
   }
+
+  /**
+   * Get ALL subscription plans including product-specific plans
+   * GET /api/subscription-plans/all/including-products
+   */
+  static async getAllPlansIncludingProducts(req, res, next) {
+    try {
+      logger.info('📋 Fetching all subscription plans (including product-specific)');
+      
+      const plans = await SubscriptionPlanService.getAllPlansIncludingProducts();
+
+      res.json({
+        success: true,
+        data: plans,
+        count: plans.length
+      });
+    } catch (error) {
+      logger.error('❌ Error fetching all subscription plans:', error);
+      next(error);
+    }
+  }
 }
 
 module.exports = SubscriptionPlanController;

@@ -334,6 +334,57 @@ class SubscriptionController {
       next(err);
     }
   }
+
+  /**
+   * GET /subscriptions/plans/all/including-products
+   * Get ALL subscription plans including product-specific plans
+   * Used for admin panel when editing tenants
+   */
+  static async getAllPlansIncludingProducts(req, res, next) {
+    try {
+      const result = await pool.query(
+        `SELECT id, name, description, price, billing_cycle, features, 
+                max_users, max_storage_gb, product_type, status, created_at, updated_at
+         FROM subscription_plans
+         WHERE status = 'active'
+         ORDER BY 
+           CASE 
+             WHEN product_type IS NULL THEN 0 
+             ELSE 1 
+           END,
+           product_type,
+           price ASC`
+      );
+
+      // Transform to camelCase
+      const transformedPlans = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        price: parseFloat(row.price),
+        billing_cycle: row.billing_cycle,
+        billingCycle: row.billing_cycle, // Add camelCase version
+        features: row.features,
+        maxUsers: row.max_users,
+        maxStorageGb: row.max_storage_gb,
+        productType: row.product_type, // Transform to camelCase
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+
+      logger.info(`All subscription plans retrieved (including products): ${transformedPlans.length} plans`);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        data: transformedPlans,
+        message: 'All subscription plans retrieved successfully'
+      });
+    } catch (err) {
+      logger.error(`Subscription controller get all plans error: ${err.message}`);
+      next(err);
+    }
+  }
 }
 
 module.exports = SubscriptionController;

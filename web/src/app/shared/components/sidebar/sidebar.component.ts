@@ -230,7 +230,7 @@ export class SidebarComponent {
     };
 
     window.addEventListener('resize', handleResize);
-    console.log('🧭 SidebarComponent initialized - Standard RBAC active');
+    // console.log('🧭 SidebarComponent initialized - Standard RBAC active');
   }
 
   /**
@@ -238,29 +238,29 @@ export class SidebarComponent {
    */
   checkMenuAccess(item: MenuItem): boolean {
     if (!this.authService.isAuthenticated()) {
-      console.log('❌ User not authenticated');
+      // console.log('❌ User not authenticated');
       return false;
     }
 
     const permissions = this.rbacService.userPermissions();
-    console.log('🔍 Checking menu access for:', item.label, {
-      permission: item.permission,
-      anyPermission: item.anyPermission,
-      totalPermissions: permissions.size,
-      allPermissions: Array.from(permissions)
-    });
+    // console.log('🔍 Checking menu access for:', item.label, {
+    //   permission: item.permission,
+    //   anyPermission: item.anyPermission,
+    //   totalPermissions: permissions.size,
+    //   allPermissions: Array.from(permissions)
+    // });
 
     // Check specific permission
     if (item.permission) {
       const hasAccess = this.rbacService.can(item.permission);
-      console.log(`  → ${item.permission}: ${hasAccess}`);
+      // console.log(`  → ${item.permission}: ${hasAccess}`);
       return hasAccess;
     }
 
     // Check if user has ANY of the required permissions
     if (item.anyPermission && item.anyPermission.length > 0) {
       const hasAccess = this.rbacService.canAny(item.anyPermission);
-      console.log(`  → Any of [${item.anyPermission.join(', ')}]: ${hasAccess}`);
+      // console.log(`  → Any of [${item.anyPermission.join(', ')}]: ${hasAccess}`);
       return hasAccess;
     }
 

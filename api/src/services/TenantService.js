@@ -296,7 +296,8 @@ class TenantService {
 
       const countQuery = `SELECT COUNT(*) as total FROM tenants ${whereClause}`;
       const dataQuery = `
-        SELECT id, name, subdomain, plan, status, max_users, created_at
+        SELECT id, name, subdomain, plan, status, max_users, created_at,
+               money_loan_enabled, bnpl_enabled, pawnshop_enabled
         FROM tenants
         ${whereClause}
         ORDER BY created_at DESC
@@ -310,8 +311,22 @@ class TenantService {
         pool.query(dataQuery, params),
       ]);
 
+      // Transform tenant data to camelCase
+      const transformedTenants = dataResult.rows.map(tenant => ({
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        plan: tenant.plan,
+        status: tenant.status,
+        maxUsers: tenant.max_users,
+        createdAt: tenant.created_at,
+        moneyLoanEnabled: tenant.money_loan_enabled,
+        bnplEnabled: tenant.bnpl_enabled,
+        pawnshopEnabled: tenant.pawnshop_enabled
+      }));
+
       return {
-        tenants: dataResult.rows,
+        tenants: transformedTenants,
         pagination: {
           page,
           limit,
@@ -535,7 +550,10 @@ class TenantService {
         pool.query(`SELECT COUNT(*) as count FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE r.tenant_id = $1`, [tenantId]),
         pool.query(`SELECT COUNT(*) as count FROM audit_logs WHERE tenant_id = $1`, [tenantId]),
         pool.query(
-          `SELECT COUNT(*) as count FROM user_sessions WHERE tenant_id = $1 AND status = 'active'`,
+          `SELECT COUNT(*) as count 
+           FROM user_sessions us 
+           JOIN users u ON us.user_id = u.id 
+           WHERE u.tenant_id = $1 AND us.status = 'active'`,
           [tenantId]
         ),
       ]);

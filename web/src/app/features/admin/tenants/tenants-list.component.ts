@@ -12,8 +12,11 @@ interface Tenant {
   subdomain: string;
   plan: string;
   status: string;
-  max_users: number;
-  created_at: string;
+  maxUsers: number;
+  createdAt: string;
+  moneyLoanEnabled?: boolean;
+  bnplEnabled?: boolean;
+  pawnshopEnabled?: boolean;
   user_count?: number;
   role_count?: number;
 }
@@ -168,10 +171,9 @@ interface Pagination {
               <tr>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenant</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subdomain</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Products Enabled</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -188,20 +190,28 @@ interface Pagination {
                     <code class="text-xs text-blue-600 dark:text-blue-400">{{ tenant.subdomain }}</code>
                   </td>
                   <td class="px-4 py-2.5">
-                    <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded" [ngClass]="getPlanClass(tenant.plan)">
-                      {{ tenant.plan.toUpperCase() }}
-                    </span>
+                    <div class="flex flex-wrap gap-1">
+                      <span *ngIf="tenant.moneyLoanEnabled" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                        💸 Money Loan
+                      </span>
+                      <span *ngIf="tenant.bnplEnabled" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                        🛒 BNPL
+                      </span>
+                      <span *ngIf="tenant.pawnshopEnabled" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                        💍 Pawnshop
+                      </span>
+                      <span *ngIf="!tenant.moneyLoanEnabled && !tenant.bnplEnabled && !tenant.pawnshopEnabled" class="text-xs text-gray-400 dark:text-gray-500 italic">
+                        No products
+                      </span>
+                    </div>
                   </td>
                   <td class="px-4 py-2.5">
                     <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded" [ngClass]="getStatusClass(tenant.status)">
                       {{ tenant.status.toUpperCase() }}
                     </span>
                   </td>
-                  <td class="px-4 py-2.5">
-                    <span class="text-xs text-gray-900 dark:text-white">{{ tenant.user_count || 0 }} / {{ tenant.max_users }}</span>
-                  </td>
-                  <td class="px-4 py-2.5">
-                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ formatDate(tenant.created_at) }}</span>
+                  <td class="px-4 py-2.5 text-center">
+                    <span class="text-xs text-gray-900 dark:text-white">{{ tenant.user_count || 0 }} / {{ tenant.maxUsers }}</span>
                   </td>
                   <td class="px-4 py-2.5">
                     <div class="flex items-center justify-center gap-2">
@@ -259,7 +269,7 @@ interface Pagination {
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="px-4 py-8 text-center">
+                  <td colspan="6" class="px-4 py-8 text-center">
                     <p class="text-xs text-gray-500 dark:text-gray-400">No tenants found</p>
                   </td>
                 </tr>

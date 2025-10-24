@@ -632,13 +632,36 @@ export class TenantEditorComponent implements OnInit {
   }
 
   loadSubscriptionPlans(): void {
-    this.productSubscriptionService.getSubscriptionPlans().subscribe({
+    console.log('🔍 [DEBUG] loadSubscriptionPlans() called');
+    console.log('🔍 [DEBUG] Calling API: /api/subscriptions/plans/all/including-products');
+    
+    this.productSubscriptionService.getAllSubscriptionPlans().subscribe({
       next: (response) => {
+        console.log('✅ [DEBUG] API Response received:', response);
+        console.log('✅ [DEBUG] Response data length:', response.data?.length);
+        console.log('✅ [DEBUG] Raw response.data:', response.data);
+        
+        // Log each plan's details
+        response.data?.forEach((plan, index) => {
+          console.log(`   Plan ${index + 1}:`, {
+            id: plan.id,
+            name: plan.name,
+            productType: plan.productType,
+            price: plan.price
+          });
+        });
+        
         this.subscriptionPlans.set(response.data);
-        console.log('📋 Subscription plans loaded:', response.data);
+        console.log('📋 All subscription plans loaded (including products):', response.data);
+        console.log('   Platform plans:', this.platformPlans());
+        console.log('   Money Loan plans:', this.moneyLoanPlans());
+        console.log('   BNPL plans:', this.bnplPlans());
+        console.log('   Pawnshop plans:', this.pawnshopPlans());
       },
       error: (err) => {
-        console.error('Error loading subscription plans:', err);
+        console.error('❌ [DEBUG] Error loading subscription plans:', err);
+        console.error('❌ [DEBUG] Error status:', err.status);
+        console.error('❌ [DEBUG] Error message:', err.message);
       }
     });
   }
@@ -646,11 +669,24 @@ export class TenantEditorComponent implements OnInit {
   loadProductSubscriptions(): void {
     if (!this.tenantId()) return;
 
+    console.log('🔍 [DEBUG] loadProductSubscriptions() called for tenant:', this.tenantId());
+
     this.productSubscriptionService.getTenantProductSubscriptions(this.tenantId()!).subscribe({
       next: (response) => {
+        console.log('✅ [DEBUG] Product subscriptions response:', response);
+        
         const subscriptionsMap = new Map<string, ProductSubscription>();
         response.data.forEach(sub => {
+          console.log('  📦 Processing subscription:', {
+            product_type: sub.product_type,
+            subscription_plan_id: sub.subscription_plan_id,
+            billing_cycle: sub.billing_cycle,
+            status: sub.status,
+            starts_at: sub.starts_at
+          });
+          
           subscriptionsMap.set(sub.product_type, sub);
+          
           // Populate form with existing subscription data
           if (this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions]) {
             this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions] = {
@@ -658,13 +694,19 @@ export class TenantEditorComponent implements OnInit {
               billing_cycle: sub.billing_cycle,
               starts_at: sub.starts_at.split('T')[0]
             };
+            console.log(`  ✅ Form populated for ${sub.product_type}:`, this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions]);
           }
         });
+        
         this.existingProductSubscriptions.set(subscriptionsMap);
-        console.log('📦 Product subscriptions loaded:', subscriptionsMap);
+        console.log('📦 All product subscriptions loaded:', {
+          total: subscriptionsMap.size,
+          subscriptions: Array.from(subscriptionsMap.entries())
+        });
+        console.log('📝 Product subscription forms:', this.productSubscriptions);
       },
       error: (err) => {
-        console.error('Error loading product subscriptions:', err);
+        console.error('❌ [DEBUG] Error loading product subscriptions:', err);
       }
     });
   }
@@ -672,33 +714,52 @@ export class TenantEditorComponent implements OnInit {
   loadTenant(): void {
     if (!this.tenantId()) return;
 
+    console.log('🔍 [DEBUG] loadTenant() called for ID:', this.tenantId());
+    
     this.loading.set(true);
     this.error.set(null);
 
     this.http.get<any>(`/api/tenants/${this.tenantId()}`).subscribe({
       next: (response) => {
         const tenant = response.data;
+        console.log('✅ [DEBUG] Tenant data loaded:', tenant);
+        console.log('   Product flags (camelCase):', {
+          moneyLoanEnabled: tenant.moneyLoanEnabled,
+          bnplEnabled: tenant.bnplEnabled,
+          pawnshopEnabled: tenant.pawnshopEnabled
+        });
+        
         this.form = {
           name: tenant.name,
           subdomain: tenant.subdomain,
           plan: tenant.plan,
           status: tenant.status,
           max_users: tenant.max_users,
-          logo_url: tenant.logo_url || '',
-          colors: tenant.colors || { primary: '#3b82f6', secondary: '#8b5cf6' },
+          logo_url: tenant.logoUrl || '',
+          colors: { 
+            primary: tenant.primaryColor || '#3b82f6', 
+            secondary: tenant.secondaryColor || '#8b5cf6' 
+          },
           contact_person: tenant.contact_person || '',
           contact_email: tenant.contact_email || '',
           contact_phone: tenant.contact_phone || '',
-          money_loan_enabled: tenant.money_loan_enabled || false,
-          bnpl_enabled: tenant.bnpl_enabled || false,
-          pawnshop_enabled: tenant.pawnshop_enabled || false
+          money_loan_enabled: tenant.moneyLoanEnabled || false,
+          bnpl_enabled: tenant.bnplEnabled || false,
+          pawnshop_enabled: tenant.pawnshopEnabled || false
         };
+        
+        console.log('📝 Form populated with:', {
+          money_loan_enabled: this.form.money_loan_enabled,
+          bnpl_enabled: this.form.bnpl_enabled,
+          pawnshop_enabled: this.form.pawnshop_enabled
+        });
+        
         this.loading.set(false);
       },
       error: (err) => {
         this.error.set(err.error?.message || 'Failed to load tenant');
         this.loading.set(false);
-        console.error('Error loading tenant:', err);
+        console.error('❌ [DEBUG] Error loading tenant:', err);
       }
     });
   }

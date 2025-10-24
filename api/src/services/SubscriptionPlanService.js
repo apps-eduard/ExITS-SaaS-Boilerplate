@@ -90,6 +90,32 @@ class SubscriptionPlanService {
   }
 
   /**
+   * Get ALL subscription plans including product-specific plans
+   * Used for admin panel when configuring tenant products
+   */
+  static async getAllPlansIncludingProducts() {
+    const client = await pool.connect();
+    try {
+      // Return ALL active plans (both platform and product-specific)
+      const result = await client.query(
+        `SELECT * FROM subscription_plans 
+         WHERE status = 'active' 
+         ORDER BY 
+           CASE 
+             WHEN product_type IS NULL THEN 0 
+             ELSE 1 
+           END,
+           product_type,
+           price ASC`
+      );
+
+      return result.rows.map(this.transformPlan);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Get a single plan by name
    */
   static async getPlanByName(planName) {

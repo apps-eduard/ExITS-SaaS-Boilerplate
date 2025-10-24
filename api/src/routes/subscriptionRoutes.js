@@ -11,6 +11,7 @@ const router = express.Router();
 
 // Public routes (no auth required for viewing plans during signup)
 router.get('/plans', SubscriptionController.getPlans);
+router.get('/plans/all/including-products', SubscriptionController.getAllPlansIncludingProducts);
 router.get('/plans/by-name/:name', SubscriptionController.getPlanByName);
 
 // Protected routes - require authentication and permissions

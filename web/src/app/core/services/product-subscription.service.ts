@@ -48,6 +48,14 @@ export class ProductSubscriptionService {
   }
 
   /**
+   * Get ALL subscription plans including product-specific plans
+   * Used for admin panel when editing tenants
+   */
+  getAllSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[] }> {
+    return this.http.get<{ success: boolean; data: SubscriptionPlan[] }>('/api/subscriptions/plans/all/including-products');
+  }
+
+  /**
    * Get all product subscriptions for a tenant
    */
   getTenantProductSubscriptions(tenantId: number): Observable<{ success: boolean; data: ProductSubscription[] }> {
