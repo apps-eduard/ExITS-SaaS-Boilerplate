@@ -1,11 +1,12 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService, User } from '../../../core/services/user.service';
 import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmationService } from '../../../core/services/confirmation.service';
+import { RBACService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-users-list',
@@ -17,11 +18,13 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">👥 User Management</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage system and tenant users</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {{ isTenantContext() ? 'Manage your tenant users' : 'Manage system and tenant users' }}
+          </p>
         </div>
         <button
           *ngIf="canCreateUsers()"
-          routerLink="/admin/users/new"
+          [routerLink]="isTenantContext() ? '/tenant/users/new' : '/admin/users/new'"
           class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,8 +34,8 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
         </button>
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="border-b border-gray-200 dark:border-gray-700">
+      <!-- Navigation Tabs - Only show in system admin context -->
+      <div *ngIf="!isTenantContext()" class="border-b border-gray-200 dark:border-gray-700">
         <nav class="flex gap-6">
           <a
             routerLink="/admin/users"
@@ -456,6 +459,11 @@ export class UsersListComponent implements OnInit {
   searchQuery = '';
   Math = Math;
 
+  // Context detection
+  isTenantContext = signal(false);
+  private router = inject(Router);
+  private rbacService = inject(RBACService);
+
   // Filters
   filterStatus = '';
   filterRole = '';
@@ -472,13 +480,35 @@ export class UsersListComponent implements OnInit {
     private confirmationService: ConfirmationService
   ) {}
 
-  // Permission check methods
-  canCreateUsers = computed(() => this.authService.hasPermission('users:create'));
-  canUpdateUsers = computed(() => this.authService.hasPermission('users:update'));
-  canDeleteUsers = computed(() => this.authService.hasPermission('users:delete'));
+  // Permission check methods - adapt based on context
+  canCreateUsers = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-users:create');
+    }
+    return this.authService.hasPermission('users:create');
+  });
+  
+  canUpdateUsers = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-users:update');
+    }
+    return this.authService.hasPermission('users:update');
+  });
+  
+  canDeleteUsers = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-users:delete');
+    }
+    return this.authService.hasPermission('users:delete');
+  });
 
   ngOnInit(): void {
-    console.log('📋 UsersListComponent initialized');
+    // Detect if we're in tenant context by checking the URL
+    const url = this.router.url;
+    this.isTenantContext.set(url.startsWith('/tenant/'));
+    
+    console.log('📋 UsersListComponent initialized - Tenant context:', this.isTenantContext());
+    
     this.userService.loadUsers();
     this.roleService.loadRoles(); // Load roles for user creation/editing
   }
@@ -490,6 +520,12 @@ export class UsersListComponent implements OnInit {
   get filteredUsers() {
     let users = this.userService.usersSignal();
 
+    // In tenant context, only show tenant users for the current tenant
+    if (this.isTenantContext()) {
+      const currentUser = this.authService.currentUser();
+      users = users.filter(u => u.tenantId === currentUser?.tenant_id);
+    }
+
     // Filter by status
     if (this.filterStatus) {
       users = users.filter(u => u.status === this.filterStatus);
@@ -498,8 +534,8 @@ export class UsersListComponent implements OnInit {
       users = users.filter(u => u.status !== 'deleted');
     }
 
-    // Filter by type (system/tenant)
-    if (this.filterType) {
+    // Filter by type (system/tenant) - only in system admin context
+    if (!this.isTenantContext() && this.filterType) {
       if (this.filterType === 'system') {
         users = users.filter(u => !u.tenantId);
       } else {

@@ -1,9 +1,11 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RoleService, Role } from '../../../core/services/role.service';
 import { ConfirmationService } from '../../../core/services/confirmation.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { RBACService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-roles-list',
@@ -15,10 +17,13 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Role Management</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Define roles and control access permissions across your system</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ isTenantContext() ? 'Manage your tenant roles and permissions' : 'Define roles and control access permissions across your system' }}
+          </p>
         </div>
         <button
-          routerLink="/admin/roles/new"
+          *ngIf="canCreateRoles()"
+          [routerLink]="isTenantContext() ? '/tenant/roles/new' : '/admin/roles/new'"
           class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +65,7 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
 
         <!-- Filters -->
         <div class="lg:col-span-4 grid grid-cols-3 gap-2">
-          <div>
+          <div *ngIf="!isTenantContext()">
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Space</label>
             <select
               [(ngModel)]="filterSpace"
@@ -71,7 +76,7 @@ import { ConfirmationService } from '../../../core/services/confirmation.service
               <option value="tenant">Tenant</option>
             </select>
           </div>
-          <div>
+          <div *ngIf="!isTenantContext()">
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tenant</label>
             <select
               [(ngModel)]="filterTenant"
@@ -254,6 +259,34 @@ export class RolesListComponent implements OnInit {
   filterSpace = signal<'' | 'system' | 'tenant'>('');
   filterTenant = signal('');
 
+  // Context detection
+  isTenantContext = signal(false);
+  private router = inject(Router);
+  private authService = inject(AuthService);
+  private rbacService = inject(RBACService);
+
+  // Permission checks - adapt based on context
+  canCreateRoles = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-roles:create');
+    }
+    return this.authService.hasPermission('roles:create');
+  });
+
+  canUpdateRoles = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-roles:update');
+    }
+    return this.authService.hasPermission('roles:update');
+  });
+
+  canDeleteRoles = computed(() => {
+    if (this.isTenantContext()) {
+      return this.rbacService.can('tenant-roles:delete');
+    }
+    return this.authService.hasPermission('roles:delete');
+  });
+
   // Get unique tenant names from roles
   availableTenants = computed(() => {
     const tenants = new Set<string>();
@@ -268,16 +301,24 @@ export class RolesListComponent implements OnInit {
   filteredRoles = computed(() => {
     let roles = this.roleService.rolesSignal();
 
-    // Filter by space
-    const space = this.filterSpace();
-    if (space) {
-      roles = roles.filter(r => r.space === space);
+    // In tenant context, only show tenant roles for the current tenant
+    if (this.isTenantContext()) {
+      const currentUser = this.authService.currentUser();
+      roles = roles.filter(r => r.space === 'tenant' && r.tenantId === currentUser?.tenant_id);
     }
 
-    // Filter by tenant
-    const tenant = this.filterTenant();
-    if (tenant) {
-      roles = roles.filter(r => r.tenantName === tenant);
+    // Filter by space (only in system admin context)
+    if (!this.isTenantContext()) {
+      const space = this.filterSpace();
+      if (space) {
+        roles = roles.filter(r => r.space === space);
+      }
+
+      // Filter by tenant (only in system admin context)
+      const tenant = this.filterTenant();
+      if (tenant) {
+        roles = roles.filter(r => r.tenantName === tenant);
+      }
     }
 
     // Filter by search query
@@ -298,7 +339,12 @@ export class RolesListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('📋 RolesListComponent initialized');
+    // Detect if we're in tenant context by checking the URL
+    const url = this.router.url;
+    this.isTenantContext.set(url.startsWith('/tenant/'));
+    
+    console.log('📋 RolesListComponent initialized - Tenant context:', this.isTenantContext());
+    
     this.roleService.loadRoles();
   }
 

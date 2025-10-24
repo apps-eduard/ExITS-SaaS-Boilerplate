@@ -10,29 +10,29 @@ const tenantIsolationMiddleware = require('../middleware/tenantIsolation');
 
 const router = express.Router();
 
-// All role routes require authentication and tenant isolation
+// All routes require authentication and tenant isolation
 router.use(authMiddleware, tenantIsolationMiddleware);
 
-// List roles
-router.get('/', rbacMiddleware(['roles'], ['read']), RoleController.listRoles);
+// List roles - accepts both system roles:read and tenant-roles:read
+router.get('/', rbacMiddleware(['roles', 'tenant-roles'], ['read']), RoleController.listRoles);
 
-// Create role
-router.post('/', rbacMiddleware(['roles'], ['create']), RoleController.createRole);
+// Create role - accepts both system roles:create and tenant-roles:create
+router.post('/', rbacMiddleware(['roles', 'tenant-roles'], ['create']), RoleController.createRole);
 
-// Get role by ID
-router.get('/:id', rbacMiddleware(['roles'], ['read']), RoleController.getRole);
+// Get role - accepts both system roles:read and tenant-roles:read
+router.get('/:id', rbacMiddleware(['roles', 'tenant-roles'], ['read']), RoleController.getRole);
 
-// Update role
-router.put('/:id', rbacMiddleware(['roles'], ['update']), RoleController.updateRole);
+// Update role - accepts both system roles:update and tenant-roles:update
+router.put('/:id', rbacMiddleware(['roles', 'tenant-roles'], ['update']), RoleController.updateRole);
 
-// Delete role
-router.delete('/:id', rbacMiddleware(['roles'], ['delete']), RoleController.deleteRole);
+// Delete role - accepts both system roles:delete and tenant-roles:delete
+router.delete('/:id', rbacMiddleware(['roles', 'tenant-roles'], ['delete']), RoleController.deleteRole);
 
 // Permissions
 router.get('/permissions', RoleController.getAllPermissions);
-router.get('/:id/permissions', rbacMiddleware(['roles'], ['read']), RoleController.getRolePermissions);
-router.post('/:id/permissions', rbacMiddleware(['roles'], ['update']), RoleController.grantPermission);
-router.post('/:id/permissions/bulk', rbacMiddleware(['roles'], ['update']), RoleController.bulkAssignPermissions);
-router.delete('/:id/permissions/:permissionKey', rbacMiddleware(['roles'], ['update']), RoleController.revokePermission);
+router.get('/:id/permissions', rbacMiddleware(['roles', 'tenant-roles'], ['read']), RoleController.getRolePermissions);
+router.post('/:id/permissions', rbacMiddleware(['roles', 'tenant-roles'], ['update']), RoleController.grantPermission);
+router.post('/:id/permissions/bulk', rbacMiddleware(['roles', 'tenant-roles'], ['update']), RoleController.bulkAssignPermissions);
+router.delete('/:id/permissions/:permissionKey', rbacMiddleware(['roles', 'tenant-roles'], ['update']), RoleController.revokePermission);
 
 module.exports = router;

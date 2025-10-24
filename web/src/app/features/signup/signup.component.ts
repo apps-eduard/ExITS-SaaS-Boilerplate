@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TenantService } from '../../core/services/tenant.service';
 import { SubscriptionService, SubscriptionPlan } from '../../core/services/subscription.service';
 import { UserService } from '../../core/services/user.service';
+import { ToastService } from '../../core/services/toast.service';
 import { debounceTime, Subject } from 'rxjs';
 
 interface OnboardingStep {
@@ -61,6 +62,7 @@ export class SignupComponent implements OnInit {
     private tenantService: TenantService,
     private subscriptionService: SubscriptionService,
     private userService: UserService,
+    private toastService: ToastService,
     private router: Router
   ) {
     this.initializeSignupForm();
@@ -363,7 +365,10 @@ export class SignupComponent implements OnInit {
           console.log('🎉 [SIGNUP_SUCCESS] Account created successfully!');
           this.success.set(true);
           this.loading.set(false);
-          this.onboardingSteps[3].completed = true;
+          this.onboardingSteps[4].completed = true; // Step 5 is index 4
+
+          // Show success toast
+          this.toastService.success('🎉 Account created successfully! Redirecting to login...');
 
           // Redirect to login after 2 seconds
           console.log('⏳ [REDIRECTING] Will redirect to login in 2 seconds...');
@@ -387,6 +392,9 @@ export class SignupComponent implements OnInit {
                         'Failed to create account. Please try again.';
         console.error('📢 [ERROR_DISPLAYED_TO_USER]:', errorMsg);
         this.error.set(errorMsg);
+        
+        // Show error toast
+        this.toastService.error(errorMsg);
       }
     });
   }

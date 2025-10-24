@@ -2,6 +2,8 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap, catchError, of } from 'rxjs';
+import { UserService } from './user.service';
+import { RoleService } from './role.service';
 
 export interface User {
   id: string | number;
@@ -43,7 +45,9 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private userService: UserService,
+    private roleService: RoleService
   ) {
     this.loadUserFromStorage();
   }
@@ -103,13 +107,23 @@ export class AuthService {
   }
 
   private clearSession() {
+    // Clear localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     localStorage.removeItem('permissions');
+    
+    // Clear auth state
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
     this.userPermissions.set([]);
+    
+    // Clear service caches to prevent data leakage between sessions
+    this.userService.clearCache();
+    this.roleService.clearCache();
+    
+    console.log('🗑️ Session cleared - all caches reset');
+    
     this.router.navigate(['/login']);
   }
 

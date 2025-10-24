@@ -79,6 +79,50 @@ class TenantController {
   }
 
   /**
+   * PUT /tenants/current/products
+   * Update current user's tenant product settings
+   */
+  static async updateMyTenantProducts(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+      const { money_loan_enabled, pawnshop_enabled, bnpl_enabled } = req.body;
+
+      if (!tenantId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'No tenant associated with this user'
+        });
+      }
+
+      // Only allow updating product flags
+      const updateData = {
+        money_loan_enabled: money_loan_enabled !== undefined ? money_loan_enabled : undefined,
+        pawnshop_enabled: pawnshop_enabled !== undefined ? pawnshop_enabled : undefined,
+        bnpl_enabled: bnpl_enabled !== undefined ? bnpl_enabled : undefined
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
+      console.log(`ℹ️  Updating tenant ${tenantId} products:`, updateData);
+
+      const result = await TenantService.updateTenant(tenantId, updateData);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Product settings updated successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /tenants/by-subdomain/:subdomain
    * Get tenant by subdomain
    */

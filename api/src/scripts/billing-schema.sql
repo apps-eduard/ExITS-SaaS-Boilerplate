@@ -27,7 +27,10 @@ END$$;
 
 -- Subscription Plans
 -- Use BIGSERIAL for explicit sequence-backed PKs (nextval)
-CREATE TABLE IF NOT EXISTS subscription_plans (
+-- Drop existing table to ensure clean schema (migration will recreate with correct structure)
+DROP TABLE IF EXISTS subscription_plans CASCADE;
+
+CREATE TABLE subscription_plans (
   id BIGSERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   description TEXT,

@@ -59,13 +59,20 @@ ON CONFLICT (permission_key) DO NOTHING;
 
 -- System Permissions (Billing)
 INSERT INTO permissions (permission_key, resource, action, description, space) VALUES
+('billing:create', 'billing', 'create', 'Create billing plans', 'system'),
 ('billing:read', 'billing', 'read', 'View billing information', 'system'),
+('billing:edit', 'billing', 'edit', 'Edit billing plans', 'system'),
+('billing:delete', 'billing', 'delete', 'Delete billing plans', 'system'),
 ('billing:manage-plans', 'billing', 'manage-plans', 'Manage billing plans', 'system'),
 ('billing:view-invoices', 'billing', 'view-invoices', 'View invoices', 'system')
 ON CONFLICT (permission_key) DO NOTHING;
 
 -- System Permissions (System)
 INSERT INTO permissions (permission_key, resource, action, description, space) VALUES
+('system:create', 'system', 'create', 'Create system resources', 'system'),
+('system:read', 'system', 'read', 'View system resources', 'system'),
+('system:edit', 'system', 'edit', 'Edit system resources', 'system'),
+('system:delete', 'system', 'delete', 'Delete system resources', 'system'),
 ('system:view-health', 'system', 'view-health', 'View system health', 'system'),
 ('system:view-performance', 'system', 'view-performance', 'View system performance', 'system'),
 ('system:manage-config', 'system', 'manage-config', 'Manage system configuration', 'system'),

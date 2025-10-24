@@ -7,17 +7,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   
   // Public routes that don't need authentication
-  const publicRoutes = [
-    '/api/auth/login',
-    '/api/auth/refresh',
-    '/api/auth/forgot-password',
-    '/api/auth/check-email',
-    '/api/tenants/create', // Public tenant registration
-    '/api/tenants/by-subdomain', // Public subdomain lookup
-    '/api/subscriptions/plans' // Public subscription plans for signup
-  ];
-
-  const isPublicRoute = publicRoutes.some(route => req.url.includes(route));
+  // Use exact matching or specific patterns to avoid false positives
+  const isPublicRoute = (
+    (req.url.includes('/api/auth/login') && req.method === 'POST') ||
+    (req.url.includes('/api/auth/refresh') && req.method === 'POST') ||
+    (req.url.includes('/api/auth/forgot-password')) ||
+    (req.url.includes('/api/auth/check-email')) ||
+    (req.url.includes('/api/tenants/create') && req.method === 'POST') ||
+    (req.url.includes('/api/tenants/by-subdomain') && req.method === 'GET') ||
+    (req.url.match(/\/api\/subscriptions\/plans$/) && req.method === 'GET') || // Only GET all plans is public
+    (req.url.match(/\/api\/subscriptions\/plans\/\d+$/) && req.method === 'GET') || // Only GET single plan is public
+    (req.url.match(/\/api\/subscription-plans$/) && req.method === 'GET') || // New endpoint - only GET is public
+    (req.url.match(/\/api\/subscription-plans\/[^/]+$/) && req.method === 'GET') // New endpoint - only GET is public
+  );
 
   // Only add token for non-public routes
   if (!isPublicRoute) {

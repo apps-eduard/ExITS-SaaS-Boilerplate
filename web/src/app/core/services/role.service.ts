@@ -75,6 +75,18 @@ export class RoleService {
   }
 
   /**
+   * Clear all cached role data
+   */
+  clearCache(): void {
+    this.rolesSignal.set([]);
+    this.currentRoleSignal.set(null);
+    this.loadingSignal.set(false);
+    this.errorSignal.set(null);
+    this.permissionMatrixSignal.set({});
+    console.log('🗑️ RoleService cache cleared');
+  }
+
+  /**
    * Load all roles
    */
   async loadRoles(space?: 'system' | 'tenant'): Promise<void> {

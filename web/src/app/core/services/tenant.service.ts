@@ -12,7 +12,27 @@ export interface Tenant {
   primary_color?: string;
   secondary_color?: string;
   max_users?: number;
+  money_loan_enabled?: boolean;
+  bnpl_enabled?: boolean;
+  pawnshop_enabled?: boolean;
   created_at: string;
+}
+
+export interface SubscriptionPlan {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string;
+  icon: string;
+  price: number;
+  billingCycle: string;
+  maxUsers: number | null;
+  maxStorageGb: number | null;
+  features: string[];
+  isActive: boolean;
+  isRecommended: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -35,5 +55,12 @@ export class TenantService {
    */
   getMyTenant(): Observable<{ success: boolean; data: Tenant }> {
     return this.http.get<{ success: boolean; data: Tenant }>(`${this.apiUrl}/current`);
+  }
+
+  /**
+   * Get all available subscription plans
+   */
+  getSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[]; count: number }> {
+    return this.http.get<{ success: boolean; data: SubscriptionPlan[]; count: number }>(`/api/subscription-plans`);
   }
 }

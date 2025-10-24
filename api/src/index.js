@@ -27,6 +27,7 @@ const rbacRoutes = require('./routes/rbacRoutes');
 const addressRoutes = require('./routes/addresses');
 const billingRoutes = require('./routes/billingRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +85,7 @@ app.use('/api/rbac', rbacRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/product-subscriptions', require('./routes/productSubscriptionRoutes'));
 
 // ==================== 404 HANDLER ====================

@@ -15,10 +15,10 @@ router.get('/plans/by-name/:name', SubscriptionController.getPlanByName);
 
 // Protected routes - require authentication and permissions
 // Note: Specific routes MUST come before parameterized routes
-router.post('/plans', authMiddleware, rbacMiddleware(['subscription_plans'], ['create']), SubscriptionController.createPlan);
+router.post('/plans', authMiddleware, rbacMiddleware(['billing', 'system'], ['create']), SubscriptionController.createPlan);
 router.get('/plans/:id/subscribers', SubscriptionController.getPlanSubscriberCount); // No auth required for now
 router.get('/plans/:id', SubscriptionController.getPlan); // No auth required for now
-router.put('/plans/:id', authMiddleware, rbacMiddleware(['subscription_plans'], ['update']), SubscriptionController.updatePlan);
-router.delete('/plans/:id', authMiddleware, rbacMiddleware(['subscription_plans'], ['delete']), SubscriptionController.deletePlan);
+router.put('/plans/:id', authMiddleware, rbacMiddleware(['billing', 'system'], ['edit']), SubscriptionController.updatePlan);
+router.delete('/plans/:id', authMiddleware, rbacMiddleware(['billing', 'system'], ['delete']), SubscriptionController.deletePlan);
 
 module.exports = router;

@@ -254,6 +254,78 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tenant/dashboard/tenant-dashboard.component').then(m => m.TenantDashboardComponent)
       },
       {
+        path: 'users',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
+          }
+        ]
+      },
+      {
+        path: 'roles',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/roles/roles-list.component').then(m => m.RolesListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/admin/roles/role-editor.component').then(m => m.RoleEditorComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/admin/roles/role-editor.component').then(m => m.RoleEditorComponent)
+          }
+        ]
+      },
+      {
+        path: 'products',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/tenant/products/tenant-products.component').then(m => m.TenantProductsComponent)
+          },
+          {
+            path: 'settings',
+            loadComponent: () => import('./features/tenant/products/tenant-product-settings.component').then(m => m.TenantProductSettingsComponent)
+          },
+          {
+            path: 'config',
+            loadComponent: () => import('./features/tenant/products/tenant-product-config.component').then(m => m.TenantProductConfigComponent)
+          }
+        ]
+      },
+      {
+        path: 'subscriptions',
+        loadComponent: () => import('./features/tenant/billing/tenant-subscriptions.component').then(m => m.TenantSubscriptionsComponent)
+      },
+      {
+        path: 'billing',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/tenant/billing/tenant-billing-overview.component').then(m => m.TenantBillingOverviewComponent)
+          },
+          {
+            path: 'invoices',
+            loadComponent: () => import('./features/tenant/billing/tenant-invoices.component').then(m => m.TenantInvoicesComponent)
+          },
+          {
+            path: 'renewal',
+            loadComponent: () => import('./features/tenant/billing/tenant-renewal-settings.component').then(m => m.TenantRenewalSettingsComponent)
+          }
+        ]
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'

@@ -118,6 +118,25 @@ class TenantService {
         // Save the Tenant Admin role ID for assigning to the admin user
         if (role.name === 'Tenant Admin') {
           tenantAdminRoleId = roleResult.rows[0].id;
+          
+          // Grant all tenant-level permissions to Tenant Admin role
+          const permissionsResult = await client.query(
+            `SELECT id FROM permissions WHERE space IN ('tenant', 'both')`
+          );
+          
+          if (permissionsResult.rows.length > 0) {
+            const permissionValues = permissionsResult.rows
+              .map((p, idx) => `(${tenantAdminRoleId}, ${p.id})`)
+              .join(', ');
+            
+            await client.query(
+              `INSERT INTO role_permissions_standard (role_id, permission_id) 
+               VALUES ${permissionValues}
+               ON CONFLICT (role_id, permission_id) DO NOTHING`
+            );
+            
+            logger.info(`Granted ${permissionsResult.rows.length} permissions to Tenant Admin role`);
+          }
         }
       }
 

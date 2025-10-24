@@ -37,6 +37,29 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
 CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
 
+-- Subscription Plans table
+CREATE TABLE IF NOT EXISTS subscription_plans (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  display_name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(10),
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  billing_cycle VARCHAR(20) DEFAULT 'monthly',
+  max_users INT,
+  max_storage_gb INT,
+  features JSONB DEFAULT '[]',
+  is_active BOOLEAN DEFAULT TRUE,
+  is_recommended BOOLEAN DEFAULT FALSE,
+  display_order INT DEFAULT 0,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_name ON subscription_plans(name);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_is_active ON subscription_plans(is_active);
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

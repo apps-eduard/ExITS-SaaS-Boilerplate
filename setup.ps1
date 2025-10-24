@@ -311,6 +311,18 @@ EMAIL_FROM=noreply@exits-saas.com
         Write-Warning "Permission assignment may have encountered issues"
     }
     
+    Write-Step "Fixing Tenant Admin permissions..."
+    Write-Host "$($Gray)  Tenant Admin fix output:$($Reset)"
+    $tenantAdminOutput = node src\scripts\fix-tenant-admin-permissions.js 2>&1
+    $tenantAdminOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
+    $tenantAdminSuccess = $LASTEXITCODE -eq 0
+    
+    if ($tenantAdminSuccess) {
+        Write-Success "Tenant Admin roles granted all tenant-level permissions"
+    } else {
+        Write-Warning "Tenant Admin permission fix may have encountered issues"
+    }
+    
     Pop-Location
     
     # Clean up password

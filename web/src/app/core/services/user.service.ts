@@ -83,6 +83,23 @@ export class UserService {
   }
 
   /**
+   * Clear all cached user data
+   */
+  clearCache(): void {
+    this.usersSignal.set([]);
+    this.currentUserSignal.set(null);
+    this.loadingSignal.set(false);
+    this.errorSignal.set(null);
+    this.paginationSignal.set({
+      page: 1,
+      limit: 20,
+      total: 0,
+      pages: 0
+    });
+    console.log('🗑️ UserService cache cleared');
+  }
+
+  /**
    * Load all users with pagination
    */
   async loadUsers(page: number = 1, limit: number = 20, search: string = ''): Promise<void> {

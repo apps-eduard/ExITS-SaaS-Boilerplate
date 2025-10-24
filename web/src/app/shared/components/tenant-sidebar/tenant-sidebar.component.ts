@@ -1,9 +1,9 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RBACService } from '../../../core/services/rbac.service';
-import { TenantService } from '../../../core/services/tenant.service';
+import { TenantService, Tenant } from '../../../core/services/tenant.service';
 
 interface MenuItem {
   label: string;
@@ -62,7 +62,7 @@ interface MenuItem {
 
         <!-- Navigation -->
         <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-          <div *ngFor="let item of menuItems()">
+          <div *ngFor="let item of filteredMenuItems()">
             <!-- Parent Menu Item -->
             <div *ngIf="!item.children">
               <a
@@ -141,8 +141,30 @@ export class TenantSidebarComponent implements OnInit {
   expandedGroups = signal(new Set<string>(['Dashboard']));
 
   tenantName = signal('My Tenant'); // Will be loaded from API
+  tenantData = signal<Tenant | null>(null);
 
-  menuItems = signal<MenuItem[]>([
+  // Check if any products are enabled
+  hasAnyProductEnabled = computed(() => {
+    const tenant = this.tenantData();
+    if (!tenant) return false;
+    return tenant.money_loan_enabled || tenant.pawnshop_enabled || tenant.bnpl_enabled;
+  });
+
+  // Filter menu items based on tenant products
+  filteredMenuItems = computed(() => {
+    const items = this.baseMenuItems();
+    const hasProducts = this.hasAnyProductEnabled();
+    
+    // If no products are enabled, filter out the Products menu
+    return items.filter(item => {
+      if (item.menuKey === 'tenant-products' && !hasProducts) {
+        return false;
+      }
+      return true;
+    });
+  });
+
+  baseMenuItems = signal<MenuItem[]>([
     { label: 'Dashboard', icon: '📊', route: '/tenant/dashboard', menuKey: 'tenant-dashboard' },
     {
       label: 'Users',
@@ -208,12 +230,18 @@ export class TenantSidebarComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Load tenant name when component initializes
+    // Load tenant name and data when component initializes
     this.tenantService.getMyTenant().subscribe({
       next: (response) => {
         if (response.success && response.data) {
           this.tenantName.set(response.data.name);
-          console.log('✅ Loaded tenant name:', response.data.name);
+          this.tenantData.set(response.data);
+          console.log('✅ Loaded tenant details:', {
+            name: response.data.name,
+            moneyLoan: response.data.money_loan_enabled,
+            pawnshop: response.data.pawnshop_enabled,
+            bnpl: response.data.bnpl_enabled
+          });
         }
       },
       error: (error) => {

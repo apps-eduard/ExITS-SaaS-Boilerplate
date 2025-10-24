@@ -17,9 +17,9 @@ class SubscriptionController {
       const result = await pool.query(
         `SELECT sp.id, sp.name, sp.description, sp.price, sp.billing_cycle, sp.features, 
                 sp.max_users, sp.max_storage_gb, sp.status, sp.created_at, sp.updated_at,
-                COUNT(ps.id) FILTER (WHERE ps.status = 'active') as subscriber_count
+                COUNT(ts.id) FILTER (WHERE ts.status = 'active') as subscriber_count
          FROM subscription_plans sp
-         LEFT JOIN product_subscriptions ps ON sp.id = ps.subscription_plan_id
+         LEFT JOIN tenant_subscriptions ts ON sp.id = ts.plan_id
          WHERE sp.status = 'active'
          GROUP BY sp.id
          ORDER BY sp.price ASC`
@@ -176,7 +176,7 @@ class SubscriptionController {
           description,
           price,
           billing_cycle,
-          features || [],
+          JSON.stringify(features || []),
           max_users || null,
           max_storage_gb || null,
           status || 'active'
@@ -255,7 +255,17 @@ class SubscriptionController {
              updated_at = NOW()
          WHERE id = $9
          RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, status, created_at, updated_at`,
-        [name, description, price, billing_cycle, features, max_users, max_storage_gb, status, id]
+        [
+          name, 
+          description, 
+          price, 
+          billing_cycle, 
+          features ? JSON.stringify(features) : undefined, 
+          max_users, 
+          max_storage_gb, 
+          status, 
+          id
+        ]
       );
 
       logger.info(`Subscription plan updated: ${id}`);

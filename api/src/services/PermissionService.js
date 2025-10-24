@@ -34,9 +34,8 @@ class PermissionService {
 
       const hasAccess = result.rows[0].count > 0;
       
-      if (!hasAccess) {
-        logger.warn(`❌ Permission denied: User ${userId} does not have ${permissionKey}`);
-      }
+      // Don't log warning here - let RBAC middleware log if ALL checks fail
+      // This prevents misleading logs when checking multiple permission variants
 
       return hasAccess;
     } catch (err) {

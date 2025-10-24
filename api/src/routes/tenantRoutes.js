@@ -20,6 +20,9 @@ router.use(authMiddleware, tenantIsolationMiddleware);
 // Get current user's tenant (no special permissions required - any authenticated user)
 router.get('/current', TenantController.getMyTenant);
 
+// Update current user's tenant products (tenant-settings permission)
+router.put('/current/products', rbacMiddleware(['tenant-settings', 'tenants'], ['update']), TenantController.updateMyTenantProducts);
+
 // List tenants
 router.get('/', rbacMiddleware(['tenants'], ['read']), TenantController.listTenants);
 

@@ -143,8 +143,8 @@ interface Tenant {
               </select>
             </div>
 
-            <!-- User Type -->
-            <div>
+            <!-- User Type (only shown in system admin context) -->
+            <div *ngIf="!isTenantContext()">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 User Type
               </label>
@@ -177,8 +177,8 @@ interface Tenant {
             </div>
           </div>
 
-          <!-- Tenant Selection (shown only for tenant users in create mode) -->
-          <div *ngIf="userType === 'tenant' && !isEditMode()" class="mt-3">
+          <!-- Tenant Selection (shown only for tenant users in create mode in system admin context) -->
+          <div *ngIf="userType === 'tenant' && !isEditMode() && !isTenantContext()" class="mt-3">
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Select Tenant <span class="text-red-500">*</span>
             </label>
@@ -464,6 +464,7 @@ export class UserEditorComponent implements OnInit {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   userType = 'system'; // 'system' or 'tenant' - default to system admin
+  isTenantContext = signal(false); // Track if we're in tenant context
 
   tenants = signal<Tenant[]>([]);
   loadingTenants = signal(false);
@@ -512,12 +513,25 @@ export class UserEditorComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    // Detect context from route (admin vs tenant)
+    const url = this.router.url;
+    const isTenantCtx = url.startsWith('/tenant/');
+    this.isTenantContext.set(isTenantCtx);
+    
+    // For tenant context, force user type to tenant
+    if (isTenantCtx) {
+      this.userType = 'tenant';
+    }
+    
     this.userId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(this.userId !== null && this.userId !== 'new');
 
     // Load roles and tenants
     await this.roleService.loadRoles();
-    this.loadTenants();
+    if (!isTenantCtx) {
+      // Only load tenants dropdown for system admin context
+      this.loadTenants();
+    }
 
     // Load user if editing
     if (this.isEditMode() && this.userId) {
@@ -806,7 +820,13 @@ export class UserEditorComponent implements OnInit {
         }
 
         console.log('✅ User saved successfully');
-        this.router.navigate(['/admin/users']);
+        // Detect context and navigate accordingly
+        const url = this.router.url;
+        if (url.startsWith('/tenant/')) {
+          this.router.navigate(['/tenant/users']);
+        } else {
+          this.router.navigate(['/admin/users']);
+        }
       } else {
         this.errorMessage.set('Failed to save user. Please try again.');
       }
@@ -832,6 +852,12 @@ export class UserEditorComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/admin/users']);
+    // Detect context from route and navigate accordingly
+    const url = this.router.url;
+    if (url.startsWith('/tenant/')) {
+      this.router.navigate(['/tenant/users']);
+    } else {
+      this.router.navigate(['/admin/users']);
+    }
   }
 }

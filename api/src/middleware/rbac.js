@@ -36,8 +36,16 @@ const rbacMiddleware = (requiredModules = [], requiredActions = []) => {
       }
 
       if (!hasPermission) {
+        // Build list of all permission combinations that were checked
+        const checkedPermissions = [];
+        for (const module of requiredModules) {
+          for (const action of requiredActions) {
+            checkedPermissions.push(`${module}:${action}`);
+          }
+        }
+        
         logger.warn(
-          `User ${req.userId} denied access to ${requiredModules.join(',')} - ${requiredActions.join(',')}`
+          `❌ Permission denied: User ${req.userId} does not have any of: ${checkedPermissions.join(', ')}`
         );
 
         return res.status(CONSTANTS.HTTP_STATUS.FORBIDDEN).json({
