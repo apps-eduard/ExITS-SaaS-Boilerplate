@@ -71,6 +71,8 @@ exports.seed = async function(knex) {
   
   const permissionsToAdd = [
     // System permissions
+    { permission_key: 'dashboard:view', resource: 'dashboard', action: 'view', description: 'System dashboard access', space: 'system' },
+    
     { permission_key: 'tenants:create', resource: 'tenants', action: 'create', description: 'Create tenants', space: 'system' },
     { permission_key: 'tenants:read', resource: 'tenants', action: 'read', description: 'View tenants', space: 'system' },
     { permission_key: 'tenants:update', resource: 'tenants', action: 'update', description: 'Edit tenants', space: 'system' },

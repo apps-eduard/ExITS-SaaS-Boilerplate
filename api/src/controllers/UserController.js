@@ -229,6 +229,51 @@ class UserController {
       next(err);
     }
   }
+
+  /**
+   * POST /users/:id/products
+   * Assign product access to a user
+   */
+  static async assignProductAccess(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { products } = req.body;
+
+      if (!products || !Array.isArray(products)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Products array is required'
+        });
+      }
+
+      const result = await UserService.assignProductAccess(id, products, req.userId, req.tenantId);
+
+      res.status(HTTP_STATUS.OK).json({
+        message: 'Product access assigned successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /users/:id/products
+   * Get user product access
+   */
+  static async getUserProducts(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const result = await UserService.getUserProducts(id, req.tenantId);
+
+      res.status(HTTP_STATUS.OK).json({
+        message: 'Product access retrieved successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = UserController;

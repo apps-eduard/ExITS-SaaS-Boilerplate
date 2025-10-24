@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { UserService, User, UserCreatePayload, UserUpdatePayload } from '../../../core/services/user.service';
 import { RoleService, Role } from '../../../core/services/role.service';
 import { AddressService, AddressCreatePayload } from '../../../core/services/address.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface Tenant {
   id: number;
@@ -235,6 +236,168 @@ interface Tenant {
 
             <div *ngIf="availableRoles().length === 0" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
               No roles available for this user type
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Access (Tenant Users Only) -->
+        <div *ngIf="userType === 'tenant'" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Product Access</h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assign user to one or more products</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Money Loan Product -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+              <label class="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="productAccess.moneyLoan.enabled"
+                  class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                />
+                <div class="flex items-center gap-2 flex-1">
+                  <span class="text-2xl">💰</span>
+                  <div>
+                    <span class="text-xs font-semibold text-gray-900 dark:text-white">Money Loan</span>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Grant access to loan management system</p>
+                  </div>
+                </div>
+              </label>
+
+              <div *ngIf="productAccess.moneyLoan.enabled" class="ml-9 mt-2 space-y-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
+                  <select
+                    [(ngModel)]="productAccess.moneyLoan.accessLevel"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-amber-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="view">View Only</option>
+                    <option value="create">Create</option>
+                    <option value="edit">Edit</option>
+                    <option value="approve">Approve</option>
+                    <option value="manage">Manage</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="flex items-center gap-2 cursor-pointer text-xs">
+                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.isPrimary" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                    <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer text-xs">
+                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canApproveLoans" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                    <span class="text-gray-700 dark:text-gray-300">Can approve loans</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer text-xs">
+                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canDisburseFunds" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                    <span class="text-gray-700 dark:text-gray-300">Can disburse funds</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer text-xs">
+                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canViewReports" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                    <span class="text-gray-700 dark:text-gray-300">Can view reports</span>
+                  </label>
+                </div>
+
+                <div *ngIf="productAccess.moneyLoan.canApproveLoans" class="pt-1">
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max Approval Amount</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="productAccess.moneyLoan.maxApprovalAmount"
+                    placeholder="e.g., 100000"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-amber-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- BNPL Product -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+              <label class="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="productAccess.bnpl.enabled"
+                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <div class="flex items-center gap-2 flex-1">
+                  <span class="text-2xl">🛒</span>
+                  <div>
+                    <span class="text-xs font-semibold text-gray-900 dark:text-white">Buy Now Pay Later (BNPL)</span>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Grant access to BNPL system</p>
+                  </div>
+                </div>
+              </label>
+
+              <div *ngIf="productAccess.bnpl.enabled" class="ml-9 mt-2 space-y-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
+                  <select
+                    [(ngModel)]="productAccess.bnpl.accessLevel"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="view">View Only</option>
+                    <option value="create">Create</option>
+                    <option value="edit">Edit</option>
+                    <option value="approve">Approve</option>
+                    <option value="manage">Manage</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <label class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input type="checkbox" [(ngModel)]="productAccess.bnpl.isPrimary" class="w-3.5 h-3.5 text-blue-600 rounded" />
+                  <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Pawnshop Product -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+              <label class="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="productAccess.pawnshop.enabled"
+                  class="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                />
+                <div class="flex items-center gap-2 flex-1">
+                  <span class="text-2xl">💎</span>
+                  <div>
+                    <span class="text-xs font-semibold text-gray-900 dark:text-white">Pawnshop</span>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Grant access to pawnshop system</p>
+                  </div>
+                </div>
+              </label>
+
+              <div *ngIf="productAccess.pawnshop.enabled" class="ml-9 mt-2 space-y-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
+                  <select
+                    [(ngModel)]="productAccess.pawnshop.accessLevel"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="view">View Only</option>
+                    <option value="create">Create</option>
+                    <option value="edit">Edit</option>
+                    <option value="approve">Approve</option>
+                    <option value="manage">Manage</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <label class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input type="checkbox" [(ngModel)]="productAccess.pawnshop.isPrimary" class="w-3.5 h-3.5 text-green-600 rounded" />
+                  <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+              <p class="text-xs text-blue-700 dark:text-blue-300">
+                <strong>Note:</strong> Product access is combined with role permissions for layered security. Users must have both product access AND appropriate role permissions to perform actions.
+              </p>
             </div>
           </div>
         </div>
@@ -485,6 +648,29 @@ export class UserEditorComponent implements OnInit {
 
   selectedRoles = signal<Set<string>>(new Set());
 
+  // Product Access fields
+  productAccess = {
+    moneyLoan: {
+      enabled: false,
+      accessLevel: 'view',
+      isPrimary: false,
+      canApproveLoans: false,
+      canDisburseFunds: false,
+      canViewReports: false,
+      maxApprovalAmount: null
+    },
+    bnpl: {
+      enabled: false,
+      accessLevel: 'view',
+      isPrimary: false
+    },
+    pawnshop: {
+      enabled: false,
+      accessLevel: 'view',
+      isPrimary: false
+    }
+  };
+
   // Address fields
   includeAddress = false;
   addressData: any = {
@@ -509,7 +695,8 @@ export class UserEditorComponent implements OnInit {
     private http: HttpClient,
     public userService: UserService,
     public roleService: RoleService,
-    public addressService: AddressService
+    public addressService: AddressService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit() {
@@ -518,9 +705,14 @@ export class UserEditorComponent implements OnInit {
     const isTenantCtx = url.startsWith('/tenant/');
     this.isTenantContext.set(isTenantCtx);
     
-    // For tenant context, force user type to tenant
+    // For tenant context, force user type to tenant and set tenant ID
     if (isTenantCtx) {
       this.userType = 'tenant';
+      const currentTenantId = this.authService.getTenantId();
+      if (currentTenantId) {
+        this.formData.tenantId = currentTenantId;
+        console.log('🏢 Tenant context detected, tenantId set to:', currentTenantId);
+      }
     }
     
     this.userId = this.route.snapshot.paramMap.get('id');
@@ -565,6 +757,11 @@ export class UserEditorComponent implements OnInit {
         if (user.roles) {
           this.selectedRoles.set(new Set(user.roles.map(r => r.id)));
           console.log('👥 Selected roles:', Array.from(this.selectedRoles()));
+        }
+
+        // Load product access for tenant users
+        if (user.tenantId) {
+          await this.loadUserProducts(this.userId);
         }
 
         // Manually trigger change detection
@@ -698,6 +895,81 @@ export class UserEditorComponent implements OnInit {
     }
   }
 
+  /**
+   * Load user product access from API
+   */
+  async loadUserProducts(userId: string): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(`/api/users/${userId}/products`)
+      );
+      
+      if (response && response.data) {
+        const products = response.data;
+        
+        // Reset product access
+        this.resetProductAccess();
+        
+        // Map API response to UI state
+        products.forEach((product: any) => {
+          switch (product.productType) {
+            case 'money_loan':
+              this.productAccess.moneyLoan.enabled = true;
+              this.productAccess.moneyLoan.accessLevel = product.accessLevel || 'view';
+              this.productAccess.moneyLoan.isPrimary = product.isPrimary || false;
+              this.productAccess.moneyLoan.canApproveLoans = product.canApproveLoans || false;
+              this.productAccess.moneyLoan.canDisburseFunds = product.canDisburseFunds || false;
+              this.productAccess.moneyLoan.canViewReports = product.canViewReports || false;
+              this.productAccess.moneyLoan.maxApprovalAmount = product.maxApprovalAmount || null;
+              break;
+            case 'bnpl':
+              this.productAccess.bnpl.enabled = true;
+              this.productAccess.bnpl.accessLevel = product.accessLevel || 'view';
+              this.productAccess.bnpl.isPrimary = product.isPrimary || false;
+              break;
+            case 'pawnshop':
+              this.productAccess.pawnshop.enabled = true;
+              this.productAccess.pawnshop.accessLevel = product.accessLevel || 'view';
+              this.productAccess.pawnshop.isPrimary = product.isPrimary || false;
+              break;
+          }
+        });
+        
+        console.log('📦 Loaded product access:', products.length, 'products');
+      }
+    } catch (error) {
+      console.error('❌ Error loading user products:', error);
+      // Don't throw - just log the error
+    }
+  }
+
+  /**
+   * Reset product access to default state
+   */
+  resetProductAccess(): void {
+    this.productAccess = {
+      moneyLoan: {
+        enabled: false,
+        accessLevel: 'view',
+        isPrimary: false,
+        canApproveLoans: false,
+        canDisburseFunds: false,
+        canViewReports: false,
+        maxApprovalAmount: null
+      },
+      bnpl: {
+        enabled: false,
+        accessLevel: 'view',
+        isPrimary: false
+      },
+      pawnshop: {
+        enabled: false,
+        accessLevel: 'view',
+        isPrimary: false
+      }
+    };
+  }
+
   isFormValid(): boolean {
     if (!this.formData.email) return false;
     if (!this.isEditMode() && !this.formData.password) return false;
@@ -709,6 +981,58 @@ export class UserEditorComponent implements OnInit {
     }
 
     return true;
+  }
+
+  /**
+   * Build product assignment payload from productAccess state
+   */
+  buildProductAssignments(): any[] {
+    const assignments: any[] = [];
+
+    if (this.productAccess.moneyLoan.enabled) {
+      assignments.push({
+        productType: 'money_loan',
+        accessLevel: this.productAccess.moneyLoan.accessLevel,
+        isPrimary: this.productAccess.moneyLoan.isPrimary,
+        canApproveLoans: this.productAccess.moneyLoan.canApproveLoans,
+        canDisburseFunds: this.productAccess.moneyLoan.canDisburseFunds,
+        canViewReports: this.productAccess.moneyLoan.canViewReports,
+        maxApprovalAmount: this.productAccess.moneyLoan.maxApprovalAmount
+      });
+    }
+
+    if (this.productAccess.bnpl.enabled) {
+      assignments.push({
+        productType: 'bnpl',
+        accessLevel: this.productAccess.bnpl.accessLevel,
+        isPrimary: this.productAccess.bnpl.isPrimary
+      });
+    }
+
+    if (this.productAccess.pawnshop.enabled) {
+      assignments.push({
+        productType: 'pawnshop',
+        accessLevel: this.productAccess.pawnshop.accessLevel,
+        isPrimary: this.productAccess.pawnshop.isPrimary
+      });
+    }
+
+    return assignments;
+  }
+
+  /**
+   * Assign product access to a user via API
+   */
+  async assignProductAccess(userId: string, assignments: any[]): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post(`/api/users/${userId}/products`, { products: assignments })
+      );
+      console.log('📦 Product access response:', response);
+    } catch (error) {
+      console.error('❌ Error assigning product access:', error);
+      throw error;
+    }
   }
 
   async save() {
@@ -816,6 +1140,20 @@ export class UserEditorComponent implements OnInit {
           } catch (addressError) {
             console.error('⚠️ User created but address failed:', addressError);
             // Don't fail the whole operation if address creation fails
+          }
+        }
+
+        // Assign product access (for tenant users only)
+        if (this.userType === 'tenant') {
+          try {
+            const productAssignments = this.buildProductAssignments();
+            if (productAssignments.length > 0) {
+              await this.assignProductAccess(user.id, productAssignments);
+              console.log('✅ Product access assigned successfully');
+            }
+          } catch (productError) {
+            console.error('⚠️ User created but product assignment failed:', productError);
+            // Don't fail the whole operation if product assignment fails
           }
         }
 

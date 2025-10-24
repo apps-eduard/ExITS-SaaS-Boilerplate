@@ -42,4 +42,8 @@ router.post('/:id/roles/:roleId', rbacMiddleware(['roles', 'tenant-roles'], ['up
 router.delete('/:id/roles/:roleId', rbacMiddleware(['roles', 'tenant-roles'], ['update']), UserController.removeRole);
 router.get('/:id/permissions', UserController.getUserPermissions);
 
+// Product access management (tenant users only)
+router.post('/:id/products', rbacMiddleware(['tenant-users'], ['update']), UserController.assignProductAccess);
+router.get('/:id/products', UserController.getUserProducts);
+
 module.exports = router;

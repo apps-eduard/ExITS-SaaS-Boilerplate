@@ -470,6 +470,156 @@ class UserService {
       logger.error(`Audit log error: ${err.message}`);
     }
   }
+
+  /**
+   * Assign product access to a user
+   */
+  static async assignProductAccess(userId, products, requestingUserId, tenantId) {
+    try {
+      // First, get the user to get their tenant_id
+      const userResult = await pool.query(
+        `SELECT id, tenant_id FROM users WHERE id = $1`,
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        throw new Error('User not found');
+      }
+
+      const user = userResult.rows[0];
+      const userTenantId = user.tenant_id || tenantId;
+
+      if (!userTenantId) {
+        throw new Error('Cannot assign product access to system users');
+      }
+
+      // Get or create employee_profile for this user
+      let employeeResult = await pool.query(
+        `SELECT id FROM employee_profiles WHERE user_id = $1`,
+        [userId]
+      );
+
+      let employeeId;
+      if (employeeResult.rows.length === 0) {
+        // Create employee profile
+        const createEmployeeResult = await pool.query(
+          `INSERT INTO employee_profiles (tenant_id, user_id, employee_number, hire_date, employment_status, department, position)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
+          [
+            userTenantId,
+            userId,
+            `EMP-${userId}`,
+            new Date(),
+            'active',
+            'General',
+            'Employee'
+          ]
+        );
+        employeeId = createEmployeeResult.rows[0].id;
+        logger.info(`Created employee profile for user ${userId}`);
+      } else {
+        employeeId = employeeResult.rows[0].id;
+      }
+
+      // Delete existing product access for this employee
+      await pool.query(
+        `DELETE FROM employee_product_access WHERE employee_id = $1`,
+        [employeeId]
+      );
+
+      // Insert new product access records
+      const insertedProducts = [];
+      for (const product of products) {
+        const result = await pool.query(
+          `INSERT INTO employee_product_access (
+            tenant_id, employee_id, user_id, product_type, access_level, is_primary,
+            can_approve_loans, max_approval_amount, can_disburse_funds, can_view_reports,
+            assigned_by, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING id, product_type, access_level, is_primary`,
+          [
+            userTenantId,
+            employeeId,
+            userId,
+            product.productType,
+            product.accessLevel || 'view',
+            product.isPrimary || false,
+            product.canApproveLoans || false,
+            product.maxApprovalAmount || null,
+            product.canDisburseFunds || false,
+            product.canViewReports || false,
+            requestingUserId,
+            'active'
+          ]
+        );
+        insertedProducts.push(result.rows[0]);
+      }
+
+      await this.auditLog(requestingUserId, userTenantId, 'assign_product_access', 'user', userId, { products });
+
+      logger.info(`Product access assigned to user ${userId}: ${insertedProducts.length} products`);
+      return insertedProducts;
+    } catch (err) {
+      logger.error(`User service assign product access error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Get user product access
+   */
+  static async getUserProducts(userId, tenantId) {
+    try {
+      const result = await pool.query(
+        `SELECT 
+          epa.id,
+          epa.product_type,
+          epa.access_level,
+          epa.is_primary,
+          epa.can_approve_loans,
+          epa.max_approval_amount,
+          epa.can_disburse_funds,
+          epa.can_view_reports,
+          epa.can_modify_interest,
+          epa.can_waive_penalties,
+          epa.daily_transaction_limit,
+          epa.monthly_transaction_limit,
+          epa.max_daily_transactions,
+          epa.status,
+          epa.assigned_date,
+          epa.created_at
+         FROM employee_product_access epa
+         JOIN employee_profiles ep ON epa.employee_id = ep.id
+         WHERE epa.user_id = $1 AND epa.status = 'active'
+         ${tenantId ? 'AND epa.tenant_id = $2' : ''}
+         ORDER BY epa.is_primary DESC, epa.created_at ASC`,
+        tenantId ? [userId, tenantId] : [userId]
+      );
+
+      return result.rows.map(row => ({
+        id: row.id,
+        productType: row.product_type,
+        accessLevel: row.access_level,
+        isPrimary: row.is_primary,
+        canApproveLoans: row.can_approve_loans,
+        maxApprovalAmount: row.max_approval_amount,
+        canDisburseFunds: row.can_disburse_funds,
+        canViewReports: row.can_view_reports,
+        canModifyInterest: row.can_modify_interest,
+        canWaivePenalties: row.can_waive_penalties,
+        dailyTransactionLimit: row.daily_transaction_limit,
+        monthlyTransactionLimit: row.monthly_transaction_limit,
+        maxDailyTransactions: row.max_daily_transactions,
+        status: row.status,
+        assignedDate: row.assigned_date,
+        createdAt: row.created_at
+      }));
+    } catch (err) {
+      logger.error(`User service get products error: ${err.message}`);
+      throw err;
+    }
+  }
 }
 
 module.exports = UserService;
