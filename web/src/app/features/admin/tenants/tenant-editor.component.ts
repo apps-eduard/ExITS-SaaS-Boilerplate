@@ -286,11 +286,14 @@ interface ProductSubscriptionForm {
                   <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
                   
                   <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Plan <span class="text-red-500">*</span>
+                    </label>
                     <select [(ngModel)]="productSubscriptions.money_loan.subscription_plan_id"
                             name="money_loan_plan"
+                            required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500">
-                      <option [value]="null">Select plan</option>
+                      <option [value]="null">Select plan (required)</option>
                       <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
@@ -302,10 +305,14 @@ interface ProductSubscriptionForm {
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
                       <select [(ngModel)]="productSubscriptions.money_loan.billing_cycle"
                               name="money_loan_billing"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                              [disabled]="isTrialPlan(productSubscriptions.money_loan.subscription_plan_id)"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
                         <option value="monthly">Monthly</option>
                         <option value="yearly">Yearly</option>
                       </select>
+                      <p *ngIf="isTrialPlan(productSubscriptions.money_loan.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Trial plans are monthly only
+                      </p>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
@@ -351,11 +358,14 @@ interface ProductSubscriptionForm {
                   <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
                   
                   <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Plan <span class="text-red-500">*</span>
+                    </label>
                     <select [(ngModel)]="productSubscriptions.bnpl.subscription_plan_id"
                             name="bnpl_plan"
+                            required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-                      <option [value]="null">Select plan</option>
+                      <option [value]="null">Select plan (required)</option>
                       <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
@@ -367,10 +377,14 @@ interface ProductSubscriptionForm {
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
                       <select [(ngModel)]="productSubscriptions.bnpl.billing_cycle"
                               name="bnpl_billing"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                              [disabled]="isTrialPlan(productSubscriptions.bnpl.subscription_plan_id)"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
                         <option value="monthly">Monthly</option>
                         <option value="yearly">Yearly</option>
                       </select>
+                      <p *ngIf="isTrialPlan(productSubscriptions.bnpl.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Trial plans are monthly only
+                      </p>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
@@ -416,11 +430,14 @@ interface ProductSubscriptionForm {
                   <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
                   
                   <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Plan</label>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Plan <span class="text-red-500">*</span>
+                    </label>
                     <select [(ngModel)]="productSubscriptions.pawnshop.subscription_plan_id"
                             name="pawnshop_plan"
+                            required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-                      <option [value]="null">Select plan</option>
+                      <option [value]="null">Select plan (required)</option>
                       <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
@@ -432,10 +449,14 @@ interface ProductSubscriptionForm {
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
                       <select [(ngModel)]="productSubscriptions.pawnshop.billing_cycle"
                               name="pawnshop_billing"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                              [disabled]="isTrialPlan(productSubscriptions.pawnshop.subscription_plan_id)"
+                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
                         <option value="monthly">Monthly</option>
                         <option value="yearly">Yearly</option>
                       </select>
+                      <p *ngIf="isTrialPlan(productSubscriptions.pawnshop.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Trial plans are monthly only
+                      </p>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
@@ -695,6 +716,7 @@ export class TenantEditorComponent implements OnInit {
 
   handleProductSubscriptions(tenantId: number): void {
     const subscriptionRequests: any[] = [];
+    const errors: string[] = [];
 
     // Handle each product
     const products: Array<keyof typeof this.productSubscriptions> = ['money_loan', 'bnpl', 'pawnshop'];
@@ -704,7 +726,26 @@ export class TenantEditorComponent implements OnInit {
       const subForm = this.productSubscriptions[productType];
       const existingSub = this.existingProductSubscriptions().get(productType);
 
-      if (isEnabled && subForm.subscription_plan_id) {
+      if (isEnabled) {
+        // Validate: Product is enabled, plan is required
+        if (!subForm.subscription_plan_id) {
+          const productName = productType.replace('_', ' ').toUpperCase();
+          errors.push(`${productName}: Subscription plan is required when product is enabled`);
+          return;
+        }
+
+        // Set default start date if not provided
+        if (!subForm.starts_at) {
+          subForm.starts_at = new Date().toISOString().split('T')[0];
+        }
+
+        // Check if selected plan is Trial
+        const selectedPlan = this.subscriptionPlans().find(p => p.id === subForm.subscription_plan_id);
+        if (selectedPlan?.name.toLowerCase() === 'trial') {
+          // Trial plan should always be monthly
+          subForm.billing_cycle = 'monthly';
+        }
+
         // Product is enabled and has a plan selected
         if (existingSub) {
           // Update existing subscription
@@ -737,6 +778,13 @@ export class TenantEditorComponent implements OnInit {
       }
     });
 
+    // Check for validation errors
+    if (errors.length > 0) {
+      this.error.set(errors.join('; '));
+      this.saving.set(false);
+      return;
+    }
+
     // Execute all subscription requests
     if (subscriptionRequests.length > 0) {
       forkJoin(subscriptionRequests).subscribe({
@@ -762,5 +810,11 @@ export class TenantEditorComponent implements OnInit {
       style: 'currency',
       currency: 'PHP'
     }).format(price);
+  }
+
+  isTrialPlan(planId: number | null): boolean {
+    if (!planId) return false;
+    const plan = this.subscriptionPlans().find(p => p.id === planId);
+    return plan?.name.toLowerCase() === 'trial';
   }
 }

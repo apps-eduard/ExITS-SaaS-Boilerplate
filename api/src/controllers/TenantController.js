@@ -52,6 +52,33 @@ class TenantController {
   }
 
   /**
+   * GET /tenants/current
+   * Get current user's tenant (no special permissions required)
+   */
+  static async getMyTenant(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+
+      if (!tenantId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'No tenant associated with this user'
+        });
+      }
+
+      const result = await TenantService.getTenantById(tenantId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Tenant retrieved successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /tenants/by-subdomain/:subdomain
    * Get tenant by subdomain
    */

@@ -17,16 +17,25 @@ class ProductSubscriptionService {
           ps.id,
           ps.tenant_id,
           ps.product_type,
+          ps.subscription_plan_id,
           ps.status,
-          ps.started_at,
+          ps.started_at as starts_at,
           ps.expires_at,
           ps.price,
           ps.billing_cycle,
           ps.metadata,
           ps.created_at,
           ps.updated_at,
-          sp.name as plan_name,
-          sp.description as plan_description
+          json_build_object(
+            'id', sp.id,
+            'name', sp.name,
+            'description', sp.description,
+            'price', sp.price,
+            'billing_cycle', sp.billing_cycle,
+            'features', sp.features,
+            'max_users', sp.max_users,
+            'max_storage_gb', sp.max_storage_gb
+          ) as subscription_plan
          FROM product_subscriptions ps
          LEFT JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
          WHERE ps.tenant_id = $1
@@ -46,22 +55,35 @@ class ProductSubscriptionService {
    */
   static async subscribeToProduct(tenantId, productType, subscriptionData) {
     try {
-      const { subscription_plan_id, price, billing_cycle, expires_at } = subscriptionData;
+      const { subscription_plan_id, billing_cycle, starts_at, expires_at } = subscriptionData;
+
+      // Fetch the price from subscription plan
+      const planResult = await pool.query(
+        `SELECT price FROM subscription_plans WHERE id = $1`,
+        [subscription_plan_id]
+      );
+
+      if (planResult.rows.length === 0) {
+        throw new Error('Subscription plan not found');
+      }
+
+      const price = planResult.rows[0].price;
 
       const result = await pool.query(
         `INSERT INTO product_subscriptions 
-          (tenant_id, product_type, subscription_plan_id, price, billing_cycle, expires_at, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active')
+          (tenant_id, product_type, subscription_plan_id, price, billing_cycle, started_at, expires_at, status)
+         VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), $7, 'active')
          ON CONFLICT (tenant_id, product_type) 
          DO UPDATE SET
            subscription_plan_id = EXCLUDED.subscription_plan_id,
            price = EXCLUDED.price,
            billing_cycle = EXCLUDED.billing_cycle,
+           started_at = EXCLUDED.started_at,
            expires_at = EXCLUDED.expires_at,
            status = 'active',
            updated_at = CURRENT_TIMESTAMP
          RETURNING *`,
-        [tenantId, productType, subscription_plan_id, price, billing_cycle, expires_at]
+        [tenantId, productType, subscription_plan_id, price, billing_cycle, starts_at, expires_at]
       );
 
       // Update tenant enabled flag
@@ -112,13 +134,27 @@ class ProductSubscriptionService {
    */
   static async updateProductSubscription(tenantId, productType, updateData) {
     try {
-      const { price, billing_cycle, expires_at, status } = updateData;
+      const { subscription_plan_id, billing_cycle, expires_at, status } = updateData;
       
       const fieldsToUpdate = [];
       const values = [tenantId, productType];
       let paramCount = 3;
 
-      if (price !== undefined) {
+      // If subscription_plan_id is being updated, fetch the new price
+      if (subscription_plan_id !== undefined) {
+        const planResult = await pool.query(
+          `SELECT price FROM subscription_plans WHERE id = $1`,
+          [subscription_plan_id]
+        );
+
+        if (planResult.rows.length === 0) {
+          throw new Error('Subscription plan not found');
+        }
+
+        const price = planResult.rows[0].price;
+        
+        fieldsToUpdate.push(`subscription_plan_id = $${paramCount++}`);
+        values.push(subscription_plan_id);
         fieldsToUpdate.push(`price = $${paramCount++}`);
         values.push(price);
       }

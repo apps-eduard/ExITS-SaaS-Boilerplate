@@ -17,6 +17,9 @@ router.post('/create', TenantController.createTenant); // Public tenant registra
 // Protected routes (system admin only)
 router.use(authMiddleware, tenantIsolationMiddleware);
 
+// Get current user's tenant (no special permissions required - any authenticated user)
+router.get('/current', TenantController.getMyTenant);
+
 // List tenants
 router.get('/', rbacMiddleware(['tenants'], ['read']), TenantController.listTenants);
 

@@ -28,4 +28,12 @@ export class TenantService {
   getTenantById(id: number | string): Observable<{ success: boolean; data: Tenant }> {
     return this.http.get<{ success: boolean; data: Tenant }>(`${this.apiUrl}/${id}`);
   }
+
+  /**
+   * Get current user's tenant (uses tenant_id from JWT token)
+   * This works for tenant users who don't have system-level permissions
+   */
+  getMyTenant(): Observable<{ success: boolean; data: Tenant }> {
+    return this.http.get<{ success: boolean; data: Tenant }>(`${this.apiUrl}/current`);
+  }
 }

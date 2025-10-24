@@ -50,7 +50,7 @@ class ProductSubscriptionController {
   static async subscribeToProduct(req, res, next) {
     try {
       const { tenantId } = req.params;
-      const { product_type, subscription_plan_id, price, billing_cycle, expires_at } = req.body;
+      const { product_type, subscription_plan_id, billing_cycle, starts_at, expires_at } = req.body;
 
       if (!product_type) {
         return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
@@ -59,10 +59,17 @@ class ProductSubscriptionController {
         });
       }
 
+      if (!subscription_plan_id) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          error: 'Subscription plan is required'
+        });
+      }
+
       const subscription = await ProductSubscriptionService.subscribeToProduct(
         tenantId,
         product_type,
-        { subscription_plan_id, price, billing_cycle, expires_at }
+        { subscription_plan_id, billing_cycle, starts_at, expires_at }
       );
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({

@@ -96,9 +96,9 @@ interface TenantStats {
       <!-- Content -->
       <div *ngIf="!loading() && !error() && tenant()" class="space-y-6">
         <!-- Tenant Overview -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <!-- Main Info -->
-          <div class="lg:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+          <div class="lg:col-span-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Tenant Information</h2>
             </div>
@@ -175,13 +175,18 @@ interface TenantStats {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Product Subscriptions Section -->
-              <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <span>📦</span>
-                  Product Subscriptions
-                </h4>
+          <!-- Product Subscriptions (Right Column) -->
+          <div class="lg:col-span-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span>📦</span>
+                Product Subscriptions
+              </h2>
+            </div>
+            <div class="p-4">
                 
                 <!-- No products enabled -->
                 <div *ngIf="!tenant()?.money_loan_enabled && !tenant()?.bnpl_enabled && !tenant()?.pawnshop_enabled" 
@@ -220,28 +225,22 @@ interface TenantStats {
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
-                          <p class="text-sm font-bold text-green-600 dark:text-green-400">
+                          <p class="text-xs font-bold text-green-600 dark:text-green-400">
                             ₱{{ formatPrice(getProductSubscription('money_loan')?.price || 0) }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
                             {{ getProductSubscription('money_loan')?.billing_cycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white">
                             {{ formatDate(getProductSubscription('money_loan')?.starts_at || '') }}
                           </p>
                         </div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                        <p class="text-xs text-gray-700 dark:text-gray-300">
-                          {{ getProductSubscription('money_loan')?.subscription_plan?.description }}
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -275,28 +274,22 @@ interface TenantStats {
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
-                          <p class="text-sm font-bold text-blue-600 dark:text-blue-400">
+                          <p class="text-xs font-bold text-blue-600 dark:text-blue-400">
                             ₱{{ formatPrice(getProductSubscription('bnpl')?.price || 0) }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
                             {{ getProductSubscription('bnpl')?.billing_cycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white">
                             {{ formatDate(getProductSubscription('bnpl')?.starts_at || '') }}
                           </p>
                         </div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                        <p class="text-xs text-gray-700 dark:text-gray-300">
-                          {{ getProductSubscription('bnpl')?.subscription_plan?.description }}
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -330,136 +323,35 @@ interface TenantStats {
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
-                          <p class="text-sm font-bold text-purple-600 dark:text-purple-400">
+                          <p class="text-xs font-bold text-purple-600 dark:text-purple-400">
                             ₱{{ formatPrice(getProductSubscription('pawnshop')?.price || 0) }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
                             {{ getProductSubscription('pawnshop')?.billing_cycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
-                          <p class="text-sm font-bold text-gray-900 dark:text-white">
+                          <p class="text-xs font-bold text-gray-900 dark:text-white">
                             {{ formatDate(getProductSubscription('pawnshop')?.starts_at || '') }}
                           </p>
                         </div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                        <p class="text-xs text-gray-700 dark:text-gray-300">
-                          {{ getProductSubscription('pawnshop')?.subscription_plan?.description }}
-                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- No subscription template -->
-                <ng-template #noSubscription>
-                  <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
-                    <p class="text-xs text-yellow-800 dark:text-yellow-300">
-                      ⚠️ Product is enabled but no subscription plan is assigned. Please edit the tenant to configure a subscription.
-                    </p>
-                  </div>
-                </ng-template>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Stats -->
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Quick Stats</h2>
-            </div>
-            <div class="p-4 space-y-3">
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Total Users</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ tenant()?.user_count }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Total Roles</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ tenant()?.role_count }}</span>
-              </div>
-              <div class="flex items-center justify-between py-2">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Plan</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ tenant()?.plan }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detailed Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-600 dark:text-gray-400">Users</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stats()?.total_users || 0 }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-600 dark:text-gray-400">Roles</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stats()?.total_roles || 0 }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-600 dark:text-gray-400">Assignments</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stats()?.total_assignments || 0 }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-600 dark:text-gray-400">Audit Logs</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stats()?.total_audit_logs || 0 }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-600 dark:text-gray-400">Active Sessions</p>
-                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stats()?.active_sessions || 0 }}</p>
-              </div>
+              <!-- No subscription template -->
+              <ng-template #noSubscription>
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
+                  <p class="text-xs text-yellow-800 dark:text-yellow-300">
+                    ⚠️ Product is enabled but no subscription plan is assigned. Please edit the tenant to configure a subscription.
+                  </p>
+                </div>
+              </ng-template>
             </div>
           </div>
         </div>

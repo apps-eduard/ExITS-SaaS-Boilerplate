@@ -209,20 +209,19 @@ export class TenantSidebarComponent implements OnInit {
 
   ngOnInit(): void {
     // Load tenant name when component initializes
-    const tenantId = this.authService.currentUser()?.tenant_id;
-    if (tenantId) {
-      this.tenantService.getTenantById(tenantId).subscribe({
-        next: (response) => {
-          if (response.success && response.data) {
-            this.tenantName.set(response.data.name);
-            console.log('✅ Loaded tenant name:', response.data.name);
-          }
-        },
-        error: (error) => {
-          console.error('❌ Failed to load tenant details:', error);
+    this.tenantService.getMyTenant().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.tenantName.set(response.data.name);
+          console.log('✅ Loaded tenant name:', response.data.name);
         }
-      });
-    }
+      },
+      error: (error) => {
+        console.error('❌ Failed to load tenant details:', error);
+        // Fallback to default tenant name if API fails
+        this.tenantName.set('My Tenant');
+      }
+    });
   }
 
   getUserInitials(): string {
