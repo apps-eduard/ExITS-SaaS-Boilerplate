@@ -22,7 +22,7 @@ interface ResourceGroup {
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <button routerLink="/admin/roles" class="rounded p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition">
+          <button [routerLink]="isTenantContext() ? '/tenant/roles' : '/admin/roles'" class="rounded p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -190,7 +190,7 @@ interface ResourceGroup {
                 {{ isEditing() ? '💾 Update' : '✅ Create' }}
               </button>
               <button
-                routerLink="/admin/roles"
+                [routerLink]="isTenantContext() ? '/tenant/roles' : '/admin/roles'"
                 class="w-full mt-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 transition"
               >
                 Cancel
@@ -213,7 +213,8 @@ interface ResourceGroup {
                     <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Filter by Space:</label>
                     <select
                       [(ngModel)]="spaceFilter"
-                      class="text-xs rounded border border-gray-300 bg-white px-2 py-1 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      [disabled]="isTenantContext()"
+                      class="text-xs rounded border border-gray-300 bg-white px-2 py-1 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="all">All</option>
                       <option value="system">System</option>
@@ -339,6 +340,9 @@ export class RoleEditorComponent implements OnInit {
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
+  
+  // Tenant context detection
+  isTenantContext = signal(false);
 
   // Filtered resource groups based on selected space and space filter
   get filteredResourceGroups(): ResourceGroup[] {
@@ -369,6 +373,15 @@ export class RoleEditorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Detect tenant context from URL
+    const url = this.router.url;
+    this.isTenantContext.set(url.startsWith('/tenant/'));
+    
+    // Auto-set space filter to tenant when in tenant context
+    if (this.isTenantContext()) {
+      this.spaceFilter = 'tenant';
+    }
+    
     this.loadTenants();
     this.route.params.subscribe(params => {
       if (params['id'] && params['id'] !== 'new') {
@@ -696,7 +709,7 @@ export class RoleEditorComponent implements OnInit {
           console.log('✅ Role updated, now assigning permissions...');
           await this.roleService.bulkAssignPermissions(this.roleId, permissionsArray);
           console.log('✅ Permissions assigned, navigating...');
-          this.router.navigate(['/admin/roles']);
+          this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
         } else {
           const errorMsg = this.roleService.errorSignal() || 'Failed to update role';
           console.error('❌ Update failed:', errorMsg);
@@ -731,7 +744,7 @@ export class RoleEditorComponent implements OnInit {
 
           if (successCount > 0) {
             console.log(`✅ Successfully created ${successCount} role(s)`);
-            this.router.navigate(['/admin/roles']);
+            this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
           } else {
             alert('Failed to create roles for selected tenants');
           }
@@ -749,7 +762,7 @@ export class RoleEditorComponent implements OnInit {
           if (created) {
             console.log('✅ Role created with ID:', created.id);
             await this.roleService.bulkAssignPermissions(created.id, permissionsArray);
-            this.router.navigate(['/admin/roles']);
+            this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
           } else {
             const errorMsg = this.roleService.errorSignal() || 'Failed to create role';
             console.error('❌ Create failed:', errorMsg);

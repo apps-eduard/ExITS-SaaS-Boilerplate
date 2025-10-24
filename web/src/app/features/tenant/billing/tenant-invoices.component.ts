@@ -128,7 +128,7 @@ interface Invoice {
             <input
               type="text"
               [(ngModel)]="searchTerm"
-              (ngModelChange)="applyFilters()"
+              (ngModelChange)="onSearchChange()"
               placeholder="Search invoices..."
               class="rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white w-64"
             />
@@ -287,6 +287,8 @@ export class TenantInvoicesComponent implements OnInit {
   searchTerm = '';
   selectedStatus = 'all';
   selectedYear = 'all';
+  
+  private searchDebounceTimer: any = null;
 
   allInvoices = signal<Invoice[]>([
     {
@@ -340,6 +342,18 @@ export class TenantInvoicesComponent implements OnInit {
   ngOnInit(): void {
     console.log('📄 TenantInvoicesComponent initialized');
     this.applyFilters();
+  }
+
+  onSearchChange(): void {
+    // Clear existing timer
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    
+    // Set new timer - apply filters after 300ms of no typing
+    this.searchDebounceTimer = setTimeout(() => {
+      this.applyFilters();
+    }, 300);
   }
 
   applyFilters(): void {

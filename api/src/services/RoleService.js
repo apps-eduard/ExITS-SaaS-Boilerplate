@@ -330,9 +330,9 @@ class RoleService {
       }
 
       await this.auditLog(requestingUserId, tenantId, 'bulk_assign_permissions', 'role', roleId, {
-        permissions_count: insertedCount,
-        not_found_count: notFoundCount,
-        not_found_permissions: notFoundPermissions
+        permissionsCount: insertedCount,
+        notFoundCount: notFoundCount,
+        notFoundPermissions: notFoundPermissions
       });
 
       logger.info(`✅ Bulk assigned ${insertedCount} permissions to role ${roleId}`);
@@ -380,7 +380,7 @@ class RoleService {
       );
 
       await this.auditLog(requestingUserId, tenantId, 'grant_permission', 'role', roleId, {
-        permission_key: permissionKey,
+        permissionKey: permissionKey,
       });
 
       logger.info(`Permission granted: ${permissionKey} to role ${roleId}`);
@@ -417,7 +417,7 @@ class RoleService {
       );
 
       await this.auditLog(requestingUserId, tenantId, 'revoke_permission', 'role', roleId, {
-        permission_key: permissionKey,
+        permissionKey: permissionKey,
       });
 
       logger.info(`Permission revoked: ${permissionKey} from role ${roleId}`);

@@ -234,7 +234,7 @@ class PermissionService {
 
         return {
           module: module.menu_key,
-          display_name: module.display_name,
+          displayName: module.display_name,
           ...modulePerms,
         };
       });

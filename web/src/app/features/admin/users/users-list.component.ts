@@ -343,7 +343,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                 <td class="px-4 py-3">
                   <div class="flex items-center justify-center gap-2">
                     <button
-                      [routerLink]="'/admin/users/' + user.id + '/profile'"
+                      [routerLink]="(isTenantContext() ? '/tenant/users/' : '/admin/users/') + user.id + '/profile'"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-300 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 transition"
                       title="View Profile"
                     >
@@ -354,7 +354,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                     </button>
                     <button
                       *ngIf="canUpdateUsers()"
-                      [routerLink]="'/admin/users/' + user.id"
+                      [routerLink]="(isTenantContext() ? '/tenant/users/' : '/admin/users/') + user.id"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
                       title="Edit User"
                     >

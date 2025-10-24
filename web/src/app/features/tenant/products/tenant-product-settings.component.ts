@@ -167,7 +167,7 @@ export class TenantProductSettingsComponent implements OnInit {
       icon: '💸',
       description: 'Lending management system',
       enabled: false,
-      dbField: 'money_loan_enabled' as const,
+      dbField: 'moneyLoanEnabled' as const,
       features: [
         { id: 'loan-application', name: 'Loan Application', description: 'Online loan application forms' },
         { id: 'credit-scoring', name: 'Credit Scoring', description: 'Automated credit evaluation' },
@@ -181,7 +181,7 @@ export class TenantProductSettingsComponent implements OnInit {
       icon: '💍',
       description: 'Pawnshop operations management',
       enabled: false,
-      dbField: 'pawnshop_enabled' as const,
+      dbField: 'pawnshopEnabled' as const,
       features: [
         { id: 'appraisal', name: 'Item Appraisal', description: 'Item valuation system' },
         { id: 'tickets', name: 'Pawn Tickets', description: 'Ticket generation and tracking' },
@@ -195,7 +195,7 @@ export class TenantProductSettingsComponent implements OnInit {
       icon: '🛒',
       description: 'BNPL payment solution',
       enabled: false,
-      dbField: 'bnpl_enabled' as const,
+      dbField: 'bnplEnabled' as const,
       features: [
         { id: 'installments', name: 'Installment Plans', description: 'Flexible payment plans' },
         { id: 'ecommerce', name: 'E-commerce Integration', description: 'Online store integration' },
@@ -226,9 +226,9 @@ export class TenantProductSettingsComponent implements OnInit {
           );
 
           console.log('✅ Loaded tenant product settings:', {
-            moneyLoan: response.data.money_loan_enabled,
-            pawnshop: response.data.pawnshop_enabled,
-            bnpl: response.data.bnpl_enabled
+            moneyLoan: response.data.moneyLoanEnabled,
+            pawnshop: response.data.pawnshopEnabled,
+            bnpl: response.data.bnplEnabled
           });
         }
         this.loading.set(false);

@@ -12,9 +12,9 @@ export interface Tenant {
   primary_color?: string;
   secondary_color?: string;
   max_users?: number;
-  money_loan_enabled?: boolean;
-  bnpl_enabled?: boolean;
-  pawnshop_enabled?: boolean;
+  moneyLoanEnabled?: boolean;
+  bnplEnabled?: boolean;
+  pawnshopEnabled?: boolean;
   created_at: string;
 }
 

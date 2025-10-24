@@ -8,6 +8,27 @@ const logger = require('../utils/logger');
 
 class AuditLogService {
   /**
+   * Transform database audit log to camelCase
+   */
+  static transformAuditLog(dbLog) {
+    return {
+      id: dbLog.id,
+      userId: dbLog.user_id,
+      userEmail: dbLog.email,
+      userName: dbLog.first_name && dbLog.last_name 
+        ? `${dbLog.first_name} ${dbLog.last_name}` 
+        : null,
+      action: dbLog.action,
+      entityType: dbLog.entity_type,
+      entityId: dbLog.entity_id,
+      changes: typeof dbLog.changes === 'string' ? JSON.parse(dbLog.changes) : dbLog.changes,
+      ipAddress: dbLog.ip_address,
+      requestId: dbLog.request_id,
+      createdAt: dbLog.created_at,
+    };
+  }
+
+  /**
    * Create audit log entry
    */
   static async log(userId, tenantId, action, entityType, entityId, changes = {}, ipAddress = '', requestId = '') {
@@ -77,18 +98,7 @@ class AuditLogService {
         pool.query(dataQuery, params),
       ]);
 
-      const logs = dataResult.rows.map(row => ({
-        id: row.id,
-        user_id: row.user_id,
-        user_email: row.email,
-        user_name: `${row.first_name} ${row.last_name}`,
-        action: row.action,
-        entity_type: row.entity_type,
-        entity_id: row.entity_id,
-        changes: typeof row.changes === 'string' ? JSON.parse(row.changes) : row.changes,
-        ip_address: row.ip_address,
-        created_at: row.created_at,
-      }));
+      const logs = dataResult.rows.map(row => this.transformAuditLog(row));
 
       return {
         logs,
@@ -124,21 +134,7 @@ class AuditLogService {
         throw new Error('Audit log not found');
       }
 
-      const row = result.rows[0];
-
-      return {
-        id: row.id,
-        user_id: row.user_id,
-        user_email: row.email,
-        user_name: `${row.first_name} ${row.last_name}`,
-        action: row.action,
-        entity_type: row.entity_type,
-        entity_id: row.entity_id,
-        changes: typeof row.changes === 'string' ? JSON.parse(row.changes) : row.changes,
-        ip_address: row.ip_address,
-        request_id: row.request_id,
-        created_at: row.created_at,
-      };
+      return this.transformAuditLog(result.rows[0]);
     } catch (err) {
       logger.error(`Audit log service get by ID error: ${err.message}`);
       throw err;
@@ -162,11 +158,11 @@ class AuditLogService {
       return result.rows.map(row => ({
         id: row.id,
         action: row.action,
-        entity_type: row.entity_type,
-        entity_id: row.entity_id,
+        entityType: row.entity_type,
+        entityId: row.entity_id,
         changes: typeof row.changes === 'string' ? JSON.parse(row.changes) : row.changes,
-        ip_address: row.ip_address,
-        created_at: row.created_at,
+        ipAddress: row.ip_address,
+        createdAt: row.created_at,
       }));
     } catch (err) {
       logger.error(`Audit log service get user history error: ${err.message}`);
@@ -271,7 +267,7 @@ class AuditLogService {
       );
 
       logger.info(`Archived ${result.rowCount} audit logs for tenant ${tenantId}`);
-      return { archived_count: result.rowCount };
+      return { archivedCount: result.rowCount };
     } catch (err) {
       logger.error(`Audit log service archive error: ${err.message}`);
       throw err;

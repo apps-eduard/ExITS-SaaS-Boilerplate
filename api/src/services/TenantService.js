@@ -22,6 +22,9 @@ class TenantService {
       logoUrl: dbTenant.logo_url,
       primaryColor: dbTenant.primary_color,
       secondaryColor: dbTenant.secondary_color,
+      moneyLoanEnabled: dbTenant.money_loan_enabled,
+      bnplEnabled: dbTenant.bnpl_enabled,
+      pawnshopEnabled: dbTenant.pawnshop_enabled,
       createdAt: dbTenant.created_at,
       updatedAt: dbTenant.updated_at,
       // Include counts if present
@@ -190,10 +193,7 @@ class TenantService {
   static async getTenantById(tenantId) {
     try {
       const result = await pool.query(
-        `SELECT t.id, t.name, t.subdomain, t.plan, t.status, t.max_users, t.logo_url, 
-                t.primary_color, t.secondary_color, t.created_at, t.updated_at,
-                t.contact_person, t.contact_email, t.contact_phone,
-                t.money_loan_enabled, t.bnpl_enabled, t.pawnshop_enabled,
+        `SELECT t.*, 
                 sp.id as plan_id, sp.name as plan_name, sp.description as plan_description,
                 sp.price, sp.billing_cycle, sp.features, sp.max_users as plan_max_users,
                 sp.max_storage_gb
@@ -220,37 +220,28 @@ class TenantService {
         [tenantId]
       );
 
-      return {
-        id: tenant.id,
-        name: tenant.name,
-        subdomain: tenant.subdomain,
-        plan: tenant.plan,
-        status: tenant.status,
-        max_users: tenant.max_users,
-        logo_url: tenant.logo_url,
-        primary_color: tenant.primary_color,
-        secondary_color: tenant.secondary_color,
-        contact_person: tenant.contact_person,
-        contact_email: tenant.contact_email,
-        contact_phone: tenant.contact_phone,
-        created_at: tenant.created_at,
-        updated_at: tenant.updated_at,
-        money_loan_enabled: tenant.money_loan_enabled,
-        bnpl_enabled: tenant.bnpl_enabled,
-        pawnshop_enabled: tenant.pawnshop_enabled,
-        user_count: parseInt(usersCountResult.rows[0].count),
-        role_count: parseInt(rolesCountResult.rows[0].count),
-        subscription_plan: tenant.plan_id ? {
+      // Add counts to tenant object
+      tenant.user_count = parseInt(usersCountResult.rows[0].count);
+      tenant.role_count = parseInt(rolesCountResult.rows[0].count);
+
+      // Use transformTenant to get camelCase response
+      const transformedTenant = this.transformTenant(tenant);
+
+      // Add subscription plan details if available
+      if (tenant.plan_id) {
+        transformedTenant.subscriptionPlan = {
           id: tenant.plan_id,
           name: tenant.plan_name,
           description: tenant.plan_description,
           price: parseFloat(tenant.price),
-          billing_cycle: tenant.billing_cycle,
+          billingCycle: tenant.billing_cycle,
           features: tenant.features,
-          max_users: tenant.plan_max_users,
-          max_storage_gb: tenant.max_storage_gb
-        } : null
-      };
+          maxUsers: tenant.plan_max_users,
+          maxStorageGb: tenant.max_storage_gb
+        };
+      }
+
+      return transformedTenant;
     } catch (err) {
       logger.error(`Tenant service get by ID error: ${err.message}`);
       throw err;
@@ -396,19 +387,20 @@ class TenantService {
         values.push(updateData.contact_phone);
       }
 
-      if (updateData.money_loan_enabled !== undefined) {
+      // Accept both camelCase and snake_case for product flags
+      if (updateData.money_loan_enabled !== undefined || updateData.moneyLoanEnabled !== undefined) {
         fieldsToUpdate.push(`money_loan_enabled = $${paramCount++}`);
-        values.push(updateData.money_loan_enabled);
+        values.push(updateData.money_loan_enabled !== undefined ? updateData.money_loan_enabled : updateData.moneyLoanEnabled);
       }
 
-      if (updateData.bnpl_enabled !== undefined) {
+      if (updateData.bnpl_enabled !== undefined || updateData.bnplEnabled !== undefined) {
         fieldsToUpdate.push(`bnpl_enabled = $${paramCount++}`);
-        values.push(updateData.bnpl_enabled);
+        values.push(updateData.bnpl_enabled !== undefined ? updateData.bnpl_enabled : updateData.bnplEnabled);
       }
 
-      if (updateData.pawnshop_enabled !== undefined) {
+      if (updateData.pawnshop_enabled !== undefined || updateData.pawnshopEnabled !== undefined) {
         fieldsToUpdate.push(`pawnshop_enabled = $${paramCount++}`);
-        values.push(updateData.pawnshop_enabled);
+        values.push(updateData.pawnshop_enabled !== undefined ? updateData.pawnshop_enabled : updateData.pawnshopEnabled);
       }
 
       if (fieldsToUpdate.length === 0) {
@@ -543,17 +535,17 @@ class TenantService {
         pool.query(`SELECT COUNT(*) as count FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE r.tenant_id = $1`, [tenantId]),
         pool.query(`SELECT COUNT(*) as count FROM audit_logs WHERE tenant_id = $1`, [tenantId]),
         pool.query(
-          `SELECT COUNT(*) as count FROM sessions WHERE tenant_id = $1 AND status = 'active'`,
+          `SELECT COUNT(*) as count FROM user_sessions WHERE tenant_id = $1 AND status = 'active'`,
           [tenantId]
         ),
       ]);
 
       return {
-        total_users: parseInt(stats[0].rows[0].count),
-        total_roles: parseInt(stats[1].rows[0].count),
-        total_assignments: parseInt(stats[2].rows[0].count),
-        total_audit_logs: parseInt(stats[3].rows[0].count),
-        active_sessions: parseInt(stats[4].rows[0].count),
+        totalUsers: parseInt(stats[0].rows[0].count),
+        totalRoles: parseInt(stats[1].rows[0].count),
+        totalAssignments: parseInt(stats[2].rows[0].count),
+        totalAuditLogs: parseInt(stats[3].rows[0].count),
+        activeSessions: parseInt(stats[4].rows[0].count),
       };
     } catch (err) {
       logger.error(`Tenant service get stats error: ${err.message}`);
@@ -583,8 +575,8 @@ class TenantService {
 
       return {
         allowed: user_count < max_users,
-        current_count: parseInt(user_count),
-        max_count: max_users,
+        currentCount: parseInt(user_count),
+        maxCount: max_users,
         remaining: max_users - parseInt(user_count),
       };
     } catch (err) {

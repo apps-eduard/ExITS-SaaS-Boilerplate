@@ -146,22 +146,28 @@ export class TenantSidebarComponent implements OnInit {
   // Check if any products are enabled
   hasAnyProductEnabled = computed(() => {
     const tenant = this.tenantData();
-    if (!tenant) return false;
-    return tenant.money_loan_enabled || tenant.pawnshop_enabled || tenant.bnpl_enabled;
+    if (!tenant) {
+      console.log('🔍 hasAnyProductEnabled: No tenant data');
+      return false;
+    }
+    const hasProducts = tenant.moneyLoanEnabled || tenant.pawnshopEnabled || tenant.bnplEnabled;
+    console.log('🔍 hasAnyProductEnabled:', {
+      tenant: tenant.name,
+      moneyLoanEnabled: tenant.moneyLoanEnabled,
+      pawnshopEnabled: tenant.pawnshopEnabled,
+      bnplEnabled: tenant.bnplEnabled,
+      result: hasProducts
+    });
+    return hasProducts;
   });
 
-  // Filter menu items based on tenant products
+  // Filter menu items based on permissions (Products menu always visible)
   filteredMenuItems = computed(() => {
     const items = this.baseMenuItems();
-    const hasProducts = this.hasAnyProductEnabled();
     
-    // If no products are enabled, filter out the Products menu
-    return items.filter(item => {
-      if (item.menuKey === 'tenant-products' && !hasProducts) {
-        return false;
-      }
-      return true;
-    });
+    // Don't filter out Products menu - let users see "No Products Available" message
+    // This encourages them to purchase products
+    return items;
   });
 
   baseMenuItems = signal<MenuItem[]>([
@@ -238,9 +244,9 @@ export class TenantSidebarComponent implements OnInit {
           this.tenantData.set(response.data);
           console.log('✅ Loaded tenant details:', {
             name: response.data.name,
-            moneyLoan: response.data.money_loan_enabled,
-            pawnshop: response.data.pawnshop_enabled,
-            bnpl: response.data.bnpl_enabled
+            moneyLoan: response.data.moneyLoanEnabled,
+            pawnshop: response.data.pawnshopEnabled,
+            bnpl: response.data.bnplEnabled
           });
         }
       },

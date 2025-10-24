@@ -27,7 +27,10 @@ exports.seed = async function(knex) {
       max_users: 1000,
       contact_person: 'System Admin',
       contact_email: 'admin@exits-platform.com',
-      contact_phone: '+63-917-123-4567'
+      contact_phone: '+63-917-123-4567',
+      money_loan_enabled: false,
+      bnpl_enabled: false,
+      pawnshop_enabled: false
     },
     {
       name: 'ACME Corporation',
@@ -37,7 +40,10 @@ exports.seed = async function(knex) {
       max_users: 100,
       contact_person: 'John Doe',
       contact_email: 'john.doe@acme.com',
-      contact_phone: '+63-917-123-4567'
+      contact_phone: '+63-917-123-4567',
+      money_loan_enabled: false,
+      bnpl_enabled: false,
+      pawnshop_enabled: false
     }
   ]).returning(['id', 'name']);
   console.log(`✅ ${tenants.length} tenants created`);
@@ -48,10 +54,11 @@ exports.seed = async function(knex) {
     { menu_key: 'dashboard', display_name: 'Dashboard', icon: 'dashboard', space: 'tenant', menu_order: 1, status: 'active' },
     { menu_key: 'users', display_name: 'User Management', icon: 'people', space: 'tenant', menu_order: 2, status: 'active' },
     { menu_key: 'roles', display_name: 'Roles & Permissions', icon: 'shield-check', space: 'tenant', menu_order: 3, status: 'active' },
-    { menu_key: 'tenants', display_name: 'Tenants', icon: 'office-building', space: 'system', menu_order: 4, status: 'active' },
-    { menu_key: 'permissions', display_name: 'Permissions', icon: 'key', space: 'system', menu_order: 5, status: 'active' },
-    { menu_key: 'audit', display_name: 'Audit Logs', icon: 'document-text', space: 'tenant', menu_order: 6, status: 'active' },
-    { menu_key: 'settings', display_name: 'Settings', icon: 'cog', space: 'tenant', menu_order: 7, status: 'active' }
+    { menu_key: 'tenant-products', display_name: 'Products', icon: 'cube', space: 'tenant', menu_order: 4, status: 'active' },
+    { menu_key: 'tenants', display_name: 'Tenants', icon: 'office-building', space: 'system', menu_order: 5, status: 'active' },
+    { menu_key: 'permissions', display_name: 'Permissions', icon: 'key', space: 'system', menu_order: 6, status: 'active' },
+    { menu_key: 'audit', display_name: 'Audit Logs', icon: 'document-text', space: 'tenant', menu_order: 7, status: 'active' },
+    { menu_key: 'settings', display_name: 'Settings', icon: 'cog', space: 'tenant', menu_order: 8, status: 'active' }
   ]).returning(['id', 'menu_key']);
   console.log(`✅ ${modules.length} modules created`);
 

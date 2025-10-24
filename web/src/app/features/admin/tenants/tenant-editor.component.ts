@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -294,7 +294,7 @@ interface ProductSubscriptionForm {
                             required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500">
                       <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                      <option *ngFor="let plan of moneyLoanPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
                     </select>
@@ -366,7 +366,7 @@ interface ProductSubscriptionForm {
                             required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                       <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                      <option *ngFor="let plan of bnplPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
                     </select>
@@ -438,7 +438,7 @@ interface ProductSubscriptionForm {
                             required
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
                       <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of subscriptionPlans()" [value]="plan.id">
+                      <option *ngFor="let plan of pawnshopPlans()" [value]="plan.id">
                         {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
                       </option>
                     </select>
@@ -568,6 +568,23 @@ export class TenantEditorComponent implements OnInit {
   // Subscription plans and product subscriptions
   subscriptionPlans = signal<SubscriptionPlan[]>([]);
   existingProductSubscriptions = signal<Map<string, ProductSubscription>>(new Map());
+
+  // Computed: Filter plans by product type
+  platformPlans = computed(() => 
+    this.subscriptionPlans().filter(plan => !plan.productType)
+  );
+
+  moneyLoanPlans = computed(() => 
+    this.subscriptionPlans().filter(plan => plan.productType === 'money_loan')
+  );
+
+  bnplPlans = computed(() => 
+    this.subscriptionPlans().filter(plan => plan.productType === 'bnpl')
+  );
+
+  pawnshopPlans = computed(() => 
+    this.subscriptionPlans().filter(plan => plan.productType === 'pawnshop')
+  );
 
   form: TenantForm = {
     name: '',

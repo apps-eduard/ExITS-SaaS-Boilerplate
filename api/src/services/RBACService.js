@@ -163,7 +163,7 @@ class RBACService {
    */
   static async getRoleWithPermissions(roleId) {
     try {
-      console.log(`🔍 [DEBUG] Getting role with permissions for roleId: ${roleId}`);
+      // console.log(`🔍 [DEBUG] Getting role with permissions for roleId: ${roleId}`);
       
       const roleQuery = `
         SELECT id, name, description, space, status, tenant_id
@@ -172,15 +172,15 @@ class RBACService {
       `;
       
       const roleResult = await db.query(roleQuery, [roleId]);
-      console.log(`🔍 [DEBUG] Role query result:`, roleResult.rows);
+      // console.log(`🔍 [DEBUG] Role query result:`, roleResult.rows);
       
       if (roleResult.rows.length === 0) {
-        console.log(`❌ [DEBUG] Role not found for ID: ${roleId}`);
+        // console.log(`❌ [DEBUG] Role not found for ID: ${roleId}`);
         throw new Error('Role not found');
       }
       
       const role = roleResult.rows[0];
-      console.log(`✅ [DEBUG] Role found:`, role);
+      // console.log(`✅ [DEBUG] Role found:`, role);
       
       // Get permissions for this role (Standard RBAC)
       const permQuery = `
@@ -197,10 +197,10 @@ class RBACService {
         ORDER BY p.resource, p.action
       `;
       
-      console.log(`🔍 [DEBUG] Executing permissions query for role ${roleId}`);
+      // console.log(`🔍 [DEBUG] Executing permissions query for role ${roleId}`);
       const permResult = await db.query(permQuery, [roleId]);
-      console.log(`🔍 [DEBUG] Permissions query returned ${permResult.rows.length} rows`);
-      console.log(`🔍 [DEBUG] First 5 permissions:`, permResult.rows.slice(0, 5));
+      // console.log(`🔍 [DEBUG] Permissions query returned ${permResult.rows.length} rows`);
+      // console.log(`🔍 [DEBUG] First 5 permissions:`, permResult.rows.slice(0, 5));
       
       // Transform permissions to camelCase array format
       const permissions = permResult.rows.map(row => ({
@@ -212,8 +212,8 @@ class RBACService {
         space: row.space
       }));
       
-      console.log(`🔍 [DEBUG] Transformed permissions count: ${permissions.length}`);
-      console.log(`🔍 [DEBUG] Sample transformed permissions:`, permissions.slice(0, 3));
+      // console.log(`🔍 [DEBUG] Transformed permissions count: ${permissions.length}`);
+      // console.log(`🔍 [DEBUG] Sample transformed permissions:`, permissions.slice(0, 3));
       
       // Transform role to camelCase
       const transformedRole = {
@@ -227,11 +227,11 @@ class RBACService {
       };
       
       logger.info(`📋 Role ${roleId} loaded with ${permissions.length} permissions`);
-      console.log(`✅ [DEBUG] Final role object:`, {
-        ...transformedRole,
-        permissionCount: permissions.length,
-        samplePermissions: permissions.slice(0, 3)
-      });
+      // console.log(`✅ [DEBUG] Final role object:`, {
+      //   ...transformedRole,
+      //   permissionCount: permissions.length,
+      //   samplePermissions: permissions.slice(0, 3)
+      // });
       
       return transformedRole;
     } catch (error) {

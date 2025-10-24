@@ -21,6 +21,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'one_time',
       max_users: 3,
       max_storage_gb: 5,
+      product_type: null, // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         api_access: true,
@@ -40,6 +41,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 5,
       max_storage_gb: 10,
+      product_type: null, // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         api_access: false,
@@ -52,12 +54,13 @@ exports.seed = async function(knex) {
       terms_and_conditions: 'Standard terms apply for Starter plan.'
     },
     {
-      name: 'Professional',
+      name: 'Pro',
       description: 'Best for growing businesses with advanced needs',
       price: 79.99,
       billing_cycle: 'monthly',
       max_users: 25,
       max_storage_gb: 50,
+      product_type: null, // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         priority_support: true,
@@ -78,6 +81,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 100,
       max_storage_gb: 200,
+      product_type: null, // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         priority_support: true,
@@ -94,64 +98,177 @@ exports.seed = async function(knex) {
       setup_fee: 99.99,
       terms_and_conditions: 'Enterprise terms and SLA apply.'
     },
+    // Product-specific plans
     {
-      name: 'Money Loan Add-on',
-      description: 'Money lending and loan management features',
-      price: 49.99,
+      name: 'Money Loan - Starter',
+      description: 'Basic money lending features for small operations',
+      price: 29.99,
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
+      product_type: 'money_loan',
       features: JSON.stringify({
+        max_active_loans: 50,
         loan_origination: true,
         payment_tracking: true,
         interest_calculation: true,
         borrower_management: true,
-        reporting: true
+        basic_reporting: true,
+        sms_notifications: false,
+        advanced_analytics: false
       }),
       status: 'active',
       is_popular: false,
       setup_fee: 0.00,
-      terms_and_conditions: 'Money Loan add-on terms apply.'
+      terms_and_conditions: 'Money Loan Starter plan terms apply.'
     },
     {
-      name: 'BNPL Add-on',
-      description: 'Buy Now Pay Later service features',
-      price: 39.99,
+      name: 'Money Loan - Pro',
+      description: 'Advanced money lending with analytics and automation',
+      price: 79.99,
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
+      product_type: 'money_loan',
       features: JSON.stringify({
+        max_active_loans: 500,
+        loan_origination: true,
+        payment_tracking: true,
+        interest_calculation: true,
+        borrower_management: true,
+        advanced_reporting: true,
+        sms_notifications: true,
+        email_notifications: true,
+        advanced_analytics: true,
+        automated_reminders: true,
+        credit_scoring: true
+      }),
+      status: 'active',
+      is_popular: true,
+      setup_fee: 0.00,
+      terms_and_conditions: 'Money Loan Pro plan terms apply.'
+    },
+    {
+      name: 'Money Loan - Enterprise',
+      description: 'Enterprise-grade lending platform with unlimited loans',
+      price: 199.99,
+      billing_cycle: 'monthly',
+      max_users: 0,
+      max_storage_gb: 0,
+      product_type: 'money_loan',
+      features: JSON.stringify({
+        max_active_loans: -1, // Unlimited
+        loan_origination: true,
+        payment_tracking: true,
+        interest_calculation: true,
+        borrower_management: true,
+        advanced_reporting: true,
+        sms_notifications: true,
+        email_notifications: true,
+        advanced_analytics: true,
+        automated_reminders: true,
+        credit_scoring: true,
+        custom_workflows: true,
+        api_access: true,
+        white_label: true
+      }),
+      status: 'active',
+      is_popular: false,
+      setup_fee: 50.00,
+      terms_and_conditions: 'Money Loan Enterprise plan terms apply.'
+    },
+    {
+      name: 'BNPL - Starter',
+      description: 'Basic Buy Now Pay Later features',
+      price: 24.99,
+      billing_cycle: 'monthly',
+      max_users: 0,
+      max_storage_gb: 0,
+      product_type: 'bnpl',
+      features: JSON.stringify({
+        max_transactions_per_month: 100,
         payment_splitting: true,
         installment_plans: true,
         merchant_integration: true,
         customer_portal: true,
-        risk_assessment: true
+        basic_reporting: true
       }),
       status: 'active',
       is_popular: false,
       setup_fee: 0.00,
-      terms_and_conditions: 'BNPL add-on terms apply.'
+      terms_and_conditions: 'BNPL Starter plan terms apply.'
     },
     {
-      name: 'Pawnshop Add-on',
-      description: 'Pawnshop and collateral management features',
-      price: 59.99,
+      name: 'BNPL - Pro',
+      description: 'Advanced BNPL with risk assessment',
+      price: 69.99,
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
+      product_type: 'bnpl',
       features: JSON.stringify({
+        max_transactions_per_month: 1000,
+        payment_splitting: true,
+        installment_plans: true,
+        merchant_integration: true,
+        customer_portal: true,
+        risk_assessment: true,
+        fraud_detection: true,
+        advanced_reporting: true,
+        custom_payment_terms: true
+      }),
+      status: 'active',
+      is_popular: true,
+      setup_fee: 0.00,
+      terms_and_conditions: 'BNPL Pro plan terms apply.'
+    },
+    {
+      name: 'Pawnshop - Starter',
+      description: 'Basic pawnshop management features',
+      price: 34.99,
+      billing_cycle: 'monthly',
+      max_users: 0,
+      max_storage_gb: 0,
+      product_type: 'pawnshop',
+      features: JSON.stringify({
+        max_active_items: 200,
+        item_valuation: true,
+        collateral_tracking: true,
+        redemption_management: true,
+        basic_inventory: true,
+        basic_reporting: true
+      }),
+      status: 'active',
+      is_popular: false,
+      setup_fee: 0.00,
+      terms_and_conditions: 'Pawnshop Starter plan terms apply.'
+    },
+    {
+      name: 'Pawnshop - Pro',
+      description: 'Advanced pawnshop with auction system',
+      price: 89.99,
+      billing_cycle: 'monthly',
+      max_users: 0,
+      max_storage_gb: 0,
+      product_type: 'pawnshop',
+      features: JSON.stringify({
+        max_active_items: 2000,
         item_valuation: true,
         collateral_tracking: true,
         redemption_management: true,
         auction_system: true,
-        inventory_management: true
+        advanced_inventory: true,
+        photo_management: true,
+        advanced_reporting: true,
+        barcode_scanning: true,
+        sms_notifications: true
       }),
       status: 'active',
-      is_popular: false,
+      is_popular: true,
       setup_fee: 0.00,
-      terms_and_conditions: 'Pawnshop add-on terms apply.'
+      terms_and_conditions: 'Pawnshop Pro plan terms apply.'
     }
-  ]).returning(['id', 'name', 'price']);
+  ]).returning(['id', 'name', 'price', 'product_type']);
   
   console.log(`✅ ${subscriptionPlans.length} subscription plans created`);
 
@@ -168,8 +285,8 @@ exports.seed = async function(knex) {
     { plan_id: starterPlan.id, feature_key: 'reports', feature_name: 'Basic Reports', description: 'Standard reporting features', feature_value: 'true' }
   );
 
-  // Professional plan features
-  const proPlan = subscriptionPlans.find(p => p.name === 'Professional');
+  // Pro plan features
+  const proPlan = subscriptionPlans.find(p => p.name === 'Pro');
   planFeatures.push(
     { plan_id: proPlan.id, feature_key: 'users', feature_name: 'Maximum Users', description: 'Number of users allowed', feature_value: '25', limit_value: 25 },
     { plan_id: proPlan.id, feature_key: 'storage', feature_name: 'Storage (GB)', description: 'Storage space in GB', feature_value: '50', limit_value: 50 },
@@ -198,32 +315,56 @@ exports.seed = async function(knex) {
 
   // 3. Create product subscriptions for existing tenants
   console.log('3. Creating product subscriptions for tenants...');
-  const tenants = await knex('tenants').select('id', 'name');
+  const tenants = await knex('tenants').select('id', 'name', 'money_loan_enabled', 'bnpl_enabled', 'pawnshop_enabled');
   
   let productSubscriptionCount = 0;
   for (const tenant of tenants) {
-    // Subscribe ExITS Platform to all products
-    if (tenant.name === 'ExITS Platform') {
-      const products = ['money_loan', 'bnpl', 'pawnshop'];
-      for (const product of products) {
-        await knex('product_subscriptions').insert({
-          tenant_id: tenant.id,
-          product_type: product,
-          subscription_plan_id: subscriptionPlans.find(p => p.name.toLowerCase().includes(product.replace('_', ' '))).id,
-          status: 'active',
-          price: subscriptionPlans.find(p => p.name.toLowerCase().includes(product.replace('_', ' '))).price,
-          billing_cycle: 'monthly'
-        });
-        productSubscriptionCount++;
-      }
-    } else {
-      // Subscribe other tenants to money_loan by default
+    // Subscribe to Money Loan if enabled
+    if (tenant.money_loan_enabled) {
+      const plan = tenant.name === 'ExITS Platform' 
+        ? subscriptionPlans.find(p => p.name === 'Money Loan - Enterprise')
+        : subscriptionPlans.find(p => p.name === 'Money Loan - Pro');
+      
       await knex('product_subscriptions').insert({
         tenant_id: tenant.id,
         product_type: 'money_loan',
-        subscription_plan_id: subscriptionPlans.find(p => p.name === 'Money Loan Add-on').id,
+        subscription_plan_id: plan.id,
         status: 'active',
-        price: subscriptionPlans.find(p => p.name === 'Money Loan Add-on').price,
+        price: plan.price,
+        billing_cycle: 'monthly'
+      });
+      productSubscriptionCount++;
+    }
+
+    // Subscribe to BNPL if enabled
+    if (tenant.bnpl_enabled) {
+      const plan = tenant.name === 'ExITS Platform'
+        ? subscriptionPlans.find(p => p.name === 'BNPL - Pro')
+        : subscriptionPlans.find(p => p.name === 'BNPL - Starter');
+      
+      await knex('product_subscriptions').insert({
+        tenant_id: tenant.id,
+        product_type: 'bnpl',
+        subscription_plan_id: plan.id,
+        status: 'active',
+        price: plan.price,
+        billing_cycle: 'monthly'
+      });
+      productSubscriptionCount++;
+    }
+
+    // Subscribe to Pawnshop if enabled
+    if (tenant.pawnshop_enabled) {
+      const plan = tenant.name === 'ExITS Platform'
+        ? subscriptionPlans.find(p => p.name === 'Pawnshop - Pro')
+        : subscriptionPlans.find(p => p.name === 'Pawnshop - Starter');
+      
+      await knex('product_subscriptions').insert({
+        tenant_id: tenant.id,
+        product_type: 'pawnshop',
+        subscription_plan_id: plan.id,
+        status: 'active',
+        price: plan.price,
         billing_cycle: 'monthly'
       });
       productSubscriptionCount++;
@@ -236,11 +377,11 @@ exports.seed = async function(knex) {
   console.log('4. Creating tenant subscriptions...');
   let tenantSubscriptionCount = 0;
   for (const tenant of tenants) {
-    let planName = 'Professional'; // Default
+    let planName = 'Pro'; // Default
     if (tenant.name === 'ExITS Platform') {
       planName = 'Enterprise';
     } else if (tenant.name === 'ACME Corporation') {
-      planName = 'Professional';
+      planName = 'Pro';
     }
     
     const plan = subscriptionPlans.find(p => p.name === planName);

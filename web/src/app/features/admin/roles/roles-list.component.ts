@@ -195,7 +195,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                       {{ role.status === 'active' ? 'Disable' : 'Enable' }}
                     </button>
                     <button
-                      [routerLink]="'/admin/roles/' + role.id"
+                      [routerLink]="(isTenantContext() ? '/tenant/roles/' : '/admin/roles/') + role.id"
                       class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
                       title="Edit Role"
                     >
@@ -236,7 +236,7 @@ import { RBACService } from '../../../core/services/rbac.service';
           </p>
           <button
             *ngIf="roleService.rolesSignal().length === 0"
-            routerLink="/admin/roles/new"
+            [routerLink]="isTenantContext() ? '/tenant/roles/new' : '/admin/roles/new'"
             class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
           >
             ➕ Create First Role

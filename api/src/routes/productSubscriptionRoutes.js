@@ -17,9 +17,21 @@ router.use(authMiddleware);
 router.get('/products', ProductSubscriptionController.getAvailableProducts);
 
 // Get tenant product subscriptions
+// Allow users to view their own tenant's subscriptions OR require tenants/billing read permission
 router.get(
   '/tenant/:tenantId',
-  rbacMiddleware(['tenants', 'billing'], ['read']),
+  (req, res, next) => {
+    const requestedTenantId = parseInt(req.params.tenantId);
+    const userTenantId = req.tenantId; // Set by auth middleware
+    
+    // If user is viewing their own tenant, allow it
+    if (requestedTenantId === userTenantId) {
+      return next();
+    }
+    
+    // Otherwise, require permissions
+    return rbacMiddleware(['tenants', 'billing'], ['read'])(req, res, next);
+  },
   ProductSubscriptionController.getTenantProductSubscriptions
 );
 
