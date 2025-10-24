@@ -18,8 +18,10 @@ class AuthService {
       logger.info('🔍 Querying database for user:', { email });
       
       const result = await pool.query(
-        `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.status, u.tenant_id
+        `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.status, u.tenant_id, r.name as role_name
          FROM users u
+         LEFT JOIN user_roles ur ON u.id = ur.user_id
+         LEFT JOIN roles r ON ur.role_id = r.id
          WHERE u.email = $1 AND u.status = $2`,
         [email, 'active']
       );
@@ -80,14 +82,14 @@ class AuthService {
         .digest('hex');
 
       await pool.query(
-        `INSERT INTO sessions (user_id, tenant_id, access_token_hash, refresh_token_hash, ip_address, status, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '24 hours')`,
-        [user.id, user.tenant_id, sessionHash, refreshToken, ipAddress, 'active']
+        `INSERT INTO user_sessions (user_id, token_hash, refresh_token_hash, ip_address, status, expires_at)
+         VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours')`,
+        [user.id, sessionHash, refreshToken, ipAddress, 'active']
       );
 
       // Update last login
       await pool.query(
-        `UPDATE users SET last_login_at = NOW() WHERE id = $1`,
+        `UPDATE users SET last_login = NOW() WHERE id = $1`,
         [user.id]
       );
 
@@ -103,8 +105,10 @@ class AuthService {
           lastName: user.last_name,
           fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
           tenantId: user.tenant_id,
+          role: user.role_name,
         },
         tokens: { accessToken, refreshToken },
+        session: { created: true, tokenHash: sessionHash },
         permissions,
       };
     } catch (err) {
@@ -122,7 +126,7 @@ class AuthService {
 
       // Verify session still exists
       const sessionResult = await pool.query(
-        `SELECT id FROM sessions
+        `SELECT id FROM user_sessions
          WHERE user_id = $1 AND refresh_token_hash = $2 AND status = $3`,
         [decoded.id, refreshToken, 'active']
       );
@@ -153,8 +157,8 @@ class AuthService {
   static async logout(userId, ipAddress) {
     try {
       const result = await pool.query(
-        `UPDATE sessions SET status = $1 WHERE user_id = $2 AND status = $3
-         RETURNING user_id, tenant_id`,
+        `UPDATE user_sessions SET status = $1 WHERE user_id = $2 AND status = $3
+         RETURNING user_id`,
         ['revoked', userId, 'active']
       );
 

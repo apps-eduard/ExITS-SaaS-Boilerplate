@@ -24,7 +24,7 @@ class UserService {
       status: dbUser.status,
       emailVerified: dbUser.email_verified,
       mfaEnabled: dbUser.mfa_enabled,
-      lastLoginAt: dbUser.last_login_at,
+      lastLogin: dbUser.last_login,
       createdAt: dbUser.created_at,
       updatedAt: dbUser.updated_at,
     };
@@ -102,10 +102,10 @@ class UserService {
     try {
       // System admins (tenantId = null) can view any user, tenant admins can only view their own tenant users
       const query = tenantId 
-        ? `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+        ? `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
            FROM users
            WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)`
-        : `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+        : `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
            FROM users
            WHERE id = $1`;
 
@@ -196,7 +196,7 @@ class UserService {
       const tenantFilter = includeAllTenants ? '' : 'WHERE (u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1 IS NULL))';
 
       const baseQuery = `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login_at, u.created_at,
+        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login, u.created_at,
                t.name as tenant_name, t.subdomain as tenant_subdomain
         FROM users u
         LEFT JOIN tenants t ON u.tenant_id = t.id
@@ -306,14 +306,14 @@ class UserService {
           UPDATE users
           SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
         `;
       } else {
         query = `
           UPDATE users
           SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount}
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
         `;
       }
 
@@ -365,7 +365,7 @@ class UserService {
   static async restoreUser(userId, requestingUserId, tenantId) {
     try {
       const result = await pool.query(
-        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login_at, created_at, updated_at`,
+        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at`,
         [userId]
       );
 

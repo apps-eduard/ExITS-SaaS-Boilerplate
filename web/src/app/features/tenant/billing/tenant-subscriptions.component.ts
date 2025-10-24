@@ -88,7 +88,7 @@ interface SubscriptionPlan {
 
               <!-- Current Plan Features -->
         <div class="mt-6 grid grid-cols-2 gap-3 border-t border-blue-200 pt-6 dark:border-blue-900">
-          <div *ngFor="let feature of currentPlan.features.slice(0, 6)" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <div *ngFor="let feature of (currentPlan.features || []).slice(0, 6)" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <svg class="h-5 w-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>

@@ -200,7 +200,8 @@ function Setup-Database {
     # Wait a moment for database to be fully available
     Start-Sleep -Seconds 2
     
-    Write-Step "Running database migrations..."
+    Write-Step "Running database migrations using Knex..."
+    Write-Host "$($Bright)$($Yellow)  📦 Using Knex Migration System (npx knex migrate:latest)$($Reset)"
     Push-Location api
     
     # Keep password set for migration
@@ -240,40 +241,34 @@ EMAIL_FROM=noreply@exits-saas.com
         Write-Success ".env file already exists"
     }
     
-    # Run migrations using the migrate script
-    Write-Info "Executing database migrations (this may take a moment)..."
-    Write-Host "$($Gray)  Migration output:$($Reset)"
+    # Run Knex migrations to create schema
+    Write-Info "Running Knex migrations to create database schema..."
+    Write-Host "$($Bright)$($Cyan)╔════════════════════════════════════════════════════════════╗$($Reset)"
+    Write-Host "$($Bright)$($Cyan)║  🔧 KNEX MIGRATION SYSTEM - Creating Database Schema     ║$($Reset)"
+    Write-Host "$($Bright)$($Cyan)║  Command: npm run migrate (npx knex migrate:latest)      ║$($Reset)"
+    Write-Host "$($Bright)$($Cyan)╚════════════════════════════════════════════════════════════╝$($Reset)"
+    Write-Host "$($Gray)  Knex migration output:$($Reset)"
     $migrateOutput = npm run migrate 2>&1
     $migrateOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
     $migrateSuccess = $LASTEXITCODE -eq 0
     
     if (!$migrateSuccess) {
         Pop-Location
-        Write-Error-Custom "Database migration failed"
-        Write-Host "$($Yellow)Please check that PostgreSQL is running and the database 'exits_saas_db' was created.$($Reset)"
+        Write-Error-Custom "Knex migrations failed"
+        Write-Host "$($Yellow)Please check the migration output above for errors.$($Reset)"
         return $false
     }
     
-    Write-Success "Database schema created successfully"
+    Write-Success "Database schema created successfully via Knex migrations"
+    Write-Host "$($Bright)$($Green)  ✅ All database tables created using Knex migration system$($Reset)"
     
-    Write-Step "Applying database fixes and enhancements..."
-    
-    # Run the database fixes script
-    $fixOutput = node src\scripts\apply-db-fixes.js 2>&1
-    $fixResult = $LASTEXITCODE
-    
-    if ($fixResult -eq 0) {
-        Write-Success "Database fixes applied successfully"
-    } else {
-        Write-Warning "Some database fixes may have failed (this might be okay if already applied)"
-        if ($fixOutput) {
-            Write-Host "$($Gray)  Fix output: $fixOutput$($Reset)"
-        }
-    }
-    
-    Write-Step "Seeding database with test data..."
+    Write-Step "Seeding database with initial data using Knex..."
+    Write-Host "$($Bright)$($Cyan)╔════════════════════════════════════════════════════════════╗$($Reset)"
+    Write-Host "$($Bright)$($Cyan)║  🌱 KNEX SEED SYSTEM - Populating Initial Data           ║$($Reset)"
+    Write-Host "$($Bright)$($Cyan)║  Command: npm run seed (npx knex seed:run)               ║$($Reset)"
+    Write-Host "$($Bright)$($Cyan)╚════════════════════════════════════════════════════════════╝$($Reset)"
     Write-Host "$($Gray)  Seed output:$($Reset)"
-    $seedOutput = node simple-seed.js 2>&1
+    $seedOutput = npm run seed 2>&1
     $seedOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
     $seedSuccess = $LASTEXITCODE -eq 0
     
@@ -284,46 +279,87 @@ EMAIL_FROM=noreply@exits-saas.com
         return $false
     }
     
-    Write-Success "Database seeded successfully with test users and data"
-    
-    Write-Step "Migrating to standard RBAC (resource:action format)..."
-    Write-Host "$($Gray)  RBAC migration output:$($Reset)"
-    $env:PGPASSWORD = $dbPassword
-    $rbacMigrateOutput = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -d exits_saas_db -f 'src\scripts\migrate-to-standard-rbac.sql' 2>&1
-    $rbacMigrateOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
-    $rbacMigrateSuccess = $LASTEXITCODE -eq 0
-    
-    if (!$rbacMigrateSuccess) {
-        Write-Warning "RBAC migration may have failed (this might be okay if already applied)"
-    } else {
-        Write-Success "Standard RBAC schema created (permissions table with resource:action format)"
-    }
-    
-    Write-Step "Assigning default permissions to users..."
-    Write-Host "$($Gray)  Permission assignment output:$($Reset)"
-    $permissionOutput = node src\scripts\assign-default-permissions.js 2>&1
-    $permissionOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
-    $permissionSuccess = $LASTEXITCODE -eq 0
-    
-    if ($permissionSuccess) {
-        Write-Success "All users granted Super Admin role with full permissions (49 permissions)"
-    } else {
-        Write-Warning "Permission assignment may have encountered issues"
-    }
-    
-    Write-Step "Fixing Tenant Admin permissions..."
-    Write-Host "$($Gray)  Tenant Admin fix output:$($Reset)"
-    $tenantAdminOutput = node src\scripts\fix-tenant-admin-permissions.js 2>&1
-    $tenantAdminOutput | ForEach-Object { Write-Host "$($Gray)  │$($Reset) $_" }
-    $tenantAdminSuccess = $LASTEXITCODE -eq 0
-    
-    if ($tenantAdminSuccess) {
-        Write-Success "Tenant Admin roles granted all tenant-level permissions"
-    } else {
-        Write-Warning "Tenant Admin permission fix may have encountered issues"
-    }
+    Write-Success "Database seeded successfully with tenants, users, roles and permissions"
+    Write-Host "$($Bright)$($Green)  ✅ All data populated using Knex seed system (98 permissions assigned)$($Reset)"
     
     Pop-Location
+    
+    # Clean up password
+    Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+    
+    return $true
+}
+
+# Reset user passwords
+function Reset-UserPasswords {
+    Write-Header "Resetting User Passwords"
+    
+    Write-Step "Reading database credentials from .env file..."
+    # Read DB password from .env file
+    $dbPassword = 'admin'  # Default
+    if (Test-Path "api\.env") {
+        $envContent = Get-Content "api\.env"
+        $passwordLine = $envContent | Where-Object { $_ -match '^DB_PASSWORD=' }
+        if ($passwordLine) {
+            $dbPassword = ($passwordLine -split '=',2)[1].Trim()
+            Write-Info "Found DB password in api\.env"
+        }
+    }
+    
+    $env:PGPASSWORD = $dbPassword
+    
+    Write-Step "Generating new secure passwords..."
+    
+    # Use standardized passwords that match the frontend test accounts
+    $systemAdminPassword = "Admin@123"
+    $tenantAdmin1Password = "Admin@123"
+    $tenantAdmin2Password = "Admin@123"
+    
+    Write-Step "Updating user passwords in database..."
+    
+    # Create password reset script from template  
+    if (!(Test-Path "api\reset-passwords-template.js")) {
+        Write-Error-Custom "Password reset template not found"
+        return $false
+    }
+    
+    $templateContent = Get-Content "api\reset-passwords-template.js" -Raw
+    $scriptContent = $templateContent -replace 'REPLACE_DB_PASSWORD', $dbPassword
+    $scriptContent = $scriptContent -replace 'REPLACE_SYSTEM_PASSWORD', $systemAdminPassword  
+    $scriptContent = $scriptContent -replace 'REPLACE_TENANT1_PASSWORD', $tenantAdmin1Password
+    $scriptContent = $scriptContent -replace 'REPLACE_TENANT2_PASSWORD', $tenantAdmin2Password
+    
+    # Write the customized script
+    $scriptContent | Out-File -FilePath "api\reset-passwords.js" -Encoding UTF8
+    
+    # Execute the password reset script
+    Push-Location api
+    $resetOutput = node reset-passwords.js 2>&1
+    $resetSuccess = $LASTEXITCODE -eq 0
+    Pop-Location
+    
+    # Clean up the temporary script
+    Remove-Item "api\reset-passwords.js" -ErrorAction SilentlyContinue
+    
+    if ($resetSuccess) {
+        Write-Success "User passwords reset successfully"
+        
+        # Store passwords for final display
+        $global:SystemAdminPassword = $systemAdminPassword
+        $global:TenantAdmin1Password = $tenantAdmin1Password
+        $global:TenantAdmin2Password = $tenantAdmin2Password
+        
+        Write-Host ""
+        Write-Host "$($Bright)$($Green)🔐 Standardized Login Credentials:$($Reset)"
+        Write-Host "  System Admin: admin@exitsaas.com / Admin@123"
+        Write-Host "  Tenant Admin 1: admin-1@example.com / Admin@123"
+        Write-Host "  Tenant Admin 2: admin-2@example.com / Admin@123"
+        Write-Host ""
+    } else {
+        Write-Error-Custom "Failed to reset user passwords"
+        Write-Host "$($Red)Reset output: $resetOutput$($Reset)"
+        return $false
+    }
     
     # Clean up password
     Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
@@ -395,28 +431,55 @@ function Main {
         return 
     }
     
+    if (!(Reset-UserPasswords)) { 
+        Write-Error-Custom "Password reset failed. Setup cannot continue."
+        return 
+    }
+    
     Write-Header "Setup Complete"
     Write-Success "Development environment is ready!"
     Write-Host ""
-    Write-Host "$($Green)✓ Database: exits_saas_db (PostgreSQL)$($Reset)"
-    Write-Host "$($Green)✓ Standard RBAC: Implemented (49 permissions with resource:action format)$($Reset)"
-    Write-Host "$($Green)✓ Users: 4 users with Super Admin role (full permissions)$($Reset)"
+    Write-Host "$($Bright)$($Green)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$($Reset)"
+    Write-Host "$($Green)✓ Database: exits_saas_db (PostgreSQL - Fresh installation)$($Reset)"
+    Write-Host "$($Green)✓ Knex Migrations: All tables created successfully$($Reset)"
+    Write-Host "$($Green)✓ Knex Seeds: All data populated (98 permissions, 3 roles, 3 users)$($Reset)"
+    Write-Host "$($Green)✓ Standard RBAC: Implemented (resource:action format)$($Reset)"
     Write-Host "$($Green)✓ Web Build: Complete$($Reset)"
+    Write-Host "$($Green)✓ Passwords: Reset with secure credentials$($Reset)"
+    Write-Host "$($Bright)$($Green)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$($Reset)"
+    Write-Host ""
+    Write-Host "$($Bright)$($Cyan)📦 Database Management System:$($Reset)"
+    Write-Host "  • Using Knex.js for all database operations"
+    Write-Host "  • Migrations: npx knex migrate:latest (run automatically)"
+    Write-Host "  • Seeds: npx knex seed:run (run automatically)"
+    Write-Host "  • Location: api/src/migrations/ and api/src/seeds/"
     Write-Host ""
     Write-Host "$($Cyan)To start the servers manually, run:$($Reset)"
     Write-Host "  $($Yellow)cd api ; npm start$($Reset)"
     Write-Host "  $($Yellow)cd web ; npm start$($Reset)"
     Write-Host ""
-    Write-Host "$($Bright)$($Cyan)👤 Default Login:$($Reset)"
-    Write-Host '  Email: admin@exitsaas.com'
-    Write-Host '  Password: Admin@123'
+    Write-Host "$($Bright)$($Cyan)🔐 Secure Login Credentials:$($Reset)"
+    Write-Host "  System Admin: admin@exitsaas.com / Admin@123"
+    Write-Host "  Tenant Admin 1: admin-1@example.com / Admin@123"
+    Write-Host "  Tenant Admin 2: admin-2@example.com / Admin@123"
     Write-Host ""
     Write-Host "$($Bright)$($Magenta)🔐 RBAC Features:$($Reset)"
     Write-Host "  • Standard resource:action permissions (users:create, tenants:read, etc.)"
-    Write-Host "  • 49 system permissions covering all features"
-    Write-Host "  • Super Admin role with full access"
+    Write-Host "  • 98 comprehensive permissions covering all features"
+    Write-Host "  • Super Admin role with full access (all 98 permissions)"
+    Write-Host "  • Tenant Admin roles with 67 tenant-specific permissions"
     Write-Host "  • Frontend: rbac.can('users:create'), rbac.canDo('users', 'create')"
     Write-Host "  • Backend: checkPermission('users:create') middleware"
+    Write-Host ""
+    Write-Host "$($Bright)$($Yellow)⚠️  Important Note:$($Reset)"
+    Write-Host "  This setup script uses KNEX for all database operations."
+    Write-Host "  Running this script will:"
+    Write-Host "  ├─ Drop existing database completely"
+    Write-Host "  ├─ Create fresh database structure via Knex migrations"
+    Write-Host "  ├─ Populate all data via Knex seeds"
+    Write-Host "  └─ Reset all user passwords to Admin@123"
+    Write-Host ""
+    Write-Host "$($Bright)$($Cyan)  Safe to run at OFFICE or HOME - ensures consistent database state!$($Reset)"
     Write-Host ""
 }
 

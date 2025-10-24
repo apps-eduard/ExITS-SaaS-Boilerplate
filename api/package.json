@@ -13,9 +13,13 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
-    "migrate": "node src/scripts/migrate.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "migrate:status": "knex migrate:status",
+    "migrate:make": "knex migrate:make",
     "migrate:fresh": "node src/scripts/migrate-fresh.js",
-    "seed": "node src/scripts/seed.js",
+    "seed": "knex seed:run",
+    "seed:make": "knex seed:make",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\""
   },
   "keywords": [
@@ -39,6 +43,7 @@
     "helmet": "^7.0.0",
     "joi": "^17.10.2",
     "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
     "morgan": "^1.10.1",
     "node-fetch": "^3.3.2",
     "pg": "^8.10.0",

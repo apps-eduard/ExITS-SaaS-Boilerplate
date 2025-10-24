@@ -265,15 +265,21 @@ class RoleService {
       await client.query('BEGIN');
 
       logger.info(`🔄 Bulk assigning permissions to role ${roleId}...`);
-      logger.info(`📋 Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
+      console.log(`🔍 [DEBUG] Role ID: ${roleId}`);
+      console.log(`🔍 [DEBUG] Requesting User ID: ${requestingUserId}`);
+      console.log(`🔍 [DEBUG] Tenant ID: ${tenantId}`);
+      console.log(`� [DEBUG] Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
 
       // Delete all existing permissions for this role
-      await client.query(
+      const deleteResult = await client.query(
         'DELETE FROM role_permissions_standard WHERE role_id = $1',
         [roleId]
       );
+      console.log(`🔍 [DEBUG] Deleted ${deleteResult.rowCount} existing permissions`);
 
       let insertedCount = 0;
+      let notFoundCount = 0;
+      const notFoundPermissions = [];
       
       for (const perm of permissions) {
         const { permissionKey } = perm;
@@ -283,7 +289,7 @@ class RoleService {
           continue;
         }
 
-        logger.info(`🔍 Looking up permission: ${permissionKey}`);
+        console.log(`🔍 [DEBUG] Processing permission: ${permissionKey}`);
 
         // Get the permission ID from permissions table
         const permResult = await client.query(
@@ -293,35 +299,49 @@ class RoleService {
 
         if (permResult.rows.length === 0) {
           logger.warn(`⚠️ Permission not found in database: ${permissionKey}`);
+          notFoundPermissions.push(permissionKey);
+          notFoundCount++;
           continue;
         }
 
         const permissionId = permResult.rows[0].id;
-        logger.info(`✅ Found permission ${permissionKey} with ID: ${permissionId}`);
+        console.log(`✅ [DEBUG] Found permission ${permissionKey} with ID: ${permissionId}`);
 
         // Insert the role-permission mapping
-        await client.query(
+        const insertResult = await client.query(
           `INSERT INTO role_permissions_standard (role_id, permission_id, granted_by)
            VALUES ($1, $2, $3)
            ON CONFLICT (role_id, permission_id) DO NOTHING`,
           [roleId, permissionId, requestingUserId]
         );
 
-        logger.info(`✅ Inserted permission ${permissionKey} for role ${roleId}`);
+        console.log(`✅ [DEBUG] Inserted permission ${permissionKey} for role ${roleId}, rows affected: ${insertResult.rowCount}`);
         insertedCount++;
       }
 
       await client.query('COMMIT');
 
+      console.log(`🔍 [DEBUG] Final summary:`);
+      console.log(`🔍 [DEBUG] - Permissions requested: ${permissions.length}`);
+      console.log(`🔍 [DEBUG] - Permissions inserted: ${insertedCount}`);
+      console.log(`🔍 [DEBUG] - Permissions not found: ${notFoundCount}`);
+      if (notFoundPermissions.length > 0) {
+        console.log(`🔍 [DEBUG] - Not found list:`, notFoundPermissions);
+      }
+
       await this.auditLog(requestingUserId, tenantId, 'bulk_assign_permissions', 'role', roleId, {
         permissions_count: insertedCount,
+        not_found_count: notFoundCount,
+        not_found_permissions: notFoundPermissions
       });
 
       logger.info(`✅ Bulk assigned ${insertedCount} permissions to role ${roleId}`);
 
       return {
         count: insertedCount,
-        message: `${insertedCount} permissions assigned successfully`,
+        notFoundCount: notFoundCount,
+        notFoundPermissions: notFoundPermissions,
+        message: `${insertedCount} permissions assigned successfully${notFoundCount > 0 ? `, ${notFoundCount} not found` : ''}`,
       };
     } catch (err) {
       await client.query('ROLLBACK');

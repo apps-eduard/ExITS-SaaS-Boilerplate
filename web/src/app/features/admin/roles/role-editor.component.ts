@@ -145,17 +145,28 @@ interface ResourceGroup {
 
             <!-- Quick Actions -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+              <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Selection</div>
+              
+              <!-- Toggle System Only Button - Show if filter is 'all' or 'system' -->
               <button
-                (click)="selectAll()"
-                class="w-full rounded bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition"
+                *ngIf="spaceFilter === 'all' || spaceFilter === 'system'"
+                (click)="toggleSelectSystem()"
+                [class]="areAllSystemSelected() 
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-purple-50 px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 transition'"
               >
-                ✓ Select All Permissions
+                {{ areAllSystemSelected() ? '☐ Unselect System Only' : '☑ Select System Only' }}
               </button>
+              
+              <!-- Toggle Tenant Only Button - Show if filter is 'all' or 'tenant' -->
               <button
-                (click)="clearAll()"
-                class="w-full rounded bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 transition"
+                *ngIf="spaceFilter === 'all' || spaceFilter === 'tenant'"
+                (click)="toggleSelectTenant()"
+                [class]="areAllTenantSelected() 
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 transition'"
               >
-                ✗ Clear All
+                {{ areAllTenantSelected() ? '☐ Unselect Tenant Only' : '☑ Select Tenant Only' }}
               </button>
             </div>
 
@@ -302,31 +313,28 @@ export class RoleEditorComponent implements OnInit {
     // System level
     { resource: 'dashboard', displayName: 'Dashboard', description: 'System dashboard access', actions: ['view'], category: 'system' },
     { resource: 'tenants', displayName: 'Tenants', description: 'Manage tenant organizations', actions: ['read', 'create', 'update', 'delete', 'manage-subscriptions'], category: 'system' },
-    { resource: 'users', displayName: 'Users (System)', description: 'System-wide user management', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'system' },
-    { resource: 'roles', displayName: 'Roles & Permissions', description: 'Role and permission management', actions: ['read', 'create', 'update', 'delete', 'assign-permissions'], category: 'system' },
-    { resource: 'permissions', displayName: 'Permissions', description: 'Permission management', actions: ['view', 'assign'], category: 'system' },
-    { resource: 'products', displayName: 'Products', description: 'Product catalog and management', actions: ['read', 'create', 'update', 'delete', 'manage-catalog', 'manage-mapping', 'manage-settings'], category: 'system' },
-    { resource: 'subscriptions', displayName: 'Subscriptions', description: 'Subscription management', actions: ['read', 'create', 'update', 'delete', 'manage-plans', 'manage-renewals'], category: 'system' },
-    { resource: 'reports', displayName: 'Reports & Analytics', description: 'System reports and analytics', actions: ['view', 'export', 'tenant-usage', 'revenue', 'product-adoption', 'activity-logs'], category: 'system' },
+    { resource: 'users', displayName: 'Users (System)', description: 'System-wide user management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
+    { resource: 'roles', displayName: 'Roles & Permissions', description: 'Role and permission management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
+    { resource: 'products', displayName: 'Products', description: 'Product catalog and management', actions: ['read', 'create', 'update', 'delete', 'manage-catalog'], category: 'system' },
+    { resource: 'subscriptions', displayName: 'Subscriptions', description: 'Subscription management', actions: ['read', 'create', 'update', 'delete', 'manage-plans'], category: 'system' },
+    { resource: 'reports', displayName: 'Reports & Analytics', description: 'System reports and analytics', actions: ['view', 'export', 'tenant-usage', 'revenue'], category: 'system' },
     { resource: 'analytics', displayName: 'Analytics', description: 'Analytics dashboard', actions: ['view'], category: 'system' },
     { resource: 'recycle-bin', displayName: 'Recycle Bin', description: 'Deleted items recovery', actions: ['view', 'restore', 'permanent-delete'], category: 'system' },
-    { resource: 'system', displayName: 'System Settings', description: 'System configuration', actions: ['view-health', 'view-performance', 'manage-config'], category: 'system' },
-    { resource: 'monitoring', displayName: 'Monitoring', description: 'System monitoring', actions: ['view'], category: 'system' },
-    { resource: 'billing', displayName: 'Billing', description: 'Billing and invoices', actions: ['read', 'manage-plans', 'view-invoices'], category: 'system' },
 
-    // Tenant level
-    { resource: 'tenant-dashboard', displayName: 'Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant' },
-    { resource: 'tenant-users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete', 'invite', 'assign-roles'], category: 'tenant' },
-    { resource: 'tenant-roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
+    // Tenant level - keeping all UI structure but matching DB permission keys
+    { resource: 'dashboard', displayName: 'Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant' },
+    { resource: 'users', displayName: 'Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
+    { resource: 'roles', displayName: 'Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant' },
     { resource: 'tenant-products', displayName: 'Tenant Products', description: 'Tenant product catalog', actions: ['read', 'configure', 'manage-settings'], category: 'tenant' },
     { resource: 'tenant-billing', displayName: 'Tenant Billing', description: 'Tenant billing and subscriptions', actions: ['read', 'view-subscriptions', 'view-invoices', 'manage-renewals', 'view-overview'], category: 'tenant' },
     { resource: 'tenant-reports', displayName: 'Tenant Reports', description: 'Tenant reports and analytics', actions: ['view', 'product-usage', 'user-activity', 'billing-summary', 'transactions', 'export'], category: 'tenant' },
     { resource: 'tenant-recycle-bin', displayName: 'Tenant Recycle Bin', description: 'Tenant deleted items recovery', actions: ['view', 'restore', 'view-history'], category: 'tenant' },
     { resource: 'tenant-settings', displayName: 'Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant' },
 
-    // Business modules
-    { resource: 'loans', displayName: 'Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse'], category: 'business' },
-    { resource: 'payments', displayName: 'Payments', description: 'Payment processing', actions: ['read', 'create', 'update', 'delete'], category: 'business' },
+    // Business modules (treated as tenant-level)
+    { resource: 'money-loan', displayName: 'Money Loan', description: 'Money loan management', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant' },
+    { resource: 'bnpl', displayName: 'Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant' },
+    { resource: 'pawnshop', displayName: 'Pawnshop', description: 'Pawnshop operations', actions: ['read', 'create', 'update', 'manage'], category: 'tenant' },
   ];
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
@@ -345,7 +353,7 @@ export class RoleEditorComponent implements OnInit {
     if (this.spaceFilter === 'system') {
       groups = groups.filter(group => group.category === 'system');
     } else if (this.spaceFilter === 'tenant') {
-      groups = groups.filter(group => group.category === 'tenant' || group.category === 'business');
+      groups = groups.filter(group => group.category === 'tenant');
     }
     // If 'all', show all available groups (already filtered by role space above)
 
@@ -448,18 +456,154 @@ export class RoleEditorComponent implements OnInit {
     this.selectedPermissions.set(perms);
   }
 
-  selectAll(): void {
-    const perms = new Set<string>();
-    this.resourceGroups.forEach(group => {
-      // Filter by space
-      if ((this.roleSpace === 'system' && group.category === 'system') ||
-          (this.roleSpace === 'tenant' && (group.category === 'tenant' || group.category === 'business'))) {
+  // Helper method to get the category of a permission
+  getPermissionCategory(permKey: string): 'system' | 'tenant' | null {
+    const [resource, action] = permKey.split(':');
+    
+    // Find the group that matches both resource and action
+    for (const group of this.resourceGroups) {
+      if (group.resource === resource && group.actions.includes(action)) {
+        // Business category is treated as tenant
+        return group.category === 'business' ? 'tenant' : group.category;
+      }
+    }
+    
+    return null;
+  }
+
+  // Toggle methods for quick actions
+  toggleSelectAll(): void {
+    if (this.areAllSelected()) {
+      // Unselect all
+      this.selectedPermissions.set(new Set());
+    } else {
+      // Select all visible permissions
+      const perms = new Set<string>();
+      this.filteredResourceGroups.forEach(group => {
         group.actions.forEach(action => {
           perms.add(`${group.resource}:${action}`);
         });
+      });
+      this.selectedPermissions.set(perms);
+    }
+  }
+
+  toggleSelectSystem(): void {
+    const perms = new Set<string>();
+    
+    if (this.areAllSystemSelected()) {
+      // Unselect all system permissions only, keep others
+      this.selectedPermissions().forEach(permKey => {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'system') {
+          perms.add(permKey);
+        }
+      });
+    } else {
+      // Keep all current non-system permissions
+      this.selectedPermissions().forEach(permKey => {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'system') {
+          perms.add(permKey);
+        }
+      });
+      
+      // Add all system permissions
+      this.resourceGroups.forEach(group => {
+        if (group.category === 'system') {
+          group.actions.forEach(action => {
+            perms.add(`${group.resource}:${action}`);
+          });
+        }
+      });
+    }
+    
+    this.selectedPermissions.set(perms);
+  }
+
+  toggleSelectTenant(): void {
+    const perms = new Set<string>();
+    
+    if (this.areAllTenantSelected()) {
+      // Unselect all tenant permissions only, keep others
+      this.selectedPermissions().forEach(permKey => {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'tenant') {
+          perms.add(permKey);
+        }
+      });
+    } else {
+      // Keep all current non-tenant permissions
+      this.selectedPermissions().forEach(permKey => {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'tenant') {
+          perms.add(permKey);
+        }
+      });
+      
+      // Add all tenant permissions
+      this.resourceGroups.forEach(group => {
+        if (group.category === 'tenant') {
+          group.actions.forEach(action => {
+            perms.add(`${group.resource}:${action}`);
+          });
+        }
+      });
+    }
+    
+    this.selectedPermissions.set(perms);
+  }
+
+  // Check if all permissions are selected
+  areAllSelected(): boolean {
+    let totalAvailable = 0;
+    this.filteredResourceGroups.forEach(group => {
+      totalAvailable += group.actions.length;
+    });
+    return totalAvailable > 0 && this.selectedPermissions().size === totalAvailable;
+  }
+
+  // Check if all system permissions are selected
+  areAllSystemSelected(): boolean {
+    let totalSystemPerms = 0;
+    let selectedSystemPerms = 0;
+    
+    this.resourceGroups.forEach(group => {
+      if (group.category === 'system') {
+        totalSystemPerms += group.actions.length;
+        group.actions.forEach(action => {
+          if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
+            selectedSystemPerms++;
+          }
+        });
       }
     });
-    this.selectedPermissions.set(perms);
+    
+    return totalSystemPerms > 0 && selectedSystemPerms === totalSystemPerms;
+  }
+
+  // Check if all tenant permissions are selected
+  areAllTenantSelected(): boolean {
+    let totalTenantPerms = 0;
+    let selectedTenantPerms = 0;
+    
+    this.resourceGroups.forEach(group => {
+      if (group.category === 'tenant') {
+        totalTenantPerms += group.actions.length;
+        group.actions.forEach(action => {
+          if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
+            selectedTenantPerms++;
+          }
+        });
+      }
+    });
+    
+    return totalTenantPerms > 0 && selectedTenantPerms === totalTenantPerms;
+  }
+
+  // Legacy methods (kept for compatibility)
+  selectAll(): void {
+    this.toggleSelectAll();
   }
 
   clearAll(): void {
