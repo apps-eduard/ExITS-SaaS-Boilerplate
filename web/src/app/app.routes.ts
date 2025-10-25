@@ -352,6 +352,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tenant/billing/tenant-subscriptions.component').then(m => m.TenantSubscriptionsComponent)
       },
       {
+        path: 'payment-simulation',
+        loadComponent: () => import('./features/tenant/payment/payment-simulation.component').then(m => m.PaymentSimulationComponent)
+      },
+      {
         path: 'billing',
         children: [
           {
@@ -365,6 +369,32 @@ export const routes: Routes = [
           {
             path: 'renewal',
             loadComponent: () => import('./features/tenant/billing/tenant-renewal-settings.component').then(m => m.TenantRenewalSettingsComponent)
+          }
+        ]
+      },
+      {
+        path: 'reports',
+        children: [
+          {
+            path: 'product-usage',
+            loadComponent: () => import('./features/tenant/reports/product-usage.component').then(m => m.ProductUsageComponent)
+          },
+          {
+            path: 'user-activity',
+            loadComponent: () => import('./features/tenant/reports/user-activity.component').then(m => m.UserActivityComponent)
+          },
+          {
+            path: 'billing-summary',
+            loadComponent: () => import('./features/tenant/reports/billing-summary.component').then(m => m.BillingSummaryComponent)
+          },
+          {
+            path: 'transactions',
+            loadComponent: () => import('./features/tenant/reports/transaction-history.component').then(m => m.TransactionHistoryComponent)
+          },
+          {
+            path: '',
+            redirectTo: 'transactions',
+            pathMatch: 'full'
           }
         ]
       },

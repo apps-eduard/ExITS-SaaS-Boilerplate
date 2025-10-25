@@ -20,6 +20,12 @@ router.use(authMiddleware, tenantIsolationMiddleware);
 // Get current user's tenant (no special permissions required - any authenticated user)
 router.get('/current', TenantController.getMyTenant);
 
+// Get current user's active subscriptions
+router.get('/current/subscriptions', TenantController.getMyActiveSubscriptions);
+
+// Create/update subscription for current tenant
+router.post('/current/subscribe', TenantController.createSubscription);
+
 // Update current user's tenant products (tenant-settings permission)
 router.put('/current/products', rbacMiddleware(['tenant-settings', 'tenants'], ['update']), TenantController.updateMyTenantProducts);
 

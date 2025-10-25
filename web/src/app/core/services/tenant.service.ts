@@ -36,6 +36,11 @@ export interface SubscriptionPlan {
   updatedAt: string;
 }
 
+export interface ActiveSubscriptionsResponse {
+  subscriptions: SubscriptionPlan[];
+  enabledProducts: string[]; // ['money_loan', 'bnpl', 'pawnshop']
+}
+
 @Injectable({ providedIn: 'root' })
 export class TenantService {
   private apiUrl = '/api/tenants'; // Adjust to your backend endpoint
@@ -59,6 +64,14 @@ export class TenantService {
   }
 
   /**
+   * Get active subscriptions for current tenant
+   * Returns both platform and product subscriptions + enabled products list
+   */
+  getMyActiveSubscriptions(): Observable<{ success: boolean; data: ActiveSubscriptionsResponse | SubscriptionPlan[] }> {
+    return this.http.get<{ success: boolean; data: ActiveSubscriptionsResponse | SubscriptionPlan[] }>(`${this.apiUrl}/current/subscriptions`);
+  }
+
+  /**
    * Get all available subscription plans (Platform only)
    */
   getSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[]; count: number }> {
@@ -70,5 +83,16 @@ export class TenantService {
    */
   getAllSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[]; count: number }> {
     return this.http.get<{ success: boolean; data: SubscriptionPlan[]; count: number }>(`/api/subscription-plans/all/including-products`);
+  }
+
+  /**
+   * Create or update subscription for current tenant
+   */
+  createSubscription(planId: number, billingCycle: string, paymentMethod: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/current/subscribe`, {
+      planId,
+      billingCycle,
+      paymentMethod
+    });
   }
 }

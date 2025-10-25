@@ -296,6 +296,290 @@ class TenantService {
   }
 
   /**
+   * Get active subscriptions for a tenant
+   * Returns both platform and product subscriptions
+   * Auto-creates missing product subscriptions based on enabled flags
+   */
+  static async getActiveSubscriptions(tenantId) {
+    const SubscriptionPlanService = require('./SubscriptionPlanService');
+    
+    try {
+      // First, sync product subscriptions to ensure they exist
+      await this.syncProductSubscriptions(tenantId);
+
+      // Get tenant enabled products
+      const tenantResult = await pool.query(
+        `SELECT money_loan_enabled, bnpl_enabled, pawnshop_enabled FROM tenants WHERE id = $1`,
+        [tenantId]
+      );
+
+      const enabledProducts = [];
+      if (tenantResult.rows.length > 0) {
+        const tenant = tenantResult.rows[0];
+        if (tenant.money_loan_enabled) enabledProducts.push('money_loan');
+        if (tenant.bnpl_enabled) enabledProducts.push('bnpl');
+        if (tenant.pawnshop_enabled) enabledProducts.push('pawnshop');
+      }
+
+      const subscriptions = [];
+
+      // Get platform subscription from tenant_subscriptions
+      const platformSubResult = await pool.query(
+        `SELECT ts.*, sp.id as plan_id, sp.name, sp.description, 
+                sp.price, sp.billing_cycle, sp.features, sp.product_type,
+                sp.is_popular, sp.status
+         FROM tenant_subscriptions ts
+         JOIN subscription_plans sp ON ts.plan_id = sp.id
+         WHERE ts.tenant_id = $1 AND ts.status = 'active'
+         ORDER BY ts.created_at DESC
+         LIMIT 1`,
+        [tenantId]
+      );
+
+      logger.info(`📊 Platform subscriptions found: ${platformSubResult.rows.length}`);
+
+      if (platformSubResult.rows.length > 0) {
+        const sub = platformSubResult.rows[0];
+        subscriptions.push(SubscriptionPlanService.transformPlan({
+          id: sub.plan_id,
+          name: sub.name,
+          description: sub.description,
+          price: sub.price,
+          billing_cycle: sub.billing_cycle,
+          features: sub.features,
+          product_type: sub.product_type || 'platform',
+          is_popular: sub.is_popular,
+          status: sub.status
+        }));
+      }
+
+      // Get product subscriptions from product_subscriptions
+      const productSubsResult = await pool.query(
+        `SELECT ps.*, sp.id as plan_id, sp.name, sp.description,
+                sp.price, sp.billing_cycle, sp.features, sp.product_type,
+                sp.is_popular, sp.status
+         FROM product_subscriptions ps
+         JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
+         WHERE ps.tenant_id = $1 AND ps.status = 'active'
+         ORDER BY ps.created_at`,
+        [tenantId]
+      );
+
+      logger.info(`📊 Product subscriptions found: ${productSubsResult.rows.length}`);
+
+      for (const sub of productSubsResult.rows) {
+        subscriptions.push(SubscriptionPlanService.transformPlan({
+          id: sub.plan_id,
+          name: sub.name,
+          description: sub.description,
+          price: sub.price,
+          billing_cycle: sub.billing_cycle,
+          features: sub.features,
+          product_type: sub.product_type,
+          is_popular: sub.is_popular,
+          status: sub.status
+        }));
+      }
+
+      logger.info(`✅ Total active subscriptions: ${subscriptions.length}`);
+      logger.info(`✅ Enabled products: ${enabledProducts.join(', ')}`);
+      
+      return {
+        subscriptions,
+        enabledProducts
+      };
+    } catch (err) {
+      logger.error(`Tenant service get active subscriptions error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Sync product subscriptions based on tenant enabled flags
+   * Auto-creates missing subscriptions or cancels disabled ones
+   */
+  static async syncProductSubscriptions(tenantId) {
+    try {
+      // Get tenant with their enabled products
+      const tenantResult = await pool.query(
+        `SELECT plan, money_loan_enabled, bnpl_enabled, pawnshop_enabled 
+         FROM tenants WHERE id = $1`,
+        [tenantId]
+      );
+
+      if (tenantResult.rows.length === 0) {
+        return;
+      }
+
+      const tenant = tenantResult.rows[0];
+      const platformPlan = tenant.plan || 'starter';
+
+      // Sync Money Loan
+      if (tenant.money_loan_enabled) {
+        await this.ensureProductSubscription(tenantId, 'money_loan', platformPlan);
+      }
+
+      // Sync BNPL
+      if (tenant.bnpl_enabled) {
+        await this.ensureProductSubscription(tenantId, 'bnpl', platformPlan);
+      }
+
+      // Sync Pawnshop
+      if (tenant.pawnshop_enabled) {
+        await this.ensureProductSubscription(tenantId, 'pawnshop', platformPlan);
+      }
+
+      logger.info(`✅ Synced product subscriptions for tenant ${tenantId}`);
+    } catch (err) {
+      logger.error(`Error syncing product subscriptions: ${err.message}`);
+      // Don't throw - this is a best-effort sync
+    }
+  }
+
+  /**
+   * Ensure a product subscription exists
+   * Auto-creates if missing
+   */
+  static async ensureProductSubscription(tenantId, productType, platformPlanName) {
+    try {
+      // Check if active subscription exists
+      const existing = await pool.query(
+        `SELECT id FROM product_subscriptions 
+         WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'`,
+        [tenantId, productType]
+      );
+
+      if (existing.rows.length > 0) {
+        return; // Already exists
+      }
+
+      // Find matching product plan based on platform tier
+      let planResult = await pool.query(
+        `SELECT id, price, billing_cycle FROM subscription_plans 
+         WHERE product_type = $1 
+         AND name ILIKE $2
+         AND status = 'active'
+         LIMIT 1`,
+        [productType, `%${platformPlanName}%`]
+      );
+
+      // Fallback to starter if no tier match
+      if (planResult.rows.length === 0) {
+        planResult = await pool.query(
+          `SELECT id, price, billing_cycle FROM subscription_plans 
+           WHERE product_type = $1 
+           AND name ILIKE '%starter%'
+           AND status = 'active'
+           LIMIT 1`,
+          [productType]
+        );
+      }
+
+      if (planResult.rows.length === 0) {
+        logger.warn(`No ${productType} plan found for tenant ${tenantId}`);
+        return;
+      }
+
+      const plan = planResult.rows[0];
+
+      // Create the subscription
+      await pool.query(
+        `INSERT INTO product_subscriptions 
+         (tenant_id, product_type, subscription_plan_id, status, started_at, price, billing_cycle)
+         VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
+        [tenantId, productType, plan.id, plan.price, plan.billing_cycle || 'monthly']
+      );
+
+      logger.info(`✅ Auto-created ${productType} subscription for tenant ${tenantId}`);
+    } catch (err) {
+      logger.error(`Error ensuring product subscription: ${err.message}`);
+      // Don't throw - best effort
+    }
+  }
+
+  /**
+   * Sync product subscriptions when tenant updates product flags
+   * Creates subscriptions for enabled products, cancels for disabled
+   */
+  static async syncProductSubscriptionsOnUpdate(tenantId, updateData) {
+    try {
+      // Get current tenant state to know the platform plan
+      const tenantResult = await pool.query(
+        `SELECT plan FROM tenants WHERE id = $1`,
+        [tenantId]
+      );
+
+      if (tenantResult.rows.length === 0) {
+        return;
+      }
+
+      const platformPlan = tenantResult.rows[0].plan || 'starter';
+
+      // Handle Money Loan
+      if (updateData.money_loan_enabled !== undefined) {
+        if (updateData.money_loan_enabled === true) {
+          logger.info(`🔄 Enabling Money Loan for tenant ${tenantId}`);
+          await this.ensureProductSubscription(tenantId, 'money_loan', platformPlan);
+        } else {
+          logger.info(`🔄 Disabling Money Loan for tenant ${tenantId}`);
+          await this.cancelProductSubscription(tenantId, 'money_loan');
+        }
+      }
+
+      // Handle BNPL
+      if (updateData.bnpl_enabled !== undefined) {
+        if (updateData.bnpl_enabled === true) {
+          logger.info(`🔄 Enabling BNPL for tenant ${tenantId}`);
+          await this.ensureProductSubscription(tenantId, 'bnpl', platformPlan);
+        } else {
+          logger.info(`🔄 Disabling BNPL for tenant ${tenantId}`);
+          await this.cancelProductSubscription(tenantId, 'bnpl');
+        }
+      }
+
+      // Handle Pawnshop
+      if (updateData.pawnshop_enabled !== undefined) {
+        if (updateData.pawnshop_enabled === true) {
+          logger.info(`🔄 Enabling Pawnshop for tenant ${tenantId}`);
+          await this.ensureProductSubscription(tenantId, 'pawnshop', platformPlan);
+        } else {
+          logger.info(`🔄 Disabling Pawnshop for tenant ${tenantId}`);
+          await this.cancelProductSubscription(tenantId, 'pawnshop');
+        }
+      }
+
+      logger.info(`✅ Product subscription sync completed for tenant ${tenantId}`);
+    } catch (err) {
+      logger.error(`Error syncing product subscriptions on update: ${err.message}`);
+      // Don't throw - this shouldn't block the main update
+    }
+  }
+
+  /**
+   * Cancel a product subscription
+   */
+  static async cancelProductSubscription(tenantId, productType) {
+    try {
+      const result = await pool.query(
+        `UPDATE product_subscriptions 
+         SET status = 'cancelled', updated_at = NOW()
+         WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'
+         RETURNING id`,
+        [tenantId, productType]
+      );
+
+      if (result.rows.length > 0) {
+        logger.info(`✅ Cancelled ${productType} subscription for tenant ${tenantId}`);
+      } else {
+        logger.info(`ℹ️  No active ${productType} subscription to cancel for tenant ${tenantId}`);
+      }
+    } catch (err) {
+      logger.error(`Error cancelling product subscription: ${err.message}`);
+      // Don't throw - best effort
+    }
+  }
+
+  /**
    * List all tenants with pagination
    */
   static async listTenants(page = 1, limit = 20, status = null, plan = null) {
@@ -694,6 +978,98 @@ class TenantService {
       };
     } catch (err) {
       logger.error(`Tenant service validate user limit error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Create or update subscription for tenant
+   */
+  static async createOrUpdateSubscription(tenantId, planId, billingCycle, paymentMethod) {
+    try {
+      // Get plan details
+      const planResult = await pool.query(
+        `SELECT * FROM subscription_plans WHERE id = $1 AND status = 'active'`,
+        [planId]
+      );
+
+      if (planResult.rows.length === 0) {
+        throw new Error('Invalid plan selected');
+      }
+
+      const plan = planResult.rows[0];
+      const isProductPlan = plan.product_type && plan.product_type !== 'platform';
+
+      if (isProductPlan) {
+        // Create/update product subscription
+        const existingProductSub = await pool.query(
+          `SELECT id FROM product_subscriptions 
+           WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'`,
+          [tenantId, plan.product_type]
+        );
+
+        if (existingProductSub.rows.length > 0) {
+          // Update existing subscription
+          await pool.query(
+            `UPDATE product_subscriptions 
+             SET subscription_plan_id = $1, price = $2, billing_cycle = $3, updated_at = NOW()
+             WHERE id = $4`,
+            [planId, plan.price, billingCycle, existingProductSub.rows[0].id]
+          );
+        } else {
+          // Create new product subscription
+          await pool.query(
+            `INSERT INTO product_subscriptions 
+             (tenant_id, product_type, subscription_plan_id, status, started_at, price, billing_cycle)
+             VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
+            [tenantId, plan.product_type, planId, plan.price, billingCycle]
+          );
+        }
+
+        logger.info(`✅ Created/Updated ${plan.product_type} subscription for tenant ${tenantId}`);
+      } else {
+        // Create/update platform subscription
+        const existingPlatformSub = await pool.query(
+          `SELECT id FROM tenant_subscriptions WHERE tenant_id = $1 AND status = 'active'`,
+          [tenantId]
+        );
+
+        if (existingPlatformSub.rows.length > 0) {
+          // Update existing subscription
+          await pool.query(
+            `UPDATE tenant_subscriptions 
+             SET plan_id = $1, price = $2, billing_cycle = $3, updated_at = NOW()
+             WHERE id = $4`,
+            [planId, plan.price, billingCycle, existingPlatformSub.rows[0].id]
+          );
+        } else {
+          // Create new platform subscription
+          await pool.query(
+            `INSERT INTO tenant_subscriptions 
+             (tenant_id, plan_id, status, start_date, price, billing_cycle)
+             VALUES ($1, $2, 'active', NOW(), $3, $4)`,
+            [tenantId, planId, plan.price, billingCycle]
+          );
+        }
+
+        // Update tenant plan
+        await pool.query(
+          `UPDATE tenants SET plan = $1, updated_at = NOW() WHERE id = $2`,
+          [plan.name.toLowerCase(), tenantId]
+        );
+
+        logger.info(`✅ Created/Updated platform subscription for tenant ${tenantId}`);
+      }
+
+      return {
+        success: true,
+        plan: plan.name,
+        productType: plan.product_type,
+        billingCycle,
+        paymentMethod
+      };
+    } catch (err) {
+      logger.error(`Tenant service create subscription error: ${err.message}`);
       throw err;
     }
   }

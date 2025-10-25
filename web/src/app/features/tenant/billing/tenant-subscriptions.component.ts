@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TenantService, SubscriptionPlan as ApiSubscriptionPlan } from '../../../core/services/tenant.service';
 import { RBACService } from '../../../core/services/rbac.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -58,61 +58,95 @@ interface SubscriptionPlan {
         </div>
       </div>
 
-      <!-- Current Subscription Card -->
-      <div *ngIf="!loading() && currentSubscription() as currentPlan" class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 dark:border-blue-900 dark:from-blue-950 dark:to-gray-900">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-2xl shadow-md">
-              {{ currentPlan.icon }}
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-                  {{ currentPlan.name }}
-                </h2>
-                <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Active
-                </span>
+      <!-- Current Subscriptions Cards -->
+      <div *ngIf="!loading() && currentSubscriptions().length > 0">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white mb-3">
+          Active Subscriptions
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div *ngFor="let currentPlan of currentSubscriptions()" class="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 dark:border-blue-900 dark:from-blue-950 dark:to-gray-900">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-2xl shadow-md">
+                  {{ currentPlan.icon }}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+                      {{ currentPlan.name }}
+                    </h2>
+                    <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Active
+                    </span>
+                  </div>
+                  <!-- Product Type Badge -->
+                  <div class="mt-1">
+                    <span
+                      *ngIf="currentPlan.productType === 'platform'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded"
+                    >
+                      🌐 Platform
+                    </span>
+                    <span
+                      *ngIf="currentPlan.productType === 'money_loan'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded"
+                    >
+                      💰 Money Loan
+                    </span>
+                    <span
+                      *ngIf="currentPlan.productType === 'bnpl'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded"
+                    >
+                      🛍️ BNPL
+                    </span>
+                    <span
+                      *ngIf="currentPlan.productType === 'pawnshop'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded"
+                    >
+                      💎 Pawnshop
+                    </span>
+                  </div>
+                  <div class="mt-1 flex items-baseline gap-1.5">
+                    <span class="text-xl font-bold text-gray-900 dark:text-white">
+                      {{ formatPrice(currentPlan.price) }}
+                    </span>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">
+                      / {{ currentPlan.billingCycle }}
+                    </span>
+                  </div>
+                  <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Next billing: {{ getNextBillingDate() }}
+                  </p>
+                </div>
               </div>
-              <div class="mt-1 flex items-baseline gap-1.5">
-                <span class="text-xl font-bold text-gray-900 dark:text-white">
-                  {{ formatPrice(currentPlan.price) }}
-                </span>
-                <span class="text-xs text-gray-600 dark:text-gray-400">
-                  / {{ currentPlan.billingCycle }}
-                </span>
-              </div>
-              <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
-                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <button
+                *ngIf="canManageBilling()"
+                (click)="managePlan()"
+                class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition inline-flex items-center gap-1.5"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Next billing: {{ getNextBillingDate() }}
-              </p>
+                Manage
+              </button>
             </div>
-          </div>
-          <button
-            *ngIf="canManageBilling()"
-            (click)="managePlan()"
-            class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition inline-flex items-center gap-1.5"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Manage
-          </button>
-        </div>
 
-              <!-- Current Plan Features -->
-        <div class="mt-4 grid grid-cols-2 gap-2 border-t border-blue-200 pt-4 dark:border-blue-900">
-          <div *ngFor="let feature of getFeatures(currentPlan.features).slice(0, 6)" class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-            <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <span>{{ feature }}</span>
+            <!-- Current Plan Features -->
+            <div class="mt-4 grid grid-cols-2 gap-2 border-t border-blue-200 pt-4 dark:border-blue-900">
+              <div *ngFor="let feature of getFeatures(currentPlan.features).slice(0, 6)" class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{ feature }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -231,10 +265,10 @@ interface SubscriptionPlan {
                   : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path *ngIf="plan.price > (currentSubscription()?.price || 0)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  <path *ngIf="plan.price <= (currentSubscription()?.price || 0)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  <path *ngIf="plan.price > getHighestSubscriptionPrice()" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  <path *ngIf="plan.price <= getHighestSubscriptionPrice()" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
-                {{ plan.price > (currentSubscription()?.price || 0) ? 'Upgrade' : 'Switch' }}
+                {{ plan.price > getHighestSubscriptionPrice() ? 'Upgrade' : 'Switch' }}
               </button>
               <div *ngIf="plan.current" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,32 +316,43 @@ export class TenantSubscriptionsComponent implements OnInit {
   private tenantService = inject(TenantService);
   private rbacService = inject(RBACService);
   private toastService = inject(ToastService);
+  private router = inject(Router);
 
   billingCycle = signal<'monthly' | 'yearly'>('monthly');
   loading = signal(false);
-  currentSubscription = signal<SubscriptionPlan | null>(null);
+  currentSubscriptions = signal<SubscriptionPlan[]>([]); // Changed to array
+  enabledProducts = signal<string[]>([]); // Track tenant's enabled products
   allPlans = signal<ApiSubscriptionPlan[]>([]);
 
   availablePlans = computed(() => {
     const cycle = this.billingCycle();
-    const currentPlan = this.currentSubscription();
-    const currentName = currentPlan?.name || '';
+    const currentSubscriptionNames = this.currentSubscriptions().map(s => s.name);
+    const enabled = this.enabledProducts();
     
-    return this.allPlans().map(apiPlan => ({
-      id: apiPlan.name,
-      name: apiPlan.displayName || apiPlan.name,
-      description: apiPlan.description,
-      icon: apiPlan.icon || '📦',
-      price: apiPlan.price,
-      currency: 'PHP',
-      billingCycle: cycle,
-      features: apiPlan.features || [],
-      productType: apiPlan.productType,
-      trialDays: 0,
-      current: currentName === apiPlan.displayName || currentName === apiPlan.name,
-      recommended: apiPlan.isRecommended,
-      isActive: apiPlan.isActive
-    } as SubscriptionPlan));
+    // Filter plans: show platform plans + only plans for enabled products
+    return this.allPlans()
+      .filter(apiPlan => {
+        // Always show platform plans
+        if (apiPlan.productType === 'platform') return true;
+        
+        // Show product plans only if the product is enabled
+        return enabled.includes(apiPlan.productType || '');
+      })
+      .map(apiPlan => ({
+        id: apiPlan.name,
+        name: apiPlan.displayName || apiPlan.name,
+        description: apiPlan.description,
+        icon: apiPlan.icon || '📦',
+        price: apiPlan.price,
+        currency: 'PHP',
+        billingCycle: cycle,
+        features: apiPlan.features || [],
+        productType: apiPlan.productType,
+        trialDays: 0,
+        current: currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name),
+        recommended: apiPlan.isRecommended,
+        isActive: apiPlan.isActive
+      } as SubscriptionPlan));
   });
 
   canManageBilling = computed(() =>
@@ -322,37 +367,67 @@ export class TenantSubscriptionsComponent implements OnInit {
   loadSubscriptionData(): void {
     this.loading.set(true);
     
-    // Load both tenant data and ALL available plans (including product-specific plans)
+    // Load active subscriptions and all available plans
     forkJoin({
-      tenant: this.tenantService.getMyTenant(),
+      activeSubscriptions: this.tenantService.getMyActiveSubscriptions(),
       plans: this.tenantService.getAllSubscriptionPlans()
     }).subscribe({
-      next: ({ tenant, plans }) => {
-        if (tenant.success && tenant.data) {
-          console.log('📦 All available plans:', plans.data);
-          this.allPlans.set(plans.data || []);
+      next: ({ activeSubscriptions, plans }) => {
+        console.log('📦 Active subscriptions response:', activeSubscriptions.data);
+        console.log('📦 All available plans:', plans.data);
+        
+        // Set active subscriptions directly from API
+        if (activeSubscriptions.success && activeSubscriptions.data) {
+          // Handle both old format (array) and new format (object with subscriptions + enabledProducts)
+          let subscriptions: any[];
+          let enabledProducts: string[];
           
-          const currentPlanName = tenant.data.plan;
-          const currentPlan = plans.data?.find(p => 
-            p.name.toLowerCase() === currentPlanName?.toLowerCase()
-          );
-          
-          if (currentPlan) {
-            this.currentSubscription.set({
-              id: currentPlan.name,
-              name: currentPlan.displayName || currentPlan.name,
-              icon: currentPlan.icon || '📦',
-              price: currentPlan.price,
-              billingCycle: 'monthly', // TODO: Add billing_cycle to tenant table
-              features: Array.isArray(currentPlan.features) ? currentPlan.features : [],
-              current: true,
-              recommended: currentPlan.isRecommended
-            });
-            console.log('✅ Loaded subscription:', currentPlan.displayName || currentPlan.name);
+          if (Array.isArray(activeSubscriptions.data)) {
+            // Old format: data is array of subscriptions
+            subscriptions = activeSubscriptions.data;
+            enabledProducts = [];
+            console.log('⚠️ Using legacy array format for subscriptions');
           } else {
-            console.warn('⚠️ Current plan not found in available plans:', currentPlanName);
+            // New format: data is { subscriptions, enabledProducts }
+            subscriptions = activeSubscriptions.data.subscriptions || [];
+            enabledProducts = activeSubscriptions.data.enabledProducts || [];
           }
+          
+          // Sort: Product subscriptions first, then platform
+          const sortedSubscriptions = [...subscriptions].sort((a, b) => {
+            const aIsPlatform = a.productType === 'platform';
+            const bIsPlatform = b.productType === 'platform';
+            
+            // Platform goes to the end
+            if (aIsPlatform && !bIsPlatform) return 1;
+            if (!aIsPlatform && bIsPlatform) return -1;
+            return 0;
+          });
+          
+          const transformedSubscriptions: SubscriptionPlan[] = sortedSubscriptions.map(apiPlan => ({
+            id: apiPlan.name,
+            name: apiPlan.displayName || apiPlan.name,
+            description: apiPlan.description,
+            icon: apiPlan.icon || '📦',
+            price: apiPlan.price,
+            currency: 'PHP',
+            billingCycle: apiPlan.billingCycle as 'monthly' | 'yearly',
+            features: Array.isArray(apiPlan.features) ? apiPlan.features : [],
+            productType: apiPlan.productType,
+            trialDays: 0,
+            current: true,
+            recommended: apiPlan.isRecommended,
+            isActive: apiPlan.isActive
+          }));
+          
+          this.currentSubscriptions.set(transformedSubscriptions);
+          this.enabledProducts.set(enabledProducts);
+          console.log('✅ Loaded active subscriptions:', transformedSubscriptions.length);
+          console.log('✅ Enabled products:', enabledProducts);
         }
+        
+        // Set all available plans
+        this.allPlans.set(plans.data || []);
         this.loading.set(false);
       },
       error: (error) => {
@@ -380,6 +455,12 @@ export class TenantSubscriptionsComponent implements OnInit {
       return features;
     }
     return [];
+  }
+
+  getHighestSubscriptionPrice(): number {
+    const subscriptions = this.currentSubscriptions();
+    if (subscriptions.length === 0) return 0;
+    return Math.max(...subscriptions.map(s => s.price));
   }
 
   formatPrice(price: number): string {
@@ -415,8 +496,13 @@ export class TenantSubscriptionsComponent implements OnInit {
 
   selectPlan(plan: SubscriptionPlan): void {
     console.log('📦 Selected plan:', plan.name);
-    // TODO: Implement plan change/upgrade logic
-    this.toastService.info(`Upgrading to ${plan.name} plan will be available soon!`);
+    // Navigate to payment simulation page with plan details
+    this.router.navigate(['/tenant/payment-simulation'], {
+      state: {
+        plan: plan,
+        billingCycle: this.billingCycle()
+      }
+    });
   }
 
   managePlan(): void {

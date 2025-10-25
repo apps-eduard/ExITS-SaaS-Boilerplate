@@ -79,8 +79,36 @@ class TenantController {
   }
 
   /**
+   * GET /tenants/current/subscriptions
+   * Get current user's active subscriptions
+   */
+  static async getMyActiveSubscriptions(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+
+      if (!tenantId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'No tenant associated with this user'
+        });
+      }
+
+      const result = await TenantService.getActiveSubscriptions(tenantId);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        message: 'Active subscriptions retrieved successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * PUT /tenants/current/products
    * Update current user's tenant product settings
+   * Automatically creates or cancels product subscriptions
    */
   static async updateMyTenantProducts(req, res, next) {
     try {
@@ -110,7 +138,11 @@ class TenantController {
 
       console.log(`ℹ️  Updating tenant ${tenantId} products:`, updateData);
 
+      // Update tenant flags
       const result = await TenantService.updateTenant(tenantId, updateData);
+
+      // Auto-sync product subscriptions based on the new flags
+      await TenantService.syncProductSubscriptionsOnUpdate(tenantId, updateData);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         success: true,
@@ -290,6 +322,46 @@ class TenantController {
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         message: 'User limit validated successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /tenants/current/subscribe
+   * Create or update subscription for current tenant
+   */
+  static async createSubscription(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+      const { planId, billingCycle, paymentMethod } = req.body;
+
+      if (!tenantId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'No tenant associated with this user'
+        });
+      }
+
+      if (!planId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'Plan ID is required'
+        });
+      }
+
+      const result = await TenantService.createOrUpdateSubscription(
+        tenantId,
+        planId,
+        billingCycle || 'monthly',
+        paymentMethod || 'credit_card'
+      );
+
+      res.status(CONSTANTS.HTTP_STATUS.CREATED).json({
+        success: true,
+        message: 'Subscription created successfully',
         data: result,
       });
     } catch (err) {
