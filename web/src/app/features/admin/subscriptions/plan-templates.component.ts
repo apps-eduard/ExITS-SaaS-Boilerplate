@@ -158,7 +158,10 @@ interface PlanTemplate {
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <!-- Modal Header -->
             <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-              <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+              <h2 class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
                 {{ showCreateModal ? 'Create Plan Template' : 'Edit Plan Template' }}
               </h2>
               <button
@@ -173,100 +176,263 @@ interface PlanTemplate {
 
             <!-- Modal Body -->
             <div class="p-6 space-y-4">
-              <!-- Basic Info -->
+              <!-- Plan Name -->
+              <div>
+                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                  </svg>
+                  Plan Name *
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="formData.name"
+                  placeholder="e.g., Professional Plan"
+                  autofocus
+                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <!-- Billing Cycle & Product Type -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Plan Name *</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="formData.name"
-                    placeholder="e.g., Professional Plan"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Cycle *</label>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Billing Cycle *
+                  </label>
                   <select
                     [(ngModel)]="formData.billingCycle"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
                     <option value="monthly">📅 Monthly</option>
                     <option value="quarterly">📆 Quarterly</option>
                     <option value="yearly">🗓️ Yearly</option>
                   </select>
                 </div>
+
+                <div>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    Product Type
+                  </label>
+                  <select
+                    [(ngModel)]="formData.productType"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option [value]="null">🌐 Platform Plan (General)</option>
+                    <option value="money_loan">💰 Money Loan</option>
+                    <option value="bnpl">🛍️ Buy Now Pay Later (BNPL)</option>
+                    <option value="pawnshop">💎 Pawnshop</option>
+                  </select>
+                </div>
               </div>
 
+              <!-- Description -->
               <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                  </svg>
+                  Description
+                </label>
                 <textarea
                   [(ngModel)]="formData.description"
                   rows="2"
                   placeholder="Brief description of the plan"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 ></textarea>
               </div>
 
               <!-- Pricing -->
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Currency
+                  </label>
                   <select
                     [(ngModel)]="formData.currency"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
+                    <option value="PHP">🇵🇭 PHP (Philippines)</option>
+                    <option value="USD">🇺🇸 USD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
                   </select>
                 </div>
 
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Price *</label>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    Price *
+                  </label>
                   <input
                     type="number"
                     [(ngModel)]="formData.price"
                     step="0.01"
                     min="0"
                     placeholder="0.00"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Trial Days</label>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    Trial Days
+                  </label>
                   <input
                     type="number"
                     [(ngModel)]="formData.trialDays"
                     min="0"
                     placeholder="0"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   />
                 </div>
               </div>
 
-              <!-- Features -->
+              <!-- Limits -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    Max Users
+                  </label>
+                  <input
+                    type="number"
+                    [(ngModel)]="formData.maxUsers"
+                    min="1"
+                    placeholder="Unlimited"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for unlimited</p>
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                    </svg>
+                    Max Storage (GB)
+                  </label>
+                  <input
+                    type="number"
+                    [(ngModel)]="formData.maxStorageGb"
+                    min="1"
+                    placeholder="Unlimited"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for unlimited</p>
+                </div>
+              </div>
+
+              <!-- Predefined Features Categories -->
               <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Features</label>
+                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  🌟 Features
+                </label>
+                
+                <div class="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-900/50 space-y-3">
+                  @for (category of getCategoryKeys(); track category) {
+                    <div class="bg-white dark:bg-gray-800 rounded p-2.5 border border-gray-200 dark:border-gray-700">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="font-medium text-sm text-gray-900 dark:text-white">
+                          {{ getCategory(category).label }}
+                        </div>
+                        @if (getCategory(category).mutuallyExclusive) {
+                          <span class="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Choose One</span>
+                        } @else {
+                          <span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Multiple</span>
+                        }
+                      </div>
+                      
+                      <div class="space-y-1.5">
+                        @if (getCategory(category).mutuallyExclusive) {
+                          <!-- Add "None" option for radio buttons -->
+                          <label class="flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1.5 rounded cursor-pointer">
+                            <input 
+                              type="radio" 
+                              [name]="'category_' + category"
+                              [value]="''"
+                              [checked]="!isCategorySelected(category)"
+                              (change)="clearRadioCategory(category)"
+                              class="w-4 h-4 text-gray-400 border-gray-300 dark:border-gray-600 focus:ring-gray-400"
+                            />
+                            <span class="text-gray-500 dark:text-gray-400 italic">None</span>
+                          </label>
+                        }
+                        
+                        @for (feature of getCategory(category).options; track feature) {
+                          <label class="flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1.5 rounded cursor-pointer">
+                            @if (getCategory(category).mutuallyExclusive) {
+                              <input 
+                                type="radio" 
+                                [name]="'category_' + category"
+                                [value]="feature"
+                                [checked]="formData.features.includes(feature)"
+                                (change)="selectRadioFeature(category, feature)"
+                                class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 focus:ring-primary-500"
+                              />
+                            } @else {
+                              <input 
+                                type="checkbox"
+                                [checked]="formData.features.includes(feature)"
+                                (change)="toggleCheckboxFeature(feature, $event)"
+                                class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                              />
+                            }
+                            <span class="text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Custom Features (Manual Add) -->
+              <div>
+                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Custom Features (Optional)
+                </label>
                 <div class="space-y-2">
                   @for (feature of formData.features; track $index; let i = $index) {
-                    <div class="flex items-center gap-2">
-                      <input
-                        type="text"
-                        [(ngModel)]="formData.features[i]"
-                        placeholder="Feature description"
-                        class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-                      />
-                      <button
-                        (click)="removeFeature(i)"
-                        class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
-                    </div>
+                    @if (!getAllPredefinedFeatures().includes(feature) && feature.trim() !== '') {
+                      <div class="flex items-center gap-2">
+                        <input
+                          type="text"
+                          [(ngModel)]="formData.features[i]"
+                          placeholder="Custom feature description"
+                          class="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        />
+                        <button
+                          (click)="removeFeature(i)"
+                          class="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      </div>
+                    }
                   }
                   <button
                     (click)="addFeature()"
@@ -275,20 +441,51 @@ interface PlanTemplate {
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Add Feature
+                    Add Custom Feature
                   </button>
                 </div>
               </div>
 
-              <!-- Active Status -->
-              <div>
-                <label class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="formData.isActive"
-                  />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">Make this plan available to customers</span>
-                </label>
+              <!-- Plan Options -->
+              <div class="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="formData.isFeatured"
+                      class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                    />
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">⭐ Featured Plan</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">(Highlight as recommended)</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="formData.customPricing"
+                      class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                    />
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">💼 Custom Pricing</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">(Contact sales instead of price)</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="formData.isActive"
+                      class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                    />
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">✅ Make this plan available to customers</span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -296,15 +493,20 @@ interface PlanTemplate {
             <div class="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-end gap-3">
               <button
                 (click)="closeModal()"
-                class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+                type="button"
+                class="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
               >
+                <svg class="w-4 h-4 inline-block mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
                 Cancel
               </button>
               <button
                 (click)="savePlan()"
-                class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded hover:bg-primary-700 transition shadow-sm"
+                type="button"
+                class="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition shadow-sm"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 inline-block mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
                 {{ showCreateModal ? 'Create Plan' : 'Save Changes' }}
@@ -335,14 +537,116 @@ export class PlanTemplatesComponent implements OnInit {
   showEditModal = false;
   editingPlanId: number | null = null;
 
+  // Predefined feature templates organized by category
+  featureCategories = {
+    dashboard: {
+      label: '📊 Dashboard',
+      mutuallyExclusive: true,
+      options: [
+        '📊 Basic Dashboard',
+        '📊 Advanced Dashboard',
+        '📊 Custom Dashboard'
+      ]
+    },
+    analytics: {
+      label: '📈 Analytics',
+      mutuallyExclusive: true,
+      options: [
+        '📈 Basic Analytics',
+        '📈 Advanced Analytics'
+      ]
+    },
+    reports: {
+      label: '📊 Reports',
+      mutuallyExclusive: true,
+      options: [
+        '📊 Basic Reports',
+        '📊 Advanced Reports',
+        '📊 Custom Reports'
+      ]
+    },
+    emailSupport: {
+      label: '📧 Email Support',
+      mutuallyExclusive: true,
+      options: [
+        '📧 Email Support (48h SLA)',
+        '📧 Priority Email Support (24h SLA)',
+        '📧 Priority Email Support (12h SLA)',
+        '📧 Priority Support (4h SLA)'
+      ]
+    },
+    security: {
+      label: '🔒 Security',
+      mutuallyExclusive: true,
+      options: [
+        '🔒 Security – SSL',
+        '🔒 Security – SSL + 2FA',
+        '🔒 Security – SSL + SSO',
+        '🔒 Security – SSO + 2FA',
+        '🔒 Advanced Security (SSL, SSO, 2FA)'
+      ]
+    },
+    backups: {
+      label: '🔄 Backups',
+      mutuallyExclusive: true,
+      options: [
+        '🔄 Daily Backups',
+        '🔄 Hourly Backups',
+        '🔄 Real-time Backups'
+      ]
+    },
+    communication: {
+      label: '💬 Communication & Support',
+      mutuallyExclusive: false,
+      options: [
+        '💬 Chat Support',
+        '📞 Phone Support',
+        '🎯 Dedicated Account Manager'
+      ]
+    },
+    branding: {
+      label: '🎨 Branding',
+      mutuallyExclusive: false,
+      options: [
+        '🎨 Custom Branding',
+        '🎨 White-label Options'
+      ]
+    },
+    dataExport: {
+      label: '📤 Data Management',
+      mutuallyExclusive: false,
+      options: [
+        '📤 Data Export'
+      ]
+    },
+    additional: {
+      label: '✨ Additional Features',
+      mutuallyExclusive: false,
+      options: [
+        '💾 Storage (Up to 1TB)',
+        '📱 Mobile Access',
+        '🎓 Priority Training & Onboarding',
+        '🔔 Notifications',
+        '🔌 API Access',
+        '📇 Custom Integrations',
+        '📄 Custom SLAs'
+      ]
+    }
+  };
+
   formData = {
     name: '',
     description: '',
     price: 0,
-    currency: 'USD',
+    currency: 'PHP', // Default to Philippine Peso
     billingCycle: 'monthly' as 'monthly' | 'quarterly' | 'yearly',
     trialDays: 0,
-    features: [''],
+    maxUsers: null as number | null,
+    maxStorageGb: null as number | null,
+    isFeatured: false,
+    customPricing: false,
+    productType: null as string | null,
+    features: [] as string[],
     isActive: true
   };
 
@@ -366,10 +670,14 @@ export class PlanTemplatesComponent implements OnInit {
       const enrichedPlans = plans.map((plan: any) => ({
         ...plan,
         subscriberCount: parseInt(plan.subscriber_count) || 0,
+        // Parse features if it's a JSON string
+        features: typeof plan.features === 'string' 
+          ? JSON.parse(plan.features) 
+          : (Array.isArray(plan.features) ? plan.features : []),
         // Add template-compatible properties
-        currency: 'USD',
+        currency: 'PHP',
         billingCycle: plan.billing_cycle,
-        trialDays: 0, // Not stored in DB currently
+        trialDays: plan.trial_days || 0,
         isActive: plan.status === 'active'
       }));
 
@@ -388,10 +696,15 @@ export class PlanTemplatesComponent implements OnInit {
       name: plan.name,
       description: plan.description,
       price: plan.price,
-      currency: 'USD',
+      currency: 'PHP',
       billingCycle: plan.billing_cycle as 'monthly' | 'quarterly' | 'yearly',
-      trialDays: 0,
-      features: [...plan.features],
+      trialDays: (plan as any).trial_days || 0,
+      maxUsers: plan.max_users,
+      maxStorageGb: plan.max_storage_gb,
+      isFeatured: (plan as any).is_featured || false,
+      customPricing: (plan as any).custom_pricing || false,
+      productType: (plan as any).product_type || null,
+      features: typeof plan.features === 'string' ? JSON.parse(plan.features) : (Array.isArray(plan.features) ? [...plan.features] : []),
       isActive: plan.status === 'active'
     };
     this.showEditModal = true;
@@ -447,6 +760,94 @@ export class PlanTemplatesComponent implements OnInit {
     this.formData.features.splice(index, 1);
   }
 
+  // Helper methods for feature categories
+  getCategoryKeys(): string[] {
+    if (!this.featureCategories) return [];
+    return Object.keys(this.featureCategories);
+  }
+
+  getCategory(categoryKey: string) {
+    if (!this.featureCategories) return { label: '', mutuallyExclusive: false, options: [] };
+    return this.featureCategories[categoryKey as keyof typeof this.featureCategories];
+  }
+
+  getAllPredefinedFeatures(): string[] {
+    const allFeatures: string[] = [];
+    const keys = this.getCategoryKeys();
+    for (const category of keys) {
+      const cat = this.getCategory(category);
+      if (cat && cat.options) {
+        allFeatures.push(...cat.options);
+      }
+    }
+    return allFeatures;
+  }
+
+  // Check if any feature from a category is selected
+  isCategorySelected(categoryKey: string): boolean {
+    const category = this.getCategory(categoryKey);
+    if (!category || !category.options) return false;
+    return category.options.some((opt: string) => this.formData.features.includes(opt));
+  }
+
+  // Radio button handler (mutually exclusive categories)
+  selectRadioFeature(categoryKey: string, feature: string) {
+    const category = this.getCategory(categoryKey);
+    
+    // Remove all features from this category first
+    category.options.forEach((opt: string) => {
+      const index = this.formData.features.indexOf(opt);
+      if (index > -1) {
+        this.formData.features.splice(index, 1);
+      }
+    });
+    
+    // Add the selected feature
+    this.formData.features.push(feature);
+  }
+
+  // Clear all selections from a radio category
+  clearRadioCategory(categoryKey: string) {
+    const category = this.getCategory(categoryKey);
+    
+    // Remove all features from this category
+    category.options.forEach((opt: string) => {
+      const index = this.formData.features.indexOf(opt);
+      if (index > -1) {
+        this.formData.features.splice(index, 1);
+      }
+    });
+  }
+
+  // Checkbox handler (multiple selection)
+  toggleCheckboxFeature(feature: string, event: any) {
+    const isChecked = event.target.checked;
+    
+    if (isChecked) {
+      if (!this.formData.features.includes(feature)) {
+        this.formData.features.push(feature);
+      }
+    } else {
+      const index = this.formData.features.indexOf(feature);
+      if (index > -1) {
+        this.formData.features.splice(index, 1);
+      }
+    }
+  }
+
+  // Keep original toggleFeature for compatibility
+  toggleFeature(categoryKey: string, feature: string, event: any) {
+    const category = this.getCategory(categoryKey);
+    
+    if (category.mutuallyExclusive) {
+      // For radio-style categories
+      this.selectRadioFeature(categoryKey, feature);
+    } else {
+      // For checkbox-style categories
+      this.toggleCheckboxFeature(feature, event);
+    }
+  }
+
   async savePlan() {
     const features = this.formData.features.filter(f => f.trim() !== '');
 
@@ -461,6 +862,12 @@ export class PlanTemplatesComponent implements OnInit {
       price: this.formData.price,
       billing_cycle: this.formData.billingCycle,
       features,
+      max_users: this.formData.maxUsers,
+      max_storage_gb: this.formData.maxStorageGb,
+      trial_days: this.formData.trialDays,
+      is_featured: this.formData.isFeatured,
+      custom_pricing: this.formData.customPricing,
+      product_type: this.formData.productType,
       status: this.formData.isActive ? 'active' : 'inactive'
     };
 
@@ -493,10 +900,15 @@ export class PlanTemplatesComponent implements OnInit {
       name: '',
       description: '',
       price: 0,
-      currency: 'USD',
+      currency: 'PHP',
       billingCycle: 'monthly',
       trialDays: 0,
-      features: [''],
+      maxUsers: null,
+      maxStorageGb: null,
+      isFeatured: false,
+      customPricing: false,
+      productType: null,
+      features: [],
       isActive: true
     };
   }
