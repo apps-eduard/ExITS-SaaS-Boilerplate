@@ -5,7 +5,7 @@ import { TenantService } from '../../../core/services/tenant.service';
 import { ToastService } from '../../../core/services/toast.service';
 
 interface PaymentPlan {
-  id: string;
+  id: number | string; // Allow both number (from database) and string (for compatibility)
   name: string;
   description?: string;
   icon: string;

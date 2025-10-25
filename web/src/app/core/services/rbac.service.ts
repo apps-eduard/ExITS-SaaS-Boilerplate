@@ -171,6 +171,25 @@ export class RBACService {
     return permissionKeys.every(key => this.can(key));
   }
 
+  /**
+   * Check if user can access a product feature
+   * Combines permission check with product subscription status
+   * @param productType - Product type (e.g., "money_loan", "bnpl", "pawnshop")
+   * @param action - Optional action to check (e.g., "read", "create")
+   */
+  canAccessProduct(productType: string, action: string = 'read'): boolean {
+    // Check if user has permission to access the product
+    const hasPermission = this.can(`${productType}:${action}`);
+    
+    // TODO: Also check if tenant has active subscription for this product
+    // This will be implemented when we integrate with subscription status
+    // const hasActiveSubscription = this.tenantService.hasActiveSubscription(productType);
+    
+    // For now, just check permissions
+    // Later: return hasPermission && hasActiveSubscription;
+    return hasPermission;
+  }
+
   // ==================== Legacy Methods (backward compatibility) ====================
 
   /**

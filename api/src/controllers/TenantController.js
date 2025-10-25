@@ -336,6 +336,7 @@ class TenantController {
   static async createSubscription(req, res, next) {
     try {
       const tenantId = req.tenantId;
+      const userId = req.userId;
       const { planId, billingCycle, paymentMethod } = req.body;
 
       if (!tenantId) {
@@ -354,6 +355,7 @@ class TenantController {
 
       const result = await TenantService.createOrUpdateSubscription(
         tenantId,
+        userId,
         planId,
         billingCycle || 'monthly',
         paymentMethod || 'credit_card'
@@ -362,6 +364,39 @@ class TenantController {
       res.status(CONSTANTS.HTTP_STATUS.CREATED).json({
         success: true,
         message: 'Subscription created successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /tenants/current/payment-history
+   * Get payment history for current tenant
+   */
+  static async getPaymentHistory(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+      const { dateRange, transactionType, status, page, limit } = req.query;
+
+      if (!tenantId) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: 'No tenant associated with this user'
+        });
+      }
+
+      const result = await TenantService.getPaymentHistory(tenantId, {
+        dateRange,
+        transactionType,
+        status,
+        page: page ? parseInt(page) : 1,
+        limit: limit ? parseInt(limit) : 20
+      });
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
         data: result,
       });
     } catch (err) {

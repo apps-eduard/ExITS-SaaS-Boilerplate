@@ -3,15 +3,10 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ProductSubscriptionService, SubscriptionPlan, ProductSubscription } from '../../../core/services/product-subscription.service';
-import { forkJoin } from 'rxjs';
 
 interface TenantForm {
   name: string;
   subdomain: string;
-  plan: string;
-  status: string;
-  max_users: number;
   logo_url?: string;
   colors?: {
     primary?: string;
@@ -25,12 +20,6 @@ interface TenantForm {
   money_loan_enabled: boolean;
   bnpl_enabled: boolean;
   pawnshop_enabled: boolean;
-}
-
-interface ProductSubscriptionForm {
-  subscription_plan_id: number | null;
-  billing_cycle: 'monthly' | 'yearly';
-  starts_at: string;
 }
 
 @Component({
@@ -119,79 +108,6 @@ interface ProductSubscriptionForm {
           </div>
         </div>
 
-        <!-- Plan & Limits -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-          <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-            <h2 class="text-xs font-semibold text-gray-900 dark:text-white">Subscription & Limits</h2>
-          </div>
-          <div class="p-4 space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Plan <span class="text-red-500">*</span>
-                </label>
-                <select
-                  [(ngModel)]="form.plan"
-                  name="plan"
-                  required
-                  class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                >
-                  <option value="basic">Basic</option>
-                  <option value="professional">Professional</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status <span class="text-red-500">*</span>
-                </label>
-                <select
-                  [(ngModel)]="form.status"
-                  name="status"
-                  required
-                  class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                >
-                  <option value="active">Active</option>
-                  <option value="trial">Trial</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Max Users <span class="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  [(ngModel)]="form.max_users"
-                  name="max_users"
-                  required
-                  min="1"
-                  placeholder="50"
-                  class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-              <div class="flex items-start gap-2">
-                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div class="text-xs text-blue-800 dark:text-blue-200">
-                  <p class="font-medium mb-1">Plan Limits</p>
-                  <ul class="text-xs space-y-0.5">
-                    <li><strong>Basic:</strong> Up to 50 users, basic features</li>
-                    <li><strong>Professional:</strong> Up to 200 users, advanced features</li>
-                    <li><strong>Enterprise:</strong> Unlimited users, all features</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Contact Person -->
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
           <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
@@ -254,20 +170,18 @@ interface ProductSubscriptionForm {
           </div>
           <div class="p-4">
             <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
-              Enable or disable products for this tenant. Only enabled products will be accessible.
+              Enable or disable products for this tenant. Tenants can manage their own subscriptions through their portal.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <!-- Money Loan -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
                    [class.bg-green-50]="form.money_loan_enabled"
                    [class.dark:bg-green-900/20]="form.money_loan_enabled">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg">💵</span>
-                    <div>
-                      <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Money Loan</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Quick cash loans</p>
-                    </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">💵</span>
+                  <div>
+                    <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Money Loan</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Quick cash loans</p>
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
@@ -280,66 +194,17 @@ interface ProductSubscriptionForm {
                     {{ form.money_loan_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
-
-                <!-- Subscription Configuration -->
-                <div *ngIf="form.money_loan_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
-                  
-                  <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Plan <span class="text-red-500">*</span>
-                    </label>
-                    <select [(ngModel)]="productSubscriptions.money_loan.subscription_plan_id"
-                            name="money_loan_plan"
-                            required
-                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500">
-                      <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of moneyLoanPlans()" [value]="plan.id">
-                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
-                      <select [(ngModel)]="productSubscriptions.money_loan.billing_cycle"
-                              name="money_loan_billing"
-                              [disabled]="isTrialPlan(productSubscriptions.money_loan.subscription_plan_id)"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                      <p *ngIf="isTrialPlan(productSubscriptions.money_loan.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Trial plans are monthly only
-                      </p>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
-                      <input type="date"
-                             [(ngModel)]="productSubscriptions.money_loan.starts_at"
-                             name="money_loan_start"
-                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                    </div>
-                  </div>
-
-                  <div *ngIf="existingProductSubscriptions().get('money_loan')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    ℹ️ Current: {{ existingProductSubscriptions().get('money_loan')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('money_loan')?.status }})
-                  </div>
-                </div>
               </div>
 
               <!-- BNPL -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
                    [class.bg-blue-50]="form.bnpl_enabled"
                    [class.dark:bg-blue-900/20]="form.bnpl_enabled">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg">💳</span>
-                    <div>
-                      <h3 class="text-xs font-semibold text-gray-900 dark:text-white">BNPL</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Buy Now Pay Later</p>
-                    </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">💳</span>
+                  <div>
+                    <h3 class="text-xs font-semibold text-gray-900 dark:text-white">BNPL</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Buy Now Pay Later</p>
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
@@ -352,66 +217,17 @@ interface ProductSubscriptionForm {
                     {{ form.bnpl_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
-
-                <!-- Subscription Configuration -->
-                <div *ngIf="form.bnpl_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
-                  
-                  <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Plan <span class="text-red-500">*</span>
-                    </label>
-                    <select [(ngModel)]="productSubscriptions.bnpl.subscription_plan_id"
-                            name="bnpl_plan"
-                            required
-                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-                      <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of bnplPlans()" [value]="plan.id">
-                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
-                      <select [(ngModel)]="productSubscriptions.bnpl.billing_cycle"
-                              name="bnpl_billing"
-                              [disabled]="isTrialPlan(productSubscriptions.bnpl.subscription_plan_id)"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                      <p *ngIf="isTrialPlan(productSubscriptions.bnpl.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Trial plans are monthly only
-                      </p>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
-                      <input type="date"
-                             [(ngModel)]="productSubscriptions.bnpl.starts_at"
-                             name="bnpl_start"
-                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                    </div>
-                  </div>
-
-                  <div *ngIf="existingProductSubscriptions().get('bnpl')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    ℹ️ Current: {{ existingProductSubscriptions().get('bnpl')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('bnpl')?.status }})
-                  </div>
-                </div>
               </div>
 
               <!-- Pawnshop -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
                    [class.bg-purple-50]="form.pawnshop_enabled"
                    [class.dark:bg-purple-900/20]="form.pawnshop_enabled">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg">💎</span>
-                    <div>
-                      <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Pawnshop</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Collateral loans</p>
-                    </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">💎</span>
+                  <div>
+                    <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Pawnshop</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Collateral loans</p>
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
@@ -424,53 +240,6 @@ interface ProductSubscriptionForm {
                     {{ form.pawnshop_enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
-
-                <!-- Subscription Configuration -->
-                <div *ngIf="form.pawnshop_enabled && isEditMode()" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                  <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📋 Subscription</h4>
-                  
-                  <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Plan <span class="text-red-500">*</span>
-                    </label>
-                    <select [(ngModel)]="productSubscriptions.pawnshop.subscription_plan_id"
-                            name="pawnshop_plan"
-                            required
-                            class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-                      <option [value]="null">Select plan (required)</option>
-                      <option *ngFor="let plan of pawnshopPlans()" [value]="plan.id">
-                        {{ plan.name }} - {{ formatPrice(plan.price) }}/{{ plan.billing_cycle }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Billing</label>
-                      <select [(ngModel)]="productSubscriptions.pawnshop.billing_cycle"
-                              name="pawnshop_billing"
-                              [disabled]="isTrialPlan(productSubscriptions.pawnshop.subscription_plan_id)"
-                              class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                      <p *ngIf="isTrialPlan(productSubscriptions.pawnshop.subscription_plan_id)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Trial plans are monthly only
-                      </p>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
-                      <input type="date"
-                             [(ngModel)]="productSubscriptions.pawnshop.starts_at"
-                             name="pawnshop_start"
-                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-                    </div>
-                  </div>
-
-                  <div *ngIf="existingProductSubscriptions().get('pawnshop')" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    ℹ️ Current: {{ existingProductSubscriptions().get('pawnshop')?.subscription_plan?.name }} ({{ existingProductSubscriptions().get('pawnshop')?.status }})
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -557,41 +326,16 @@ export class TenantEditorComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private productSubscriptionService = inject(ProductSubscriptionService);
 
   tenantId = signal<number | null>(null);
   isEditMode = signal(false);
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
-  
-  // Subscription plans and product subscriptions
-  subscriptionPlans = signal<SubscriptionPlan[]>([]);
-  existingProductSubscriptions = signal<Map<string, ProductSubscription>>(new Map());
-
-  // Computed: Filter plans by product type
-  platformPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => !plan.productType)
-  );
-
-  moneyLoanPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'money_loan' || plan.productType === 'platform')
-  );
-
-  bnplPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'bnpl' || plan.productType === 'platform')
-  );
-
-  pawnshopPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'pawnshop' || plan.productType === 'platform')
-  );
 
   form: TenantForm = {
     name: '',
     subdomain: '',
-    plan: 'basic',
-    status: 'active',
-    max_users: 50,
     logo_url: '',
     colors: {
       primary: '#3b82f6',
@@ -605,110 +349,15 @@ export class TenantEditorComponent implements OnInit {
     pawnshop_enabled: false
   };
 
-  // Product subscription forms
-  productSubscriptions: {
-    money_loan: ProductSubscriptionForm;
-    bnpl: ProductSubscriptionForm;
-    pawnshop: ProductSubscriptionForm;
-  } = {
-    money_loan: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] },
-    bnpl: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] },
-    pawnshop: { subscription_plan_id: null, billing_cycle: 'yearly', starts_at: new Date().toISOString().split('T')[0] }
-  };
-
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    
-    // Load subscription plans
-    this.loadSubscriptionPlans();
     
     if (id && id !== 'new') {
       this.tenantId.set(parseInt(id));
       this.isEditMode.set(true);
       this.loadTenant();
-      this.loadProductSubscriptions();
     }
     console.log('🏢 TenantEditorComponent initialized', { isEdit: this.isEditMode() });
-  }
-
-  loadSubscriptionPlans(): void {
-    console.log('🔍 [DEBUG] loadSubscriptionPlans() called');
-    console.log('🔍 [DEBUG] Calling API: /api/subscriptions/plans/all/including-products');
-    
-    this.productSubscriptionService.getAllSubscriptionPlans().subscribe({
-      next: (response) => {
-        console.log('✅ [DEBUG] API Response received:', response);
-        console.log('✅ [DEBUG] Response data length:', response.data?.length);
-        console.log('✅ [DEBUG] Raw response.data:', response.data);
-        
-        // Log each plan's details
-        response.data?.forEach((plan, index) => {
-          console.log(`   Plan ${index + 1}:`, {
-            id: plan.id,
-            name: plan.name,
-            productType: plan.productType,
-            price: plan.price
-          });
-        });
-        
-        this.subscriptionPlans.set(response.data);
-        console.log('📋 All subscription plans loaded (including products):', response.data);
-        console.log('   Platform plans:', this.platformPlans());
-        console.log('   Money Loan plans:', this.moneyLoanPlans());
-        console.log('   BNPL plans:', this.bnplPlans());
-        console.log('   Pawnshop plans:', this.pawnshopPlans());
-      },
-      error: (err) => {
-        console.error('❌ [DEBUG] Error loading subscription plans:', err);
-        console.error('❌ [DEBUG] Error status:', err.status);
-        console.error('❌ [DEBUG] Error message:', err.message);
-      }
-    });
-  }
-
-  loadProductSubscriptions(): void {
-    if (!this.tenantId()) return;
-
-    console.log('🔍 [DEBUG] loadProductSubscriptions() called for tenant:', this.tenantId());
-
-    this.productSubscriptionService.getTenantProductSubscriptions(this.tenantId()!).subscribe({
-      next: (response) => {
-        console.log('✅ [DEBUG] Product subscriptions response:', response);
-        
-        const subscriptionsMap = new Map<string, ProductSubscription>();
-        response.data.forEach(sub => {
-          console.log('  📦 Processing subscription:', {
-            product_type: sub.product_type,
-            subscription_plan_id: sub.subscription_plan_id,
-            billing_cycle: sub.billing_cycle,
-            status: sub.status,
-            starts_at: sub.starts_at
-          });
-          
-          subscriptionsMap.set(sub.product_type, sub);
-          
-          // Populate form with existing subscription data
-          if (this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions]) {
-            this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions] = {
-              subscription_plan_id: sub.subscription_plan_id,
-              billing_cycle: sub.billing_cycle,
-              starts_at: sub.starts_at.split('T')[0]
-            };
-            console.log(`  ✅ Form populated for ${sub.product_type}:`, this.productSubscriptions[sub.product_type as keyof typeof this.productSubscriptions]);
-          }
-        });
-        
-        this.existingProductSubscriptions.set(subscriptionsMap);
-        console.log('📦 All product subscriptions loaded:', {
-          total: subscriptionsMap.size,
-          subscriptions: Array.from(subscriptionsMap.entries())
-        });
-        console.log('📝 Product subscription forms:', this.productSubscriptions);
-      },
-      error: (err) => {
-        console.error('❌ [DEBUG] Error loading product subscriptions:', err);
-      }
-    });
   }
 
   loadTenant(): void {
@@ -732,9 +381,6 @@ export class TenantEditorComponent implements OnInit {
         this.form = {
           name: tenant.name,
           subdomain: tenant.subdomain,
-          plan: tenant.plan,
-          status: tenant.status,
-          max_users: tenant.max_users,
           logo_url: tenant.logoUrl || '',
           colors: { 
             primary: tenant.primaryColor || '#3b82f6', 
@@ -774,125 +420,15 @@ export class TenantEditorComponent implements OnInit {
 
     request.subscribe({
       next: (response) => {
-        console.log('Tenant saved:', response);
-        
-        // If editing, handle product subscriptions
-        if (this.isEditMode() && this.tenantId()) {
-          this.handleProductSubscriptions(this.tenantId()!);
-        } else {
-          this.saving.set(false);
-          this.router.navigate(['/admin/tenants']);
-        }
+        console.log('✅ Tenant saved successfully:', response);
+        this.saving.set(false);
+        this.router.navigate(['/admin/tenants']);
       },
       error: (err) => {
         this.error.set(err.error?.message || 'Failed to save tenant');
         this.saving.set(false);
-        console.error('Error saving tenant:', err);
+        console.error('❌ Error saving tenant:', err);
       }
     });
-  }
-
-  handleProductSubscriptions(tenantId: number): void {
-    const subscriptionRequests: any[] = [];
-    const errors: string[] = [];
-
-    // Handle each product
-    const products: Array<keyof typeof this.productSubscriptions> = ['money_loan', 'bnpl', 'pawnshop'];
-    
-    products.forEach(productType => {
-      const isEnabled = this.form[`${productType}_enabled` as keyof TenantForm];
-      const subForm = this.productSubscriptions[productType];
-      const existingSub = this.existingProductSubscriptions().get(productType);
-
-      if (isEnabled) {
-        // Validate: Product is enabled, plan is required
-        if (!subForm.subscription_plan_id) {
-          const productName = productType.replace('_', ' ').toUpperCase();
-          errors.push(`${productName}: Subscription plan is required when product is enabled`);
-          return;
-        }
-
-        // Set default start date if not provided
-        if (!subForm.starts_at) {
-          subForm.starts_at = new Date().toISOString().split('T')[0];
-        }
-
-        // Check if selected plan is Trial
-        const selectedPlan = this.subscriptionPlans().find(p => p.id === subForm.subscription_plan_id);
-        if (selectedPlan?.name.toLowerCase() === 'trial') {
-          // Trial plan should always be monthly
-          subForm.billing_cycle = 'monthly';
-        }
-
-        // Product is enabled and has a plan selected
-        if (existingSub) {
-          // Update existing subscription
-          subscriptionRequests.push(
-            this.productSubscriptionService.updateProductSubscription(
-              tenantId,
-              productType,
-              {
-                subscription_plan_id: subForm.subscription_plan_id,
-                billing_cycle: subForm.billing_cycle
-              }
-            )
-          );
-        } else {
-          // Create new subscription
-          subscriptionRequests.push(
-            this.productSubscriptionService.subscribeToProduct(tenantId, {
-              product_type: productType,
-              subscription_plan_id: subForm.subscription_plan_id,
-              billing_cycle: subForm.billing_cycle,
-              starts_at: subForm.starts_at
-            })
-          );
-        }
-      } else if (!isEnabled && existingSub) {
-        // Product is disabled but has existing subscription - cancel it
-        subscriptionRequests.push(
-          this.productSubscriptionService.unsubscribeFromProduct(tenantId, productType)
-        );
-      }
-    });
-
-    // Check for validation errors
-    if (errors.length > 0) {
-      this.error.set(errors.join('; '));
-      this.saving.set(false);
-      return;
-    }
-
-    // Execute all subscription requests
-    if (subscriptionRequests.length > 0) {
-      forkJoin(subscriptionRequests).subscribe({
-        next: (results) => {
-          console.log('Product subscriptions updated:', results);
-          this.saving.set(false);
-          this.router.navigate(['/admin/tenants']);
-        },
-        error: (err) => {
-          this.error.set('Tenant saved, but failed to update product subscriptions: ' + (err.error?.message || 'Unknown error'));
-          this.saving.set(false);
-          console.error('Error updating product subscriptions:', err);
-        }
-      });
-    } else {
-      this.saving.set(false);
-      this.router.navigate(['/admin/tenants']);
-    }
-  }
-
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
-    }).format(price);
-  }
-
-  isTrialPlan(planId: number | null): boolean {
-    if (!planId) return false;
-    const plan = this.subscriptionPlans().find(p => p.id === planId);
-    return plan?.name.toLowerCase() === 'trial';
   }
 }

@@ -26,6 +26,9 @@ router.get('/current/subscriptions', TenantController.getMyActiveSubscriptions);
 // Create/update subscription for current tenant
 router.post('/current/subscribe', TenantController.createSubscription);
 
+// Get payment history for current tenant
+router.get('/current/payment-history', TenantController.getPaymentHistory);
+
 // Update current user's tenant products (tenant-settings permission)
 router.put('/current/products', rbacMiddleware(['tenant-settings', 'tenants'], ['update']), TenantController.updateMyTenantProducts);
 

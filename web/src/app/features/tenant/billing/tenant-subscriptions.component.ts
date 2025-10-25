@@ -7,7 +7,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { forkJoin } from 'rxjs';
 
 interface SubscriptionPlan {
-  id: string;
+  id: number | string; // Allow both number (from API) and string (for compatibility)
   name: string;
   description?: string;
   icon: string;
@@ -17,9 +17,11 @@ interface SubscriptionPlan {
   features: string[];
   productType?: string;
   trialDays?: number;
-  current: boolean;
+  current: boolean; // User currently has this plan
+  hasActiveSubscription: boolean; // User has active subscription for this product
   recommended?: boolean;
   isActive?: boolean;
+  subscriptionStatus?: 'available' | 'active' | 'pending'; // New field
 }
 
 @Component({
@@ -182,7 +184,12 @@ interface SubscriptionPlan {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             *ngFor="let plan of availablePlans()"
-            class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition"
+            class="bg-white dark:bg-gray-800 rounded-lg border overflow-hidden hover:shadow-lg transition"
+            [class.border-gray-200]="plan.hasActiveSubscription || plan.productType === 'platform'"
+            [class.dark:border-gray-700]="plan.hasActiveSubscription || plan.productType === 'platform'"
+            [class.border-orange-300]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
+            [class.dark:border-orange-700]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
+            [class.opacity-90]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
           >
             <!-- Plan Header -->
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -225,6 +232,21 @@ interface SubscriptionPlan {
                 >
                   ✓ Active
                 </span>
+                <span
+                  *ngIf="!plan.current && plan.hasActiveSubscription"
+                  class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                >
+                  Available Tier
+                </span>
+                <span
+                  *ngIf="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
+                  class="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 flex items-center gap-1"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Subscribe to Unlock
+                </span>
               </div>
 
               <div class="flex items-baseline gap-1 mt-3">
@@ -256,8 +278,17 @@ interface SubscriptionPlan {
 
             <!-- Actions -->
             <div class="p-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <!-- Active Subscription - Current Plan -->
+              <div *ngIf="plan.current" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Current Plan
+              </div>
+              
+              <!-- Active Subscription - Different Tier -->
               <button
-                *ngIf="!plan.current && canManageBilling()"
+                *ngIf="!plan.current && plan.hasActiveSubscription && canManageBilling()"
                 (click)="selectPlan(plan)"
                 class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition"
                 [class]="plan.recommended 
@@ -270,12 +301,18 @@ interface SubscriptionPlan {
                 </svg>
                 {{ plan.price > getHighestSubscriptionPrice() ? 'Upgrade' : 'Switch' }}
               </button>
-              <div *ngIf="plan.current" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+              
+              <!-- No Active Subscription - Subscribe Now -->
+              <button
+                *ngIf="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available' && canManageBilling()"
+                (click)="selectPlan(plan)"
+                class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition text-white bg-green-600 hover:bg-green-700"
+              >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Current Plan
-              </div>
+                Subscribe Now
+              </button>
             </div>
           </div>
         </div>
@@ -327,6 +364,7 @@ export class TenantSubscriptionsComponent implements OnInit {
   availablePlans = computed(() => {
     const cycle = this.billingCycle();
     const currentSubscriptionNames = this.currentSubscriptions().map(s => s.name);
+    const activeProductTypes = this.currentSubscriptions().map(s => s.productType);
     const enabled = this.enabledProducts();
     
     // Filter plans: show platform plans + only plans for enabled products
@@ -338,21 +376,36 @@ export class TenantSubscriptionsComponent implements OnInit {
         // Show product plans only if the product is enabled
         return enabled.includes(apiPlan.productType || '');
       })
-      .map(apiPlan => ({
-        id: apiPlan.name,
-        name: apiPlan.displayName || apiPlan.name,
-        description: apiPlan.description,
-        icon: apiPlan.icon || '📦',
-        price: apiPlan.price,
-        currency: 'PHP',
-        billingCycle: cycle,
-        features: apiPlan.features || [],
-        productType: apiPlan.productType,
-        trialDays: 0,
-        current: currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name),
-        recommended: apiPlan.isRecommended,
-        isActive: apiPlan.isActive
-      } as SubscriptionPlan));
+      .map(apiPlan => {
+        const isCurrentPlan = currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name);
+        const hasActiveSubscription = activeProductTypes.includes(apiPlan.productType);
+        
+        // Determine subscription status
+        let subscriptionStatus: 'available' | 'active' | 'pending' = 'available';
+        if (hasActiveSubscription && isCurrentPlan) {
+          subscriptionStatus = 'active';
+        } else if (enabled.includes(apiPlan.productType || '') && !hasActiveSubscription) {
+          subscriptionStatus = 'available';
+        }
+        
+        return {
+          id: apiPlan.id, // Use the numeric ID from the database
+          name: apiPlan.displayName || apiPlan.name,
+          description: apiPlan.description,
+          icon: apiPlan.icon || '📦',
+          price: apiPlan.price,
+          currency: 'PHP',
+          billingCycle: cycle,
+          features: apiPlan.features || [],
+          productType: apiPlan.productType,
+          trialDays: 0,
+          current: isCurrentPlan,
+          hasActiveSubscription: hasActiveSubscription,
+          subscriptionStatus: subscriptionStatus,
+          recommended: apiPlan.isRecommended,
+          isActive: apiPlan.isActive
+        } as SubscriptionPlan;
+      });
   });
 
   canManageBilling = computed(() =>
@@ -416,6 +469,8 @@ export class TenantSubscriptionsComponent implements OnInit {
             productType: apiPlan.productType,
             trialDays: 0,
             current: true,
+            hasActiveSubscription: true, // These are active subscriptions
+            subscriptionStatus: 'active' as const,
             recommended: apiPlan.isRecommended,
             isActive: apiPlan.isActive
           }));

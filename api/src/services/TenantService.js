@@ -985,7 +985,7 @@ class TenantService {
   /**
    * Create or update subscription for tenant
    */
-  static async createOrUpdateSubscription(tenantId, planId, billingCycle, paymentMethod) {
+  static async createOrUpdateSubscription(tenantId, userId, planId, billingCycle, paymentMethod) {
     try {
       // Get plan details
       const planResult = await pool.query(
@@ -999,20 +999,24 @@ class TenantService {
 
       const plan = planResult.rows[0];
       const isProductPlan = plan.product_type && plan.product_type !== 'platform';
+      let transactionType = 'subscription';
 
       if (isProductPlan) {
         // Create/update product subscription
+        // Check for ANY existing subscription (active or inactive) to avoid unique constraint violation
         const existingProductSub = await pool.query(
-          `SELECT id FROM product_subscriptions 
-           WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'`,
+          `SELECT id, status FROM product_subscriptions 
+           WHERE tenant_id = $1 AND product_type = $2`,
           [tenantId, plan.product_type]
         );
 
         if (existingProductSub.rows.length > 0) {
-          // Update existing subscription
+          // Update existing subscription (reactivate if needed)
+          transactionType = existingProductSub.rows[0].status === 'active' ? 'upgrade' : 'subscription';
           await pool.query(
             `UPDATE product_subscriptions 
-             SET subscription_plan_id = $1, price = $2, billing_cycle = $3, updated_at = NOW()
+             SET subscription_plan_id = $1, price = $2, billing_cycle = $3, 
+                 status = 'active', started_at = NOW(), updated_at = NOW()
              WHERE id = $4`,
             [planId, plan.price, billingCycle, existingProductSub.rows[0].id]
           );
@@ -1029,16 +1033,19 @@ class TenantService {
         logger.info(`✅ Created/Updated ${plan.product_type} subscription for tenant ${tenantId}`);
       } else {
         // Create/update platform subscription
+        // Check for ANY existing subscription (active or inactive)
         const existingPlatformSub = await pool.query(
-          `SELECT id FROM tenant_subscriptions WHERE tenant_id = $1 AND status = 'active'`,
+          `SELECT id, status FROM tenant_subscriptions WHERE tenant_id = $1`,
           [tenantId]
         );
 
         if (existingPlatformSub.rows.length > 0) {
-          // Update existing subscription
+          // Update existing subscription (reactivate if needed)
+          transactionType = existingPlatformSub.rows[0].status === 'active' ? 'upgrade' : 'subscription';
           await pool.query(
             `UPDATE tenant_subscriptions 
-             SET plan_id = $1, price = $2, billing_cycle = $3, updated_at = NOW()
+             SET plan_id = $1, price = $2, billing_cycle = $3, 
+                 status = 'active', started_at = NOW(), updated_at = NOW()
              WHERE id = $4`,
             [planId, plan.price, billingCycle, existingPlatformSub.rows[0].id]
           );
@@ -1046,7 +1053,7 @@ class TenantService {
           // Create new platform subscription
           await pool.query(
             `INSERT INTO tenant_subscriptions 
-             (tenant_id, plan_id, status, start_date, price, billing_cycle)
+             (tenant_id, plan_id, status, started_at, price, billing_cycle)
              VALUES ($1, $2, 'active', NOW(), $3, $4)`,
             [tenantId, planId, plan.price, billingCycle]
           );
@@ -1061,6 +1068,35 @@ class TenantService {
         logger.info(`✅ Created/Updated platform subscription for tenant ${tenantId}`);
       }
 
+      // Generate invoice ID (format: INV-YYYYMMDD-XXX)
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const invoiceId = `INV-${today}-${randomSuffix}`;
+
+      // Save payment history record
+      await pool.query(
+        `INSERT INTO payment_history 
+         (tenant_id, user_id, subscription_plan_id, transaction_id, amount, currency, 
+          status, provider, transaction_type, plan_name, product_type, description, processed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
+        [
+          tenantId,
+          userId,
+          planId,
+          invoiceId,
+          plan.price,
+          'PHP',
+          'success', // Since this is a simulated payment
+          paymentMethod || 'credit_card',
+          transactionType,
+          plan.name,
+          plan.product_type || 'platform',
+          `${transactionType === 'upgrade' ? 'Upgraded to' : 'Subscribed to'} ${plan.name} - ${billingCycle} billing`
+        ]
+      );
+
+      logger.info(`💳 Payment history recorded: ${invoiceId} for tenant ${tenantId}`);
+
       return {
         success: true,
         plan: plan.name,
@@ -1070,6 +1106,95 @@ class TenantService {
       };
     } catch (err) {
       logger.error(`Tenant service create subscription error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Get payment history for a tenant with optional filters
+   */
+  static async getPaymentHistory(tenantId, filters = {}) {
+    try {
+      const { 
+        dateRange = 'all', 
+        transactionType = 'all', 
+        status = 'all',
+        page = 1,
+        limit = 20
+      } = filters;
+
+      let whereClauses = ['tenant_id = $1'];
+      let params = [tenantId];
+      let paramCounter = 2;
+
+      // Date range filter
+      if (dateRange !== 'all') {
+        let daysAgo;
+        switch (dateRange) {
+          case '7days': daysAgo = 7; break;
+          case '30days': daysAgo = 30; break;
+          case '90days': daysAgo = 90; break;
+          default: daysAgo = null;
+        }
+        if (daysAgo) {
+          whereClauses.push(`processed_at >= NOW() - INTERVAL '${daysAgo} days'`);
+        }
+      }
+
+      // Transaction type filter
+      if (transactionType !== 'all') {
+        whereClauses.push(`transaction_type = $${paramCounter}`);
+        params.push(transactionType);
+        paramCounter++;
+      }
+
+      // Status filter
+      if (status !== 'all') {
+        whereClauses.push(`status = $${paramCounter}`);
+        params.push(status);
+        paramCounter++;
+      }
+
+      const whereClause = whereClauses.join(' AND ');
+      const offset = (page - 1) * limit;
+
+      // Get total count
+      const countResult = await pool.query(
+        `SELECT COUNT(*) FROM payment_history WHERE ${whereClause}`,
+        params
+      );
+
+      // Get paginated records
+      const historyResult = await pool.query(
+        `SELECT 
+          id,
+          transaction_id as "invoiceId",
+          transaction_type as "transactionType",
+          amount,
+          currency,
+          status,
+          provider as "paymentMethod",
+          plan_name as "planName",
+          product_type as "productType",
+          description,
+          processed_at as "date",
+          created_at as "createdAt"
+         FROM payment_history 
+         WHERE ${whereClause}
+         ORDER BY processed_at DESC
+         LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`,
+        [...params, limit, offset]
+      );
+
+      return {
+        transactions: historyResult.rows,
+        total: parseInt(countResult.rows[0].count),
+        page,
+        limit,
+        totalPages: Math.ceil(countResult.rows[0].count / limit)
+      };
+    } catch (err) {
+      logger.error(`Get payment history error: ${err.message}`);
       throw err;
     }
   }

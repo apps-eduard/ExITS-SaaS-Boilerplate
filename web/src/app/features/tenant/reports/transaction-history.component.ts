@@ -1,12 +1,14 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TenantService } from '../../../core/services/tenant.service';
 
 interface Transaction {
   id: number;
-  date: Date;
+  date: Date | string;
   description: string;
   type: 'subscription' | 'upgrade' | 'downgrade' | 'refund' | 'payment';
+  transactionType?: string;
   amount: number;
   status: 'success' | 'pending' | 'failed' | 'refunded';
   paymentMethod: string;
@@ -33,9 +35,9 @@ interface Transaction {
         </div>
         <button
           (click)="exportTransactions()"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+          class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition shadow-sm"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <span>Export CSV</span>
@@ -43,7 +45,7 @@ interface Transaction {
       </div>
 
       <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <!-- Date Range Filter -->
           <div>
@@ -53,7 +55,7 @@ interface Transaction {
             <select
               [(ngModel)]="dateRange"
               (change)="filterTransactions()"
-              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="all">All Time</option>
               <option value="7days">Last 7 Days</option>
@@ -71,7 +73,7 @@ interface Transaction {
             <select
               [(ngModel)]="typeFilter"
               (change)="filterTransactions()"
-              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="all">All Types</option>
               <option value="subscription">Subscription</option>
@@ -90,7 +92,7 @@ interface Transaction {
             <select
               [(ngModel)]="statusFilter"
               (change)="filterTransactions()"
-              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="all">All Status</option>
               <option value="success">Success</option>
@@ -110,65 +112,65 @@ interface Transaction {
               [(ngModel)]="searchQuery"
               (input)="filterTransactions()"
               placeholder="Invoice ID, Plan..."
-              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none"
             />
           </div>
         </div>
       </div>
 
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Total Transactions</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">
                 {{ filteredTransactions().length }}
               </p>
             </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20 text-xl">
+            <div class="flex h-8 w-8 items-center justify-center rounded bg-blue-100 dark:bg-blue-900/20 text-lg">
               🧾
             </div>
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Total Spent</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">
                 {{ formatPrice(calculateTotal('all')) }}
               </p>
             </div>
-            <div class="flex h-10 w-10 items-center justify-between rounded-lg bg-green-100 dark:bg-green-900/20 text-xl">
+            <div class="flex h-8 w-8 items-center justify-center rounded bg-green-100 dark:bg-green-900/20 text-lg">
               💰
             </div>
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Successful</p>
-              <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+              <p class="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
                 {{ countByStatus('success') }}
               </p>
             </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20 text-xl">
+            <div class="flex h-8 w-8 items-center justify-center rounded bg-green-100 dark:bg-green-900/20 text-lg">
               ✅
             </div>
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs text-gray-500 dark:text-gray-400">Failed</p>
-              <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+              <p class="text-xl font-bold text-red-600 dark:text-red-400 mt-1">
                 {{ countByStatus('failed') }}
               </p>
             </div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20 text-xl">
+            <div class="flex h-8 w-8 items-center justify-center rounded bg-red-100 dark:bg-red-900/20 text-lg">
               ❌
             </div>
           </div>
@@ -176,30 +178,30 @@ interface Transaction {
       </div>
 
       <!-- Transactions Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
                   Date
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
                   Description
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
                   Type
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
                   Payment Method
                 </th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">
                   Amount
                 </th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300">
                   Status
                 </th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300">
                   Actions
                 </th>
               </tr>
@@ -209,11 +211,11 @@ interface Transaction {
                 *ngFor="let transaction of filteredTransactions()"
                 class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition"
               >
-                <td class="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                <td class="px-3 py-2 text-xs text-gray-900 dark:text-white whitespace-nowrap">
                   {{ formatDate(transaction.date) }}
                 </td>
-                <td class="px-4 py-3">
-                  <div class="text-sm font-medium text-gray-900 dark:text-white">
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-gray-900 dark:text-white">
                     {{ transaction.description }}
                   </div>
                   <div *ngIf="transaction.planName" class="text-xs text-gray-500 dark:text-gray-400">
@@ -223,7 +225,7 @@ interface Transaction {
                     Invoice: {{ transaction.invoiceId }}
                   </div>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-3 py-2 whitespace-nowrap">
                   <span
                     class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded"
                     [ngClass]="{
@@ -237,10 +239,10 @@ interface Transaction {
                     {{ transaction.type | titlecase }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   {{ transaction.paymentMethod }}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold text-right whitespace-nowrap"
+                <td class="px-3 py-2 text-xs font-medium text-right whitespace-nowrap"
                     [ngClass]="{
                       'text-gray-900 dark:text-white': transaction.type !== 'refund',
                       'text-red-600 dark:text-red-400': transaction.type === 'refund'
@@ -248,7 +250,7 @@ interface Transaction {
                 >
                   {{ transaction.type === 'refund' ? '-' : '' }}{{ formatPrice(transaction.amount) }}
                 </td>
-                <td class="px-4 py-3 text-center whitespace-nowrap">
+                <td class="px-3 py-2 text-center whitespace-nowrap">
                   <span
                     class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full"
                     [ngClass]="{
@@ -265,25 +267,29 @@ interface Transaction {
                     {{ transaction.status | titlecase }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center whitespace-nowrap">
+                <td class="px-3 py-2 text-center whitespace-nowrap">
                   <button
                     *ngIf="transaction.invoiceId"
                     (click)="viewInvoice(transaction)"
-                    class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium"
+                    class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium transition"
                   >
-                    View Invoice
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View
                   </button>
                 </td>
               </tr>
 
               <!-- Empty State -->
               <tr *ngIf="filteredTransactions().length === 0">
-                <td colspan="7" class="px-4 py-12 text-center">
+                <td colspan="7" class="px-3 py-8 text-center">
                   <div class="flex flex-col items-center justify-center">
-                    <svg class="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-1">No transactions found</h3>
+                    <h3 class="text-xs font-medium text-gray-900 dark:text-white mb-1">No transactions found</h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                       Try adjusting your filters or date range
                     </p>
@@ -299,10 +305,13 @@ interface Transaction {
   styles: []
 })
 export class TransactionHistoryComponent implements OnInit {
+  private tenantService = inject(TenantService);
+  
   dateRange = 'all';
   typeFilter = 'all';
   statusFilter = 'all';
   searchQuery = '';
+  isLoading = signal<boolean>(false);
 
   allTransactions = signal<Transaction[]>([]);
 
@@ -355,82 +364,41 @@ export class TransactionHistoryComponent implements OnInit {
   }
 
   loadTransactions(): void {
-    // TODO: Replace with actual API call
-    // For now, using mock data
-    const mockTransactions: Transaction[] = [
-      {
-        id: 1,
-        date: new Date('2025-10-25'),
-        description: 'Subscription Payment - Pawnshop Pro',
-        type: 'subscription',
-        amount: 79.99,
-        status: 'success',
-        paymentMethod: 'Credit Card',
-        planName: 'Pawnshop - Pro',
-        invoiceId: 'INV-2025-001'
+    this.isLoading.set(true);
+    
+    this.tenantService.getPaymentHistory({
+      dateRange: this.dateRange,
+      transactionType: this.typeFilter,
+      status: this.statusFilter
+    }).subscribe({
+      next: (response: any) => {
+        const transactions = response.data.transactions.map((t: any) => ({
+          id: t.id,
+          date: new Date(t.date),
+          description: t.description || `${t.transactionType} - ${t.planName}`,
+          type: t.transactionType || 'payment',
+          transactionType: t.transactionType,
+          amount: parseFloat(t.amount),
+          status: t.status,
+          paymentMethod: t.paymentMethod || 'Credit Card',
+          planName: t.planName,
+          invoiceId: t.invoiceId
+        }));
+        this.allTransactions.set(transactions);
+        this.isLoading.set(false);
       },
-      {
-        id: 2,
-        date: new Date('2025-10-20'),
-        description: 'Subscription Payment - Money Loan Starter',
-        type: 'subscription',
-        amount: 29.99,
-        status: 'success',
-        paymentMethod: 'GCash',
-        planName: 'Money Loan - Starter',
-        invoiceId: 'INV-2025-002'
-      },
-      {
-        id: 3,
-        date: new Date('2025-10-15'),
-        description: 'Upgrade to Pro Plan',
-        type: 'upgrade',
-        amount: 50.00,
-        status: 'success',
-        paymentMethod: 'Credit Card',
-        planName: 'Platform - Pro',
-        invoiceId: 'INV-2025-003'
-      },
-      {
-        id: 4,
-        date: new Date('2025-10-10'),
-        description: 'Monthly Subscription Payment',
-        type: 'payment',
-        amount: 99.99,
-        status: 'success',
-        paymentMethod: 'Credit Card',
-        planName: 'Enterprise Plan',
-        invoiceId: 'INV-2025-004'
-      },
-      {
-        id: 5,
-        date: new Date('2025-10-05'),
-        description: 'Failed Payment Attempt',
-        type: 'payment',
-        amount: 79.99,
-        status: 'failed',
-        paymentMethod: 'Credit Card',
-        planName: 'Pro Plan'
-      },
-      {
-        id: 6,
-        date: new Date('2025-09-25'),
-        description: 'Refund - Downgrade from Enterprise',
-        type: 'refund',
-        amount: 50.00,
-        status: 'refunded',
-        paymentMethod: 'Credit Card',
-        planName: 'Enterprise Plan',
-        invoiceId: 'INV-2025-005'
+      error: (error: any) => {
+        console.error('Error loading payment history:', error);
+        this.isLoading.set(false);
+        // Fallback to empty array on error
+        this.allTransactions.set([]);
       }
-    ];
-
-    this.allTransactions.set(mockTransactions);
+    });
   }
 
   filterTransactions(): void {
-    // Triggers computed recalculation
-    // The actual filtering is done in the computed signal
+    // Reload with new filters
+    this.loadTransactions();
   }
 
   calculateTotal(filter: 'all' | 'success' | 'failed'): number {
@@ -458,7 +426,7 @@ export class TransactionHistoryComponent implements OnInit {
     }).format(amount);
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
