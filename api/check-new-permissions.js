@@ -34,7 +34,7 @@ async function checkPermissions() {
     for (const role of tenantAdminRoles.rows) {
       const rolePerms = await pool.query(`
         SELECT COUNT(*) as count
-        FROM role_permissions_standard rps
+        FROM role_permissions rps
         JOIN permissions p ON rps.permission_id = p.id
         WHERE rps.role_id = $1
       `, [role.id]);
@@ -45,7 +45,7 @@ async function checkPermissions() {
     console.log('\n4. Checking specific new permission assignments...');
     const specificAssignments = await pool.query(`
       SELECT p.permission_key, r.id as role_id, r.name as role_name
-      FROM role_permissions_standard rps
+      FROM role_permissions rps
       JOIN permissions p ON rps.permission_id = p.id
       JOIN roles r ON rps.role_id = r.id
       WHERE r.name = 'Tenant Admin'

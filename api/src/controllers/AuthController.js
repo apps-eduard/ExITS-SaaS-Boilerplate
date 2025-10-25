@@ -31,6 +31,45 @@ class AuthController {
 
       const result = await AuthService.login(value.email, value.password, req.ip);
 
+      // Check if MFA is required
+      if (result.mfaRequired) {
+        return res.status(CONSTANTS.HTTP_STATUS.OK).json({
+          message: 'MFA verification required',
+          data: {
+            mfaRequired: true,
+            userId: result.userId,
+            email: result.email
+          },
+        });
+      }
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Login successful',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /auth/login-mfa
+   * Complete login with MFA verification
+   */
+  static async loginWithMFA(req, res, next) {
+    try {
+      const { userId, mfaToken } = req.body;
+
+      if (!userId || !mfaToken) {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          error: 'User ID and MFA token are required',
+        });
+      }
+
+      logger.info(`🔐 MFA login attempt for user ${userId}`);
+
+      const result = await AuthService.loginWithMFA(userId, mfaToken, req.ip);
+
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         message: 'Login successful',
         data: result,
@@ -186,7 +225,7 @@ class AuthController {
         `SELECT DISTINCT p.permission_key, p.resource, p.action, p.description
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions_standard rps ON r.id = rps.role_id
+         JOIN role_permissions rps ON r.id = rps.role_id
          JOIN permissions p ON rps.permission_id = p.id
          WHERE ur.user_id = $1 AND r.status = $2
          ORDER BY p.resource, p.action`,

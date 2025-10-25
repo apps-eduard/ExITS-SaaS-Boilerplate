@@ -13,7 +13,7 @@ async function checkTenantAdmins() {
             
             // Get permission count for this role
             const permCount = await pool.query(
-                'SELECT COUNT(*) as count FROM role_permissions_standard WHERE role_id = $1',
+                'SELECT COUNT(*) as count FROM role_permissions WHERE role_id = $1',
                 [role.id]
             );
             console.log(`    Current permissions: ${permCount.rows[0].count}`);

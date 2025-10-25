@@ -31,7 +31,7 @@ BEGIN
   FOR permission_record IN 
     SELECT id FROM permissions
   LOOP
-    INSERT INTO role_permissions_standard (role_id, permission_id)
+    INSERT INTO role_permissions (role_id, permission_id)
     VALUES (super_admin_role_id, permission_record.id)
     ON CONFLICT (role_id, permission_id) DO NOTHING;
   END LOOP;
@@ -59,7 +59,7 @@ SELECT
 FROM users u
 JOIN user_roles ur ON u.id = ur.user_id
 JOIN roles r ON ur.role_id = r.id
-JOIN role_permissions_standard rps ON r.id = rps.role_id
+JOIN role_permissions rps ON r.id = rps.role_id
 JOIN permissions p ON rps.permission_id = p.id
 WHERE u.status = 'active'
 GROUP BY u.id, u.email, u.first_name, u.last_name, r.name
@@ -74,7 +74,7 @@ SELECT
 FROM users u
 JOIN user_roles ur ON u.id = ur.user_id
 JOIN roles r ON ur.role_id = r.id
-JOIN role_permissions_standard rps ON r.id = rps.role_id
+JOIN role_permissions rps ON r.id = rps.role_id
 JOIN permissions p ON rps.permission_id = p.id
 WHERE u.status = 'active'
 ORDER BY u.id, p.resource, p.action

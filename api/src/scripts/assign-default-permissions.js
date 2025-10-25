@@ -47,7 +47,7 @@ async function assignDefaultPermissions() {
     let assignedCount = 0;
     for (const permission of permissionsResult.rows) {
       await client.query(`
-        INSERT INTO role_permissions_standard (role_id, permission_id)
+        INSERT INTO role_permissions (role_id, permission_id)
         VALUES ($1, $2)
         ON CONFLICT (role_id, permission_id) DO NOTHING
       `, [superAdminRoleId, permission.id]);
@@ -93,7 +93,7 @@ async function assignDefaultPermissions() {
       FROM users u
       JOIN user_roles ur ON u.id = ur.user_id
       JOIN roles r ON ur.role_id = r.id
-      JOIN role_permissions_standard rps ON r.id = rps.role_id
+      JOIN role_permissions rps ON r.id = rps.role_id
       JOIN permissions p ON rps.permission_id = p.id
       WHERE u.status = 'active'
       GROUP BY u.id, u.email, u.first_name, u.last_name, r.name
@@ -114,7 +114,7 @@ async function assignDefaultPermissions() {
     const samplePermissions = await client.query(`
       SELECT DISTINCT p.permission_key, p.resource, p.action
       FROM permissions p
-      JOIN role_permissions_standard rps ON p.id = rps.permission_id
+      JOIN role_permissions rps ON p.id = rps.permission_id
       WHERE rps.role_id = $1
       ORDER BY p.resource, p.action
       LIMIT 10

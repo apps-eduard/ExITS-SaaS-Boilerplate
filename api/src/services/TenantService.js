@@ -133,7 +133,7 @@ class TenantService {
               .join(', ');
             
             await client.query(
-              `INSERT INTO role_permissions_standard (role_id, permission_id) 
+              `INSERT INTO role_permissions (role_id, permission_id) 
                VALUES ${permissionValues}
                ON CONFLICT (role_id, permission_id) DO NOTHING`
             );

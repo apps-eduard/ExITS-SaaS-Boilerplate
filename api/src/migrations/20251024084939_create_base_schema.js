@@ -127,8 +127,8 @@ exports.up = async function(knex) {
     table.unique(['user_id', 'role_id']);
   });
 
-  // Create role_permissions_standard table
-  await knex.schema.createTable('role_permissions_standard', function (table) {
+  // Create role_permissions table
+  await knex.schema.createTable('role_permissions', function (table) {
     table.increments('id').primary();
     table.integer('role_id').references('id').inTable('roles').onDelete('CASCADE');
     table.integer('permission_id').references('id').inTable('permissions').onDelete('CASCADE');
@@ -187,7 +187,7 @@ exports.down = async function(knex) {
   // Drop tables in reverse order of creation
   await knex.schema.dropTableIfExists('user_sessions');
   await knex.schema.dropTableIfExists('audit_logs');
-  await knex.schema.dropTableIfExists('role_permissions_standard');
+  await knex.schema.dropTableIfExists('role_permissions');
   await knex.schema.dropTableIfExists('user_roles');
   await knex.schema.dropTableIfExists('permissions');
   await knex.schema.dropTableIfExists('modules');

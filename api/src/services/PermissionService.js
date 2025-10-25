@@ -23,7 +23,7 @@ class PermissionService {
           SELECT DISTINCT rps.role_id
           FROM user_roles ur
           JOIN roles r ON ur.role_id = r.id
-          JOIN role_permissions_standard rps ON r.id = rps.role_id
+          JOIN role_permissions rps ON r.id = rps.role_id
           JOIN permissions p ON rps.permission_id = p.id
           WHERE ur.user_id = $1 
             AND p.permission_key = $2

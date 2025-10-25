@@ -11,6 +11,7 @@ const router = express.Router();
 
 // Public routes (no auth required)
 router.post('/login', AuthController.login);
+router.post('/login-mfa', AuthController.loginWithMFA);
 router.post('/forgot-password', AuthController.requestPasswordReset);
 router.post('/refresh', AuthController.refreshToken);
 // Email existence check for registration (public - no auth required)

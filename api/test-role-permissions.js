@@ -16,7 +16,7 @@ async function testRolePermissions() {
         
         // 2. Count permissions assigned to Super Admin
         const permCountResult = await pool.query(
-            'SELECT COUNT(*) as count FROM role_permissions_standard WHERE role_id = $1',
+            'SELECT COUNT(*) as count FROM role_permissions WHERE role_id = $1',
             [superAdminRole.id]
         );
         console.log(`\n2. Permissions assigned to Super Admin: ${permCountResult.rows[0].count}`);
@@ -24,7 +24,7 @@ async function testRolePermissions() {
         // 3. Get sample permissions assigned to Super Admin
         const samplePermsResult = await pool.query(`
             SELECT p.permission_key, p.resource, p.action, p.space
-            FROM role_permissions_standard rps
+            FROM role_permissions rps
             JOIN permissions p ON rps.permission_id = p.id
             WHERE rps.role_id = $1
             ORDER BY p.resource, p.action
@@ -47,7 +47,7 @@ async function testRolePermissions() {
               p.action,
               p.description,
               p.space
-            FROM role_permissions_standard rps
+            FROM role_permissions rps
             JOIN permissions p ON rps.permission_id = p.id
             WHERE rps.role_id = $1
             ORDER BY p.resource, p.action
@@ -75,14 +75,14 @@ async function testRolePermissions() {
         console.log(`\n5. Checking for specific system permissions...`);
         const systemPermissionsCheck = await pool.query(`
             SELECT COUNT(*) as count 
-            FROM role_permissions_standard rps
+            FROM role_permissions rps
             JOIN permissions p ON rps.permission_id = p.id
             WHERE rps.role_id = $1 AND p.space = 'system'
         `, [superAdminRole.id]);
         
         const tenantPermissionsCheck = await pool.query(`
             SELECT COUNT(*) as count 
-            FROM role_permissions_standard rps
+            FROM role_permissions rps
             JOIN permissions p ON rps.permission_id = p.id
             WHERE rps.role_id = $1 AND p.space = 'tenant'
         `, [superAdminRole.id]);

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS permissions (
 );
 
 -- Step 2: Create new role_permissions table (standard many-to-many)
-CREATE TABLE IF NOT EXISTS role_permissions_standard (
+CREATE TABLE IF NOT EXISTS role_permissions (
   role_id INT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
   permission_id INT NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS role_permissions_standard (
 CREATE INDEX IF NOT EXISTS idx_permissions_key ON permissions(permission_key);
 CREATE INDEX IF NOT EXISTS idx_permissions_resource ON permissions(resource);
 CREATE INDEX IF NOT EXISTS idx_permissions_space ON permissions(space);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_std_role ON role_permissions_standard(role_id);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_std_perm ON role_permissions_standard(permission_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_std_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_std_perm ON role_permissions(permission_id);
 
 -- Step 4: Insert standard permissions
 
@@ -135,14 +135,14 @@ ON CONFLICT (permission_key) DO NOTHING;
 
 -- Step 5: Migrate existing role_permissions to new format
 -- This maps old menu_key:action to new permission_key format
-INSERT INTO role_permissions_standard (role_id, permission_id)
+INSERT INTO role_permissions (role_id, permission_id)
 SELECT DISTINCT 
   rp.role_id,
   p.id
 FROM role_permissions rp
 JOIN permissions p ON p.permission_key = rp.menu_key || ':' || rp.action_key
 WHERE NOT EXISTS (
-  SELECT 1 FROM role_permissions_standard rps 
+  SELECT 1 FROM role_permissions rps 
   WHERE rps.role_id = rp.role_id AND rps.permission_id = p.id
 );
 
@@ -156,7 +156,7 @@ SELECT
   p.description,
   p.space
 FROM user_roles ur
-JOIN role_permissions_standard rps ON ur.role_id = rps.role_id
+JOIN role_permissions rps ON ur.role_id = rps.role_id
 JOIN permissions p ON rps.permission_id = p.id;
 
 -- Step 7: Add comments for documentation
@@ -166,7 +166,7 @@ COMMENT ON COLUMN permissions.resource IS 'Resource being accessed (e.g., users,
 COMMENT ON COLUMN permissions.action IS 'Action being performed (e.g., create, read, update, delete)';
 COMMENT ON COLUMN permissions.space IS 'Permission scope: system, tenant, or both';
 
-COMMENT ON TABLE role_permissions_standard IS 'Standard many-to-many relationship between roles and permissions';
+COMMENT ON TABLE role_permissions IS 'Standard many-to-many relationship between roles and permissions';
 
 -- Migration complete!
 -- Next steps:

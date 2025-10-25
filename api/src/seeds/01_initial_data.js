@@ -8,7 +8,7 @@ exports.seed = async function(knex) {
   console.log('🌱 Starting comprehensive seed...\n');
 
   // Clean up existing data (but preserve permissions from migrations)
-  await knex('role_permissions_standard').del();
+  await knex('role_permissions').del();
   await knex('user_roles').del();
   // Note: NOT deleting permissions - they come from migrations
   await knex('users').del();
@@ -312,14 +312,14 @@ exports.seed = async function(knex) {
   
   if (allPermissions.length > 0) {
     // First clear any existing permissions for Super Admin to avoid duplicates
-    await knex('role_permissions_standard').where('role_id', systemAdminRole.id).del();
+    await knex('role_permissions').where('role_id', systemAdminRole.id).del();
     
     // Grant ALL permissions to Super Admin
     const rolePermissions = allPermissions.map(perm => ({
       role_id: systemAdminRole.id,
       permission_id: perm.id
     }));
-    await knex('role_permissions_standard').insert(rolePermissions);
+    await knex('role_permissions').insert(rolePermissions);
     console.log(`   • Granted ${rolePermissions.length} permissions to Super Admin`);
   }
   
@@ -330,13 +330,13 @@ exports.seed = async function(knex) {
   for (const tenantAdminRole of tenantAdminRoles) {
     if (tenantPermissions.length > 0) {
       // Clear existing permissions for this role to avoid duplicates
-      await knex('role_permissions_standard').where('role_id', tenantAdminRole.id).del();
+      await knex('role_permissions').where('role_id', tenantAdminRole.id).del();
       
       const tenantRolePermissions = tenantPermissions.map(perm => ({
         role_id: tenantAdminRole.id,
         permission_id: perm.id
       }));
-      await knex('role_permissions_standard').insert(tenantRolePermissions);
+      await knex('role_permissions').insert(tenantRolePermissions);
     }
   }
   console.log(`✅ Permissions granted to all roles`);

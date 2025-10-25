@@ -23,7 +23,7 @@ class UserService {
       tenantId: dbUser.tenant_id,
       status: dbUser.status,
       emailVerified: dbUser.email_verified,
-      mfaEnabled: dbUser.mfa_enabled,
+      mfaEnabled: dbUser.mfa_enabled || false,
       lastLogin: dbUser.last_login,
       createdAt: dbUser.created_at,
       updatedAt: dbUser.updated_at,
@@ -127,20 +127,20 @@ class UserService {
         [userId]
       );
 
-      // Get user permissions
+      // Get user permissions using the new standard RBAC system
       const permissionsResult = await pool.query(
-        `SELECT DISTINCT m.menu_key, rp.action_key
+        `SELECT DISTINCT p.resource, p.action, p.permission_key
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rp ON r.id = rp.role_id
-         JOIN modules m ON rp.module_id = m.id
-         WHERE ur.user_id = $1 AND rp.status = 'active'`,
+         JOIN role_permissions rps ON r.id = rps.role_id
+         JOIN permissions p ON rps.permission_id = p.id
+         WHERE ur.user_id = $1`,
         [userId]
       );
 
       const permissions = permissionsResult.rows.reduce((acc, row) => {
-        if (!acc[row.menu_key]) acc[row.menu_key] = [];
-        acc[row.menu_key].push(row.action_key);
+        if (!acc[row.resource]) acc[row.resource] = [];
+        acc[row.resource].push(row.action);
         return acc;
       }, {});
 
@@ -283,10 +283,7 @@ class UserService {
         values.push(status);
       }
 
-      if (updateData.mfa_enabled !== undefined) {
-        fieldsToUpdate.push(`mfa_enabled = $${paramCount++}`);
-        values.push(updateData.mfa_enabled);
-      }
+      // Note: mfa_enabled column doesn't exist in database, removed
 
       // Check if there are fields to update
       if (fieldsToUpdate.length === 0) {
@@ -306,14 +303,14 @@ class UserService {
           UPDATE users
           SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at
         `;
       } else {
         query = `
           UPDATE users
           SET ${fieldsToUpdate.join(', ')}
           WHERE id = $${paramCount}
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
+          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at
         `;
       }
 
@@ -365,7 +362,7 @@ class UserService {
   static async restoreUser(userId, requestingUserId, tenantId) {
     try {
       const result = await pool.query(
-        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at`,
+        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at`,
         [userId]
       );
 

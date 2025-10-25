@@ -6,7 +6,7 @@ async function verifyRolePermissions() {
     
     const result = await pool.query(`
       SELECT p.permission_key, p.resource, p.action, p.description
-      FROM role_permissions_standard rps
+      FROM role_permissions rps
       JOIN permissions p ON rps.permission_id = p.id
       WHERE rps.role_id = 3
       ORDER BY p.permission_key

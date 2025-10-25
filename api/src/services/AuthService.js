@@ -18,7 +18,7 @@ class AuthService {
       logger.info('🔍 Querying database for user:', { email });
       
       const result = await pool.query(
-        `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.status, u.tenant_id, r.name as role_name
+        `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.status, u.tenant_id, u.mfa_enabled, r.name as role_name
          FROM users u
          LEFT JOIN user_roles ur ON u.id = ur.user_id
          LEFT JOIN roles r ON ur.role_id = r.id
@@ -48,12 +48,22 @@ class AuthService {
         throw new Error('Invalid credentials');
       }
 
+      // Check if MFA is enabled - require MFA token before completing login
+      if (user.mfa_enabled) {
+        logger.info(`MFA required for user ${user.id}`);
+        return {
+          mfaRequired: true,
+          userId: user.id,
+          email: user.email
+        };
+      }
+
       // Fetch user permissions (standard RBAC format: resource:action)
       const permissionsResult = await pool.query(
         `SELECT DISTINCT p.permission_key
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions_standard rps ON r.id = rps.role_id
+         JOIN role_permissions rps ON r.id = rps.role_id
          JOIN permissions p ON rps.permission_id = p.id
          WHERE ur.user_id = $1 AND r.status = $2`,
         [user.id, 'active']
@@ -113,6 +123,108 @@ class AuthService {
       };
     } catch (err) {
       logger.error(`Auth service login error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Complete login after MFA verification
+   */
+  static async loginWithMFA(userId, mfaToken, ipAddress) {
+    try {
+      const MFAService = require('./MFAService');
+
+      // Verify MFA token
+      const mfaResult = await MFAService.verifyMFAToken(userId, mfaToken);
+      
+      if (!mfaResult.valid) {
+        throw new Error('Invalid MFA token');
+      }
+
+      // Get user data
+      const result = await pool.query(
+        `SELECT u.id, u.email, u.first_name, u.last_name, u.status, u.tenant_id, r.name as role_name
+         FROM users u
+         LEFT JOIN user_roles ur ON u.id = ur.user_id
+         LEFT JOIN roles r ON ur.role_id = r.id
+         WHERE u.id = $1 AND u.status = $2`,
+        [userId, 'active']
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('User not found');
+      }
+
+      const user = result.rows[0];
+
+      // Fetch user permissions
+      const permissionsResult = await pool.query(
+        `SELECT DISTINCT p.permission_key
+         FROM user_roles ur
+         JOIN roles r ON ur.role_id = r.id
+         JOIN role_permissions rps ON r.id = rps.role_id
+         JOIN permissions p ON rps.permission_id = p.id
+         WHERE ur.user_id = $1 AND r.status = $2`,
+        [user.id, 'active']
+      );
+
+      const permissions = permissionsResult.rows.map(row => row.permission_key);
+
+      // Generate tokens
+      const accessToken = generateAccessToken({
+        id: user.id,
+        email: user.email,
+        tenant_id: user.tenant_id,
+        permissions,
+      });
+
+      const refreshToken = generateRefreshToken({
+        id: user.id,
+        email: user.email,
+        tenant_id: user.tenant_id,
+      });
+
+      // Store session
+      const sessionHash = require('crypto')
+        .createHash('sha256')
+        .update(accessToken)
+        .digest('hex');
+
+      await pool.query(
+        `INSERT INTO user_sessions (user_id, token_hash, refresh_token_hash, ip_address, status, expires_at)
+         VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours')`,
+        [user.id, sessionHash, refreshToken, ipAddress, 'active']
+      );
+
+      // Update last login
+      await pool.query(
+        `UPDATE users SET last_login = NOW() WHERE id = $1`,
+        [user.id]
+      );
+
+      // Audit log
+      await this.auditLog(user.id, user.tenant_id, 'login_mfa', 'user', user.id, { mfaMethod: mfaResult.method }, ipAddress);
+
+      logger.info(`User ${user.id} logged in successfully with MFA (${mfaResult.method})`);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          tenantId: user.tenant_id,
+          role: user.role_name,
+        },
+        tokens: { accessToken, refreshToken },
+        session: { created: true, tokenHash: sessionHash },
+        permissions,
+        mfaUsed: mfaResult.method,
+        remainingBackupCodes: mfaResult.remainingCodes
+      };
+    } catch (err) {
+      logger.error(`Auth service MFA login error: ${err.message}`);
       throw err;
     }
   }

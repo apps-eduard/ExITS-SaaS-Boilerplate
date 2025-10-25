@@ -90,12 +90,12 @@ exports.up = async function(knex) {
       for (const role of tenantAdminRoles) {
         for (const perm of newTenantPermissions) {
           // Check if already assigned
-          const existing = await trx('role_permissions_standard')
+          const existing = await trx('role_permissions')
             .where({ role_id: role.id, permission_id: perm.id })
             .first();
           
           if (!existing) {
-            await trx('role_permissions_standard').insert({
+            await trx('role_permissions').insert({
               role_id: role.id,
               permission_id: perm.id,
               created_at: trx.fn.now(),
@@ -138,7 +138,7 @@ exports.down = async function(knex) {
         .first();
       
       if (permission) {
-        const deletedRows = await trx('role_permissions_standard')
+        const deletedRows = await trx('role_permissions')
           .where('permission_id', permission.id)
           .delete();
         removedAssignments += deletedRows;

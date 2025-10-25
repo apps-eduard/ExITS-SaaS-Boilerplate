@@ -135,7 +135,7 @@ exports.up = async function(knex) {
       permission_id: perm.id
     }));
 
-    await knex('role_permissions_standard')
+    await knex('role_permissions')
       .insert(rolePermissions)
       .onConflict(['role_id', 'permission_id'])
       .ignore();
@@ -161,7 +161,7 @@ exports.up = async function(knex) {
         permission_id: perm.id
       }));
 
-      await knex('role_permissions_standard')
+      await knex('role_permissions')
         .insert(rolePermissions)
         .onConflict(['role_id', 'permission_id'])
         .ignore();
@@ -186,7 +186,7 @@ exports.down = async function(knex) {
 
   const permissionIds = tenantPermissions.map(p => p.id);
 
-  await knex('role_permissions_standard')
+  await knex('role_permissions')
     .whereIn('permission_id', permissionIds)
     .del();
 

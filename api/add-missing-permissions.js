@@ -82,13 +82,13 @@ async function addMissingPermissions() {
         
         // Check if already assigned
         const existing = await pool.query(
-          'SELECT id FROM role_permissions_standard WHERE role_id = $1 AND permission_id = $2',
+          'SELECT id FROM role_permissions WHERE role_id = $1 AND permission_id = $2',
           [3, permissionId]
         );
         
         if (existing.rows.length === 0) {
           await pool.query(
-            'INSERT INTO role_permissions_standard (role_id, permission_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())',
+            'INSERT INTO role_permissions (role_id, permission_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())',
             [3, permissionId]
           );
           console.log('✅ Assigned to Tenant Admin:', perm.key);

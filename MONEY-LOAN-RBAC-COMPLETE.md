@@ -25,7 +25,7 @@ This document outlines the complete **Role-Based Access Control (RBAC)** impleme
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Layer 3: RBAC PERMISSIONS (role_permissions_standard)      │
+│  Layer 3: RBAC PERMISSIONS (role_permissions)      │
 │  ✓ User has specific permission (money-loan:loans:approve)  │
 │  ✓ Role assigned to user                                    │
 │  ✓ Permission assigned to role                              │

@@ -741,12 +741,15 @@ export class UserEditorComponent implements OnInit {
           roles: user.roles
         });
 
-        // Update form data properties individually to trigger change detection
-        this.formData.firstName = user.firstName || '';
-        this.formData.lastName = user.lastName || '';
-        this.formData.email = user.email;
-        this.formData.status = user.status || 'active';
-        this.formData.tenantId = user.tenantId;
+        // Update form data - create new object to trigger change detection
+        this.formData = {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email,
+          password: '',
+          status: user.status || 'active',
+          tenantId: user.tenantId
+        };
 
         console.log('📝 Form data set to:', this.formData);
 

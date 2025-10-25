@@ -30,6 +30,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes');
 const moneyLoanRoutes = require('./modules/products/money-loan/routes');
 const customerRoutes = require('./modules/customer/routes');
+const mfaRoutes = require('./routes/mfa');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,6 +92,7 @@ app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/product-subscriptions', require('./routes/productSubscriptionRoutes'));
 app.use('/api/money-loan', moneyLoanRoutes);
 app.use('/api/customer', customerRoutes);
+app.use('/api/mfa', mfaRoutes);
 
 // ==================== 404 HANDLER ====================
 

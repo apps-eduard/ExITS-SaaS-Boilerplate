@@ -83,12 +83,12 @@ async function runMigrationLogic() {
     for (const role of tenantAdminRoles) {
       for (const perm of tenantPermissions) {
         // Check if already assigned
-        const existing = await knex('role_permissions_standard')
+        const existing = await knex('role_permissions')
           .where({ role_id: role.id, permission_id: perm.id })
           .first();
         
         if (!existing) {
-          await knex('role_permissions_standard').insert({
+          await knex('role_permissions').insert({
             role_id: role.id,
             permission_id: perm.id,
             created_at: knex.fn.now(),

@@ -103,7 +103,7 @@ exports.down = async function(knex) {
         .first();
       
       if (permission) {
-        await trx('role_permissions_standard')
+        await trx('role_permissions')
           .where('permission_id', permission.id)
           .delete();
       }

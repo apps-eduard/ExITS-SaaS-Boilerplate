@@ -13,7 +13,7 @@ async function verifyPermissions() {
         const roleCounts = await pool.query(`
             SELECT r.name, COUNT(rp.permission_id) as permission_count
             FROM roles r
-            LEFT JOIN role_permissions_standard rp ON r.id = rp.role_id
+            LEFT JOIN role_permissions rp ON r.id = rp.role_id
             WHERE r.name IN ('Super Admin', 'Admin', 'Tenant Admin')
             GROUP BY r.id, r.name
             ORDER BY r.id

@@ -191,7 +191,7 @@ class RBACService {
           p.action,
           p.description,
           p.space
-        FROM role_permissions_standard rps
+        FROM role_permissions rps
         JOIN permissions p ON rps.permission_id = p.id
         WHERE rps.role_id = $1
         ORDER BY p.resource, p.action
@@ -394,7 +394,7 @@ class RBACService {
             )
           ) FILTER (WHERE rps.permission_id IS NOT NULL) as permissions
         FROM roles r
-        LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+        LEFT JOIN role_permissions rps ON r.id = rps.role_id
         LEFT JOIN permissions p ON rps.permission_id = p.id
         LEFT JOIN tenants t ON r.tenant_id = t.id
       `;

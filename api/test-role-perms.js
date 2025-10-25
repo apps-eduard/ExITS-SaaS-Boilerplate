@@ -15,7 +15,7 @@ async function test() {
           )
         ) FILTER (WHERE rps.permission_id IS NOT NULL) as permissions
       FROM roles r
-      LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+      LEFT JOIN role_permissions rps ON r.id = rps.role_id
       LEFT JOIN permissions p ON rps.permission_id = p.id
       WHERE r.id = 4
       GROUP BY r.id, r.name

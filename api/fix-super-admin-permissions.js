@@ -18,7 +18,7 @@ async function checkSuperAdminPermissions() {
     // 2. Check current permissions
     const currentPerms = await pool.query(`
       SELECT p.permission_key, p.resource, p.action
-      FROM role_permissions_standard rps
+      FROM role_permissions rps
       JOIN permissions p ON rps.permission_id = p.id
       WHERE rps.role_id = $1
       ORDER BY p.permission_key
@@ -48,13 +48,13 @@ async function checkSuperAdminPermissions() {
         if (perm.rows.length > 0) {
           // Check if assignment already exists
           const existing = await pool.query(
-            'SELECT id FROM role_permissions_standard WHERE role_id = $1 AND permission_id = $2',
+            'SELECT id FROM role_permissions WHERE role_id = $1 AND permission_id = $2',
             [roleId, perm.rows[0].id]
           );
           
           if (existing.rows.length === 0) {
             await pool.query(
-              'INSERT INTO role_permissions_standard (role_id, permission_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())',
+              'INSERT INTO role_permissions (role_id, permission_id, created_at, updated_at) VALUES ($1, $2, NOW(), NOW())',
               [roleId, perm.rows[0].id]
             );
             console.log(`   ✅ Added: ${permKey}`);

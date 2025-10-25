@@ -10,7 +10,7 @@ async function checkRoles() {
     const rolePerms = await pool.query(`
       SELECT r.id, r.name, COUNT(rps.permission_id) as perm_count
       FROM roles r
-      LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+      LEFT JOIN role_permissions rps ON r.id = rps.role_id
       WHERE r.name = 'Tenant Admin'
       GROUP BY r.id, r.name
     `);

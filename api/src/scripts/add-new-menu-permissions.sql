@@ -80,7 +80,7 @@ ON CONFLICT (permission_key) DO NOTHING;
 -- ==================== ASSIGN ALL PERMISSIONS TO SUPER ADMIN ====================
 
 -- Assign all new permissions to Super Admin role
-INSERT INTO role_permissions_standard (role_id, permission_id)
+INSERT INTO role_permissions (role_id, permission_id)
 SELECT 
   r.id as role_id,
   p.id as permission_id
@@ -124,7 +124,7 @@ UNION ALL
 SELECT 
   'Super Admin Permissions' as metric,
   COUNT(*) as count
-FROM role_permissions_standard rps
+FROM role_permissions rps
 JOIN roles r ON rps.role_id = r.id
 WHERE r.name = 'Super Admin' AND r.space = 'system'
 UNION ALL
@@ -161,7 +161,7 @@ SELECT
   COUNT(DISTINCT p.id) as permission_count,
   COUNT(DISTINCT p.resource) as resource_count
 FROM roles r
-JOIN role_permissions_standard rps ON r.id = rps.role_id
+JOIN role_permissions rps ON r.id = rps.role_id
 JOIN permissions p ON rps.permission_id = p.id
 WHERE r.name = 'Super Admin' AND r.space = 'system'
 GROUP BY r.name;

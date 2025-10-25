@@ -315,7 +315,7 @@ class RBACController {
       logger.info(`📋 Received permissions:`, JSON.stringify(permissions, null, 2));
 
       // First, remove all existing permissions for this role (standard RBAC)
-      const deleteQuery = `DELETE FROM role_permissions_standard WHERE role_id = $1`;
+      const deleteQuery = `DELETE FROM role_permissions WHERE role_id = $1`;
       await req.app.locals.db.query(deleteQuery, [roleId]);
       logger.info(`🗑️  Cleared existing permissions for role ${roleId}`);
 
@@ -348,9 +348,9 @@ class RBACController {
         const permissionId = permResult.rows[0].id;
         logger.info(`✅ Found permission ${permissionKey} with ID: ${permissionId}`);
 
-        // Insert into role_permissions_standard
+        // Insert into role_permissions
         await req.app.locals.db.query(
-          `INSERT INTO role_permissions_standard (role_id, permission_id)
+          `INSERT INTO role_permissions (role_id, permission_id)
            VALUES ($1, $2)
            ON CONFLICT (role_id, permission_id) DO NOTHING`,
           [roleId, permissionId]

@@ -91,7 +91,7 @@ class RoleService {
                   )
                 ) FILTER (WHERE p.id IS NOT NULL) as permissions
          FROM roles r
-         LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+         LEFT JOIN role_permissions rps ON r.id = rps.role_id
          LEFT JOIN permissions p ON rps.permission_id = p.id
          WHERE r.id = $1 AND (r.tenant_id = $2 OR r.tenant_id IS NULL)
          GROUP BY r.id`,
@@ -125,7 +125,7 @@ class RoleService {
                r.created_at, r.updated_at,
                COUNT(rps.permission_id) as permission_count
         FROM roles r
-        LEFT JOIN role_permissions_standard rps ON r.id = rps.role_id
+        LEFT JOIN role_permissions rps ON r.id = rps.role_id
         WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)
       `;
       
@@ -272,7 +272,7 @@ class RoleService {
 
       // Delete all existing permissions for this role
       const deleteResult = await client.query(
-        'DELETE FROM role_permissions_standard WHERE role_id = $1',
+        'DELETE FROM role_permissions WHERE role_id = $1',
         [roleId]
       );
       console.log(`🔍 [DEBUG] Deleted ${deleteResult.rowCount} existing permissions`);
@@ -309,7 +309,7 @@ class RoleService {
 
         // Insert the role-permission mapping
         const insertResult = await client.query(
-          `INSERT INTO role_permissions_standard (role_id, permission_id, granted_by)
+          `INSERT INTO role_permissions (role_id, permission_id, granted_by)
            VALUES ($1, $2, $3)
            ON CONFLICT (role_id, permission_id) DO NOTHING`,
           [roleId, permissionId, requestingUserId]
@@ -372,7 +372,7 @@ class RoleService {
 
       // Insert role-permission mapping
       const result = await pool.query(
-        `INSERT INTO role_permissions_standard (role_id, permission_id, granted_by)
+        `INSERT INTO role_permissions (role_id, permission_id, granted_by)
          VALUES ($1, $2, $3)
          ON CONFLICT (role_id, permission_id) DO NOTHING
          RETURNING *`,
@@ -410,7 +410,7 @@ class RoleService {
 
       // Delete role-permission mapping
       const result = await pool.query(
-        `DELETE FROM role_permissions_standard
+        `DELETE FROM role_permissions
          WHERE role_id = $1 AND permission_id = $2
          RETURNING *`,
         [roleId, permissionId]
