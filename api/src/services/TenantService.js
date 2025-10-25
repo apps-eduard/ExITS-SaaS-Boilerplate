@@ -1066,6 +1066,42 @@ class TenantService {
         );
 
         logger.info(`✅ Created/Updated platform subscription for tenant ${tenantId}`);
+        
+        // When platform subscription is active, reactivate all enabled product subscriptions
+        // This ensures product subscriptions don't show as "cancelled" when platform plan is active
+        const enabledProductsResult = await pool.query(
+          `SELECT money_loan_enabled, bnpl_enabled, pawnshop_enabled FROM tenants WHERE id = $1`,
+          [tenantId]
+        );
+        
+        if (enabledProductsResult.rows.length > 0) {
+          const tenant = enabledProductsResult.rows[0];
+          const enabledProducts = [];
+          if (tenant.money_loan_enabled) enabledProducts.push('moneyloan');
+          if (tenant.bnpl_enabled) enabledProducts.push('bnpl');
+          if (tenant.pawnshop_enabled) enabledProducts.push('pawnshop');
+          
+          logger.info(`🔄 Reactivating product subscriptions for: ${enabledProducts.join(', ')}`);
+          
+          // Update any existing product subscriptions to active
+          for (const productType of enabledProducts) {
+            const updateResult = await pool.query(
+              `UPDATE product_subscriptions 
+               SET status = 'active', updated_at = NOW()
+               WHERE tenant_id = $1 AND product_type = $2
+               RETURNING id, product_type, status`,
+              [tenantId, productType]
+            );
+            
+            if (updateResult.rows.length > 0) {
+              logger.info(`✅ Reactivated ${productType} subscription (ID: ${updateResult.rows[0].id}) to status: ${updateResult.rows[0].status}`);
+            } else {
+              logger.info(`⚠️  No existing ${productType} subscription found to reactivate`);
+            }
+          }
+          
+          logger.info(`✅ Processed ${enabledProducts.length} product subscriptions for tenant ${tenantId}`);
+        }
       }
 
       // Generate invoice ID (format: INV-YYYYMMDD-XXX)
@@ -1086,7 +1122,7 @@ class TenantService {
           invoiceId,
           plan.price,
           'PHP',
-          'success', // Since this is a simulated payment
+          'completed', // payment_status enum value
           paymentMethod || 'credit_card',
           transactionType,
           plan.name,
