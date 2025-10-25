@@ -89,22 +89,22 @@ export class RBACService {
     // Don't manually add headers - the interceptor handles this
     this.http.get<any>('http://localhost:3000/api/auth/me/permissions').subscribe({
       next: (response) => {
-        console.log('� RAW API Response:', response);
-        console.log('📦 Response.data:', response.data);
-        console.log('📦 Response.data.permissions:', response.data?.permissions);
-        console.log('📦 Type of permissions:', typeof response.data?.permissions);
+        // console.log('� RAW API Response:', response);
+        // console.log('📦 Response.data:', response.data);
+        // // console.log('📦 Response.data.permissions:', response.data?.permissions);
+        // // console.log('📦 Type of permissions:', typeof response.data?.permissions);
         
         if (response.data && response.data.permissions) {
-          console.log('✅ Permissions array:', response.data.permissions);
+          // console.log('✅ Permissions array:', response.data.permissions);
           const permissionSet = new Set<string>(response.data.permissions as string[]);
-          console.log('✅ Permission Set created with size:', permissionSet.size);
-          console.log('✅ Permission Set contents:', Array.from(permissionSet));
+          // console.log('✅ Permission Set created with size:', permissionSet.size);
+          // console.log('✅ Permission Set contents:', Array.from(permissionSet));
           
           this.userPermissions.set(permissionSet);
           this.permissionDetails.set(response.data.details || []);
           this.permissionsLoaded.set(true);
-          console.log('✅ User permissions set:', Array.from(permissionSet));
-          console.log(`✅ Total permissions loaded: ${permissionSet.size}`);
+          // console.log('✅ User permissions set:', Array.from(permissionSet));
+          // console.log(`✅ Total permissions loaded: ${permissionSet.size}`);
         } else {
           console.warn('⚠️ No permissions granted to this user');
           console.warn('⚠️ Response structure:', JSON.stringify(response, null, 2));

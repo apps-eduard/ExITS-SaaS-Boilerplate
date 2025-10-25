@@ -41,6 +41,30 @@ const errorHandlerMiddleware = (err, req, res, next) => {
     });
   }
 
+  // Handle database trigger errors (permission space validation)
+  if (err.code === 'P0001' || (err.message && err.message.includes('SECURITY VIOLATION'))) {
+    // PostgreSQL RAISE EXCEPTION from trigger
+    // Extract the user-friendly message from the trigger error
+    let userMessage = err.message;
+    
+    // Check if it's a space mismatch error from our trigger
+    if (userMessage.includes('Cannot assign') && userMessage.includes('space')) {
+      // Parse trigger message: "🚫 SECURITY VIOLATION: Cannot assign tenant-space permission (ID: 123) to system-space role (ID: 1). Permission space must match role space."
+      const match = userMessage.match(/Cannot assign (\w+)-space permission.*to (\w+)-space role/);
+      if (match) {
+        const [, permSpace, roleSpace] = match;
+        userMessage = `🚫 Permission Denied: You cannot assign ${permSpace}-space permissions to ${roleSpace}-space roles. ` +
+                     `For security reasons, ${roleSpace === 'system' ? 'system roles can only have system permissions' : 'tenant roles can only have tenant permissions'}.`;
+      }
+    }
+    
+    return res.status(CONSTANTS.HTTP_STATUS.FORBIDDEN).json({
+      error: 'Security Violation',
+      code: 'PERMISSION_SPACE_MISMATCH',
+      message: userMessage,
+    });
+  }
+
   // Handle custom error messages
   if (err.message.includes('not found')) {
     return res.status(CONSTANTS.HTTP_STATUS.NOT_FOUND).json({
@@ -58,10 +82,38 @@ const errorHandlerMiddleware = (err, req, res, next) => {
     });
   }
 
-  if (err.message.includes('permission')) {
+  if (err.message.includes('permission') || err.message.includes('PERMISSION')) {
+    // Extract more context from permission errors
+    let errorCode = 'PERMISSION_DENIED';
+    let errorTitle = 'Permission Denied';
+    
+    // Check for specific permission error types
+    if (err.message.includes('cannot modify tenant-space roles')) {
+      errorCode = 'CANNOT_MODIFY_TENANT_ROLE';
+      errorTitle = 'Cannot Modify Tenant Role';
+    } else if (err.message.includes('cannot modify system-space roles')) {
+      errorCode = 'CANNOT_MODIFY_SYSTEM_ROLE';
+      errorTitle = 'Cannot Modify System Role';
+    } else if (err.message.includes('cannot delete tenant-space roles')) {
+      errorCode = 'CANNOT_DELETE_TENANT_ROLE';
+      errorTitle = 'Cannot Delete Tenant Role';
+    } else if (err.message.includes('cannot delete system-space roles')) {
+      errorCode = 'CANNOT_DELETE_SYSTEM_ROLE';
+      errorTitle = 'Cannot Delete System Role';
+    } else if (err.message.includes('cannot modify permissions for tenant-space roles')) {
+      errorCode = 'CANNOT_MODIFY_TENANT_PERMISSIONS';
+      errorTitle = 'Cannot Modify Tenant Permissions';
+    } else if (err.message.includes('cannot modify permissions for system-space roles')) {
+      errorCode = 'CANNOT_MODIFY_SYSTEM_PERMISSIONS';
+      errorTitle = 'Cannot Modify System Permissions';
+    } else if (err.message.includes('only modify roles within your own tenant')) {
+      errorCode = 'CROSS_TENANT_ACCESS_DENIED';
+      errorTitle = 'Cross-Tenant Access Denied';
+    }
+    
     return res.status(CONSTANTS.HTTP_STATUS.FORBIDDEN).json({
-      error: 'Permission denied',
-      code: 'PERMISSION_DENIED',
+      error: errorTitle,
+      code: errorCode,
       message: err.message,
     });
   }

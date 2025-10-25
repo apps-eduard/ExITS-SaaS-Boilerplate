@@ -303,30 +303,33 @@ exports.seed = async function(knex) {
   }
   console.log(`✅ All users assigned appropriate roles`);
 
-  // 7. Grant all permissions to Super Admin (CRITICAL: Must be after all permissions are created)
-  console.log('7. Granting permissions to Super Admin...');
+  // 7. Grant permissions to roles (CRITICAL: Must be after all permissions are created)
+  console.log('7. Granting permissions to roles...');
   
   // IMPORTANT: Re-fetch ALL permissions to ensure we have the complete data
   const allPermissions = await knex('permissions').select('*');
-  console.log(`   • Found ${allPermissions.length} permissions to grant`);
+  console.log(`   • Found ${allPermissions.length} total permissions`);
   
-  if (allPermissions.length > 0) {
+  // CRITICAL: Separate permissions by space
+  const systemPermissions = allPermissions.filter(p => p.space === 'system');
+  const tenantPermissions = allPermissions.filter(p => p.space === 'tenant');
+  console.log(`   • System permissions: ${systemPermissions.length}`);
+  console.log(`   • Tenant permissions: ${tenantPermissions.length}`);
+  
+  // Grant ONLY system permissions to Super Admin
+  if (systemPermissions.length > 0) {
     // First clear any existing permissions for Super Admin to avoid duplicates
     await knex('role_permissions').where('role_id', systemAdminRole.id).del();
     
-    // Grant ALL permissions to Super Admin
-    const rolePermissions = allPermissions.map(perm => ({
+    const systemRolePermissions = systemPermissions.map(perm => ({
       role_id: systemAdminRole.id,
       permission_id: perm.id
     }));
-    await knex('role_permissions').insert(rolePermissions);
-    console.log(`   • Granted ${rolePermissions.length} permissions to Super Admin`);
+    await knex('role_permissions').insert(systemRolePermissions);
+    console.log(`   ✅ Granted ${systemRolePermissions.length} SYSTEM permissions to Super Admin`);
   }
   
-  // Grant tenant permissions to Tenant Admins
-  const tenantPermissions = allPermissions.filter(p => p.space === 'tenant');
-  console.log(`   • Found ${tenantPermissions.length} tenant permissions`);
-  
+  // Grant ONLY tenant permissions to Tenant Admins
   for (const tenantAdminRole of tenantAdminRoles) {
     if (tenantPermissions.length > 0) {
       // Clear existing permissions for this role to avoid duplicates
@@ -337,23 +340,24 @@ exports.seed = async function(knex) {
         permission_id: perm.id
       }));
       await knex('role_permissions').insert(tenantRolePermissions);
+      console.log(`   ✅ Granted ${tenantRolePermissions.length} TENANT permissions to Tenant Admin (tenant_id: ${tenantAdminRole.tenant_id})`);
     }
   }
-  console.log(`✅ Permissions granted to all roles`);
+  console.log(`✅ All roles granted appropriate permissions (space-separated)`);
 
   console.log('\n✨ Seed completed successfully!');
   console.log('\n📋 Summary:');
   console.log(`   • ${tenants.length} tenants`);
   console.log(`   • ${modules.length} modules`);
-  console.log(`   • ${permissions.length} comprehensive permissions`);
+  console.log(`   • ${allPermissions.length} comprehensive permissions`);
   console.log(`   • ${1 + tenantAdminRoles.length} roles (1 system + ${tenantAdminRoles.length} tenant)`);
   console.log(`   • ${1 + tenantAdmins.length} users (1 system + ${tenantAdmins.length} tenant)`);
   
-  console.log('\n🔐 Permission Categories:');
-  const systemPerms = permissions.filter(p => p.space === 'system');
-  const tenantPerms = permissions.filter(p => p.space === 'tenant');
-  console.log(`   • System Permissions: ${systemPerms.length}`);
-  console.log(`   • Tenant Permissions: ${tenantPerms.length}`);
+  console.log('\n🔐 Permission Assignments:');
+  console.log(`   • Super Admin: ${systemPermissions.length} system permissions (100%)`);
+  console.log(`   • Tenant Admin(s): ${tenantPermissions.length} tenant permissions each (100%)`);
+  console.log(`   • Total System Permissions: ${systemPermissions.length}`);
+  console.log(`   • Total Tenant Permissions: ${tenantPermissions.length}`);
   
   console.log('\n📦 Permission Breakdown:');
   console.log('   • User Management, Roles & Permissions');

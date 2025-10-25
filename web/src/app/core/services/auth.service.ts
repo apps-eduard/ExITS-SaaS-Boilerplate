@@ -63,7 +63,7 @@ export class AuthService {
 
           // Store permissions from login response
           const permissions = response.data.permissions || [];
-          console.log('🔑 Permissions from login:', permissions);
+          // console.log('🔑 Permissions from login:', permissions);
           this.userPermissions.set(permissions);
           localStorage.setItem('permissions', JSON.stringify(permissions));
 

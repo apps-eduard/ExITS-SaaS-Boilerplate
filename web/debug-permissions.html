@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Permissions</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }
+        .section { margin: 20px 0; padding: 15px; background: #2a2a2a; border-radius: 5px; }
+        .permission { padding: 5px; margin: 2px 0; background: #333; }
+        .header { color: #00ffff; font-size: 18px; font-weight: bold; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 16px; margin: 5px; }
+        button:hover { background: #45a049; }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Permission Debugger</h1>
+    
+    <div class="section">
+        <div class="header">Actions</div>
+        <button onclick="checkToken()">1. Check Token</button>
+        <button onclick="fetchPermissions()">2. Fetch Permissions from API</button>
+        <button onclick="checkLocalStorage()">3. Check LocalStorage</button>
+        <button onclick="clearAll()">4. Clear All & Logout</button>
+    </div>
+
+    <div class="section">
+        <div class="header">Results</div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            results.innerHTML += `<div class="${className}">${message}</div>`;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function checkToken() {
+            clearResults();
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                log('❌ No access_token found in localStorage', 'error');
+                return;
+            }
+            
+            log('✅ Token found in localStorage', 'success');
+            log(`Token (first 50 chars): ${token.substring(0, 50)}...`);
+            
+            // Decode JWT (basic - just split and parse)
+            try {
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                log('📦 Token Payload:');
+                log(JSON.stringify(payload, null, 2));
+                
+                // Check expiry
+                const exp = payload.exp;
+                const now = Math.floor(Date.now() / 1000);
+                if (exp < now) {
+                    log('⚠️ TOKEN EXPIRED!', 'error');
+                } else {
+                    const remaining = exp - now;
+                    log(`✅ Token valid for ${Math.floor(remaining / 60)} minutes`, 'success');
+                }
+            } catch (e) {
+                log(`❌ Failed to decode token: ${e.message}`, 'error');
+            }
+        }
+
+        async function fetchPermissions() {
+            clearResults();
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                log('❌ No token - please login first', 'error');
+                return;
+            }
+
+            log('🔄 Fetching permissions from API...');
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/me/permissions`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                log('📡 API Response:', 'success');
+                log(JSON.stringify(data, null, 2));
+                
+                if (data.data && data.data.permissions) {
+                    log(`✅ Total permissions: ${data.data.permissions.length}`, 'success');
+                    log('📋 Permissions list:');
+                    data.data.permissions.forEach((perm, i) => {
+                        log(`  ${i + 1}. ${perm}`);
+                    });
+                } else {
+                    log('⚠️ No permissions found in response', 'warning');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            clearResults();
+            log('🔍 Checking localStorage...');
+            log(`Keys: ${Object.keys(localStorage).join(', ')}`);
+            
+            const token = localStorage.getItem('access_token');
+            const user = localStorage.getItem('current_user');
+            
+            if (token) {
+                log(`✅ access_token: ${token.substring(0, 30)}...`, 'success');
+            } else {
+                log('❌ No access_token', 'error');
+            }
+            
+            if (user) {
+                log('✅ current_user:', 'success');
+                try {
+                    const userData = JSON.parse(user);
+                    log(JSON.stringify(userData, null, 2));
+                } catch (e) {
+                    log(`❌ Failed to parse user data: ${e.message}`, 'error');
+                }
+            } else {
+                log('❌ No current_user', 'error');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('This will clear localStorage and log you out. Continue?')) {
+                localStorage.clear();
+                clearResults();
+                log('✅ localStorage cleared', 'success');
+                log('Redirecting to login in 2 seconds...');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
+            }
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            log('🚀 Permission Debugger Ready');
+            log('Click buttons above to debug');
+        };
+    </script>
+</body>
+</html>

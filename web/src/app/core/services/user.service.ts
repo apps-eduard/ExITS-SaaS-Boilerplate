@@ -79,7 +79,7 @@ export class UserService {
   );
 
   constructor(private http: HttpClient) {
-    console.log('✅ UserService initialized');
+    // console.log('✅ UserService initialized');
   }
 
   /**

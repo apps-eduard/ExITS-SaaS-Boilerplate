@@ -18,7 +18,6 @@ class RoleService {
       name: dbRole.name,
       description: dbRole.description,
       space: dbRole.space,
-      parentRoleId: dbRole.parent_role_id,
       status: dbRole.status,
       createdAt: dbRole.created_at,
       updatedAt: dbRole.updated_at,
@@ -47,15 +46,14 @@ class RoleService {
   static async createRole(roleData, requestingUserId, tenantId) {
     try {
       const result = await pool.query(
-        `INSERT INTO roles (tenant_id, name, description, space, parent_role_id)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, tenant_id, name, description, space, parent_role_id, status, created_at, updated_at`,
+        `INSERT INTO roles (tenant_id, name, description, space)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, tenant_id, name, description, space, status, created_at, updated_at`,
         [
           roleData.space === 'system' ? null : tenantId,
           roleData.name,
           roleData.description || null,
           roleData.space,
-          roleData.parentRoleId || null,
         ]
       );
 
@@ -74,11 +72,15 @@ class RoleService {
 
   /**
    * Get role by ID with permissions (standard RBAC)
+   * Super Admin can view ANY role (read-only)
+   * Tenant users can only view their own tenant roles + system roles
    */
   static async getRoleById(roleId, tenantId) {
     try {
+      const isSuperAdmin = tenantId === null;
+
       const roleResult = await pool.query(
-        `SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.parent_role_id, r.status,
+        `SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.status,
                 r.created_at, r.updated_at,
                 json_agg(
                   json_build_object(
@@ -93,9 +95,10 @@ class RoleService {
          FROM roles r
          LEFT JOIN role_permissions rps ON r.id = rps.role_id
          LEFT JOIN permissions p ON rps.permission_id = p.id
-         WHERE r.id = $1 AND (r.tenant_id = $2 OR r.tenant_id IS NULL)
+         WHERE r.id = $1 
+         ${isSuperAdmin ? '' : 'AND (r.tenant_id = $2 OR r.tenant_id IS NULL)'}
          GROUP BY r.id`,
-        [roleId, tenantId]
+        isSuperAdmin ? [roleId] : [roleId, tenantId]
       );
 
       if (roleResult.rows.length === 0) {
@@ -115,22 +118,27 @@ class RoleService {
 
   /**
    * List roles with pagination
+   * Super Admin (tenantId = null) can view ALL roles (read-only)
+   * Tenant users can only view their own tenant roles + system roles
    */
   static async listRoles(tenantId, page = 1, limit = 20, space = null) {
     try {
       const offset = (page - 1) * limit;
+      
+      // Super Admin (tenantId === null) sees ALL roles across all tenants
+      const isSuperAdmin = tenantId === null;
 
       let query = `
-        SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.parent_role_id, r.status,
+        SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.status,
                r.created_at, r.updated_at,
                COUNT(rps.permission_id) as permission_count
         FROM roles r
         LEFT JOIN role_permissions rps ON r.id = rps.role_id
-        WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)
+        ${isSuperAdmin ? 'WHERE 1=1' : 'WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)'}
       `;
       
-      const params = [tenantId];
-      let paramIndex = 2;
+      const params = isSuperAdmin ? [] : [tenantId];
+      let paramIndex = isSuperAdmin ? 1 : 2;
       
       if (space) {
         query += ` AND r.space = $${paramIndex}`;
@@ -143,10 +151,12 @@ class RoleService {
 
       const countQuery = `
         SELECT COUNT(*) as total FROM roles r
-        WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)
-        ${space ? `AND r.space = $2` : ''}
+        ${isSuperAdmin ? 'WHERE 1=1' : 'WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)'}
+        ${space ? `AND r.space = $${isSuperAdmin ? 1 : 2}` : ''}
       `;
-      const countParams = space ? [tenantId, space] : [tenantId];
+      const countParams = isSuperAdmin 
+        ? (space ? [space] : [])
+        : (space ? [tenantId, space] : [tenantId]);
 
       const [countResult, dataResult] = await Promise.all([
         pool.query(countQuery, countParams),
@@ -175,9 +185,46 @@ class RoleService {
 
   /**
    * Update role
+   * SECURITY: Super Admin can only update system roles, not tenant roles
    */
   static async updateRole(roleId, updateData, requestingUserId, tenantId) {
     try {
+      // Get the role to check ownership and space
+      const roleCheck = await pool.query(
+        'SELECT id, tenant_id, space, name FROM roles WHERE id = $1',
+        [roleId]
+      );
+
+      if (roleCheck.rows.length === 0) {
+        throw new Error('Role not found');
+      }
+
+      const existingRole = roleCheck.rows[0];
+      const isSuperAdmin = tenantId === null;
+
+      // SECURITY CHECK: Super Admin cannot modify tenant roles
+      if (isSuperAdmin && existingRole.space === 'tenant') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: System administrators cannot modify tenant-space roles. ` +
+          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users cannot modify system roles
+      if (!isSuperAdmin && existingRole.space === 'system') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: Tenant users cannot modify system-space roles. ` +
+          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users can only modify roles in their own tenant
+      if (!isSuperAdmin && existingRole.tenant_id !== tenantId) {
+        throw new Error(
+          `🚫 PERMISSION DENIED: You can only modify roles within your own tenant.`
+        );
+      }
+
       const fieldsToUpdate = [];
       const values = [];
       let paramCount = 1;
@@ -192,23 +239,18 @@ class RoleService {
         values.push(updateData.description);
       }
 
-      if (updateData.parentRoleId !== undefined) {
-        fieldsToUpdate.push(`parent_role_id = $${paramCount++}`);
-        values.push(updateData.parentRoleId);
-      }
-
       if (fieldsToUpdate.length === 0) {
         throw new Error('No fields to update');
       }
 
       fieldsToUpdate.push(`updated_at = NOW()`);
-      values.push(roleId, tenantId);
+      values.push(roleId);
 
       const result = await pool.query(
         `UPDATE roles
          SET ${fieldsToUpdate.join(', ')}
-         WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-         RETURNING id, tenant_id, name, description, space, parent_role_id, status, created_at, updated_at`,
+         WHERE id = $${paramCount}
+         RETURNING id, tenant_id, name, description, space, status, created_at, updated_at`,
         values
       );
 
@@ -230,14 +272,49 @@ class RoleService {
 
   /**
    * Delete role
+   * SECURITY: Super Admin can only delete system roles, not tenant roles
    */
   static async deleteRole(roleId, requestingUserId, tenantId) {
     try {
+      // Get the role to check ownership and space
+      const roleCheck = await pool.query(
+        'SELECT id, tenant_id, space, name FROM roles WHERE id = $1',
+        [roleId]
+      );
+
+      if (roleCheck.rows.length === 0) {
+        throw new Error('Role not found');
+      }
+
+      const existingRole = roleCheck.rows[0];
+      const isSuperAdmin = tenantId === null;
+
+      // SECURITY CHECK: Super Admin cannot delete tenant roles
+      if (isSuperAdmin && existingRole.space === 'tenant') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: System administrators cannot delete tenant-space roles. ` +
+          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users cannot delete system roles
+      if (!isSuperAdmin && existingRole.space === 'system') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: Tenant users cannot delete system-space roles. ` +
+          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users can only delete roles in their own tenant
+      if (!isSuperAdmin && existingRole.tenant_id !== tenantId) {
+        throw new Error(
+          `🚫 PERMISSION DENIED: You can only delete roles within your own tenant.`
+        );
+      }
+
       const result = await pool.query(
-        `DELETE FROM roles
-         WHERE id = $1 AND (tenant_id = $2 OR (tenant_id IS NULL AND $2::uuid IS NULL))
-         RETURNING id, name`,
-        [roleId, tenantId]
+        `DELETE FROM roles WHERE id = $1 RETURNING id, name`,
+        [roleId]
       );
 
       if (result.rows.length === 0) {
@@ -257,6 +334,7 @@ class RoleService {
   /**
    * Bulk assign permissions to role (standard RBAC)
    * Replaces all existing permissions
+   * SECURITY: Super Admin can only assign permissions to system roles
    */
   static async bulkAssignPermissions(roleId, permissions, requestingUserId, tenantId) {
     const client = await pool.connect();
@@ -268,7 +346,47 @@ class RoleService {
       console.log(`🔍 [DEBUG] Role ID: ${roleId}`);
       console.log(`🔍 [DEBUG] Requesting User ID: ${requestingUserId}`);
       console.log(`🔍 [DEBUG] Tenant ID: ${tenantId}`);
-      console.log(`� [DEBUG] Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
+      console.log(`🔍 [DEBUG] Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
+
+      // CRITICAL: Get role space to validate permission assignments
+      const roleResult = await client.query(
+        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
+        [roleId]
+      );
+
+      if (roleResult.rows.length === 0) {
+        throw new Error(`Role not found: ${roleId}`);
+      }
+
+      const roleSpace = roleResult.rows[0].space;
+      const roleTenantId = roleResult.rows[0].tenant_id;
+      const roleName = roleResult.rows[0].name;
+      const isSuperAdmin = tenantId === null;
+
+      console.log(`🔍 [DEBUG] Role space: ${roleSpace}, Role tenant_id: ${roleTenantId}, Role name: ${roleName}`);
+
+      // SECURITY CHECK: Super Admin cannot assign permissions to tenant roles
+      if (isSuperAdmin && roleSpace === 'tenant') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
+          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users cannot assign permissions to system roles
+      if (!isSuperAdmin && roleSpace === 'system') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
+          `Role "${roleName}" is a system role and can only be managed by system administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users can only assign permissions to roles in their own tenant
+      if (!isSuperAdmin && roleTenantId !== tenantId) {
+        throw new Error(
+          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
+        );
+      }
 
       // Delete all existing permissions for this role
       const deleteResult = await client.query(
@@ -291,9 +409,9 @@ class RoleService {
 
         console.log(`🔍 [DEBUG] Processing permission: ${permissionKey}`);
 
-        // Get the permission ID from permissions table
+        // Get the permission ID and space from permissions table
         const permResult = await client.query(
-          'SELECT id FROM permissions WHERE permission_key = $1',
+          'SELECT id, space FROM permissions WHERE permission_key = $1',
           [permissionKey]
         );
 
@@ -305,14 +423,24 @@ class RoleService {
         }
 
         const permissionId = permResult.rows[0].id;
-        console.log(`✅ [DEBUG] Found permission ${permissionKey} with ID: ${permissionId}`);
+        const permissionSpace = permResult.rows[0].space;
+        console.log(`✅ [DEBUG] Found permission ${permissionKey} with ID: ${permissionId}, Space: ${permissionSpace}`);
+
+        // CRITICAL SECURITY CHECK: Validate permission space matches role space
+        if (roleSpace !== permissionSpace) {
+          const errorMsg = 
+            `🚫 SECURITY VIOLATION: Cannot assign ${permissionSpace}-space permission "${permissionKey}" to ${roleSpace}-space role "${roleName}". ` +
+            `For security reasons, ${roleSpace === 'system' ? 'system roles can only have system permissions' : 'tenant roles can only have tenant permissions'}.`;
+          logger.error(errorMsg);
+          throw new Error(errorMsg);
+        }
 
         // Insert the role-permission mapping
         const insertResult = await client.query(
-          `INSERT INTO role_permissions (role_id, permission_id, granted_by)
-           VALUES ($1, $2, $3)
+          `INSERT INTO role_permissions (role_id, permission_id)
+           VALUES ($1, $2)
            ON CONFLICT (role_id, permission_id) DO NOTHING`,
-          [roleId, permissionId, requestingUserId]
+          [roleId, permissionId]
         );
 
         console.log(`✅ [DEBUG] Inserted permission ${permissionKey} for role ${roleId}, rows affected: ${insertResult.rowCount}`);
@@ -355,12 +483,51 @@ class RoleService {
 
   /**
    * Grant single permission to role
+   * SECURITY: Super Admin can only grant permissions to system roles
    */
   static async grantPermission(roleId, permissionKey, requestingUserId, tenantId) {
     try {
-      // Get permission ID
+      // CRITICAL: Get role space to validate permission assignment
+      const roleResult = await pool.query(
+        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
+        [roleId]
+      );
+
+      if (roleResult.rows.length === 0) {
+        throw new Error(`Role not found: ${roleId}`);
+      }
+
+      const roleSpace = roleResult.rows[0].space;
+      const roleTenantId = roleResult.rows[0].tenant_id;
+      const roleName = roleResult.rows[0].name;
+      const isSuperAdmin = tenantId === null;
+
+      // SECURITY CHECK: Super Admin cannot grant permissions to tenant roles
+      if (isSuperAdmin && roleSpace === 'tenant') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
+          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users cannot grant permissions to system roles
+      if (!isSuperAdmin && roleSpace === 'system') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
+          `Role "${roleName}" is a system role and can only be managed by system administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users can only grant permissions to roles in their own tenant
+      if (!isSuperAdmin && roleTenantId !== tenantId) {
+        throw new Error(
+          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
+        );
+      }
+
+      // Get permission ID and space
       const permResult = await pool.query(
-        'SELECT id FROM permissions WHERE permission_key = $1',
+        'SELECT id, space FROM permissions WHERE permission_key = $1',
         [permissionKey]
       );
 
@@ -369,14 +536,24 @@ class RoleService {
       }
 
       const permissionId = permResult.rows[0].id;
+      const permissionSpace = permResult.rows[0].space;
+
+      // CRITICAL SECURITY CHECK: Validate permission space matches role space
+      if (roleSpace !== permissionSpace) {
+        const errorMsg = 
+          `🚫 SECURITY VIOLATION: Cannot assign ${permissionSpace}-space permission "${permissionKey}" to ${roleSpace}-space role "${roleName}". ` +
+          `For security reasons, ${roleSpace === 'system' ? 'system roles can only have system permissions' : 'tenant roles can only have tenant permissions'}.`;
+        logger.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       // Insert role-permission mapping
       const result = await pool.query(
-        `INSERT INTO role_permissions (role_id, permission_id, granted_by)
-         VALUES ($1, $2, $3)
+        `INSERT INTO role_permissions (role_id, permission_id)
+         VALUES ($1, $2)
          ON CONFLICT (role_id, permission_id) DO NOTHING
          RETURNING *`,
-        [roleId, permissionId, requestingUserId]
+        [roleId, permissionId]
       );
 
       await this.auditLog(requestingUserId, tenantId, 'grant_permission', 'role', roleId, {
@@ -393,9 +570,48 @@ class RoleService {
 
   /**
    * Revoke permission from role
+   * SECURITY: Super Admin can only revoke permissions from system roles
    */
   static async revokePermission(roleId, permissionKey, requestingUserId, tenantId) {
     try {
+      // Get the role to check ownership and space
+      const roleResult = await pool.query(
+        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
+        [roleId]
+      );
+
+      if (roleResult.rows.length === 0) {
+        throw new Error(`Role not found: ${roleId}`);
+      }
+
+      const roleSpace = roleResult.rows[0].space;
+      const roleTenantId = roleResult.rows[0].tenant_id;
+      const roleName = roleResult.rows[0].name;
+      const isSuperAdmin = tenantId === null;
+
+      // SECURITY CHECK: Super Admin cannot revoke permissions from tenant roles
+      if (isSuperAdmin && roleSpace === 'tenant') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
+          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users cannot revoke permissions from system roles
+      if (!isSuperAdmin && roleSpace === 'system') {
+        throw new Error(
+          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
+          `Role "${roleName}" is a system role and can only be managed by system administrators.`
+        );
+      }
+
+      // SECURITY CHECK: Tenant users can only revoke permissions from roles in their own tenant
+      if (!isSuperAdmin && roleTenantId !== tenantId) {
+        throw new Error(
+          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
+        );
+      }
+
       // Get permission ID
       const permResult = await pool.query(
         'SELECT id FROM permissions WHERE permission_key = $1',

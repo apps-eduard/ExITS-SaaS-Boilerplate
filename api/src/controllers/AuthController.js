@@ -220,9 +220,27 @@ class AuthController {
     try {
       const pool = require('../config/database');
       const logger = require('../utils/logger');
+      
       logger.info('🔎 [getMyPermissions] User ID:', req.user.id);
+      logger.info('🔎 [getMyPermissions] User Email:', req.user.email);
+      logger.info('🔎 [getMyPermissions] Tenant ID:', req.user.tenant_id);
+      
+      // First, let's see what roles this user has
+      const rolesResult = await pool.query(
+        `SELECT r.id, r.name, r.description, r.space, r.status
+         FROM user_roles ur
+         JOIN roles r ON ur.role_id = r.id
+         WHERE ur.user_id = $1
+         ORDER BY r.name`,
+        [req.user.id]
+      );
+      
+      logger.info('👤 [getMyPermissions] User has roles:', rolesResult.rows);
+      logger.info(`👤 [getMyPermissions] Total roles: ${rolesResult.rows.length}`);
+      
+      // Now get permissions
       const result = await pool.query(
-        `SELECT DISTINCT p.permission_key, p.resource, p.action, p.description
+        `SELECT DISTINCT p.permission_key, p.resource, p.action, p.description, r.name as role_name
          FROM user_roles ur
          JOIN roles r ON ur.role_id = r.id
          JOIN role_permissions rps ON r.id = rps.role_id
@@ -231,7 +249,16 @@ class AuthController {
          ORDER BY p.resource, p.action`,
         [req.user.id, 'active']
       );
-      logger.info('🔎 [getMyPermissions] SQL result:', result.rows);
+      
+      logger.info('🔎 [getMyPermissions] SQL result count:', result.rows.length);
+      logger.info('🔎 [getMyPermissions] First 10 permissions:', result.rows.slice(0, 10));
+      logger.info('🔎 [getMyPermissions] Permissions by role:', 
+        result.rows.reduce((acc, row) => {
+          acc[row.role_name] = (acc[row.role_name] || 0) + 1;
+          return acc;
+        }, {})
+      );
+      
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         success: true,
         data: {

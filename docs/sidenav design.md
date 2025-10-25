@@ -26,18 +26,23 @@
   ├─ 💳 Invoices
   └─ ⚙️ Renewal Settings
 
-⚙️ Settings ▼
-  ├─ 🔧 Configuration
-  ├─ 🔔 Notification Rules
-  ├─ 🧾 System Logs
-  ├─ 🧱 System Backups
-  └─ 🛡️ Security Policies
-
 📊 Reports ▼
   ├─ 📈 Tenant Usage
   ├─ 💳 Revenue Reports
   ├─ 🧩 Product Adoption
-  └─ 🧾 System Activity Logs
+  ├─ 🧾 System Activity Logs
+  └─ 📊 Reports & Analytics
+
+⚙️ Settings ▼
+  ├─ 🛠️ Configuration
+  ├─ 🔔 Notification Rules
+  ├─ 🧾 System and Audit Logs
+  ├─ 🧱 System Backups
+  ├─ 📦 Product Settings
+  ├─ 🛠️ Global Configuration
+  ├─ 💳 Billing & Payment Configuration
+  ├─ 💬 Support Settings
+  └─ 🛡️ Compliance & Security Policies
 
 ♻️ Recycle Bin ▼
 
@@ -69,5 +74,10 @@
   ├─ 🧍‍♂️ User Activity
   ├─ 💰 Billing / Payment Summary
   └─ 🧾 Transaction History
+  └─ 📊 Tenant Reports & Analytics
+
+⚙️ System Settings ▼
+  ├─ 🎨 Branding & Customization
+  ├─ 📦 Product Settings
 
 ♻️ Recycle Bin ▼

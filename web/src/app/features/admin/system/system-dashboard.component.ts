@@ -285,9 +285,11 @@ export class SystemDashboardComponent implements OnInit {
   });
 
   // Permission checks
-  canViewHealth = computed(() => this.authService.hasPermission('system:view-health'));
-  canViewPerformance = computed(() => this.authService.hasPermission('system:view-performance'));
-  canManageConfig = computed(() => this.authService.hasPermission('system:manage-config'));
+  // Map system dashboard permissions to actual system permission keys present in DB
+  // (settings:read and settings:update are used for system settings access)
+  canViewHealth = computed(() => this.authService.hasPermission('settings:read'));
+  canViewPerformance = computed(() => this.authService.hasPermission('settings:read'));
+  canManageConfig = computed(() => this.authService.hasPermission('settings:update'));
 
   ngOnInit(): void {
     console.log('⚙️ SystemDashboardComponent initialized');

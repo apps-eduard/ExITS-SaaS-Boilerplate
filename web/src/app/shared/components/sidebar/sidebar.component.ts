@@ -22,15 +22,12 @@ interface MenuItem {
     @if (isOpen() && !isDesktop()) {
       <div
         (click)="isOpen.set(false)"
-        class="fixed inset-0 z-30 bg-black/50 lg:hidden">
-      </div>
+        class="fixed inset-0 bg-black/20 dark:bg-black/40 z-30 lg:hidden"></div>
     }
 
-    <!-- Sidebar: Fixed overlay on mobile, sticky on desktop -->
+    <!-- Sidebar -->
     <aside
-      class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out"
-      [class.fixed]="!isDesktop()"
-      [class.lg:sticky]="isDesktop()"
+      class="fixed lg:sticky top-0 w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ease-in-out z-50 lg:z-0"
       [class.top-0]="!isDesktop()"
       [class.left-0]="!isDesktop()"
       [class.z-40]="!isDesktop()"
@@ -158,10 +155,10 @@ export class SidebarComponent {
     {
       label: 'Users',
       icon: '👥',
-      anyPermission: ['users:read', 'users:create', 'users:update'],
+      anyPermission: ['users:read', 'users:create', 'users:update', 'tenant-users:read'],
       children: [
-        { label: 'All Users', icon: '👤', route: '/admin/users', permission: 'users:read' },
-        { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', permission: 'users:invite' },
+        { label: 'All Users', icon: '👤', route: '/admin/users', anyPermission: ['users:read', 'tenant-users:read'] },
+        { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', anyPermission: ['users:create', 'tenant-users:invite'] },
         { label: 'Roles & Permissions', icon: '🔐', route: '/admin/roles', permission: 'roles:read' },
       ]
     },
@@ -179,57 +176,57 @@ export class SidebarComponent {
     {
       label: 'Money Loan',
       icon: '💰',
-      anyPermission: ['money_loan:view', 'money_loan:customers:view', 'money_loan:loans:view'],
+      anyPermission: ['money-loan:read', 'money-loan:overview:view', 'money-loan:customers:read', 'money-loan:loans:read'],
       children: [
-        { label: 'Overview', icon: '📊', route: '/admin/money-loan/overview', permission: 'money_loan:view' },
-        { label: 'Customers', icon: '👥', route: '/admin/money-loan/customers', permission: 'money_loan:customers:view' },
-        { label: 'All Loans', icon: '📝', route: '/admin/money-loan/loans', permission: 'money_loan:loans:view' },
-        { label: 'Record Payment', icon: '💳', route: '/admin/money-loan/payments/record', permission: 'money_loan:payments:create' },
-        { label: 'Collections', icon: '🔔', route: '/admin/money-loan/collections', permission: 'money_loan:view' },
-        { label: 'Reports', icon: '📈', route: '/admin/money-loan/reports', permission: 'money_loan:view' },
+        { label: 'Overview', icon: '📊', route: '/admin/money-loan/overview', permission: 'money-loan:overview:view' },
+        { label: 'Customers', icon: '👥', route: '/admin/money-loan/customers', permission: 'money-loan:customers:read' },
+        { label: 'All Loans', icon: '📝', route: '/admin/money-loan/loans', permission: 'money-loan:loans:read' },
+        { label: 'Record Payment', icon: '💳', route: '/admin/money-loan/payments/record', permission: 'money-loan:payments:create' },
+        { label: 'Collections', icon: '🔔', route: '/admin/money-loan/collections', permission: 'money-loan:collections:read' },
+        { label: 'Reports', icon: '📈', route: '/admin/money-loan/reports', permission: 'money-loan:reports:read' },
       ]
     },
     {
       label: 'Subscriptions & Billing',
       icon: '💳',
-      anyPermission: ['billing:read', 'billing:manage-plans', 'subscriptions:read'],
+      anyPermission: ['subscriptions:read', 'subscriptions:create', 'tenant-billing:read'],
       children: [
         { label: 'All Subscriptions', icon: '🧾', route: '/admin/subscriptions', permission: 'subscriptions:read' },
         { label: 'New Subscription', icon: '➕', route: '/admin/subscriptions/new', permission: 'subscriptions:create' },
-        { label: 'Plan Templates', icon: '�', route: '/admin/subscriptions/plans', permission: 'billing:manage-plans' },
-        { label: 'Billing Overview', icon: '💰', route: '/admin/subscriptions/billing', permission: 'billing:read' },
-        { label: 'Invoices', icon: '💳', route: '/admin/subscriptions/invoices', permission: 'billing:view-invoices' },
-        { label: 'Renewal Settings', icon: '⚙️', route: '/admin/subscriptions/renewal-settings', permission: 'billing:manage-plans' },
+        { label: 'Plan Templates', icon: '📋', route: '/admin/subscriptions/plans', permission: 'subscriptions:manage-plans' },
+        { label: 'Billing Overview', icon: '💰', route: '/admin/subscriptions/billing', permission: 'tenant-billing:read' },
+        { label: 'Invoices', icon: '💳', route: '/admin/subscriptions/invoices', permission: 'tenant-billing:view-invoices' },
+        { label: 'Renewal Settings', icon: '⚙️', route: '/admin/subscriptions/renewal-settings', permission: 'tenant-billing:manage-renewals' },
       ]
     },
     {
       label: 'Settings',
       icon: '⚙️',
-      anyPermission: ['system:view-health', 'system:view-performance', 'system:manage-config'],
+      anyPermission: ['settings:read', 'settings:update', 'audit:read'],
       children: [
-        { label: 'Configuration', icon: '🔧', route: '/admin/system/config', permission: 'system:manage-config' },
-        { label: 'Notification Rules', icon: '🔔', route: '/admin/settings/notifications', permission: 'system:manage-config' },
-        { label: 'System Logs', icon: '📝', route: '/admin/system/logs', permission: 'system:manage-config' },
-        { label: 'System Backups', icon: '💾', route: '/admin/settings/backups', permission: 'system:manage-config' },
-        { label: 'Security Policies', icon: '🛡️', route: '/admin/settings/security', permission: 'system:manage-config' },
+        { label: 'Configuration', icon: '🔧', route: '/admin/system/config', permission: 'settings:update' },
+        { label: 'Notification Rules', icon: '🔔', route: '/admin/settings/notifications', permission: 'settings:update' },
+        { label: 'System and Audit Logs', icon: '🧾', route: '/admin/system/logs', permission: 'audit:read' },
+        { label: 'System Backups', icon: '🧱', route: '/admin/settings/backups', permission: 'settings:update' },
+        { label: 'Security Policies', icon: '🛡️', route: '/admin/settings/security', permission: 'settings:update' },
       ]
     },
     {
       label: 'Reports',
       icon: '📊',
-      anyPermission: ['reports:view', 'analytics:view'],
+      anyPermission: ['reports:view', 'reports:export', 'analytics:view'],
       children: [
         { label: 'Tenant Usage', icon: '📈', route: '/admin/reports/tenant-usage', permission: 'reports:view' },
-        { label: 'Revenue Reports', icon: '�', route: '/admin/reports/revenue', permission: 'reports:view' },
+        { label: 'Revenue Reports', icon: '💰', route: '/admin/reports/revenue', permission: 'reports:view' },
         { label: 'Product Adoption', icon: '🧩', route: '/admin/reports/product-adoption', permission: 'reports:view' },
-        { label: 'System Activity Logs', icon: '🧾', route: '/admin/reports/activity-logs', permission: 'reports:view' },
+        { label: 'System Activity Logs', icon: '🧾', route: '/admin/reports/activity-logs', permission: 'audit:read' },
       ]
     },
     {
       label: 'Recycle Bin',
       icon: '♻️',
       route: '/admin/recycle-bin',
-      anyPermission: ['users:update', 'tenants:update']
+      anyPermission: ['recycle-bin:view', 'recycle-bin:restore']
     },
   ]);
 
