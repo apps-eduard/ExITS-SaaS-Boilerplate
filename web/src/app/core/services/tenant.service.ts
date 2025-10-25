@@ -26,6 +26,7 @@ export interface SubscriptionPlan {
   icon: string;
   price: number;
   billingCycle: string;
+  productType?: string;
   maxUsers: number | null;
   maxStorageGb: number | null;
   features: string[];
@@ -58,9 +59,16 @@ export class TenantService {
   }
 
   /**
-   * Get all available subscription plans
+   * Get all available subscription plans (Platform only)
    */
   getSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[]; count: number }> {
     return this.http.get<{ success: boolean; data: SubscriptionPlan[]; count: number }>(`/api/subscription-plans`);
+  }
+
+  /**
+   * Get ALL subscription plans including product-specific plans (Money Loan, BNPL, Pawnshop)
+   */
+  getAllSubscriptionPlans(): Observable<{ success: boolean; data: SubscriptionPlan[]; count: number }> {
+    return this.http.get<{ success: boolean; data: SubscriptionPlan[]; count: number }>(`/api/subscription-plans/all/including-products`);
   }
 }

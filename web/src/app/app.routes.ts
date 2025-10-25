@@ -222,22 +222,20 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
+        loadComponent: () => import('./features/admin/reports/reports-layout.component').then(m => m.ReportsLayoutComponent),
         children: [
+          {
+            path: '',
+            redirectTo: 'tenant-usage',
+            pathMatch: 'full'
+          },
           {
             path: 'tenant-usage',
             loadComponent: () => import('./features/admin/reports/tenant-usage.component').then(m => m.TenantUsageComponent)
           },
           {
-            path: 'revenue',
-            loadComponent: () => import('./features/admin/reports/revenue-reports.component').then(m => m.RevenueReportsComponent)
-          },
-          {
-            path: 'product-adoption',
-            loadComponent: () => import('./features/admin/reports/product-adoption.component').then(m => m.ProductAdoptionComponent)
-          },
-          {
-            path: 'activity-logs',
-            loadComponent: () => import('./features/admin/reports/system-activity-logs.component').then(m => m.SystemActivityLogsComponent)
+            path: 'subscription-history',
+            loadComponent: () => import('./features/admin/reports/subscription-history.component').then(m => m.SubscriptionHistoryComponent)
           }
         ]
       },

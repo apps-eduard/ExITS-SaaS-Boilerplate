@@ -129,7 +129,6 @@ exports.seed = async function(knex) {
     { permission_key: 'roles:update', resource: 'roles', action: 'update', description: 'Edit roles', space: 'tenant' },
     { permission_key: 'roles:delete', resource: 'roles', action: 'delete', description: 'Delete roles', space: 'tenant' },
     
-    { permission_key: 'dashboard:view', resource: 'dashboard', action: 'view', description: 'View dashboard', space: 'tenant' },
     { permission_key: 'audit:read', resource: 'audit', action: 'read', description: 'View audit logs', space: 'tenant' },
     { permission_key: 'audit:export', resource: 'audit', action: 'export', description: 'Export audit logs', space: 'tenant' },
     

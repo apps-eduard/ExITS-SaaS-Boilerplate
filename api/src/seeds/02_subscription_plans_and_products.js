@@ -21,7 +21,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'one_time',
       max_users: 3,
       max_storage_gb: 5,
-      product_type: null, // Platform-level plan
+      product_type: 'platform', // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         api_access: true,
@@ -41,7 +41,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 5,
       max_storage_gb: 10,
-      product_type: null, // Platform-level plan
+      product_type: 'platform', // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         api_access: false,
@@ -60,7 +60,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 25,
       max_storage_gb: 50,
-      product_type: null, // Platform-level plan
+      product_type: 'platform', // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         priority_support: true,
@@ -81,7 +81,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 100,
       max_storage_gb: 200,
-      product_type: null, // Platform-level plan
+      product_type: 'platform', // Platform-level plan
       features: JSON.stringify({
         basic_support: true,
         priority_support: true,
@@ -415,3 +415,4 @@ exports.seed = async function(knex) {
     }
   });
 };
+

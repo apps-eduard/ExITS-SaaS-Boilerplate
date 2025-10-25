@@ -33,3 +33,8 @@ cd api && node -e "const pool = require('./src/config/database'); pool.query('SE
 
 
 node -e "const pool = require('./src/config/database'); pool.query('SELECT column_name, data_type FROM information_schema.columns WHERE table_name = \'role_permissions\' ORDER BY ordinal_position').then(r => { console.log('role_permissions columns:'); r.rows.forEach(c => console.log('  -', c.column_name, '(' + c.data_type + ')')); process.exit(0); }).catch(console.error);"
+
+cd api && node -e "const knex = require('./knexfile'); const db = require('knex')(knex.development); db('subscription_plans').select('id', 'name', 'product_type').orderBy('id').then(rows => { console.log(JSON.stringify(rows, null, 2)); process.exit(); });"
+
+
+node -e "const pool = require('./src/config/database'); pool.query('SELECT id, tenant_id, product_type, subscription_plan_id, status FROM product_subscriptions ORDER BY tenant_id, id').then(r => { console.log('Product Subscriptions:'); console.table(r.rows); process.exit(0); }).catch(e => { console.error(e); process.exit(1); });"

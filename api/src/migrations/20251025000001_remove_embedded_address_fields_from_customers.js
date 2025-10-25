@@ -3,15 +3,36 @@
  * These fields have been moved to the unified addresses table
  */
 
-exports.up = function(knex) {
+exports.up = async function(knex) {
+  // Check if customers table exists
+  const hasTable = await knex.schema.hasTable('customers');
+  if (!hasTable) {
+    console.log('⏭️  Customers table does not exist, skipping migration');
+    return;
+  }
+
+  // Check which columns exist and only drop those that do
+  const columnsToCheck = ['address', 'barangay', 'city', 'province', 'postal_code', 'country'];
+  const columnsToRemove = [];
+
+  for (const column of columnsToCheck) {
+    const hasColumn = await knex.schema.hasColumn('customers', column);
+    if (hasColumn) {
+      columnsToRemove.push(column);
+    }
+  }
+
+  if (columnsToRemove.length === 0) {
+    console.log('⏭️  No address columns to remove from customers table');
+    return;
+  }
+
+  console.log(`🗑️  Removing columns from customers: ${columnsToRemove.join(', ')}`);
+  
   return knex.schema.table('customers', (table) => {
-    // Drop old embedded address fields
-    table.dropColumn('address');
-    table.dropColumn('barangay');
-    table.dropColumn('city');
-    table.dropColumn('province');
-    table.dropColumn('postal_code');
-    table.dropColumn('country');
+    columnsToRemove.forEach(column => {
+      table.dropColumn(column);
+    });
   });
 };
 

@@ -24,30 +24,23 @@ class SubscriptionPlanService {
     
     const icon = dbPlan.icon || iconMap[dbPlan.name.toLowerCase()] || '📦';
     
-    // Transform features from JSON object to array of feature strings
+    // Features are stored in the database with icons already, just return them as-is
     let features = [];
     if (dbPlan.features) {
-      const featuresObj = typeof dbPlan.features === 'string' 
+      const featuresData = typeof dbPlan.features === 'string' 
         ? JSON.parse(dbPlan.features) 
         : dbPlan.features;
       
-      // Convert feature object to array of human-readable strings
-      const featureMap = {
-        basic_support: 'Basic Support',
-        priority_support: 'Priority Support',
-        api_access: 'API Access',
-        advanced_reporting: 'Advanced Reporting',
-        custom_branding: 'Custom Branding',
-        integrations: 'Third-party Integrations',
-        dedicated_support: 'Dedicated Support Team',
-        sla_99_uptime: '99.9% Uptime SLA',
-        custom_integrations: 'Custom Integrations',
-        trial_duration_days: null // Skip this one
-      };
-      
-      features = Object.entries(featuresObj)
-        .filter(([key, value]) => value === true && featureMap[key] !== null)
-        .map(([key]) => featureMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+      // If features are already an array (with icons), use them directly
+      if (Array.isArray(featuresData)) {
+        features = featuresData;
+      } else {
+        // Legacy support: if features are stored as object, convert to array
+        // But this shouldn't happen anymore as all features now have icons
+        features = Object.entries(featuresData)
+          .filter(([key, value]) => value === true)
+          .map(([key]) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+      }
     }
     
     return {

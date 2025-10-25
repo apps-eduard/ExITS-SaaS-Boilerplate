@@ -1,3 +1,14 @@
+•	Use KNEX for any database changes
+•	Maintain all camelCase
+•	Maintain compact design
+•	Maintain all buttons with icon
+•	User Modern Design Interactive
+•	Maintain Theme will work
+•	Mobile responsive design
+
+
+STANDARD COMPACT DESIGN
+
 Button Details
 Size & Spacing:
 •	Padding: px-3 py-1.5 (Horizontal: 12px, Vertical: 6px)

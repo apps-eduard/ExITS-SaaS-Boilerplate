@@ -134,6 +134,8 @@ class ProductSubscriptionService {
    */
   static async updateProductSubscription(tenantId, productType, updateData) {
     try {
+      console.log('🔄 Updating product subscription:', { tenantId, productType, updateData });
+      
       const { subscription_plan_id, billing_cycle, expires_at, status } = updateData;
       
       const fieldsToUpdate = [];
@@ -185,7 +187,12 @@ class ProductSubscriptionService {
         RETURNING *
       `;
 
+      console.log('📝 Update query:', query);
+      console.log('📝 Query values:', values);
+
       const result = await pool.query(query, values);
+
+      console.log('✅ Update result:', result.rows[0]);
 
       if (result.rows.length === 0) {
         throw new Error('Product subscription not found');
@@ -195,6 +202,7 @@ class ProductSubscriptionService {
       return result.rows[0];
     } catch (err) {
       logger.error(`Error updating product subscription: ${err.message}`);
+      console.error('❌ Update error:', err);
       throw err;
     }
   }

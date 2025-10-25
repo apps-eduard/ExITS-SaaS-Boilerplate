@@ -10,18 +10,28 @@ const CONSTANTS = require('../config/constants');
 class SubscriptionController {
   /**
    * GET /subscriptions/plans
-   * Get all subscription plans
+   * Get all subscription plans with subscriber counts from both tables
    */
   static async getPlans(req, res, next) {
     try {
       const result = await pool.query(
         `SELECT sp.id, sp.name, sp.description, sp.price, sp.billing_cycle, sp.features, 
-                sp.max_users, sp.max_storage_gb, sp.status, sp.created_at, sp.updated_at,
-                COUNT(ts.id) FILTER (WHERE ts.status = 'active') as subscriber_count
+                sp.max_users, sp.max_storage_gb, sp.status, sp.product_type, 
+                sp.trial_days, sp.is_featured, sp.custom_pricing,
+                sp.created_at, sp.updated_at,
+                (
+                  -- Count from tenant_subscriptions (Platform plans)
+                  SELECT COUNT(*) 
+                  FROM tenant_subscriptions ts 
+                  WHERE ts.plan_id = sp.id AND ts.status = 'active'
+                ) + (
+                  -- Count from product_subscriptions (Money Loan, BNPL, Pawnshop plans)
+                  SELECT COUNT(*) 
+                  FROM product_subscriptions ps 
+                  WHERE ps.subscription_plan_id = sp.id AND ps.status::text = 'active'
+                ) as subscriber_count
          FROM subscription_plans sp
-         LEFT JOIN tenant_subscriptions ts ON sp.id = ts.plan_id
          WHERE sp.status = 'active'
-         GROUP BY sp.id
          ORDER BY sp.price ASC`
       );
 
@@ -142,7 +152,11 @@ class SubscriptionController {
         features,
         max_users,
         max_storage_gb,
-        status
+        status,
+        product_type,
+        trial_days,
+        is_featured,
+        custom_pricing
       } = req.body;
 
       // Validate required fields
@@ -168,9 +182,11 @@ class SubscriptionController {
 
       const result = await pool.query(
         `INSERT INTO subscription_plans 
-         (name, description, price, billing_cycle, features, max_users, max_storage_gb, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, status, created_at, updated_at`,
+         (name, description, price, billing_cycle, features, max_users, max_storage_gb, status, 
+          product_type, trial_days, is_featured, custom_pricing)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, 
+                   status, product_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
         [
           name,
           description,
@@ -179,7 +195,11 @@ class SubscriptionController {
           JSON.stringify(features || []),
           max_users || null,
           max_storage_gb || null,
-          status || 'active'
+          status || 'active',
+          product_type || 'platform',
+          trial_days || 0,
+          is_featured || false,
+          custom_pricing || false
         ]
       );
 
@@ -211,7 +231,11 @@ class SubscriptionController {
         features,
         max_users,
         max_storage_gb,
-        status
+        status,
+        product_type,
+        trial_days,
+        is_featured,
+        custom_pricing
       } = req.body;
 
       // Check if plan exists
@@ -252,9 +276,14 @@ class SubscriptionController {
              max_users = COALESCE($6, max_users),
              max_storage_gb = COALESCE($7, max_storage_gb),
              status = COALESCE($8, status),
+             product_type = COALESCE($9, product_type),
+             trial_days = COALESCE($10, trial_days),
+             is_featured = COALESCE($11, is_featured),
+             custom_pricing = COALESCE($12, custom_pricing),
              updated_at = NOW()
-         WHERE id = $9
-         RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, status, created_at, updated_at`,
+         WHERE id = $13
+         RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, 
+                   status, product_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
         [
           name, 
           description, 
@@ -263,7 +292,11 @@ class SubscriptionController {
           features ? JSON.stringify(features) : undefined, 
           max_users, 
           max_storage_gb, 
-          status, 
+          status,
+          product_type,
+          trial_days,
+          is_featured,
+          custom_pricing,
           id
         ]
       );

@@ -6,7 +6,15 @@
 const bcrypt = require('bcryptjs');
 
 exports.seed = async function(knex) {
-  const tenantId = 2; // ACME Corporation
+  // Get ACME Corporation tenant ID dynamically
+  const tenant = await knex('tenants').where('subdomain', 'acme').first();
+  
+  if (!tenant) {
+    console.log('⏭️ No ACME Corporation tenant found, skipping customer portal access seed');
+    return;
+  }
+  
+  const tenantId = tenant.id;
   const defaultPassword = 'Customer@123';
   const passwordHash = await bcrypt.hash(defaultPassword, 10);
 

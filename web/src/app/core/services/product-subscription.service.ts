@@ -9,7 +9,7 @@ export interface SubscriptionPlan {
   price: number;
   billing_cycle: string;
   features: string[];
-  productType?: 'money_loan' | 'bnpl' | 'pawnshop' | null;
+  productType?: 'platform' | 'money_loan' | 'bnpl' | 'pawnshop' | null;
 }
 
 export interface ProductSubscription {

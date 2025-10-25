@@ -13,6 +13,16 @@ class BillingService {
     const result = await pool.query(
       `SELECT * FROM subscription_plans WHERE status != 'archived' ORDER BY price ASC`
     );
+    console.log('🔍 BillingService.getPlans - Row count:', result.rows.length);
+    if (result.rows.length > 0) {
+      console.log('📋 First plan columns:', Object.keys(result.rows[0]));
+      console.log('📋 First plan product_type:', result.rows[0].product_type);
+      console.log('📋 Sample plans:', result.rows.slice(0, 3).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        product_type: p.product_type 
+      })));
+    }
     return result.rows;
   }
 
@@ -34,12 +44,30 @@ class BillingService {
    * Create new subscription plan
    */
   static async createPlan(planData) {
-    const { name, description, price, billing_cycle, features, max_users, max_storage_gb } = planData;
+    const { 
+      name, 
+      description, 
+      price, 
+      billing_cycle, 
+      features, 
+      max_users, 
+      max_storage_gb,
+      product_type,
+      trial_days,
+      is_featured,
+      custom_pricing,
+      status
+    } = planData;
     
     const result = await pool.query(
-      `INSERT INTO subscription_plans (name, description, price, billing_cycle, features, max_users, max_storage_gb)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [name, description, price, billing_cycle, features, max_users, max_storage_gb]
+      `INSERT INTO subscription_plans (
+        name, description, price, billing_cycle, features, max_users, max_storage_gb,
+        product_type, trial_days, is_featured, custom_pricing, status
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [name, description, price, billing_cycle, features, max_users, max_storage_gb,
+       product_type || 'platform', trial_days || 0, is_featured || false, custom_pricing || false, 
+       status || 'active']
     );
     
     return result.rows[0];
@@ -49,15 +77,37 @@ class BillingService {
    * Update subscription plan
    */
   static async updatePlan(id, planData) {
-    const { name, description, price, billing_cycle, features, max_users, max_storage_gb, status } = planData;
+    const { 
+      name, 
+      description, 
+      price, 
+      billing_cycle, 
+      features, 
+      max_users, 
+      max_storage_gb, 
+      status,
+      product_type,
+      trial_days,
+      is_featured,
+      custom_pricing
+    } = planData;
+    
+    console.log('🔍 Updating plan:', id);
+    console.log('📦 Plan data received:', { product_type, name });
+    console.log('📝 Full planData:', planData);
     
     const result = await pool.query(
       `UPDATE subscription_plans 
        SET name = $1, description = $2, price = $3, billing_cycle = $4, 
-           features = $5, max_users = $6, max_storage_gb = $7, status = $8, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9 RETURNING *`,
-      [name, description, price, billing_cycle, features, max_users, max_storage_gb, status, id]
+           features = $5, max_users = $6, max_storage_gb = $7, status = $8,
+           product_type = $9, trial_days = $10, is_featured = $11, custom_pricing = $12,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $13 RETURNING *`,
+      [name, description, price, billing_cycle, features, max_users, max_storage_gb, status, 
+       product_type, trial_days, is_featured, custom_pricing, id]
     );
+    
+    console.log('✅ Plan updated in DB:', result.rows[0].product_type);
     
     if (result.rows.length === 0) {
       throw new Error('Plan not found');

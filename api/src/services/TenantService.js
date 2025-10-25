@@ -101,6 +101,30 @@ class TenantService {
 
       const tenant = result.rows[0];
 
+      // Create tenant subscription record
+      const planResult = await client.query(
+        `SELECT id, price FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
+        [plan]
+      );
+
+      if (planResult.rows.length > 0) {
+        const planId = planResult.rows[0].id;
+        const monthlyPrice = planResult.rows[0].price;
+        
+        // Calculate expiration date (1 year from now)
+        const startDate = new Date();
+        const expirationDate = new Date(startDate);
+        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+        await client.query(
+          `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
+           VALUES ($1, $2, 'active', $3, $4, $5)`,
+          [tenant.id, planId, startDate, expirationDate, monthlyPrice]
+        );
+
+        logger.info(`Tenant subscription created: Tenant ${tenant.id} -> Plan ${planId}`);
+      }
+
       // Create default tenant roles
       const defaultRoles = [
         { name: 'Tenant Admin', description: 'Tenant administrator', space: 'tenant' },
@@ -437,6 +461,77 @@ class TenantService {
 
       if (result.rows.length === 0) {
         throw new Error('Tenant not found');
+      }
+
+      // If plan was updated, also update tenant_subscriptions
+      if (updateData.plan !== undefined) {
+        const planResult = await pool.query(
+          `SELECT id, price FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
+          [updateData.plan]
+        );
+
+        if (planResult.rows.length > 0) {
+          const planId = planResult.rows[0].id;
+          const monthlyPrice = planResult.rows[0].price;
+
+          // Check if tenant has an existing active subscription
+          const existingSub = await pool.query(
+            `SELECT id, plan_id FROM tenant_subscriptions WHERE tenant_id = $1 AND status = 'active'`,
+            [tenantId]
+          );
+
+          if (existingSub.rows.length > 0) {
+            const existingPlanId = existingSub.rows[0].plan_id;
+            
+            // If plan changed, cancel old subscription and create new one (preserve history)
+            if (existingPlanId !== planId) {
+              // Cancel existing subscription
+              await pool.query(
+                `UPDATE tenant_subscriptions 
+                 SET status = 'cancelled', 
+                     cancelled_at = CURRENT_TIMESTAMP,
+                     cancellation_reason = 'Plan changed',
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE tenant_id = $1 AND status = 'active'`,
+                [tenantId]
+              );
+              logger.info(`Cancelled old subscription for tenant ${tenantId} (plan changed)`);
+
+              // Create new subscription
+              const startDate = new Date();
+              const expirationDate = new Date(startDate);
+              expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+              await pool.query(
+                `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
+                 VALUES ($1, $2, 'active', $3, $4, $5)`,
+                [tenantId, planId, startDate, expirationDate, monthlyPrice]
+              );
+              logger.info(`Created new subscription for tenant ${tenantId} -> Plan ${planId}`);
+            } else {
+              // Same plan, just update the price if needed
+              await pool.query(
+                `UPDATE tenant_subscriptions 
+                 SET monthly_price = $1, updated_at = CURRENT_TIMESTAMP
+                 WHERE tenant_id = $2 AND status = 'active'`,
+                [monthlyPrice, tenantId]
+              );
+              logger.info(`Updated subscription price for tenant ${tenantId}`);
+            }
+          } else {
+            // No active subscription, create new one
+            const startDate = new Date();
+            const expirationDate = new Date(startDate);
+            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+            await pool.query(
+              `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
+               VALUES ($1, $2, 'active', $3, $4, $5)`,
+              [tenantId, planId, startDate, expirationDate, monthlyPrice]
+            );
+            logger.info(`Created new subscription for tenant ${tenantId} -> Plan ${planId}`);
+          }
+        }
       }
 
       logger.info(`Tenant updated: ${tenantId}`);

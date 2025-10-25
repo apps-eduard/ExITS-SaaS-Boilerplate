@@ -575,15 +575,15 @@ export class TenantEditorComponent implements OnInit {
   );
 
   moneyLoanPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'money_loan')
+    this.subscriptionPlans().filter(plan => plan.productType === 'money_loan' || plan.productType === 'platform')
   );
 
   bnplPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'bnpl')
+    this.subscriptionPlans().filter(plan => plan.productType === 'bnpl' || plan.productType === 'platform')
   );
 
   pawnshopPlans = computed(() => 
-    this.subscriptionPlans().filter(plan => plan.productType === 'pawnshop')
+    this.subscriptionPlans().filter(plan => plan.productType === 'pawnshop' || plan.productType === 'platform')
   );
 
   form: TenantForm = {

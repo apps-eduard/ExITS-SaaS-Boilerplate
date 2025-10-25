@@ -4,8 +4,25 @@
  */
 
 exports.seed = async function(knex) {
-  // Get tenant ID (assuming tenant with ID 2 exists - ACME Corporation)
-  const tenantId = 2;
+  // Get ACME Corporation tenant ID dynamically
+  const tenant = await knex('tenants').where('subdomain', 'acme').first();
+  
+  if (!tenant) {
+    console.log('⏭️ No ACME Corporation tenant found, skipping money loan seed');
+    return;
+  }
+  
+  const tenantId = tenant.id;
+  
+  // Get Super Admin user ID for reviewed_by and other references
+  const superAdmin = await knex('users').where('email', 'admin@exitsaas.com').first();
+  
+  if (!superAdmin) {
+    console.log('⏭️ No Super Admin user found, skipping money loan seed');
+    return;
+  }
+  
+  const adminUserId = superAdmin.id;
 
   // Clear existing Money Loan data (in reverse order of dependencies)
   await knex('collection_activities').where('tenant_id', tenantId).del();
@@ -89,7 +106,7 @@ exports.seed = async function(knex) {
 
   console.log(`✅ Created ${loanProducts.length} loan products`);
 
-  // 2. Insert Test Customers
+  // 2. Insert Test Customers (Note: Address data now goes in separate addresses table)
   const customers = await knex('customers').insert([
     {
       tenant_id: tenantId,
@@ -104,12 +121,6 @@ exports.seed = async function(knex) {
       email: 'juan.delacruz@example.com',
       phone: '+639171234567',
       alternate_phone: '+639281234567',
-      address: '123 Rizal Street, Barangay San Antonio',
-      barangay: 'San Antonio',
-      city: 'Makati',
-      province: 'Metro Manila',
-      postal_code: '1203',
-      country: 'Philippines',
       id_type: 'national_id',
       id_number: 'NID-1234-5678-9012',
       tin_number: '123-456-789-000',
@@ -146,12 +157,6 @@ exports.seed = async function(knex) {
       civil_status: 'single',
       email: 'maria.santos@example.com',
       phone: '+639181234567',
-      address: '789 Luna Street, Barangay Poblacion',
-      barangay: 'Poblacion',
-      city: 'Pasig',
-      province: 'Metro Manila',
-      postal_code: '1600',
-      country: 'Philippines',
       id_type: 'drivers_license',
       id_number: 'DL-ABC-123456',
       tin_number: '987-654-321-000',
@@ -188,12 +193,6 @@ exports.seed = async function(knex) {
       civil_status: 'single',
       email: 'pedro.gonzales@example.com',
       phone: '+639191234567',
-      address: '321 Mabini Avenue, Barangay Masagana',
-      barangay: 'Masagana',
-      city: 'Quezon City',
-      province: 'Metro Manila',
-      postal_code: '1100',
-      country: 'Philippines',
       id_type: 'umid',
       id_number: 'UMID-9876543210',
       tin_number: '456-789-012-000',
@@ -232,7 +231,7 @@ exports.seed = async function(knex) {
     approved_amount: 50000,
     approved_term_days: 365,
     approved_interest_rate: 18.00,
-    reviewed_by: 1, // Super Admin
+    reviewed_by: adminUserId,
     reviewed_at: new Date(),
     review_notes: 'Application approved - good credit history'
   }).returning('*');
@@ -260,8 +259,8 @@ exports.seed = async function(knex) {
     first_payment_date: new Date('2025-10-01'),
     maturity_date: new Date('2026-09-01'),
     status: 'active',
-    approved_by: 1,
-    disbursed_by: 1
+    approved_by: adminUserId,
+    disbursed_by: adminUserId
   }).returning('*');
 
   console.log(`✅ Created active loan`);
@@ -306,7 +305,7 @@ exports.seed = async function(knex) {
       transaction_id: 'BT-123456',
       payment_date: new Date('2025-10-01'),
       status: 'completed',
-      received_by: 1,
+      received_by: adminUserId,
       notes: 'First payment - on time'
     },
     {
@@ -321,7 +320,7 @@ exports.seed = async function(knex) {
       payment_method: 'cash',
       payment_date: new Date('2025-11-01'),
       status: 'completed',
-      received_by: 1,
+      received_by: adminUserId,
       notes: 'Second payment - on time'
     }
   ]);

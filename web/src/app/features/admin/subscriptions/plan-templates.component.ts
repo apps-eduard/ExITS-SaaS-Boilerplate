@@ -1,8 +1,9 @@
-import { Component, signal, computed, OnInit, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { ToastService } from '../../../core/services/toast.service';
 
 interface PlanTemplate {
   id: number;
@@ -72,6 +73,27 @@ interface PlanTemplate {
                   <div class="flex-1">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
                     <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ plan.description }}</p>
+                    
+                    <!-- Product Type Badge -->
+                    <div class="mt-2">
+                      @if (plan.productType === 'platform') {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded">
+                          🌐 Platform Plan (All Products)
+                        </span>
+                      } @else if (plan.productType === 'money_loan') {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
+                          💰 Money Loan
+                        </span>
+                      } @else if (plan.productType === 'bnpl') {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
+                          🛍️ Buy Now Pay Later
+                        </span>
+                      } @else if (plan.productType === 'pawnshop') {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded">
+                          💎 Pawnshop
+                        </span>
+                      }
+                    </div>
                   </div>
                   <span
                     class="px-2 py-0.5 text-xs font-medium rounded-full"
@@ -223,7 +245,7 @@ interface PlanTemplate {
                     [(ngModel)]="formData.productType"
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
-                    <option [value]="null">🌐 Platform Plan (General)</option>
+                    <option value="platform">🌐 Platform Plan (General)</option>
                     <option value="money_loan">💰 Money Loan</option>
                     <option value="bnpl">🛍️ Buy Now Pay Later (BNPL)</option>
                     <option value="pawnshop">💎 Pawnshop</option>
@@ -520,6 +542,7 @@ interface PlanTemplate {
 })
 export class PlanTemplatesComponent implements OnInit {
   private http = inject(HttpClient);
+  private toastService = inject(ToastService);
   private apiUrl = '/api/subscriptions';
 
   // Using enriched plans with template-compatible properties
@@ -528,6 +551,7 @@ export class PlanTemplatesComponent implements OnInit {
     billingCycle: string;
     trialDays: number;
     isActive: boolean;
+    productType: string;
   })[]>([]);
 
   loading = signal<boolean>(false);
@@ -645,7 +669,7 @@ export class PlanTemplatesComponent implements OnInit {
     maxStorageGb: null as number | null,
     isFeatured: false,
     customPricing: false,
-    productType: null as string | null,
+    productType: 'platform' as string | null,
     features: [] as string[],
     isActive: true
   };
@@ -659,31 +683,57 @@ export class PlanTemplatesComponent implements OnInit {
       this.loading.set(true);
       this.error.set(null);
 
+      console.log('🔄 Loading plans from API...');
+
       // Load subscription plans
       const response = await firstValueFrom(
         this.http.get<{ success: boolean; data: PlanTemplate[] }>(`${this.apiUrl}/plans`)
       );
 
+      console.log('📡 Full API Response:', response);
+
       const plans = response.data || [];
 
+      console.log('📊 Raw plans from API:', plans);
+      console.log('📊 Product types:', plans.map((p: any) => ({ id: p.id, name: p.name, product_type: p.product_type })));
+      console.log('📊 Subscriber counts:', plans.map((p: any) => ({ id: p.id, name: p.name, subscriber_count: p.subscriber_count, type: typeof p.subscriber_count })));
+
       // Enrich plans with template-compatible properties
-      const enrichedPlans = plans.map((plan: any) => ({
-        ...plan,
-        subscriberCount: parseInt(plan.subscriber_count) || 0,
-        // Parse features if it's a JSON string
-        features: typeof plan.features === 'string' 
-          ? JSON.parse(plan.features) 
-          : (Array.isArray(plan.features) ? plan.features : []),
-        // Add template-compatible properties
-        currency: 'PHP',
-        billingCycle: plan.billing_cycle,
-        trialDays: plan.trial_days || 0,
-        isActive: plan.status === 'active'
-      }));
+      const enrichedPlans = plans.map((plan: any) => {
+        console.log(`🔍 Processing plan ${plan.id}:`, {
+          name: plan.name,
+          raw_product_type: plan.product_type,
+          typeof_product_type: typeof plan.product_type,
+          is_null: plan.product_type === null,
+          is_undefined: plan.product_type === undefined,
+          is_empty_string: plan.product_type === '',
+          will_become: plan.product_type || 'platform'
+        });
+
+        return {
+          ...plan,
+          subscriber_count: parseInt(plan.subscriber_count || '0', 10), // Keep original property name for template
+          subscriberCount: parseInt(plan.subscriber_count || '0', 10),  // Also keep camelCase version
+          // Parse features if it's a JSON string
+          features: typeof plan.features === 'string' 
+            ? JSON.parse(plan.features) 
+            : (Array.isArray(plan.features) ? plan.features : []),
+          // Add template-compatible properties
+          currency: 'PHP',
+          billingCycle: plan.billing_cycle,
+          trialDays: plan.trial_days || 0,
+          isActive: plan.status === 'active',
+          // Product type is now always a string
+          productType: plan.product_type || 'platform'
+        };
+      });
+
+      console.log('✨ Enriched plans:', enrichedPlans.map((p: any) => ({ id: p.id, name: p.name, productType: p.productType, raw: p.product_type })));
 
       this.plans.set(enrichedPlans);
+      console.log('✅ Plans set in signal');
     } catch (error: any) {
-      console.error('Error loading plans:', error);
+      console.error('❌ Error loading plans:', error);
       this.error.set(error.message || 'Failed to load plans');
     } finally {
       this.loading.set(false);
@@ -703,7 +753,7 @@ export class PlanTemplatesComponent implements OnInit {
       maxStorageGb: plan.max_storage_gb,
       isFeatured: (plan as any).is_featured || false,
       customPricing: (plan as any).custom_pricing || false,
-      productType: (plan as any).product_type || null,
+      productType: (plan as any).productType || 'platform',
       features: typeof plan.features === 'string' ? JSON.parse(plan.features) : (Array.isArray(plan.features) ? [...plan.features] : []),
       isActive: plan.status === 'active'
     };
@@ -727,9 +777,10 @@ export class PlanTemplatesComponent implements OnInit {
         this.http.post(`${this.apiUrl}/plans`, newPlanData)
       );
       await this.loadPlans();
+      this.toastService.success('Plan duplicated successfully');
     } catch (error: any) {
       console.error('Error duplicating plan:', error);
-      alert(error.error?.message || 'Failed to duplicate plan');
+      this.toastService.error(error.error?.message || 'Failed to duplicate plan');
     }
   }
 
@@ -746,9 +797,10 @@ export class PlanTemplatesComponent implements OnInit {
         this.http.delete(`${this.apiUrl}/plans/${id}`)
       );
       await this.loadPlans();
+      this.toastService.success('Plan deleted successfully');
     } catch (error: any) {
       console.error('Error deleting plan:', error);
-      alert(error.error?.message || 'Failed to delete plan');
+      this.toastService.error(error.error?.message || 'Failed to delete plan');
     }
   }
 
@@ -852,7 +904,7 @@ export class PlanTemplatesComponent implements OnInit {
     const features = this.formData.features.filter(f => f.trim() !== '');
 
     if (!this.formData.name || !this.formData.description) {
-      alert('Please fill in all required fields');
+      this.toastService.warning('Please fill in all required fields');
       return;
     }
 
@@ -867,7 +919,7 @@ export class PlanTemplatesComponent implements OnInit {
       trial_days: this.formData.trialDays,
       is_featured: this.formData.isFeatured,
       custom_pricing: this.formData.customPricing,
-      product_type: this.formData.productType,
+      product_type: this.formData.productType || 'platform',
       status: this.formData.isActive ? 'active' : 'inactive'
     };
 
@@ -877,18 +929,20 @@ export class PlanTemplatesComponent implements OnInit {
         await firstValueFrom(
           this.http.put(`${this.apiUrl}/plans/${this.editingPlanId}`, planData)
         );
+        this.toastService.success('Plan updated successfully');
       } else {
         // Create new plan
         await firstValueFrom(
           this.http.post(`${this.apiUrl}/plans`, planData)
         );
+        this.toastService.success('Plan created successfully');
       }
 
       this.closeModal();
       await this.loadPlans();
     } catch (error: any) {
       console.error('Error saving plan:', error);
-      alert(error.error?.message || 'Failed to save plan');
+      this.toastService.error(error.error?.message || 'Failed to save plan');
     }
   }
 
@@ -907,7 +961,7 @@ export class PlanTemplatesComponent implements OnInit {
       maxStorageGb: null,
       isFeatured: false,
       customPricing: false,
-      productType: null,
+      productType: 'platform',
       features: [],
       isActive: true
     };

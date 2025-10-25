@@ -44,7 +44,7 @@ exports.getAllAddresses = async (req, res) => {
           END,
           pa.zip_code
         ) AS formatted_address
-      FROM philippine_addresses pa
+      FROM addresses pa
       WHERE pa.tenant_id = $1 
         AND pa.deleted_at IS NULL
     `;
@@ -99,7 +99,7 @@ exports.getAddressById = async (req, res) => {
     const { tenant_id } = req.user;
 
     const result = await db.query(
-      `SELECT * FROM philippine_addresses 
+      `SELECT * FROM addresses 
        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
       [id, tenant_id]
     );
@@ -202,7 +202,7 @@ exports.createAddress = async (req, res) => {
     // If setting as primary, unset other primary addresses
     if (finalIsPrimary) {
       await client.query(
-        `UPDATE philippine_addresses 
+        `UPDATE addresses 
          SET is_primary = FALSE 
          WHERE tenant_id = $1 AND address_type = $2 AND is_primary = TRUE`,
         [tenant_id, finalAddressType]
@@ -210,7 +210,7 @@ exports.createAddress = async (req, res) => {
     }
 
     const result = await client.query(
-      `INSERT INTO philippine_addresses (
+      `INSERT INTO addresses (
         tenant_id, address_type, is_primary, label,
         unit_number, house_number, street_name, barangay,
         city_municipality, province, region, zip_code,
@@ -306,7 +306,7 @@ exports.updateAddress = async (req, res) => {
 
     // Check if address exists
     const checkResult = await client.query(
-      'SELECT * FROM philippine_addresses WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL',
+      'SELECT * FROM addresses WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL',
       [id, tenant_id]
     );
 
@@ -322,7 +322,7 @@ exports.updateAddress = async (req, res) => {
     // If setting as primary, unset other primary addresses
     if (is_primary) {
       await client.query(
-        `UPDATE philippine_addresses 
+        `UPDATE addresses 
          SET is_primary = FALSE 
          WHERE tenant_id = $1 AND address_type = $2 AND is_primary = TRUE AND id != $3`,
         [tenant_id, address_type || checkResult.rows[0].address_type, id]
@@ -330,7 +330,7 @@ exports.updateAddress = async (req, res) => {
     }
 
     const result = await client.query(
-      `UPDATE philippine_addresses 
+      `UPDATE addresses 
        SET 
          address_type = COALESCE($1, address_type),
          is_primary = COALESCE($2, is_primary),
@@ -409,7 +409,7 @@ exports.deleteAddress = async (req, res) => {
     const { tenant_id } = req.user;
 
     const result = await db.query(
-      `UPDATE philippine_addresses 
+      `UPDATE addresses 
        SET deleted_at = CURRENT_TIMESTAMP, status = 'deleted'
        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
        RETURNING id`,
@@ -450,7 +450,7 @@ exports.setPrimaryAddress = async (req, res) => {
 
     // Check if address exists
     const checkResult = await client.query(
-      'SELECT address_type FROM philippine_addresses WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL',
+      'SELECT address_type FROM addresses WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL',
       [id, tenant_id]
     );
 
@@ -465,7 +465,7 @@ exports.setPrimaryAddress = async (req, res) => {
 
     // Unset other primary addresses of the same type
     await client.query(
-      `UPDATE philippine_addresses 
+      `UPDATE addresses 
        SET is_primary = FALSE 
        WHERE tenant_id = $1 AND address_type = $2 AND is_primary = TRUE`,
       [tenant_id, checkResult.rows[0].address_type]
@@ -473,7 +473,7 @@ exports.setPrimaryAddress = async (req, res) => {
 
     // Set this address as primary
     const result = await client.query(
-      `UPDATE philippine_addresses 
+      `UPDATE addresses 
        SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND tenant_id = $2
        RETURNING *`,
@@ -510,7 +510,7 @@ exports.verifyAddress = async (req, res) => {
     const { tenant_id, id: user_id } = req.user;
 
     const result = await db.query(
-      `UPDATE philippine_addresses 
+      `UPDATE addresses 
        SET is_verified = TRUE, 
            verified_at = CURRENT_TIMESTAMP,
            verified_by = $1,
