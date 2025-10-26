@@ -92,7 +92,7 @@ export class PlatformSelectorModalComponent {
         productType: 'money_loan',
         name: 'Money Loan',
         icon: '💰',
-        route: '/platforms/money-loan/dashboard',
+        route: '/products/money-loan/dashboard',
         description: 'Lending & Collections',
         color: 'border-amber-300 hover:border-amber-500 dark:border-amber-700 dark:hover:border-amber-500'
       },
@@ -100,7 +100,7 @@ export class PlatformSelectorModalComponent {
         productType: 'bnpl',
         name: 'Buy Now Pay Later',
         icon: '🛒',
-        route: '/platforms/bnpl/dashboard',
+        route: '/products/bnpl/dashboard',
         description: 'Installment Management',
         color: 'border-blue-300 hover:border-blue-500 dark:border-blue-700 dark:hover:border-blue-500'
       },
@@ -108,7 +108,7 @@ export class PlatformSelectorModalComponent {
         productType: 'pawnshop',
         name: 'Pawnshop',
         icon: '💎',
-        route: '/platforms/pawnshop/dashboard',
+        route: '/products/pawnshop/dashboard',
         description: 'Pawn & Redemption',
         color: 'border-green-300 hover:border-green-500 dark:border-green-700 dark:hover:border-green-500'
       }

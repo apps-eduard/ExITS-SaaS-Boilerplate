@@ -34,6 +34,9 @@ router.put('/:id', rbacMiddleware(['users', 'tenant-users'], ['update']), UserCo
 // Delete user - accepts both system users:delete and tenant-users:delete permissions
 router.delete('/:id', rbacMiddleware(['users', 'tenant-users'], ['delete']), UserController.deleteUser);
 
+// Reset password - accepts both system users:update and tenant-users:update permissions
+router.put('/:id/reset-password', rbacMiddleware(['users', 'tenant-users'], ['update']), UserController.resetPassword);
+
 // Restore user - accepts both system users:update and tenant-users:update permissions
 router.put('/:id/restore', rbacMiddleware(['users', 'tenant-users'], ['update']), UserController.restoreUser);
 

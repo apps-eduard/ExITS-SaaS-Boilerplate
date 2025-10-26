@@ -456,12 +456,12 @@ class UserService {
   /**
    * Audit log helper
    */
-  static async auditLog(userId, tenantId, action, entityType, entityId, changes) {
+  static async auditLog(userId, tenantId, action, resourceType, resourceId, changes) {
     try {
       await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status)
+        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'success']
+        [userId, tenantId, action, resourceType, resourceId, JSON.stringify(changes), 'success']
       );
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);
@@ -500,7 +500,7 @@ class UserService {
       if (employeeResult.rows.length === 0) {
         // Create employee profile
         const createEmployeeResult = await pool.query(
-          `INSERT INTO employee_profiles (tenant_id, user_id, employee_number, hire_date, employment_status, department, position)
+          `INSERT INTO employee_profiles (tenant_id, user_id, employee_code, hire_date, employment_status, department, position)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
           [
@@ -614,6 +614,49 @@ class UserService {
       }));
     } catch (err) {
       logger.error(`User service get products error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Reset user password
+   * @param {number} userId - User ID
+   * @param {string} newPassword - New password
+   * @param {number} requestingUserId - ID of user requesting the reset
+   * @param {number} tenantId - Tenant ID for isolation
+   * @returns {Promise<boolean>} Success status
+   */
+  static async resetPassword(userId, newPassword, requestingUserId, tenantId) {
+    try {
+      // Verify user exists and belongs to tenant
+      const user = await this.getUserById(userId, tenantId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await pool.query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3',
+        [passwordHash, userId, tenantId]
+      );
+
+      // Audit log
+      await this.auditLog(
+        requestingUserId,
+        tenantId,
+        'password_reset',
+        'user',
+        userId,
+        { action: 'Password reset by admin' }
+      );
+
+      logger.info(`Password reset for user ${userId} by user ${requestingUserId}`);
+      return true;
+    } catch (err) {
+      logger.error(`User service reset password error: ${err.message}`);
       throw err;
     }
   }

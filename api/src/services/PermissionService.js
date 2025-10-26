@@ -83,7 +83,7 @@ class PermissionService {
       );
 
       await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status)
+        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           delegatedByUserId,
@@ -91,8 +91,8 @@ class PermissionService {
           'delegate_permission',
           'permission_delegation',
           result.rows[0].id,
-          { delegated_to: delegatedToUserId, role_id: roleId },
-          'active',
+          JSON.stringify({ delegated_to: delegatedToUserId, role_id: roleId }),
+          'success',
         ]
       );
 
@@ -120,9 +120,9 @@ class PermissionService {
       }
 
       await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status)
+        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [requestingUserId, tenantId, 'revoke_delegation', 'permission_delegation', delegationId, {}, 'active']
+        [requestingUserId, tenantId, 'revoke_delegation', 'permission_delegation', delegationId, JSON.stringify({}), 'success']
       );
 
       return { message: 'Delegation revoked successfully' };

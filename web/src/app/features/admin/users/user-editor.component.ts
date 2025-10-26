@@ -10,6 +10,7 @@ import { AddressService, AddressCreatePayload } from '../../../core/services/add
 import { AuthService } from '../../../core/services/auth.service';
 import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
 import { TenantService } from '../../../core/services/tenant.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 interface Tenant {
   id: number;
@@ -674,36 +675,28 @@ interface Tenant {
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">🔐 Reset Password</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Change user's password</p>
               </div>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="showResetPassword"
-                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Reset password</span>
-              </label>
             </div>
 
-          <div *ngIf="showResetPassword" class="space-y-3">
+          <div class="space-y-3">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <!-- New Password -->
               <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  New Password <span class="text-red-500">*</span>
+                  New Password (optional)
                 </label>
                 <input
                   [(ngModel)]="resetPasswordData.newPassword"
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Leave blank to keep current password"
                   class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 />
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum 8 characters</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum 8 characters if changing</p>
               </div>
 
               <!-- Confirm Password -->
               <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Confirm Password <span class="text-red-500">*</span>
+                  Confirm Password
                 </label>
                 <input
                   [(ngModel)]="resetPasswordData.confirmPassword"
@@ -722,15 +715,11 @@ interface Tenant {
               </div>
             </div>
 
-            <div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+            <div *ngIf="resetPasswordData.newPassword" class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
               <p class="text-xs text-amber-700 dark:text-amber-300">
                 <strong>⚠️ Warning:</strong> User will need to use this new password on their next login. Consider notifying them about the password change.
               </p>
             </div>
-          </div>
-
-          <div *ngIf="!showResetPassword" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
-            Password will remain unchanged
           </div>
         </div>
 
@@ -852,7 +841,6 @@ export class UserEditorComponent implements OnInit {
   };
 
   // Reset Password fields
-  showResetPassword = false;
   resetPasswordData = {
     newPassword: '',
     confirmPassword: ''
@@ -868,7 +856,8 @@ export class UserEditorComponent implements OnInit {
     public addressService: AddressService,
     private authService: AuthService,
     private productSubscriptionService: ProductSubscriptionService,
-    private tenantService: TenantService
+    private tenantService: TenantService,
+    private toastService: ToastService
   ) {}
 
   async ngOnInit() {
@@ -1217,8 +1206,8 @@ export class UserEditorComponent implements OnInit {
       return false;
     }
 
-    // If resetting password in edit mode, validate password fields
-    if (this.isEditMode() && this.showResetPassword && !this.isPasswordResetValid()) {
+    // If password fields are filled in edit mode, validate them
+    if (this.isEditMode() && !this.isPasswordResetValid()) {
       return false;
     }
 
@@ -1323,12 +1312,13 @@ export class UserEditorComponent implements OnInit {
 
       if (user) {
         // Reset password if requested (edit mode only)
-        if (this.isEditMode() && this.showResetPassword && this.isPasswordResetValid()) {
+        // Reset password if provided
+        if (this.isEditMode() && this.resetPasswordData.newPassword && this.isPasswordResetValid()) {
           try {
             await this.http.put(`/api/users/${user.id}/reset-password`, {
               newPassword: this.resetPasswordData.newPassword
             }).toPromise();
-            console.log('✅ Password reset successfully');
+            this.toastService.success('Password reset successfully');
           } catch (passwordError) {
             console.error('⚠️ Password reset failed:', passwordError);
             this.errorMessage.set('User updated but password reset failed. Please try again.');
@@ -1447,8 +1437,12 @@ export class UserEditorComponent implements OnInit {
   }
 
   isPasswordResetValid(): boolean {
-    if (!this.showResetPassword) return true;
+    // If no password entered, it's valid (password is optional)
+    if (!this.resetPasswordData.newPassword && !this.resetPasswordData.confirmPassword) {
+      return true;
+    }
 
+    // If password entered, validate it
     return !!(
       this.resetPasswordData.newPassword &&
       this.resetPasswordData.confirmPassword &&

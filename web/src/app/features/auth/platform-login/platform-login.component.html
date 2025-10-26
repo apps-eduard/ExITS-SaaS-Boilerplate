@@ -214,22 +214,51 @@
           </button>
         </form>
 
+        <!-- Divider -->
+        <div class="relative my-6">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">⚡ Quick Login (Auto Submit)</span>
+          </div>
+        </div>
+
+        <!-- Quick Login Buttons -->
+        <div class="space-y-2">
+          <div *ngFor="let account of testAccounts"
+               (click)="quickLogin(account)"
+               class="p-3 border-2 border-green-200 dark:border-green-700 rounded-xl cursor-pointer transition-all hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-between bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30">
+            <div class="flex-1">
+              <div class="text-xs font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                {{ account.label }}
+              </div>
+              <div class="text-xs font-mono text-gray-600 dark:text-gray-400">
+                {{ account.email }}
+              </div>
+            </div>
+            <div class="text-lg font-bold text-green-600 dark:text-green-400 flex-shrink-0 ml-4">
+              ⚡
+            </div>
+          </div>
+        </div>
+
         <!-- Info Box -->
         <div class="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
           <p class="text-sm text-indigo-900 dark:text-indigo-200 text-center">
             <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            This login is for <strong>platform employees</strong> only
+            Login for <strong>Tenant Admins & Employees</strong>
           </p>
         </div>
 
         <!-- Links -->
         <div class="text-center mt-6 space-y-3">
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            Admin or Tenant Manager?
+            System Administrator?
             <a routerLink="/login" class="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors ml-1">
-              Use Main Login
+              Use System Login
             </a>
           </p>
         </div>

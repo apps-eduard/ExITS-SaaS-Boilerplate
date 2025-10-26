@@ -671,12 +671,12 @@ class RoleService {
   /**
    * Audit logging helper
    */
-  static async auditLog(userId, tenantId, action, entityType, entityId, details) {
+  static async auditLog(userId, tenantId, action, resourceType, resourceId, details) {
     try {
       await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status)
+        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'success')`,
-        [userId, tenantId, action, entityType, entityId, JSON.stringify(details)]
+        [userId, tenantId, action, resourceType, resourceId, JSON.stringify(details)]
       );
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);

@@ -144,16 +144,16 @@ import { ThemeService } from '../../../core/services/theme.service';
 
             <!-- Test Accounts -->
             <div class="space-y-2">
-              <p class="text-xs text-center text-gray-500 dark:text-gray-400">Click to auto-fill credentials</p>
+              <p class="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">⚡ Quick Test Login (Auto Submit)</p>
               @for (account of testAccounts; track account.email) {
                 <button
                   type="button"
-                  (click)="fillCredentials(account)"
-                  class="w-full p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 border border-purple-200 dark:border-purple-800 rounded-lg transition-all text-left group"
+                  (click)="quickLogin(account)"
+                  class="w-full p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 border border-green-200 dark:border-green-800 rounded-lg transition-all text-left group"
                 >
                   <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                      <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div class="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <span class="text-white text-sm font-bold">{{ account.label.charAt(0) }}</span>
                       </div>
                       <div>
@@ -161,7 +161,7 @@ import { ThemeService } from '../../../core/services/theme.service';
                         <p class="text-xs text-gray-500 dark:text-gray-400">{{ account.email }}</p>
                       </div>
                     </div>
-                    <span class="text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                    <span class="text-green-600 dark:text-green-400 font-bold">⚡</span>
                   </div>
                 </button>
               }
@@ -234,15 +234,22 @@ export class CustomerLoginComponent {
   error = '';
 
   testAccounts = [
-    { email: 'juan.delacruz@test.com', password: 'Customer@123', label: 'Juan Dela Cruz' },
-    { email: 'maria.santos@test.com', password: 'Customer@123', label: 'Maria Santos' },
-    { email: 'pedro.gonzales@test.com', password: 'Customer@123', label: 'Pedro Gonzales' }
+    { email: 'customer1@test.com', password: 'Customer@123', label: 'Customer 1 (Money Loan)' },
+    { email: 'customer2@test.com', password: 'Customer@123', label: 'Customer 2 (BNPL)' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
     this.identifier = account.email;
     this.password = account.password;
     this.error = '';
+  }
+
+  // Quick login - auto submit
+  quickLogin(account: { email: string; password: string }) {
+    this.identifier = account.email;
+    this.password = account.password;
+    this.error = '';
+    this.onSubmit();
   }
 
   toggleTheme() {

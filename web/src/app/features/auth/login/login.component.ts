@@ -26,15 +26,20 @@ export class LoginComponent {
   loading = signal(false);
 
   testAccounts = [
-    { email: 'admin@exitsaas.com', password: 'Admin@123', label: 'System Admin' },
-    { email: 'admin-1@example.com', password: 'Admin@123', label: 'Tenant 1 Admin' },
-    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant 2 Admin' },
-    { email: 'admin-3@example.com', password: 'Admin@123', label: 'Tenant 3 Admin' }
+    { email: 'admin@exitsaas.com', password: 'Admin@123', label: 'System Admin', role: 'system' },
+    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant Admin', role: 'tenant' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
     this.email = account.email;
     this.password = account.password;
+  }
+
+  // Quick login - auto submit
+  quickLogin(account: { email: string; password: string }) {
+    this.email = account.email;
+    this.password = account.password;
+    this.login();
   }
 
   onSubmit() {
@@ -55,7 +60,21 @@ export class LoginComponent {
         this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
 
         const user = response.data.user;
+        const roles = response.data.roles || [];
+        const platforms = response.data.platforms || [];
+
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
+        const isTenantAdmin = roles.some((r: any) => 
+          r.name === 'Tenant Admin' && r.space === 'tenant'
+        );
+
+        // Allow System Admins AND Tenant Admins
+        if (!isSystemAdmin && !isTenantAdmin) {
+          this.error = 'This login is for System Admins and Tenant Admins only. Employees and Customers should use Platform Login.';
+          this.toastService.error('Please use Platform Login');
+          this.authService.logout().subscribe();
+          return;
+        }
 
         // System Admin → System Dashboard
         if (isSystemAdmin) {
@@ -63,8 +82,11 @@ export class LoginComponent {
           return;
         }
 
-        // Tenant User (Admin/Manager) → Tenant Dashboard
-        this.router.navigate(['/tenant/dashboard']);
+        // Tenant Admin → Tenant Dashboard
+        if (isTenantAdmin) {
+          this.router.navigate(['/tenant/dashboard']);
+          return;
+        }
       },
       error: (error: any) => {
         this.loading.set(false);

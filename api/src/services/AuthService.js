@@ -106,17 +106,24 @@ class AuthService {
       // Audit log
       await this.auditLog(user.id, user.tenant_id, 'login', 'user', user.id, {}, ipAddress);
 
-      // Fetch user's platforms if tenant user
+      // Fetch user's platforms if tenant user (only if user_products table exists)
       let platforms = [];
       if (user.tenant_id) {
-        const platformsResult = await pool.query(
-          `SELECT product_type as "productType", access_level as "accessLevel", is_primary as "isPrimary"
-           FROM user_products
-           WHERE user_id = $1
-           ORDER BY is_primary DESC, product_type`,
-          [user.id]
-        );
-        platforms = platformsResult.rows;
+        try {
+          const platformsResult = await pool.query(
+            `SELECT product_type as "productType", access_level as "accessLevel", is_primary as "isPrimary"
+             FROM user_products
+             WHERE user_id = $1
+             ORDER BY is_primary DESC, product_type`,
+            [user.id]
+          );
+          platforms = platformsResult.rows;
+          logger.info(`✅ Fetched ${platforms.length} platforms for user ${user.id}`);
+        } catch (platformErr) {
+          // user_products table might not exist yet - that's okay for admin logins
+          logger.warn(`Could not fetch platforms for user ${user.id}: ${platformErr.message}`);
+          platforms = [];
+        }
       }
 
       // Transform user to camelCase for frontend
@@ -386,12 +393,12 @@ class AuthService {
   /**
    * Audit log helper
    */
-  static async auditLog(userId, tenantId, action, entityType, entityId, changes, ipAddress) {
+  static async auditLog(userId, tenantId, action, resourceType, resourceId, changes, ipAddress) {
     try {
       await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, entity_type, entity_id, changes, status, ip_address)
+        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status, ip_address)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [userId, tenantId, action, entityType, entityId, JSON.stringify(changes), 'success', ipAddress]
+        [userId, tenantId, action, resourceType, resourceId, JSON.stringify(changes), 'success', ipAddress]
       );
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);

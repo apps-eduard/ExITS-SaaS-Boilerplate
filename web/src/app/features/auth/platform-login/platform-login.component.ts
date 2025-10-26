@@ -30,9 +30,24 @@ export class PlatformLoginComponent {
   showPlatformSelector = signal(false);
   userPlatforms = signal<any[]>([]);
 
+  // Test accounts for platform users (Tenant Admins and Employees only)
+  testAccounts = [
+    { email: 'admin-1@example.com', password: 'Admin@123', label: 'Tenant 1 Admin' },
+    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant 2 Admin' },
+    { email: 'employee1@tenant1.com', password: 'Employee@123', label: 'Employee 1 (Money Loan View)' },
+    { email: 'employee2@tenant1.com', password: 'Employee@123', label: 'Employee 2 (Multi-Platform)' }
+  ];
+
   fillCredentials(account: { email: string; password: string }) {
     this.email = account.email;
     this.password = account.password;
+  }
+
+  // Quick login - auto submit
+  quickLogin(account: { email: string; password: string }) {
+    this.email = account.email;
+    this.password = account.password;
+    this.onSubmit();
   }
 
   onSubmit() {
@@ -50,18 +65,52 @@ export class PlatformLoginComponent {
 
         const user = response.data.user;
         const platforms = response.data.platforms || [];
+        const roles = response.data.roles || [];
 
-        // Platform login is ONLY for tenant users with platform access
+        // Check if user is System Admin
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
 
         if (isSystemAdmin) {
-          this.error = 'This login is for platform employees only. Please use the main login.';
-          this.toastService.error('This login is for platform employees only');
+          this.error = 'This login is for platform users only. Please use the main login.';
+          this.toastService.error('This login is for platform users only');
           this.authService.logout().subscribe();
           return;
         }
 
-        // Tenant User with NO platforms → Error (shouldn't use platform login)
+        // Check if user is Tenant Admin
+        const isTenantAdmin = roles.some((r: any) => 
+          r.name === 'Tenant Admin' && r.space === 'tenant'
+        );
+
+        // ===== TENANT ADMIN ROUTING =====
+        // Tenant Admins have FULL ACCESS to tenant management
+        // They can use Platform Login OR System Login
+        if (isTenantAdmin) {
+          // If Tenant Admin has NO platforms → Route to Tenant Dashboard
+          if (platforms.length === 0) {
+            console.log(`✅ Tenant Admin with no platforms → /tenant/dashboard`);
+            this.router.navigate(['/tenant/dashboard']);
+            return;
+          }
+
+          // If Tenant Admin has SINGLE platform → Show choice or auto-route
+          if (platforms.length === 1) {
+            // For now, auto-route to platform (they can navigate to admin features via menu)
+            const route = this.getPlatformRoute(platforms[0].productType);
+            console.log(`✅ Tenant Admin with 1 platform: ${platforms[0].productType} → ${route}`);
+            this.router.navigate([route]);
+            return;
+          }
+
+          // If Tenant Admin has MULTIPLE platforms → Show selector modal
+          console.log(`🎯 Tenant Admin with ${platforms.length} platforms, showing selector`);
+          this.userPlatforms.set(platforms);
+          this.showPlatformSelector.set(true);
+          return;
+        }
+
+        // ===== EMPLOYEE ROUTING =====
+        // Employees MUST have platform access (they don't have tenant management access)
         if (platforms.length === 0) {
           this.error = 'No platform access found. Please contact your administrator.';
           this.toastService.error('No platform access found');
@@ -69,16 +118,16 @@ export class PlatformLoginComponent {
           return;
         }
 
-        // Tenant User with SINGLE platform → Auto-route to that platform
+        // Employee with SINGLE platform → Auto-route
         if (platforms.length === 1) {
           const route = this.getPlatformRoute(platforms[0].productType);
-          console.log(`✅ Single platform detected: ${platforms[0].productType} → ${route}`);
+          console.log(`✅ Employee with 1 platform: ${platforms[0].productType} → ${route}`);
           this.router.navigate([route]);
           return;
         }
 
-        // Tenant User with MULTIPLE platforms → Show selector modal
-        console.log(`🎯 Multiple platforms detected (${platforms.length}), showing selector`);
+        // Employee with MULTIPLE platforms → Show selector modal
+        console.log(`🎯 Employee with ${platforms.length} platforms, showing selector`);
         this.userPlatforms.set(platforms);
         this.showPlatformSelector.set(true);
       },
@@ -99,9 +148,9 @@ export class PlatformLoginComponent {
 
   getPlatformRoute(productType: string): string {
     const routes: Record<string, string> = {
-      'money_loan': '/platforms/money-loan/dashboard',
-      'bnpl': '/platforms/bnpl/dashboard',
-      'pawnshop': '/platforms/pawnshop/dashboard'
+      'money_loan': '/products/money-loan/dashboard',
+      'bnpl': '/products/bnpl/dashboard',
+      'pawnshop': '/products/pawnshop/dashboard'
     };
     return routes[productType] || '/tenant/dashboard';
   }

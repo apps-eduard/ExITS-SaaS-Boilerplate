@@ -274,6 +274,31 @@ class UserController {
       next(err);
     }
   }
+
+  /**
+   * PUT /users/:id/reset-password
+   * Reset user password
+   */
+  static async resetPassword(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: 'New password is required',
+        });
+      }
+
+      await UserService.resetPassword(id, newPassword, req.userId, req.tenantId);
+
+      res.status(HTTP_STATUS.OK).json({
+        message: 'Password reset successfully',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = UserController;

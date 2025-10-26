@@ -232,45 +232,32 @@
             <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Demo Accounts</span>
+            <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">⚡ Quick Login (Auto Submit)</span>
           </div>
         </div>
 
-        <!-- Demo Credentials -->
+        <!-- Quick Login Buttons -->
         <div class="space-y-3">
-          <div *ngFor="let account of testAccounts"
-               (click)="fillCredentials(account)"
-               class="p-3 border rounded-xl cursor-pointer transition-all hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-            <div class="flex-1">
-              <div class="text-xs font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                {{ account.label }}
-              </div>
-              <div class="text-xs font-mono text-gray-600 dark:text-gray-400">
-                {{ account.email }}
-              </div>
-            </div>
-            <div class="text-xs font-medium text-blue-600 dark:text-blue-400 flex-shrink-0 ml-4">
-              Click to Fill →
-            </div>
-          </div>
+          <button
+            *ngFor="let account of testAccounts"
+            type="button"
+            (click)="quickLogin(account)"
+            class="w-full py-3 px-4 border-2 border-green-200 dark:border-green-700 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 text-green-800 dark:text-green-200 font-semibold rounded-xl hover:shadow-lg transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            {{ account.label }}
+          </button>
         </div>
 
         <!-- Sign Up Link -->
         <div class="text-center mt-6">
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?
-            <a href="#" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-              Contact Sales
+            Need platform access?
+            <a routerLink="/platform/login" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+              Platform Login →
             </a>
           </p>
-        </div>
-
-        <!-- Quick Login Link -->
-        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-500 dark:text-gray-500 text-center mb-2">⚡ Testing?</p>
-          <a routerLink="/quick-login" class="w-full block text-center py-2 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors">
-            ⚡ Use Quick Login Instead
-          </a>
         </div>
       </div>
 
