@@ -663,7 +663,7 @@ class BillingService {
   static async getPaymentMethods() {
     const result = await pool.query(
       `SELECT id, name, display_name, description, is_active 
-       FROM payment_methods 
+       FROM payment_method_types 
        WHERE is_active = true 
        ORDER BY display_name ASC`
     );
@@ -680,11 +680,11 @@ class BillingService {
       const query = `
         SELECT 
           ts.metadata,
-          pm.id as payment_method_id,
-          pm.name as payment_method_name,
-          pm.display_name as payment_method_display_name
+          pmt.id as payment_method_id,
+          pmt.name as payment_method_name,
+          pmt.display_name as payment_method_display_name
         FROM tenant_subscriptions ts
-        LEFT JOIN payment_methods pm ON pm.id = (ts.metadata->>'payment_method_id')::bigint
+        LEFT JOIN payment_method_types pmt ON pmt.id = (ts.metadata->>'payment_method_id')::bigint
         WHERE ts.tenant_id = $1 AND ts.status = 'active'
         LIMIT 1
       `;
@@ -718,7 +718,7 @@ class BillingService {
     try {
       // Verify payment method exists
       const pmCheck = await client.query(
-        'SELECT id, name FROM payment_methods WHERE id = $1 AND is_active = true',
+        'SELECT id, name FROM payment_method_types WHERE id = $1 AND is_active = true',
         [paymentMethodId]
       );
 

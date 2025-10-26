@@ -320,6 +320,104 @@ interface PaymentMethod {
           Save Changes
         </button>
       </div>
+
+      <!-- Payment Method Selector Modal -->
+      <div
+        *ngIf="showPaymentMethodForm()"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        (click)="closePaymentMethodForm()"
+      >
+        <div
+          class="relative w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+          (click)="$event.stopPropagation()"
+        >
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-700">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">💳 Select Payment Method</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Choose your preferred payment method for renewals</p>
+            </div>
+            <button
+              (click)="closePaymentMethodForm()"
+              class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white transition"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-6 space-y-4">
+            <div *ngIf="availablePaymentMethods().length === 0" class="text-center py-8">
+              <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+                <span class="text-3xl">💳</span>
+              </div>
+              <p class="text-gray-600 dark:text-gray-400">No payment methods available</p>
+            </div>
+
+            <div *ngIf="availablePaymentMethods().length > 0" class="grid gap-3">
+              <div
+                *ngFor="let method of availablePaymentMethods()"
+                (click)="selectPaymentMethodFromList(method.id)"
+                class="flex items-center gap-4 rounded-lg border-2 p-4 cursor-pointer transition"
+                [class.border-blue-600]="selectedPaymentMethodId() === method.id"
+                [class.bg-blue-50]="selectedPaymentMethodId() === method.id"
+                [class.dark:bg-blue-900/20]="selectedPaymentMethodId() === method.id"
+                [class.border-gray-200]="selectedPaymentMethodId() !== method.id"
+                [class.dark:border-gray-700]="selectedPaymentMethodId() !== method.id"
+                [class.hover:border-gray-300]="selectedPaymentMethodId() !== method.id"
+                [class.dark:hover:border-gray-600]="selectedPaymentMethodId() !== method.id"
+              >
+                <!-- Icon -->
+                <div class="flex h-14 w-14 items-center justify-center rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                  <span class="text-2xl">
+                    @if (method.name === 'stripe') { 💳 }
+                    @else if (method.name === 'paypal') { 💰 }
+                    @else if (method.name === 'gcash') { 📱 }
+                    @else if (method.name === 'bank_transfer') { 🏦 }
+                    @else { 💵 }
+                  </span>
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1">
+                  <h4 class="font-bold text-gray-900 dark:text-white">{{ method.display_name }}</h4>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">{{ method.description }}</p>
+                </div>
+
+                <!-- Selection Indicator -->
+                <div
+                  class="h-5 w-5 rounded-full border-2 flex items-center justify-center transition"
+                  [class.border-blue-600]="selectedPaymentMethodId() === method.id"
+                  [class.bg-blue-600]="selectedPaymentMethodId() === method.id"
+                  [class.border-gray-300]="selectedPaymentMethodId() !== method.id"
+                  [class.dark:border-gray-600]="selectedPaymentMethodId() !== method.id"
+                >
+                  <span *ngIf="selectedPaymentMethodId() === method.id" class="text-white text-xs">✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="flex items-center justify-end gap-3 border-t border-gray-200 p-6 dark:border-gray-700">
+            <button
+              (click)="closePaymentMethodForm()"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+            >
+              Cancel
+            </button>
+            <button
+              (click)="savePaymentMethodSelection()"
+              [disabled]="!selectedPaymentMethodId()"
+              class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Payment Method
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: []
@@ -378,7 +476,7 @@ export class TenantRenewalSettingsComponent implements OnInit {
   hasChanges = signal(false);
 
   canManageRenewal = computed(() =>
-    this.rbacService.can('tenant-billing:update')
+    this.rbacService.can('tenant-billing:manage-renewals')
   );
 
   ngOnInit(): void {
@@ -436,6 +534,7 @@ export class TenantRenewalSettingsComponent implements OnInit {
   }
 
   updatePaymentMethod(): void {
+    this.loadAvailablePaymentMethods();
     this.showPaymentMethodForm.set(true);
   }
 
@@ -462,6 +561,39 @@ export class TenantRenewalSettingsComponent implements OnInit {
 
   selectPaymentType(type: 'card' | 'bank' | 'gcash' | 'bank_transfer'): void {
     this.selectedPaymentType.set(type);
+  }
+
+  selectPaymentMethodFromList(methodId: number): void {
+    this.selectedPaymentMethodId.set(methodId);
+  }
+
+  savePaymentMethodSelection(): void {
+    if (!this.canManageRenewal()) {
+      this.toastService.error('You do not have permission to update payment method');
+      return;
+    }
+
+    const methodId = this.selectedPaymentMethodId();
+    if (!methodId) {
+      this.toastService.error('Please select a payment method');
+      return;
+    }
+
+    // For now, we'll save without additional details
+    // In a real implementation, you might prompt for card number, account number, etc.
+    this.billingService.updatePaymentMethod(methodId, {}).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastService.success('✓ Payment method updated successfully');
+          this.closePaymentMethodForm();
+          // Optionally reload payment method data
+        }
+      },
+      error: (error) => {
+        console.error('Error updating payment method:', error);
+        this.toastService.error('Failed to update payment method');
+      }
+    });
   }
 
   savePaymentMethod(): void {

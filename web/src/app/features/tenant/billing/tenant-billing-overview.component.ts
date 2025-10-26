@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import { RBACService } from '../../../core/services/rbac.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -411,6 +411,7 @@ export class TenantBillingOverviewComponent implements OnInit {
   private toastService = inject(ToastService);
   private billingService = inject(BillingService);
   private invoiceService = inject(InvoiceService);
+  private router = inject(Router);
 
   isLoading = signal(false);
   autoRenewal = signal(false);
@@ -573,7 +574,8 @@ export class TenantBillingOverviewComponent implements OnInit {
   }
 
   updatePaymentMethod(): void {
-    this.toastService.info('Payment method management will be available soon!');
+    // Navigate to Renewal Settings page where payment method selection is available
+    this.router.navigate(['/tenant/billing/renewal-settings']);
   }
 
   updateBillingInfo(): void {
