@@ -81,7 +81,8 @@ interface Tenant {
                 Last Name
               </label>
               <input
-                name="lastName"
+
+              name="lastName"
                 [(ngModel)]="formData.lastName"
                 type="text"
                 placeholder="Doe"
@@ -244,7 +245,7 @@ interface Tenant {
         <div *ngIf="userType === 'tenant'" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Product Access</h2>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Platform Access</h2>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assign user to one or more products</p>
             </div>
           </div>
@@ -704,7 +705,7 @@ export class UserEditorComponent implements OnInit {
     const url = this.router.url;
     const isTenantCtx = url.startsWith('/tenant/');
     this.isTenantContext.set(isTenantCtx);
-    
+
     // For tenant context, force user type to tenant and set tenant ID
     if (isTenantCtx) {
       this.userType = 'tenant';
@@ -714,7 +715,7 @@ export class UserEditorComponent implements OnInit {
         console.log('🏢 Tenant context detected, tenantId set to:', currentTenantId);
       }
     }
-    
+
     this.userId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(this.userId !== null && this.userId !== 'new');
 
@@ -906,13 +907,13 @@ export class UserEditorComponent implements OnInit {
       const response: any = await firstValueFrom(
         this.http.get(`/api/users/${userId}/products`)
       );
-      
+
       if (response && response.data) {
         const products = response.data;
-        
+
         // Reset product access
         this.resetProductAccess();
-        
+
         // Map API response to UI state
         products.forEach((product: any) => {
           switch (product.productType) {
@@ -937,7 +938,7 @@ export class UserEditorComponent implements OnInit {
               break;
           }
         });
-        
+
         console.log('📦 Loaded product access:', products.length, 'products');
       }
     } catch (error) {

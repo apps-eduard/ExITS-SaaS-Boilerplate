@@ -45,21 +45,6 @@ interface MenuItem {
           </div>
         </div>
 
-        <!-- User Info -->
-        <div class="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
-          <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-semibold">
-              {{ getUserInitials() }}
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium text-gray-900 dark:text-white truncate">
-                {{ authService.currentUser()?.email }}
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Tenant User</p>
-            </div>
-          </div>
-        </div>
-
         <!-- Navigation -->
         <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-1">
           <div *ngFor="let item of filteredMenuItems()">

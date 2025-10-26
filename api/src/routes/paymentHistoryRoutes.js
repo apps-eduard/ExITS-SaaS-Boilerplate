@@ -13,7 +13,7 @@ const rbacMiddleware = require('../middleware/rbac');
 router.get(
   '/invoices',
   authMiddleware,
-  rbacMiddleware(['tenant-billing:read']),
+  rbacMiddleware(['tenant-billing'], ['read']),
   PaymentHistoryController.getTenantInvoices
 );
 
@@ -21,7 +21,7 @@ router.get(
 router.get(
   '/invoices/stats',
   authMiddleware,
-  rbacMiddleware(['tenant-billing:read']),
+  rbacMiddleware(['tenant-billing'], ['read']),
   PaymentHistoryController.getTenantInvoiceStats
 );
 
@@ -29,7 +29,7 @@ router.get(
 router.get(
   '/invoices/:id',
   authMiddleware,
-  rbacMiddleware(['tenant-billing:read']),
+  rbacMiddleware(['tenant-billing'], ['read']),
   PaymentHistoryController.getInvoiceById
 );
 

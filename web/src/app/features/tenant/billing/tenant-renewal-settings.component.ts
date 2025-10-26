@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RBACService } from '../../../core/services/rbac.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { BillingService, AvailablePaymentMethod } from '../../../core/services/billing.service';
 
 interface RenewalSettings {
   autoRenewal: boolean;
@@ -17,12 +18,14 @@ interface RenewalSettings {
 
 interface PaymentMethod {
   id: string;
-  type: 'card' | 'bank';
+  type: 'card' | 'bank' | 'gcash' | 'bank_transfer';
   last4: string;
   brand?: string;
   expiryMonth?: number;
   expiryYear?: number;
   bankName?: string;
+  accountName?: string;
+  phoneNumber?: string; // For GCash
   isDefault: boolean;
 }
 
@@ -270,7 +273,7 @@ interface PaymentMethod {
         <div *ngIf="paymentMethod(); else noPaymentMethod" class="flex items-center gap-4">
           <div class="flex h-16 w-24 items-center justify-center rounded-lg border-2 border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <span class="text-3xl">
-              {{ paymentMethod()!.type === 'card' ? '💳' : '🏦' }}
+              {{ getPaymentMethodIcon(paymentMethod()!) }}
             </span>
           </div>
           <div class="flex-1">
@@ -324,6 +327,7 @@ interface PaymentMethod {
 export class TenantRenewalSettingsComponent implements OnInit {
   private rbacService = inject(RBACService);
   private toastService = inject(ToastService);
+  private billingService = inject(BillingService);
 
   settings = signal<RenewalSettings>({
     autoRenewal: true,
@@ -337,15 +341,39 @@ export class TenantRenewalSettingsComponent implements OnInit {
 
   localSettings: RenewalSettings = { ...this.settings() };
 
-  paymentMethod = signal<PaymentMethod | null>({
-    id: 'pm_1',
-    type: 'card',
-    last4: '4242',
-    brand: 'Visa',
-    expiryMonth: 12,
+  // Available payment methods from the database
+  availablePaymentMethods = signal<AvailablePaymentMethod[]>([]);
+  selectedPaymentMethodId = signal<number | null>(null);
+
+  // Sample payment method (will be loaded from backend)
+  // Supported types: 'card', 'bank', 'gcash', 'bank_transfer'
+  // Examples:
+  // Card: { type: 'card', last4: '4242', brand: 'Visa', expiryMonth: 12, expiryYear: 2025 }
+  // GCash: { type: 'gcash', phoneNumber: '+63 917 123 4567', last4: '4567' }
+  // Bank Transfer: { type: 'bank_transfer', bankName: 'BDO', accountName: 'Company Name', last4: '1234' }
+  paymentMethod = signal<PaymentMethod | null>(null);
+
+  // Payment method form
+  showPaymentMethodForm = signal(false);
+  selectedPaymentType = signal<'card' | 'bank' | 'gcash' | 'bank_transfer'>('card');
+
+  paymentForm = {
+    // Card fields
+    cardNumber: '',
+    cardBrand: 'Visa',
+    expiryMonth: 1,
     expiryYear: 2025,
-    isDefault: true
-  });
+    cvv: '',
+
+    // Bank fields
+    bankName: '',
+    accountNumber: '',
+    accountName: '',
+
+    // GCash fields
+    gcashNumber: '',
+    gcashName: ''
+  };
 
   hasChanges = signal(false);
 
@@ -355,6 +383,7 @@ export class TenantRenewalSettingsComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('🔄 TenantRenewalSettingsComponent initialized');
+    this.loadAvailablePaymentMethods();
     // TODO: Load real renewal settings
   }
 
@@ -392,8 +421,112 @@ export class TenantRenewalSettingsComponent implements OnInit {
     this.toastService.info('Changes discarded');
   }
 
+  loadAvailablePaymentMethods(): void {
+    this.billingService.getAvailablePaymentMethods().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.availablePaymentMethods.set(response.data);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading payment methods:', error);
+        this.toastService.error('Failed to load payment methods');
+      }
+    });
+  }
+
   updatePaymentMethod(): void {
-    this.toastService.info('Payment method management will be available soon!');
+    this.showPaymentMethodForm.set(true);
+  }
+
+  closePaymentMethodForm(): void {
+    this.showPaymentMethodForm.set(false);
+    this.resetPaymentForm();
+  }
+
+  resetPaymentForm(): void {
+    this.paymentForm = {
+      cardNumber: '',
+      cardBrand: 'Visa',
+      expiryMonth: 1,
+      expiryYear: 2025,
+      cvv: '',
+      bankName: '',
+      accountNumber: '',
+      accountName: '',
+      gcashNumber: '',
+      gcashName: ''
+    };
+    this.selectedPaymentType.set('card');
+  }
+
+  selectPaymentType(type: 'card' | 'bank' | 'gcash' | 'bank_transfer'): void {
+    this.selectedPaymentType.set(type);
+  }
+
+  savePaymentMethod(): void {
+    if (!this.canManageRenewal()) {
+      this.toastService.error('You do not have permission to update payment method');
+      return;
+    }
+
+    const type = this.selectedPaymentType();
+    let newPaymentMethod: PaymentMethod | null = null;
+
+    switch (type) {
+      case 'card':
+        if (!this.paymentForm.cardNumber || !this.paymentForm.cvv) {
+          this.toastService.error('Please fill in all card details');
+          return;
+        }
+        newPaymentMethod = {
+          id: 'pm_' + Date.now(),
+          type: 'card',
+          brand: this.paymentForm.cardBrand,
+          last4: this.paymentForm.cardNumber.slice(-4),
+          expiryMonth: this.paymentForm.expiryMonth,
+          expiryYear: this.paymentForm.expiryYear,
+          isDefault: true
+        };
+        break;
+
+      case 'bank':
+      case 'bank_transfer':
+        if (!this.paymentForm.bankName || !this.paymentForm.accountNumber || !this.paymentForm.accountName) {
+          this.toastService.error('Please fill in all bank details');
+          return;
+        }
+        newPaymentMethod = {
+          id: 'pm_' + Date.now(),
+          type: type,
+          bankName: this.paymentForm.bankName,
+          accountName: this.paymentForm.accountName,
+          last4: this.paymentForm.accountNumber.slice(-4),
+          isDefault: true
+        };
+        break;
+
+      case 'gcash':
+        if (!this.paymentForm.gcashNumber || !this.paymentForm.gcashName) {
+          this.toastService.error('Please fill in all GCash details');
+          return;
+        }
+        newPaymentMethod = {
+          id: 'pm_' + Date.now(),
+          type: 'gcash',
+          phoneNumber: this.paymentForm.gcashNumber,
+          last4: this.paymentForm.gcashNumber.slice(-4),
+          isDefault: true
+        };
+        break;
+    }
+
+    if (newPaymentMethod) {
+      this.paymentMethod.set(newPaymentMethod);
+      this.toastService.success('✓ Payment method updated successfully');
+      this.closePaymentMethodForm();
+      // TODO: Save to backend
+    }
   }
 
   getNextBillingDate(): string {
@@ -406,17 +539,47 @@ export class TenantRenewalSettingsComponent implements OnInit {
     });
   }
 
-  getPaymentMethodLabel(method: PaymentMethod): string {
-    if (method.type === 'card') {
-      return `${method.brand} •••• ${method.last4}`;
+  getPaymentMethodIcon(method: PaymentMethod): string {
+    switch (method.type) {
+      case 'card':
+        return '💳';
+      case 'bank':
+      case 'bank_transfer':
+        return '🏦';
+      case 'gcash':
+        return '📱';
+      default:
+        return '💳';
     }
-    return `${method.bankName} •••• ${method.last4}`;
+  }
+
+  getPaymentMethodLabel(method: PaymentMethod): string {
+    switch (method.type) {
+      case 'card':
+        return `${method.brand} •••• ${method.last4}`;
+      case 'bank':
+        return `${method.bankName} •••• ${method.last4}`;
+      case 'bank_transfer':
+        return `${method.bankName || 'Bank Transfer'} - ${method.accountName || 'Account'}`;
+      case 'gcash':
+        return `GCash - ${method.phoneNumber || '••••'}`;
+      default:
+        return `Payment Method •••• ${method.last4}`;
+    }
   }
 
   getPaymentMethodDetails(method: PaymentMethod): string {
-    if (method.type === 'card') {
-      return `Expires ${method.expiryMonth}/${method.expiryYear}`;
+    switch (method.type) {
+      case 'card':
+        return `Expires ${method.expiryMonth}/${method.expiryYear}`;
+      case 'bank':
+        return 'Bank Account';
+      case 'bank_transfer':
+        return method.accountName ? `Account: ${method.accountName}` : 'Bank Transfer Account';
+      case 'gcash':
+        return method.phoneNumber ? `Mobile: ${method.phoneNumber}` : 'GCash Account';
+      default:
+        return 'Payment Method';
     }
-    return 'Bank Account';
   }
 }

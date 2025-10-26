@@ -96,6 +96,7 @@ INSERT INTO payment_methods (name, display_name, description) VALUES
   ('stripe', 'Stripe', 'Credit/Debit Card via Stripe'),
   ('paypal', 'PayPal', 'PayPal Account'),
   ('bank_transfer', 'Bank Transfer', 'Direct Bank Transfer'),
+  ('gcash', 'GCash', 'GCash Mobile Wallet'),
   ('manual', 'Manual Payment', 'Offline/Manual Payment Entry')
 ON CONFLICT (name) DO NOTHING;
 

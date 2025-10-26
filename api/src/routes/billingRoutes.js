@@ -31,4 +31,9 @@ router.post('/invoices/:id/pay', authMiddleware, BillingController.payInvoice);
 // Statistics
 router.get('/stats', authMiddleware, BillingController.getStats);
 
+// Payment Methods
+router.get('/payment-methods', authMiddleware, BillingController.getPaymentMethods);
+router.get('/tenants/current/payment-method', authMiddleware, BillingController.getTenantPaymentMethod);
+router.put('/tenants/current/payment-method', authMiddleware, BillingController.updateTenantPaymentMethod);
+
 module.exports = router;

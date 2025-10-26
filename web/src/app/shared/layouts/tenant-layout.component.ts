@@ -2,7 +2,7 @@ import { Component, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from '../components/header/header.component';
-import { TenantSidebarComponent } from '../components/tenant-sidebar/tenant-sidebar.component';
+import { TenantSidebarComponent } from '../../features/tenant/tenant-sidebar/tenant-sidebar.component';
 
 @Component({
   selector: 'app-tenant-layout',
@@ -12,7 +12,7 @@ import { TenantSidebarComponent } from '../components/tenant-sidebar/tenant-side
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <!-- Tenant Sidebar -->
       <app-tenant-sidebar #sidebar />
-      
+
       <!-- Main Content Area -->
       <div class="flex-1 flex flex-col overflow-hidden">
         <app-header (menuToggle)="toggleSidebar()" />

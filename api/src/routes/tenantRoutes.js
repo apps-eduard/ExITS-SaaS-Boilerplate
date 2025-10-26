@@ -4,6 +4,7 @@
 
 const express = require('express');
 const TenantController = require('../controllers/TenantController');
+const BillingController = require('../controllers/BillingController');
 const authMiddleware = require('../middleware/auth');
 const rbacMiddleware = require('../middleware/rbac');
 const tenantIsolationMiddleware = require('../middleware/tenantIsolation');
@@ -28,6 +29,12 @@ router.post('/current/subscribe', TenantController.createSubscription);
 
 // Get payment history for current tenant
 router.get('/current/payment-history', TenantController.getPaymentHistory);
+
+// Billing overview routes
+router.get('/current/billing/overview', BillingController.getBillingOverview);
+router.get('/current/billing/info', BillingController.getBillingInfo);
+router.put('/current/billing/info', rbacMiddleware(['tenant-billing'], ['update']), BillingController.updateBillingInfo);
+router.put('/current/billing/auto-renewal', rbacMiddleware(['tenant-billing'], ['update']), BillingController.updateAutoRenewal);
 
 // Update current user's tenant products (tenant-settings permission)
 router.put('/current/products', rbacMiddleware(['tenant-settings', 'tenants'], ['update']), TenantController.updateMyTenantProducts);

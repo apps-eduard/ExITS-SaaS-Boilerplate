@@ -138,22 +138,21 @@ class BillingService {
   static async getSubscriptions() {
     const result = await pool.query(
       `SELECT 
-        ps.id,
-        ps.tenant_id,
-        ps.platform_type,
-        ps.status,
-        ps.started_at,
-        ps.expires_at,
-        ps.price,
-        ps.billing_cycle,
-        ps.created_at,
-        ps.updated_at,
+        ts.id,
+        ts.tenant_id,
+        ts.status,
+        ts.start_date,
+        ts.end_date,
+        ts.created_at,
+        ts.updated_at,
         t.name as tenant_name,
-        sp.name as plan_name
-       FROM platform_subscriptions ps
-       JOIN tenants t ON ps.tenant_id = t.id
-       JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
-       ORDER BY ps.created_at DESC`
+        sp.name as plan_name,
+        sp.price,
+        sp.billing_cycle
+       FROM tenant_subscriptions ts
+       JOIN tenants t ON ts.tenant_id = t.id
+       JOIN subscription_plans sp ON ts.plan_id = sp.id
+       ORDER BY ts.created_at DESC`
     );
     return result.rows;
   }
@@ -358,6 +357,415 @@ class BillingService {
     `);
     
     return result.rows[0];
+  }
+
+  /**
+   * Get billing overview for a tenant
+   */
+  static async getBillingOverview(tenantId) {
+    const client = await pool.connect();
+    try {
+      // Get current subscription with plan details
+      const subscriptionQuery = `
+        SELECT 
+          ts.next_billing_date,
+          ts.status as subscription_status,
+          ts.monthly_price,
+          ts.metadata,
+          sp.price as plan_price,
+          sp.billing_cycle,
+          sp.name as plan_name
+        FROM tenant_subscriptions ts
+        JOIN subscription_plans sp ON ts.plan_id = sp.id
+        WHERE ts.tenant_id = $1 AND ts.status IN ('active', 'trial')
+        ORDER BY ts.created_at DESC
+        LIMIT 1
+      `;
+      const subscriptionResult = await client.query(subscriptionQuery, [tenantId]);
+
+      // Get last completed payment
+      const lastPaymentQuery = `
+        SELECT 
+          ph.amount,
+          ph.payment_date,
+          ph.created_at,
+          i.invoice_number
+        FROM payment_history ph
+        LEFT JOIN invoices i ON ph.invoice_id = i.id
+        WHERE ph.tenant_id = $1 AND ph.status = 'completed'
+        ORDER BY ph.payment_date DESC NULLS LAST, ph.created_at DESC
+        LIMIT 1
+      `;
+      const lastPaymentResult = await client.query(lastPaymentQuery, [tenantId]);
+
+      // Get outstanding balance (pending + overdue invoices)
+      const balanceQuery = `
+        SELECT 
+          COALESCE(SUM(total), 0) as pending_amount
+        FROM invoices
+        WHERE tenant_id = $1 AND status IN ('pending', 'overdue')
+      `;
+      const balanceResult = await client.query(balanceQuery, [tenantId]);
+
+      // Calculate next billing amount (use subscription monthly_price or plan price)
+      const subscription = subscriptionResult.rows[0];
+      let nextBillingAmount = 0;
+      
+      if (subscription) {
+        // Prefer monthly_price from subscription, fallback to plan price
+        nextBillingAmount = subscription.monthly_price 
+          ? parseFloat(subscription.monthly_price)
+          : (subscription.plan_price ? parseFloat(subscription.plan_price) : 0);
+      }
+
+      // Get auto_renew from metadata (default to true)
+      const metadata = subscription?.metadata || {};
+      const autoRenewal = metadata.auto_renew !== undefined ? metadata.auto_renew : true;
+
+      return {
+        currentBalance: -parseFloat(balanceResult.rows[0].pending_amount || 0),
+        nextBillingDate: subscription?.next_billing_date || null,
+        nextBillingAmount: nextBillingAmount,
+        billingCycle: subscription?.billing_cycle || 'monthly',
+        planName: subscription?.plan_name || null,
+        lastPaymentDate: lastPaymentResult.rows[0]?.payment_date || lastPaymentResult.rows[0]?.created_at || null,
+        lastPaymentAmount: lastPaymentResult.rows[0]?.amount ? parseFloat(lastPaymentResult.rows[0].amount) : 0,
+        lastInvoiceNumber: lastPaymentResult.rows[0]?.invoice_number || null,
+        paymentMethod: null,
+        autoRenewal: autoRenewal,
+        subscriptionStatus: subscription?.subscription_status || 'none',
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get billing information for a tenant
+   */
+  static async getBillingInfo(tenantId) {
+    const client = await pool.connect();
+    try {
+      // Get tenant basic info
+      const tenantQuery = `
+        SELECT 
+          name as company_name,
+          billing_email,
+          contact_email,
+          contact_person,
+          contact_phone,
+          metadata
+        FROM tenants
+        WHERE id = $1
+      `;
+      const tenantResult = await client.query(tenantQuery, [tenantId]);
+
+      if (tenantResult.rows.length === 0) {
+        throw new Error('Tenant not found');
+      }
+
+      const tenant = tenantResult.rows[0];
+      const metadata = tenant.metadata || {};
+
+      // Get billing address from addresses table
+      const addressQuery = `
+        SELECT 
+          unit_number,
+          house_number,
+          street_name,
+          subdivision,
+          barangay,
+          city_municipality,
+          province,
+          region,
+          zip_code,
+          country,
+          landmark,
+          contact_person,
+          contact_phone
+        FROM addresses
+        WHERE tenant_id = $1 
+          AND addressable_type = 'tenant'
+          AND addressable_id = $1
+          AND address_type = 'billing'
+          AND status = 'active'
+        ORDER BY is_primary DESC, created_at DESC
+        LIMIT 1
+      `;
+      const addressResult = await client.query(addressQuery, [tenantId]);
+
+      let formattedAddress = 'No address provided';
+      let addressDetails = null;
+
+      if (addressResult.rows.length > 0) {
+        const addr = addressResult.rows[0];
+        const parts = [
+          addr.unit_number,
+          addr.house_number,
+          addr.street_name,
+          addr.subdivision,
+          addr.barangay,
+          addr.city_municipality,
+          addr.province,
+          addr.zip_code
+        ].filter(Boolean);
+        
+        formattedAddress = parts.join(', ');
+        addressDetails = {
+          unitNumber: addr.unit_number,
+          houseNumber: addr.house_number,
+          street: addr.street_name,
+          subdivision: addr.subdivision,
+          barangay: addr.barangay,
+          city: addr.city_municipality,
+          province: addr.province,
+          region: addr.region,
+          zipCode: addr.zip_code,
+          country: addr.country || 'Philippines',
+          landmark: addr.landmark,
+          contactPerson: addr.contact_person,
+          contactPhone: addr.contact_phone
+        };
+      }
+
+      return {
+        companyName: tenant.company_name,
+        taxId: metadata.tax_id || null,
+        email: tenant.billing_email || tenant.contact_email,
+        address: formattedAddress,
+        addressDetails: addressDetails,
+        contactPerson: tenant.contact_person,
+        contactPhone: tenant.contact_phone,
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Update billing information for a tenant
+   */
+  static async updateBillingInfo(tenantId, data) {
+    const client = await pool.connect();
+    try {
+      const { companyName, taxId, email, address, contactPerson, contactPhone } = data;
+
+      // First, get current metadata
+      const metadataQuery = 'SELECT metadata FROM tenants WHERE id = $1';
+      const metadataResult = await client.query(metadataQuery, [tenantId]);
+      const currentMetadata = metadataResult.rows[0]?.metadata || {};
+
+      const updates = [];
+      const values = [];
+      let paramIndex = 1;
+
+      if (companyName !== undefined) {
+        updates.push(`name = $${paramIndex}`);
+        values.push(companyName);
+        paramIndex++;
+      }
+      if (email !== undefined) {
+        updates.push(`billing_email = $${paramIndex}`);
+        values.push(email);
+        paramIndex++;
+      }
+      if (contactPerson !== undefined) {
+        updates.push(`contact_person = $${paramIndex}`);
+        values.push(contactPerson);
+        paramIndex++;
+      }
+      if (contactPhone !== undefined) {
+        updates.push(`contact_phone = $${paramIndex}`);
+        values.push(contactPhone);
+        paramIndex++;
+      }
+
+      // Update metadata with tax_id and address
+      const updatedMetadata = { ...currentMetadata };
+      if (taxId !== undefined) {
+        updatedMetadata.tax_id = taxId;
+      }
+      if (address !== undefined) {
+        updatedMetadata.billing_address = address;
+      }
+
+      updates.push(`metadata = $${paramIndex}`);
+      values.push(JSON.stringify(updatedMetadata));
+      paramIndex++;
+
+      if (updates.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      values.push(tenantId);
+      const query = `
+        UPDATE tenants
+        SET ${updates.join(', ')}, updated_at = NOW()
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+
+      await client.query(query, values);
+
+      return {
+        success: true,
+        message: 'Billing information updated successfully',
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Update auto-renewal setting for a tenant
+   * Stores in metadata since auto_renew column doesn't exist in tenant_subscriptions
+   */
+  static async updateAutoRenewal(tenantId, enabled) {
+    const client = await pool.connect();
+    try {
+      // Get current metadata
+      const getQuery = `
+        SELECT metadata FROM tenant_subscriptions
+        WHERE tenant_id = $1 AND status = 'active'
+        LIMIT 1
+      `;
+      const getResult = await client.query(getQuery, [tenantId]);
+
+      if (getResult.rows.length === 0) {
+        throw new Error('No active subscription found');
+      }
+
+      const currentMetadata = getResult.rows[0].metadata || {};
+      const updatedMetadata = { ...currentMetadata, auto_renew: enabled };
+
+      // Update metadata with auto_renew setting
+      const updateQuery = `
+        UPDATE tenant_subscriptions
+        SET metadata = $1, updated_at = NOW()
+        WHERE tenant_id = $2 AND status = 'active'
+        RETURNING *
+      `;
+
+      const result = await client.query(updateQuery, [JSON.stringify(updatedMetadata), tenantId]);
+
+      return {
+        success: true,
+        message: `Auto-renewal ${enabled ? 'enabled' : 'disabled'} successfully`,
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get all available payment methods
+   */
+  static async getPaymentMethods() {
+    const result = await pool.query(
+      `SELECT id, name, display_name, description, is_active 
+       FROM payment_methods 
+       WHERE is_active = true 
+       ORDER BY display_name ASC`
+    );
+    return result.rows;
+  }
+
+  /**
+   * Get tenant's current payment method
+   */
+  static async getTenantPaymentMethod(tenantId) {
+    const client = await pool.connect();
+    try {
+      // Get payment method details from metadata
+      const query = `
+        SELECT 
+          ts.metadata,
+          pm.id as payment_method_id,
+          pm.name as payment_method_name,
+          pm.display_name as payment_method_display_name
+        FROM tenant_subscriptions ts
+        LEFT JOIN payment_methods pm ON pm.id = (ts.metadata->>'payment_method_id')::bigint
+        WHERE ts.tenant_id = $1 AND ts.status = 'active'
+        LIMIT 1
+      `;
+      
+      const result = await client.query(query, [tenantId]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      const metadata = row.metadata || {};
+      const paymentDetails = metadata.payment_details || {};
+
+      return {
+        paymentMethodId: row.payment_method_id,
+        paymentMethodName: row.payment_method_name,
+        paymentMethodDisplayName: row.payment_method_display_name,
+        details: paymentDetails,
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Update tenant's payment method
+   */
+  static async updateTenantPaymentMethod(tenantId, paymentMethodId, details = {}) {
+    const client = await pool.connect();
+    try {
+      // Verify payment method exists
+      const pmCheck = await client.query(
+        'SELECT id, name FROM payment_methods WHERE id = $1 AND is_active = true',
+        [paymentMethodId]
+      );
+
+      if (pmCheck.rows.length === 0) {
+        throw new Error('Invalid payment method');
+      }
+
+      // Get current metadata
+      const getQuery = `
+        SELECT metadata FROM tenant_subscriptions
+        WHERE tenant_id = $1 AND status = 'active'
+        LIMIT 1
+      `;
+      const getResult = await client.query(getQuery, [tenantId]);
+
+      if (getResult.rows.length === 0) {
+        throw new Error('No active subscription found');
+      }
+
+      const currentMetadata = getResult.rows[0].metadata || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        payment_method_id: paymentMethodId,
+        payment_details: details,
+      };
+
+      // Update metadata with payment method
+      const updateQuery = `
+        UPDATE tenant_subscriptions
+        SET metadata = $1, updated_at = NOW()
+        WHERE tenant_id = $2 AND status = 'active'
+        RETURNING *
+      `;
+
+      await client.query(updateQuery, [JSON.stringify(updatedMetadata), tenantId]);
+
+      return {
+        success: true,
+        message: 'Payment method updated successfully',
+        data: {
+          paymentMethodId,
+          paymentMethodName: pmCheck.rows[0].name,
+        },
+      };
+    } finally {
+      client.release();
+    }
   }
 }
 

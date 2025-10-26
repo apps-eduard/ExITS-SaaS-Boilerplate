@@ -268,6 +268,112 @@ class BillingController {
       next(err);
     }
   }
+
+  /**
+   * GET /api/tenants/current/billing/overview
+   * Get billing overview for current tenant
+   */
+  static async getBillingOverview(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const overview = await BillingService.getBillingOverview(tenantId);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json(overview);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /api/tenants/current/billing/info
+   * Get billing information for current tenant
+   */
+  static async getBillingInfo(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const info = await BillingService.getBillingInfo(tenantId);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json(info);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * PUT /api/tenants/current/billing/info
+   * Update billing information
+   */
+  static async updateBillingInfo(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const data = req.body;
+      const result = await BillingService.updateBillingInfo(tenantId, data);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * PUT /api/tenants/current/billing/auto-renewal
+   * Update auto-renewal setting
+   */
+  static async updateAutoRenewal(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const { enabled } = req.body;
+      const result = await BillingService.updateAutoRenewal(tenantId, enabled);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /api/payment-methods
+   * Get all available payment methods
+   */
+  static async getPaymentMethods(req, res, next) {
+    try {
+      const methods = await BillingService.getPaymentMethods();
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        data: methods
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /api/tenants/current/payment-method
+   * Get tenant's current payment method
+   */
+  static async getTenantPaymentMethod(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const method = await BillingService.getTenantPaymentMethod(tenantId);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        success: true,
+        data: method
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * PUT /api/tenants/current/payment-method
+   * Update tenant's payment method
+   */
+  static async updateTenantPaymentMethod(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const { paymentMethodId, details } = req.body;
+      const result = await BillingService.updateTenantPaymentMethod(tenantId, paymentMethodId, details);
+      res.status(CONSTANTS.HTTP_STATUS.OK).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = BillingController;
