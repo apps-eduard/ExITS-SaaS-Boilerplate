@@ -55,8 +55,8 @@ temp/
 # Ionic
 .ionic/
 www/
-platforms/
-plugins/
+mobile/platforms/
+mobile/plugins/
 
 # TypeScript
 *.tsbuildinfo
