@@ -37,6 +37,10 @@ export class LoginComponent {
     this.password = account.password;
   }
 
+  onSubmit() {
+    this.login();
+  }
+
   login() {
     if (!this.email || !this.password) {
       this.toastService.warning('Please enter email and password');
@@ -50,14 +54,17 @@ export class LoginComponent {
         this.loading.set(false);
         this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
 
-        // Route based on user type
         const user = response.data.user;
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
-        const targetRoute = isSystemAdmin ? '/dashboard' : '/tenant/dashboard';
 
-        setTimeout(() => {
-          this.router.navigate([targetRoute]);
-        }, 100);
+        // System Admin → System Dashboard
+        if (isSystemAdmin) {
+          this.router.navigate(['/dashboard']);
+          return;
+        }
+
+        // Tenant User (Admin/Manager) → Tenant Dashboard
+        this.router.navigate(['/tenant/dashboard']);
       },
       error: (error: any) => {
         this.loading.set(false);
@@ -66,9 +73,5 @@ export class LoginComponent {
         this.error = message;
       }
     });
-  }
-
-  onSubmit() {
-    this.login();
   }
 }

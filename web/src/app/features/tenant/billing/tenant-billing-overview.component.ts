@@ -23,11 +23,15 @@ interface PaymentMethod {
 
 interface BillingOverview {
   currentBalance: number;
-  nextBillingDate: string;
+  nextBillingDate: string | null;
   nextBillingAmount: number;
-  lastPaymentDate: string;
+  lastPaymentDate: string | null;
   lastPaymentAmount: number;
   paymentMethod: PaymentMethod | null;
+  subscriptionStatus?: string;
+  autoRenewal?: boolean;
+  planName?: string | null;
+  billingCycle?: string;
 }
 
 @Component({
@@ -130,19 +134,28 @@ interface BillingOverview {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+            <span *ngIf="hasActiveSubscription()" class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
               Upcoming
+            </span>
+            <span *ngIf="!hasActiveSubscription()" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+              No Subscription
             </span>
           </div>
           <div>
             <p class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">Next Billing Date</p>
-            <p class="text-xl font-bold text-gray-900 dark:text-white mb-3">
+            <p *ngIf="hasActiveSubscription()" class="text-xl font-bold text-gray-900 dark:text-white mb-3">
               {{ formatDate(overview().nextBillingDate) }}
+            </p>
+            <p *ngIf="!hasActiveSubscription()" class="text-xl font-bold text-gray-500 dark:text-gray-400 mb-3">
+              N/A
             </p>
             <div class="pt-3 border-t border-gray-100 dark:border-gray-800">
               <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Amount Due</p>
-              <p class="text-lg font-bold text-gray-900 dark:text-white">
+              <p *ngIf="hasActiveSubscription()" class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ formatCurrency(overview().nextBillingAmount) }}
+              </p>
+              <p *ngIf="!hasActiveSubscription()" class="text-sm text-gray-500 dark:text-gray-400 italic">
+                No active subscription
               </p>
             </div>
           </div>
@@ -156,19 +169,28 @@ interface BillingOverview {
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
               </svg>
             </div>
-            <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <span *ngIf="hasPaymentHistory()" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
               Completed
+            </span>
+            <span *ngIf="!hasPaymentHistory()" class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+              No History
             </span>
           </div>
           <div>
             <p class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">Last Payment</p>
-            <p class="text-xl font-bold text-gray-900 dark:text-white mb-3">
+            <p *ngIf="hasPaymentHistory()" class="text-xl font-bold text-gray-900 dark:text-white mb-3">
               {{ formatDate(overview().lastPaymentDate) }}
+            </p>
+            <p *ngIf="!hasPaymentHistory()" class="text-xl font-bold text-gray-500 dark:text-gray-400 mb-3">
+              N/A
             </p>
             <div class="pt-3 border-t border-gray-100 dark:border-gray-800">
               <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Amount Paid</p>
-              <p class="text-lg font-bold text-green-600 dark:text-green-400">
+              <p *ngIf="hasPaymentHistory()" class="text-lg font-bold text-green-600 dark:text-green-400">
                 {{ formatCurrency(overview().lastPaymentAmount) }}
+              </p>
+              <p *ngIf="!hasPaymentHistory()" class="text-sm text-gray-500 dark:text-gray-400 italic">
+                No payment history
               </p>
             </div>
           </div>
@@ -452,17 +474,23 @@ export class TenantBillingOverviewComponent implements OnInit {
       transactions: this.invoiceService.getInvoices({ limit: 5 })
     }).subscribe({
       next: (response) => {
+        console.log('📊 Billing overview response:', response.overview);
+        
         // Set overview data
         this.overview.set({
           currentBalance: response.overview.currentBalance,
-          nextBillingDate: response.overview.nextBillingDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          nextBillingDate: response.overview.nextBillingDate,
           nextBillingAmount: response.overview.nextBillingAmount,
-          lastPaymentDate: response.overview.lastPaymentDate || '',
+          lastPaymentDate: response.overview.lastPaymentDate,
           lastPaymentAmount: response.overview.lastPaymentAmount,
-          paymentMethod: response.overview.paymentMethod
+          paymentMethod: response.overview.paymentMethod,
+          subscriptionStatus: response.overview.subscriptionStatus,
+          autoRenewal: response.overview.autoRenewal,
+          planName: response.overview.planName,
+          billingCycle: response.overview.billingCycle
         });
 
-        this.autoRenewal.set(response.overview.autoRenewal);
+        this.autoRenewal.set(response.overview.autoRenewal || false);
 
         // Set billing info
         this.billingInfo.set(response.billingInfo);
@@ -496,13 +524,29 @@ export class TenantBillingOverviewComponent implements OnInit {
     }).format(amount);
   }
 
-  formatDate(dateStr: string): string {
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) {
+      return 'N/A';
+    }
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return 'N/A';
+    }
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
+  }
+
+  hasActiveSubscription(): boolean {
+    const status = this.overview().subscriptionStatus;
+    // Check if subscription status indicates an active subscription
+    return status === 'active' || status === 'trial' || status === 'pending';
+  }
+
+  hasPaymentHistory(): boolean {
+    return !!this.overview().lastPaymentDate && this.overview().lastPaymentAmount > 0;
   }
 
   getPaymentMethodLabel(method: PaymentMethod): string {
@@ -575,7 +619,7 @@ export class TenantBillingOverviewComponent implements OnInit {
 
   updatePaymentMethod(): void {
     // Navigate to Renewal Settings page where payment method selection is available
-    this.router.navigate(['/tenant/billing/renewal-settings']);
+    this.router.navigate(['/tenant/billing/renewal']);
   }
 
   updateBillingInfo(): void {

@@ -45,8 +45,8 @@ router.get('/', rbacMiddleware(['tenants'], ['read']), TenantController.listTena
 // Create tenant
 router.post('/', rbacMiddleware(['tenants'], ['create']), TenantController.createTenant);
 
-// Get tenant
-router.get('/:id', rbacMiddleware(['tenants'], ['read']), TenantController.getTenant);
+// Get tenant - allow tenants:read OR users:read (for user management)
+router.get('/:id', rbacMiddleware(['tenants', 'users', 'tenant-users'], ['read']), TenantController.getTenant);
 
 // Update tenant
 router.put('/:id', rbacMiddleware(['tenants'], ['update']), TenantController.updateTenant);

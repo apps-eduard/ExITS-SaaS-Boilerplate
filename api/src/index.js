@@ -92,7 +92,7 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/subscription-plans', subscriptionPlanRoutes);
-app.use('/api/product-subscriptions', require('./routes/productSubscriptionRoutes'));
+app.use('/api/platform-subscriptions', require('./routes/productSubscriptionRoutes'));
 app.use('/api/reports', reportRoutes);
 app.use('/api/system-logs', systemLogsRoutes);
 app.use('/api/money-loan', moneyLoanRoutes);

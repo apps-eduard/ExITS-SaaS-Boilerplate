@@ -69,17 +69,37 @@ class ProductSubscriptionService {
 
       const price = planResult.rows[0].price;
 
+      // Calculate expires_at if not provided based on billing cycle
+      let calculatedExpiresAt = expires_at;
+      if (!calculatedExpiresAt) {
+        const startDate = starts_at || 'CURRENT_TIMESTAMP';
+        switch (billing_cycle) {
+          case 'monthly':
+            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 month')`;
+            break;
+          case 'quarterly':
+            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '3 months')`;
+            break;
+          case 'yearly':
+            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 year')`;
+            break;
+          default:
+            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 month')`;
+        }
+      }
+
       const result = await pool.query(
         `INSERT INTO platform_subscriptions 
           (tenant_id, platform_type, subscription_plan_id, price, billing_cycle, started_at, expires_at, status)
-         VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), $7, 'active')
+         VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), 
+           COALESCE($7::timestamp, ${calculatedExpiresAt}), 'active')
          ON CONFLICT (tenant_id, platform_type) 
          DO UPDATE SET
            subscription_plan_id = EXCLUDED.subscription_plan_id,
            price = EXCLUDED.price,
            billing_cycle = EXCLUDED.billing_cycle,
            started_at = EXCLUDED.started_at,
-           expires_at = EXCLUDED.expires_at,
+           expires_at = COALESCE(EXCLUDED.expires_at, ${calculatedExpiresAt}),
            status = 'active',
            updated_at = CURRENT_TIMESTAMP
          RETURNING *`,

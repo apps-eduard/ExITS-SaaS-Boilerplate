@@ -131,7 +131,7 @@ interface ResourceGroup {
                 </label>
                 <select
                   [(ngModel)]="roleSpace"
-                  [disabled]="isEditing() || isReadOnlyMode()"
+                  [disabled]="isEditing() || isReadOnlyMode() || isTenantContext()"
                   class="w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white disabled:opacity-50"
                 >
                   <option value="system">System</option>
@@ -762,6 +762,8 @@ export class RoleEditorComponent implements OnInit {
     // Auto-set space filter to tenant when in tenant context
     if (this.isTenantContext()) {
       this.setSpaceFilter('tenant');
+      // Force roleSpace to tenant for tenant context
+      this.roleSpace = 'tenant';
       // In tenant context, auto-set the tenant ID from current user
       const currentTenantId = this.authService.getTenantId();
       if (currentTenantId) {

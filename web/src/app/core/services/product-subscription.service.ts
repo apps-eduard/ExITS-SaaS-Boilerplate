@@ -38,7 +38,7 @@ export interface SubscribeToProductRequest {
 })
 export class ProductSubscriptionService {
   private http = inject(HttpClient);
-  private apiUrl = '/api/product-subscriptions';
+  private apiUrl = '/api/platform-subscriptions';
 
   /**
    * Get available subscription plans

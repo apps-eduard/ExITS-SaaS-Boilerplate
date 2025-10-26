@@ -19,12 +19,17 @@ export const routes: Routes = [
     canActivate: [noAuthGuard]
   },
   {
+    path: 'platform/login',
+    loadComponent: () => import('./features/auth/platform-login/platform-login.component').then(m => m.PlatformLoginComponent),
+    canActivate: [noAuthGuard]
+  },
+  {
     path: 'customer/login',
     loadComponent: () => import('./features/auth/customer-login/customer-login.component').then(m => m.CustomerLoginComponent)
   },
   {
     path: 'customer',
-    loadComponent: () => import('./features/products/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
+    loadComponent: () => import('./features/platforms/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
     children: [
       {
         path: 'dashboard',
@@ -33,24 +38,24 @@ export const routes: Routes = [
     ]
   },
   {
-    path: 'products/money-loan/customer',
-    loadComponent: () => import('./features/products/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
+    path: 'platforms/money-loan/customer',
+    loadComponent: () => import('./features/platforms/money-loan/customer/customer-layout.component').then(m => m.CustomerLayoutComponent),
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/products/money-loan/customer/customer-dashboard.component').then(m => m.CustomerDashboardComponent)
+        loadComponent: () => import('./features/platforms/money-loan/customer/customer-dashboard.component').then(m => m.CustomerDashboardComponent)
       },
       {
         path: 'loans',
-        loadComponent: () => import('./features/products/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
+        loadComponent: () => import('./features/platforms/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
       },
       {
         path: 'apply',
-        loadComponent: () => import('./features/products/money-loan/customer/apply-loan.component').then(m => m.ApplyLoanComponent)
+        loadComponent: () => import('./features/platforms/money-loan/customer/apply-loan.component').then(m => m.ApplyLoanComponent)
       },
       {
         path: 'payment',
-        loadComponent: () => import('./features/products/money-loan/customer/make-payment.component').then(m => m.CustomerMakePaymentComponent)
+        loadComponent: () => import('./features/platforms/money-loan/customer/make-payment.component').then(m => m.CustomerMakePaymentComponent)
       },
       {
         path: '',
@@ -189,7 +194,7 @@ export const routes: Routes = [
       },
       {
         path: 'money-loan',
-        loadChildren: () => import('./admin/modules/money-loan/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
+        loadChildren: () => import('./features/platforms/money-loan/moneyloan-route/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
       },
       {
         path: 'subscriptions',

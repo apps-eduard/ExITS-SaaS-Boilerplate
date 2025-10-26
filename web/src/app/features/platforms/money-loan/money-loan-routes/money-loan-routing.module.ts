@@ -1,11 +1,11 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { LoanOverviewComponent } from '../../../features/products/money-loan/admin/loan-overview.component';
-import { LoansListComponent } from '../../../features/products/money-loan/admin/loans-list.component';
-import { CustomersListComponent } from '../../../features/products/money-loan/admin/customers-list.component';
-import { CustomerFormComponent } from '../../../features/products/money-loan/admin/customer-form.component';
-import { LoanDetailsComponent } from '../../../features/products/money-loan/admin/loan-details.component';
-import { PaymentFormComponent } from '../../../features/products/money-loan/admin/payment-form.component';
+import { LoanOverviewComponent } from '../admin/loan-overview.component';
+import { LoansListComponent } from '../admin/loans-list.component';
+import { CustomersListComponent } from '../admin/customers-list.component';
+import { CustomerFormComponent } from '../admin/customer-form.component';
+import { LoanDetailsComponent } from '../admin/loan-details.component';
+import { PaymentFormComponent } from '../admin/payment-form.component';
 
 const routes: Routes = [
   {

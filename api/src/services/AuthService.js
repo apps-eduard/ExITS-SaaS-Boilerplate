@@ -106,6 +106,19 @@ class AuthService {
       // Audit log
       await this.auditLog(user.id, user.tenant_id, 'login', 'user', user.id, {}, ipAddress);
 
+      // Fetch user's platforms if tenant user
+      let platforms = [];
+      if (user.tenant_id) {
+        const platformsResult = await pool.query(
+          `SELECT product_type as "productType", access_level as "accessLevel", is_primary as "isPrimary"
+           FROM user_products
+           WHERE user_id = $1
+           ORDER BY is_primary DESC, product_type`,
+          [user.id]
+        );
+        platforms = platformsResult.rows;
+      }
+
       // Transform user to camelCase for frontend
       return {
         user: {
@@ -120,6 +133,7 @@ class AuthService {
         tokens: { accessToken, refreshToken },
         session: { created: true, tokenHash: sessionHash },
         permissions,
+        platforms,  // Include platforms array
       };
     } catch (err) {
       logger.error(`Auth service login error: ${err.message}`);
@@ -382,6 +396,70 @@ class AuthService {
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);
     }
+  }
+
+  /**
+   * Platform-specific login - validate user has access to the platform
+   */
+  static async platformLogin(email, password, platformType, ipAddress) {
+    try {
+      logger.info(`🔍 Platform login attempt for ${platformType}:`, { email });
+
+      // First, perform standard login
+      const loginResult = await this.login(email, password, ipAddress);
+
+      // If MFA required, return that
+      if (loginResult.mfaRequired) {
+        return loginResult;
+      }
+
+      const user = loginResult.user;
+
+      // Platform login is only for tenant users
+      if (!user.tenantId) {
+        logger.warn(`Platform login attempt by system admin: ${email}`);
+        throw new Error('Platform login is only available for tenant users. Please use the admin login.');
+      }
+
+      // Check if user has access to this specific platform
+      const platformAccess = await pool.query(
+        `SELECT * FROM user_products 
+         WHERE user_id = $1 AND product_type = $2`,
+        [user.id, platformType]
+      );
+
+      if (platformAccess.rows.length === 0) {
+        logger.warn(`User ${email} attempted to access ${platformType} platform without permission`);
+        throw new Error(`You do not have access to the ${this.getPlatformName(platformType)} platform. Please contact your administrator.`);
+      }
+
+      logger.info(`✅ Platform login successful for ${email} on ${platformType}`);
+
+      // Add platform info to the result
+      return {
+        ...loginResult,
+        platform: {
+          type: platformType,
+          name: this.getPlatformName(platformType),
+          accessLevel: platformAccess.rows[0].access_level
+        }
+      };
+    } catch (err) {
+      logger.error(`❌ Platform login error:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Helper to get platform display name
+   */
+  static getPlatformName(platformType) {
+    const names = {
+      'money_loan': 'Money Loan',
+      'bnpl': 'Buy Now Pay Later',
+      'pawnshop': 'Pawnshop'
+    };
+    return names[platformType] || platformType;
   }
 }
 

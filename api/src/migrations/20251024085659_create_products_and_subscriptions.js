@@ -6,12 +6,12 @@ exports.up = async function(knex) {
   // Create additional enums for products and subscriptions
   const enumTypes = [
     { name: 'product_type', values: ['money_loan', 'bnpl', 'pawnshop'] },
-    { name: 'product_subscription_status', values: ['active', 'suspended', 'cancelled', 'expired'] },
+    { name: 'product_subscription_status', values: ['active', 'suspended', 'cancelled', 'expired', 'trial'] },
     { name: 'billing_cycle_type', values: ['monthly', 'quarterly', 'yearly', 'one_time'] },
     { name: 'plan_status', values: ['active', 'inactive', 'deprecated'] },
-    { name: 'subscription_status', values: ['active', 'suspended', 'cancelled', 'expired', 'pending'] },
+    { name: 'subscription_status', values: ['active', 'suspended', 'cancelled', 'expired', 'pending', 'trial'] },
     { name: 'payment_status', values: ['pending', 'completed', 'failed', 'refunded', 'cancelled'] },
-    { name: 'invoice_status', values: ['draft', 'sent', 'paid', 'overdue', 'cancelled'] }
+    { name: 'invoice_status', values: ['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending'] }
   ];
 
   for (const enumType of enumTypes) {

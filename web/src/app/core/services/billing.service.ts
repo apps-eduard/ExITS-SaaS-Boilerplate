@@ -25,12 +25,16 @@ export interface AvailablePaymentMethod {
 
 export interface BillingOverview {
   currentBalance: number;
-  nextBillingDate: string;
+  nextBillingDate: string | null;
   nextBillingAmount: number;
   lastPaymentDate: string | null;
   lastPaymentAmount: number;
   paymentMethod: PaymentMethod | null;
   autoRenewal: boolean;
+  subscriptionStatus?: string;
+  planName?: string | null;
+  billingCycle?: string;
+  lastInvoiceNumber?: string | null;
 }
 
 export interface BillingInfo {

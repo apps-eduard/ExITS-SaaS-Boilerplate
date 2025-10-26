@@ -271,6 +271,90 @@ class AuthController {
       next(err);
     }
   }
+
+  /**
+   * POST /auth/platform/money-loan/login
+   * Platform-specific login for Money Loan
+   */
+  static async moneyLoanLogin(req, res, next) {
+    try {
+      const { error, value } = validateLogin(req.body);
+      if (error) {
+        error.isJoi = true;
+        return next(error);
+      }
+
+      logger.info('💰 Money Loan Platform Login attempt:', {
+        email: value.email,
+        ip: req.ip
+      });
+
+      const result = await AuthService.platformLogin(value.email, value.password, 'money_loan', req.ip);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Money Loan login successful',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /auth/platform/bnpl/login
+   * Platform-specific login for BNPL
+   */
+  static async bnplLogin(req, res, next) {
+    try {
+      const { error, value } = validateLogin(req.body);
+      if (error) {
+        error.isJoi = true;
+        return next(error);
+      }
+
+      logger.info('🛒 BNPL Platform Login attempt:', {
+        email: value.email,
+        ip: req.ip
+      });
+
+      const result = await AuthService.platformLogin(value.email, value.password, 'bnpl', req.ip);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'BNPL login successful',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /auth/platform/pawnshop/login
+   * Platform-specific login for Pawnshop
+   */
+  static async pawnshopLogin(req, res, next) {
+    try {
+      const { error, value } = validateLogin(req.body);
+      if (error) {
+        error.isJoi = true;
+        return next(error);
+      }
+
+      logger.info('💎 Pawnshop Platform Login attempt:', {
+        email: value.email,
+        ip: req.ip
+      });
+
+      const result = await AuthService.platformLogin(value.email, value.password, 'pawnshop', req.ip);
+
+      res.status(CONSTANTS.HTTP_STATUS.OK).json({
+        message: 'Pawnshop login successful',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = AuthController;

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef, computed } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -8,12 +8,17 @@ import { UserService, User, UserCreatePayload, UserUpdatePayload } from '../../.
 import { RoleService, Role } from '../../../core/services/role.service';
 import { AddressService, AddressCreatePayload } from '../../../core/services/address.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
+import { TenantService } from '../../../core/services/tenant.service';
 
 interface Tenant {
   id: number;
   name: string;
   subdomain: string;
   status: string;
+  moneyLoanEnabled?: boolean;
+  bnplEnabled?: boolean;
+  pawnshopEnabled?: boolean;
 }
 
 @Component({
@@ -56,9 +61,74 @@ interface Tenant {
 
       <!-- Form -->
       <div class="space-y-4">
-        <!-- Basic Information -->
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Basic Information</h2>
+        <!-- Main Tabs -->
+        <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-t-lg">
+          <div class="flex gap-1 px-2 pt-2">
+            <button
+              type="button"
+              (click)="activeTab.set('basic')"
+              [class]="activeTab() === 'basic' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">👤</span>
+              Basic Info
+            </button>
+            <button
+              type="button"
+              (click)="activeTab.set('roles')"
+              [class]="activeTab() === 'roles' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">🔑</span>
+              Roles
+            </button>
+            <button
+              *ngIf="userType === 'tenant'"
+              type="button"
+              (click)="activeTab.set('platforms')"
+              [class]="activeTab() === 'platforms' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">🚀</span>
+              Platforms
+            </button>
+            <button
+              type="button"
+              (click)="activeTab.set('address')"
+              [class]="activeTab() === 'address' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">📍</span>
+              Address
+            </button>
+            <button
+              *ngIf="isEditMode()"
+              type="button"
+              (click)="activeTab.set('password')"
+              [class]="activeTab() === 'password' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">🔐</span>
+              Password
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="rounded-b-lg border border-t-0 border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+          <!-- Basic Information Tab -->
+          <div *ngIf="activeTab() === 'basic'">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <!-- First Name -->
@@ -207,9 +277,9 @@ interface Tenant {
           </div>
         </div>
 
-        <!-- Role Assignment -->
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Role Assignment</h2>
+          <!-- Roles Tab -->
+          <div *ngIf="activeTab() === 'roles'">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Role Assignment</h2>
 
           <div *ngIf="roleService.loadingSignal()" class="text-center py-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">Loading roles...</p>
@@ -241,22 +311,21 @@ interface Tenant {
           </div>
         </div>
 
-        <!-- Product Access (Tenant Users Only) -->
-        <div *ngIf="userType === 'tenant'" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center justify-between mb-3">
-            <div>
+          <!-- Platforms Tab (Tenant Users Only) -->
+          <div *ngIf="activeTab() === 'platforms'">
+            <div class="mb-3">
               <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Platform Access</h2>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assign user to one or more products</p>
             </div>
-          </div>
 
           <div class="space-y-3">
             <!-- Money Loan Product -->
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div *ngIf="availablePlatforms().moneyLoan" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <label class="flex items-center gap-2 cursor-pointer mb-2">
                 <input
                   type="checkbox"
                   [(ngModel)]="productAccess.moneyLoan.enabled"
+                  (ngModelChange)="autoSetPrimaryPlatform()"
                   class="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
                 />
                 <div class="flex items-center gap-2 flex-1">
@@ -268,59 +337,21 @@ interface Tenant {
                 </div>
               </label>
 
-              <div *ngIf="productAccess.moneyLoan.enabled" class="ml-9 mt-2 space-y-2">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
-                  <select
-                    [(ngModel)]="productAccess.moneyLoan.accessLevel"
-                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-amber-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="view">View Only</option>
-                    <option value="create">Create</option>
-                    <option value="edit">Edit</option>
-                    <option value="approve">Approve</option>
-                    <option value="manage">Manage</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                  <label class="flex items-center gap-2 cursor-pointer text-xs">
-                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.isPrimary" class="w-3.5 h-3.5 text-amber-600 rounded" />
-                    <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer text-xs">
-                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canApproveLoans" class="w-3.5 h-3.5 text-amber-600 rounded" />
-                    <span class="text-gray-700 dark:text-gray-300">Can approve loans</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer text-xs">
-                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canDisburseFunds" class="w-3.5 h-3.5 text-amber-600 rounded" />
-                    <span class="text-gray-700 dark:text-gray-300">Can disburse funds</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer text-xs">
-                    <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.canViewReports" class="w-3.5 h-3.5 text-amber-600 rounded" />
-                    <span class="text-gray-700 dark:text-gray-300">Can view reports</span>
-                  </label>
-                </div>
-
-                <div *ngIf="productAccess.moneyLoan.canApproveLoans" class="pt-1">
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max Approval Amount</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="productAccess.moneyLoan.maxApprovalAmount"
-                    placeholder="e.g., 100000"
-                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-amber-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  />
-                </div>
+              <div *ngIf="productAccess.moneyLoan.enabled" class="ml-9 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.isPrimary" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                  <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
+                </label>
               </div>
             </div>
 
             <!-- BNPL Product -->
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div *ngIf="availablePlatforms().bnpl" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <label class="flex items-center gap-2 cursor-pointer mb-2">
                 <input
                   type="checkbox"
                   [(ngModel)]="productAccess.bnpl.enabled"
+                  (ngModelChange)="autoSetPrimaryPlatform()"
                   class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <div class="flex items-center gap-2 flex-1">
@@ -333,21 +364,6 @@ interface Tenant {
               </label>
 
               <div *ngIf="productAccess.bnpl.enabled" class="ml-9 mt-2 space-y-2">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
-                  <select
-                    [(ngModel)]="productAccess.bnpl.accessLevel"
-                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="view">View Only</option>
-                    <option value="create">Create</option>
-                    <option value="edit">Edit</option>
-                    <option value="approve">Approve</option>
-                    <option value="manage">Manage</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
                 <label class="flex items-center gap-2 cursor-pointer text-xs">
                   <input type="checkbox" [(ngModel)]="productAccess.bnpl.isPrimary" class="w-3.5 h-3.5 text-blue-600 rounded" />
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
@@ -356,11 +372,12 @@ interface Tenant {
             </div>
 
             <!-- Pawnshop Product -->
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div *ngIf="availablePlatforms().pawnshop" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <label class="flex items-center gap-2 cursor-pointer mb-2">
                 <input
                   type="checkbox"
                   [(ngModel)]="productAccess.pawnshop.enabled"
+                  (ngModelChange)="autoSetPrimaryPlatform()"
                   class="w-4 h-4 text-green-600 rounded focus:ring-green-500"
                 />
                 <div class="flex items-center gap-2 flex-1">
@@ -373,21 +390,6 @@ interface Tenant {
               </label>
 
               <div *ngIf="productAccess.pawnshop.enabled" class="ml-9 mt-2 space-y-2">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Access Level</label>
-                  <select
-                    [(ngModel)]="productAccess.pawnshop.accessLevel"
-                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-green-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="view">View Only</option>
-                    <option value="create">Create</option>
-                    <option value="edit">Edit</option>
-                    <option value="approve">Approve</option>
-                    <option value="manage">Manage</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
                 <label class="flex items-center gap-2 cursor-pointer text-xs">
                   <input type="checkbox" [(ngModel)]="productAccess.pawnshop.isPrimary" class="w-3.5 h-3.5 text-green-600 rounded" />
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
@@ -397,230 +399,364 @@ interface Tenant {
 
             <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
               <p class="text-xs text-blue-700 dark:text-blue-300">
-                <strong>Note:</strong> Product access is combined with role permissions for layered security. Users must have both product access AND appropriate role permissions to perform actions.
+                <strong>Note:</strong> Platform access is combined with role permissions for layered security. Users must have both platform access AND appropriate role permissions to perform actions.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- Address Information (Optional) -->
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Address Information</h2>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                [(ngModel)]="includeAddress"
-                class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Add address</span>
-            </label>
-          </div>
+          <!-- Address Tab -->
+          <div *ngIf="activeTab() === 'address'">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Address Information</h2>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="includeAddress"
+                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Add address</span>
+              </label>
+            </div>
 
           <div *ngIf="includeAddress" class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <!-- Address Type -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Address Type <span class="text-red-500">*</span>
-                </label>
-                <select
-                  [(ngModel)]="addressData.addressType"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
+            <!-- Tabs -->
+            <div class="border-b border-gray-200 dark:border-gray-700">
+              <div class="flex gap-1">
+                <button
+                  type="button"
+                  (click)="activeAddressTab.set('location')"
+                  [class]="activeAddressTab() === 'location' 
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                  class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
                 >
-                  <option value="">Select type</option>
-                  <option value="home">Home</option>
-                  <option value="work">Work</option>
-                  <option value="billing">Billing</option>
-                  <option value="shipping">Shipping</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <!-- Region -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Region <span class="text-red-500">*</span>
-                </label>
-                <select
-                  [(ngModel)]="addressData.region"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
+                  <span class="text-base">📍</span>
+                  Location
+                </button>
+                <button
+                  type="button"
+                  (click)="activeAddressTab.set('contact')"
+                  [class]="activeAddressTab() === 'contact' 
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                  class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
                 >
-                  <option value="">Select region</option>
-                  <option *ngFor="let region of addressService.regionsSignal()" [value]="region.code">
-                    {{ region.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Province -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Province <span class="text-red-500">*</span>
-                </label>
-                <input
-                  [(ngModel)]="addressData.province"
-                  type="text"
-                  placeholder="e.g., Metro Manila"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
-                />
-              </div>
-
-              <!-- City/Municipality -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  City/Municipality <span class="text-red-500">*</span>
-                </label>
-                <input
-                  [(ngModel)]="addressData.cityMunicipality"
-                  type="text"
-                  placeholder="e.g., Quezon City"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
-                />
-              </div>
-
-              <!-- Barangay -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Barangay <span class="text-red-500">*</span>
-                </label>
-                <input
-                  [(ngModel)]="addressData.barangay"
-                  type="text"
-                  placeholder="e.g., Barangay Commonwealth"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
-                />
-              </div>
-
-              <!-- Zip Code -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Zip Code
-                </label>
-                <input
-                  [(ngModel)]="addressData.zipCode"
-                  type="text"
-                  placeholder="e.g., 1121"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
-
-              <!-- Street -->
-              <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Street Address <span class="text-red-500">*</span>
-                </label>
-                <input
-                  [(ngModel)]="addressData.street"
-                  type="text"
-                  placeholder="e.g., 123 Main Street, Subdivision Name"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  required
-                />
-              </div>
-
-              <!-- Landmark -->
-              <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Landmark (Optional)
-                </label>
-                <input
-                  [(ngModel)]="addressData.landmark"
-                  type="text"
-                  placeholder="e.g., Near SM Mall, Across McDonald's"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
-
-              <!-- Contact Name -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Contact Name
-                </label>
-                <input
-                  [(ngModel)]="addressData.contactName"
-                  type="text"
-                  placeholder="Contact person name"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
-
-              <!-- Contact Phone -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Contact Phone
-                </label>
-                <input
-                  [(ngModel)]="addressData.contactPhone"
-                  type="tel"
-                  placeholder="e.g., +63 912 345 6789"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
-
-              <!-- Notes -->
-              <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes (Optional)
-                </label>
-                <textarea
-                  [(ngModel)]="addressData.notes"
-                  rows="2"
-                  placeholder="Additional delivery instructions or notes"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                ></textarea>
-              </div>
-
-              <!-- Set as Primary -->
-              <div class="md:col-span-2">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="addressData.isPrimary"
-                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Set as primary address</span>
-                </label>
+                  <span class="text-base">📞</span>
+                  Contact
+                </button>
+                <button
+                  type="button"
+                  (click)="activeAddressTab.set('additional')"
+                  [class]="activeAddressTab() === 'additional' 
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                  class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
+                >
+                  <span class="text-base">📝</span>
+                  Additional
+                </button>
               </div>
             </div>
 
-            <div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-              <p class="text-xs text-blue-700 dark:text-blue-300">
-                <strong>Note:</strong> Philippine address format follows: Street → Barangay → City/Municipality → Province → Region
+            <!-- Location Tab -->
+            <div *ngIf="activeAddressTab() === 'location'" class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Address Type -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address Type <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    [(ngModel)]="addressData.addressType"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  >
+                    <option value="">Select type</option>
+                    <option value="home">🏠 Home</option>
+                    <option value="work">💼 Work</option>
+                    <option value="billing">💳 Billing</option>
+                    <option value="shipping">📦 Shipping</option>
+                    <option value="other">📌 Other</option>
+                  </select>
+                </div>
+
+                <!-- Region -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Region <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    [(ngModel)]="addressData.region"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  >
+                    <option value="">Select region</option>
+                    <option *ngFor="let region of addressService.regionsSignal()" [value]="region.code">
+                      {{ region.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Province -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Province <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.province"
+                    type="text"
+                    placeholder="e.g., Metro Manila"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <!-- City/Municipality -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    City/Municipality <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.cityMunicipality"
+                    type="text"
+                    placeholder="e.g., Quezon City"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <!-- Barangay -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Barangay <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.barangay"
+                    type="text"
+                    placeholder="e.g., Barangay Commonwealth"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <!-- Zip Code -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Zip Code
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.zipCode"
+                    type="text"
+                    placeholder="e.g., 1121"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <!-- Street -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Street Address <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.street"
+                    type="text"
+                    placeholder="e.g., 123 Main Street, Subdivision Name"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                  📍 <strong>Philippine address format:</strong> Street → Barangay → City/Municipality → Province → Region
+                </p>
+              </div>
+            </div>
+
+            <!-- Contact Tab -->
+            <div *ngIf="activeAddressTab() === 'contact'" class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Contact Name -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Contact Name
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.contactName"
+                    type="text"
+                    placeholder="Contact person name"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <!-- Contact Phone -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Contact Phone
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.contactPhone"
+                    type="tel"
+                    placeholder="e.g., +63 912 345 6789"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                  📞 <strong>Optional:</strong> Add contact information for this address location
+                </p>
+              </div>
+            </div>
+
+            <!-- Additional Tab -->
+            <div *ngIf="activeAddressTab() === 'additional'" class="space-y-3">
+              <div class="grid grid-cols-1 gap-3">
+                <!-- Landmark -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Landmark (Optional)
+                  </label>
+                  <input
+                    [(ngModel)]="addressData.landmark"
+                    type="text"
+                    placeholder="e.g., Near SM Mall, Across McDonald's"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+
+                <!-- Notes -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    [(ngModel)]="addressData.notes"
+                    rows="3"
+                    placeholder="Additional delivery instructions or notes"
+                    class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  ></textarea>
+                </div>
+
+                <!-- Set as Primary -->
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="addressData.isPrimary"
+                      class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">⭐ Set as primary address</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                  📝 <strong>Helpful info:</strong> Add landmarks and notes to help with deliveries or navigation
+                </p>
+              </div>
+            </div>
+          </div>
+
+            <div *ngIf="!includeAddress" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
+              Address can be added later in the user profile
+            </div>
+          </div>
+
+          <!-- Reset Password Tab (Edit mode only) -->
+          <div *ngIf="activeTab() === 'password'">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">🔐 Reset Password</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Change user's password</p>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="showResetPassword"
+                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Reset password</span>
+              </label>
+            </div>
+
+          <div *ngIf="showResetPassword" class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <!-- New Password -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  New Password <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="resetPasswordData.newPassword"
+                  type="password"
+                  placeholder="Enter new password"
+                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum 8 characters</p>
+              </div>
+
+              <!-- Confirm Password -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Confirm Password <span class="text-red-500">*</span>
+                </label>
+                <input
+                  [(ngModel)]="resetPasswordData.confirmPassword"
+                  type="password"
+                  placeholder="Confirm new password"
+                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword !== resetPasswordData.confirmPassword" 
+                   class="text-xs text-red-500 dark:text-red-400 mt-0.5">
+                  ⚠️ Passwords do not match
+                </p>
+                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword === resetPasswordData.confirmPassword" 
+                   class="text-xs text-green-500 dark:text-green-400 mt-0.5">
+                  ✓ Passwords match
+                </p>
+              </div>
+            </div>
+
+            <div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+              <p class="text-xs text-amber-700 dark:text-amber-300">
+                <strong>⚠️ Warning:</strong> User will need to use this new password on their next login. Consider notifying them about the password change.
               </p>
             </div>
           </div>
 
-          <div *ngIf="!includeAddress" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
-            Address can be added later in the user profile
+          <div *ngIf="!showResetPassword" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
+            Password will remain unchanged
           </div>
+        </div>
+
         </div>
 
         <!-- Actions -->
-        <div class="flex items-center justify-end gap-2">
+        <div class="flex items-center justify-end gap-2 mt-4">
           <button
             (click)="goBack()"
             type="button"
-            class="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+            class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
           >
             Cancel
           </button>
           <button
             (click)="save()"
             [disabled]="saving() || !isFormValid()"
-            class="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {{ saving() ? 'Saving...' : (isEditMode() ? 'Update User' : 'Create User') }}
           </button>
         </div>
       </div>
     </div>
-  `
+  `,
+  styles: []
 })
 export class UserEditorComponent implements OnInit {
   userId: string | null = null;
@@ -629,6 +765,9 @@ export class UserEditorComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   userType = 'system'; // 'system' or 'tenant' - default to system admin
   isTenantContext = signal(false); // Track if we're in tenant context
+
+  // Main tab navigation
+  activeTab = signal<string>('basic'); // 'basic', 'roles', 'platforms', 'address', 'password'
 
   tenants = signal<Tenant[]>([]);
   loadingTenants = signal(false);
@@ -672,8 +811,31 @@ export class UserEditorComponent implements OnInit {
     }
   };
 
+  // Tenant data and platform subscriptions
+  currentTenantData = signal<any>(null);
+  tenantPlatformSubscriptions = signal<ProductSubscription[]>([]);
+  
+  // Computed property to determine which platforms are available
+  // Uses tenant's enabled flags (same logic as Platform Catalog)
+  availablePlatforms = computed(() => {
+    const tenant = this.currentTenantData();
+    if (!tenant) {
+      return {
+        moneyLoan: false,
+        bnpl: false,
+        pawnshop: false
+      };
+    }
+    return {
+      moneyLoan: tenant.moneyLoanEnabled || false,
+      bnpl: tenant.bnplEnabled || false,
+      pawnshop: tenant.pawnshopEnabled || false
+    };
+  });
+
   // Address fields
   includeAddress = false;
+  activeAddressTab = signal<string>('location'); // 'location', 'contact', 'additional'
   addressData: any = {
     addressType: 'home',
     street: '',
@@ -689,6 +851,13 @@ export class UserEditorComponent implements OnInit {
     notes: ''
   };
 
+  // Reset Password fields
+  showResetPassword = false;
+  resetPasswordData = {
+    newPassword: '',
+    confirmPassword: ''
+  };
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -697,7 +866,9 @@ export class UserEditorComponent implements OnInit {
     public userService: UserService,
     public roleService: RoleService,
     public addressService: AddressService,
-    private authService: AuthService
+    private authService: AuthService,
+    private productSubscriptionService: ProductSubscriptionService,
+    private tenantService: TenantService
   ) {}
 
   async ngOnInit() {
@@ -713,6 +884,8 @@ export class UserEditorComponent implements OnInit {
       if (currentTenantId) {
         this.formData.tenantId = currentTenantId;
         console.log('🏢 Tenant context detected, tenantId set to:', currentTenantId);
+        // Load platform subscriptions for this tenant
+        this.loadTenantPlatformSubscriptions(Number(currentTenantId));
       }
     }
 
@@ -765,6 +938,9 @@ export class UserEditorComponent implements OnInit {
 
         // Load product access for tenant users
         if (user.tenantId) {
+          // Load tenant's platform subscriptions to show available platforms
+          this.loadTenantPlatformSubscriptions(Number(user.tenantId));
+          // Load user's current product access
           await this.loadUserProducts(this.userId);
         }
 
@@ -799,6 +975,44 @@ export class UserEditorComponent implements OnInit {
       console.error('❌ Error loading tenants:', error);
       this.loadingTenants.set(false);
     }
+  }
+
+  loadTenantPlatformSubscriptions(tenantId: number) {
+    console.log('🔍 Loading tenant data and platform subscriptions for tenant:', tenantId);
+    
+    // First, load the tenant data to get enabled platform flags
+    this.http.get<any>(`/api/tenants/${tenantId}`).subscribe({
+      next: (response) => {
+        if (response && response.data) {
+          this.currentTenantData.set(response.data);
+          console.log('✅ Loaded tenant data:', {
+            id: response.data.id,
+            name: response.data.name,
+            moneyLoanEnabled: response.data.moneyLoanEnabled,
+            bnplEnabled: response.data.bnplEnabled,
+            pawnshopEnabled: response.data.pawnshopEnabled
+          });
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error loading tenant data:', error);
+        this.currentTenantData.set(null);
+      }
+    });
+
+    // Also load platform subscriptions
+    this.productSubscriptionService.getTenantProductSubscriptions(tenantId).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.tenantPlatformSubscriptions.set(response.data);
+          console.log('✅ Loaded platform subscriptions:', response.data);
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error loading platform subscriptions:', error);
+        this.tenantPlatformSubscriptions.set([]);
+      }
+    });
   }
 
   availableRoles() {
@@ -900,6 +1114,25 @@ export class UserEditorComponent implements OnInit {
   }
 
   /**
+   * Auto-set primary platform if only one is enabled
+   */
+  autoSetPrimaryPlatform() {
+    const enabledPlatforms = [
+      { key: 'moneyLoan', enabled: this.productAccess.moneyLoan.enabled },
+      { key: 'bnpl', enabled: this.productAccess.bnpl.enabled },
+      { key: 'pawnshop', enabled: this.productAccess.pawnshop.enabled }
+    ].filter(p => p.enabled);
+
+    // If only one platform is enabled, make it primary
+    if (enabledPlatforms.length === 1) {
+      const platform = enabledPlatforms[0].key;
+      this.productAccess.moneyLoan.isPrimary = platform === 'moneyLoan';
+      this.productAccess.bnpl.isPrimary = platform === 'bnpl';
+      this.productAccess.pawnshop.isPrimary = platform === 'pawnshop';
+    }
+  }
+
+  /**
    * Load user product access from API
    */
   async loadUserProducts(userId: string): Promise<void> {
@@ -981,6 +1214,11 @@ export class UserEditorComponent implements OnInit {
 
     // If creating a tenant user, tenant must be selected
     if (!this.isEditMode() && this.userType === 'tenant' && !this.formData.tenantId) {
+      return false;
+    }
+
+    // If resetting password in edit mode, validate password fields
+    if (this.isEditMode() && this.showResetPassword && !this.isPasswordResetValid()) {
       return false;
     }
 
@@ -1084,6 +1322,21 @@ export class UserEditorComponent implements OnInit {
       }
 
       if (user) {
+        // Reset password if requested (edit mode only)
+        if (this.isEditMode() && this.showResetPassword && this.isPasswordResetValid()) {
+          try {
+            await this.http.put(`/api/users/${user.id}/reset-password`, {
+              newPassword: this.resetPasswordData.newPassword
+            }).toPromise();
+            console.log('✅ Password reset successfully');
+          } catch (passwordError) {
+            console.error('⚠️ Password reset failed:', passwordError);
+            this.errorMessage.set('User updated but password reset failed. Please try again.');
+            this.saving.set(false);
+            return;
+          }
+        }
+
         // Update roles (if editing)
         if (this.isEditMode() && this.userId) {
           // Get current roles from loaded user data
@@ -1190,6 +1443,17 @@ export class UserEditorComponent implements OnInit {
       this.addressData.cityMunicipality &&
       this.addressData.province &&
       this.addressData.region
+    );
+  }
+
+  isPasswordResetValid(): boolean {
+    if (!this.showResetPassword) return true;
+
+    return !!(
+      this.resetPasswordData.newPassword &&
+      this.resetPasswordData.confirmPassword &&
+      this.resetPasswordData.newPassword === this.resetPasswordData.confirmPassword &&
+      this.resetPasswordData.newPassword.length >= 8
     );
   }
 

@@ -365,8 +365,9 @@ class BillingService {
   static async getBillingOverview(tenantId) {
     const client = await pool.connect();
     try {
-      // Get current subscription with plan details
-      const subscriptionQuery = `
+      // Get current subscription with plan details - check both tenant_subscriptions and platform_subscriptions
+      // First try tenant_subscriptions (platform-level)
+      let subscriptionQuery = `
         SELECT 
           ts.next_billing_date,
           ts.status as subscription_status,
@@ -381,19 +382,47 @@ class BillingService {
         ORDER BY ts.created_at DESC
         LIMIT 1
       `;
-      const subscriptionResult = await client.query(subscriptionQuery, [tenantId]);
+      let subscriptionResult = await client.query(subscriptionQuery, [tenantId]);
+
+      // If no tenant subscription found, check platform_subscriptions
+      if (subscriptionResult.rows.length === 0) {
+        subscriptionQuery = `
+          SELECT 
+            COALESCE(
+              ps.expires_at,
+              CASE 
+                WHEN sp.billing_cycle = 'monthly' THEN ps.started_at + INTERVAL '1 month'
+                WHEN sp.billing_cycle = 'quarterly' THEN ps.started_at + INTERVAL '3 months'
+                WHEN sp.billing_cycle = 'yearly' THEN ps.started_at + INTERVAL '1 year'
+                ELSE ps.started_at + INTERVAL '1 month'
+              END
+            ) as next_billing_date,
+            ps.status as subscription_status,
+            ps.price as monthly_price,
+            ps.metadata,
+            sp.price as plan_price,
+            sp.billing_cycle,
+            sp.name as plan_name
+          FROM platform_subscriptions ps
+          JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
+          WHERE ps.tenant_id = $1 AND ps.status IN ('active', 'trial')
+          ORDER BY ps.created_at DESC
+          LIMIT 1
+        `;
+        subscriptionResult = await client.query(subscriptionQuery, [tenantId]);
+      }
 
       // Get last completed payment
       const lastPaymentQuery = `
         SELECT 
           ph.amount,
-          ph.payment_date,
+          ph.processed_at,
           ph.created_at,
           i.invoice_number
         FROM payment_history ph
         LEFT JOIN invoices i ON ph.invoice_id = i.id
         WHERE ph.tenant_id = $1 AND ph.status = 'completed'
-        ORDER BY ph.payment_date DESC NULLS LAST, ph.created_at DESC
+        ORDER BY ph.processed_at DESC NULLS LAST, ph.created_at DESC
         LIMIT 1
       `;
       const lastPaymentResult = await client.query(lastPaymentQuery, [tenantId]);
@@ -401,7 +430,7 @@ class BillingService {
       // Get outstanding balance (pending + overdue invoices)
       const balanceQuery = `
         SELECT 
-          COALESCE(SUM(total), 0) as pending_amount
+          COALESCE(SUM(total_amount), 0) as pending_amount
         FROM invoices
         WHERE tenant_id = $1 AND status IN ('pending', 'overdue')
       `;
@@ -418,9 +447,43 @@ class BillingService {
           : (subscription.plan_price ? parseFloat(subscription.plan_price) : 0);
       }
 
-      // Get auto_renew from metadata (default to true)
+      // Get auto_renew and payment method from metadata (default to true for auto_renew)
       const metadata = subscription?.metadata || {};
       const autoRenewal = metadata.auto_renew !== undefined ? metadata.auto_renew : true;
+      const paymentMethodId = metadata.payment_method_id || null;
+
+      // Fetch payment method details if payment_method_id exists
+      let paymentMethod = null;
+      if (paymentMethodId) {
+        const paymentMethodQuery = `
+          SELECT id, type, last_four, expiry_month, expiry_year, card_brand, is_default
+          FROM payment_methods
+          WHERE id = $1 AND tenant_id = $2
+          LIMIT 1
+        `;
+        const paymentMethodResult = await client.query(paymentMethodQuery, [paymentMethodId, tenantId]);
+        if (paymentMethodResult.rows.length > 0) {
+          const pm = paymentMethodResult.rows[0];
+          paymentMethod = {
+            id: pm.id,
+            type: pm.type,
+            last4: pm.last_four,
+            brand: pm.card_brand,
+            expiryMonth: pm.expiry_month,
+            expiryYear: pm.expiry_year,
+            isDefault: pm.is_default
+          };
+        }
+      }
+
+      console.log('📊 Billing Overview Debug:', {
+        hasSubscription: !!subscription,
+        nextBillingDate: subscription?.next_billing_date,
+        subscriptionStatus: subscription?.subscription_status,
+        planName: subscription?.plan_name,
+        paymentMethodId: paymentMethodId,
+        paymentMethod: paymentMethod
+      });
 
       return {
         currentBalance: -parseFloat(balanceResult.rows[0].pending_amount || 0),
@@ -428,10 +491,10 @@ class BillingService {
         nextBillingAmount: nextBillingAmount,
         billingCycle: subscription?.billing_cycle || 'monthly',
         planName: subscription?.plan_name || null,
-        lastPaymentDate: lastPaymentResult.rows[0]?.payment_date || lastPaymentResult.rows[0]?.created_at || null,
+        lastPaymentDate: lastPaymentResult.rows[0]?.processed_at || lastPaymentResult.rows[0]?.created_at || null,
         lastPaymentAmount: lastPaymentResult.rows[0]?.amount ? parseFloat(lastPaymentResult.rows[0].amount) : 0,
         lastInvoiceNumber: lastPaymentResult.rows[0]?.invoice_number || null,
-        paymentMethod: null,
+        paymentMethod: paymentMethod,
         autoRenewal: autoRenewal,
         subscriptionStatus: subscription?.subscription_status || 'none',
       };
@@ -726,13 +789,23 @@ class BillingService {
         throw new Error('Invalid payment method');
       }
 
-      // Get current metadata
-      const getQuery = `
+      // Check for active subscription in tenant_subscriptions first
+      let getQuery = `
         SELECT metadata FROM tenant_subscriptions
         WHERE tenant_id = $1 AND status = 'active'
         LIMIT 1
       `;
-      const getResult = await client.query(getQuery, [tenantId]);
+      let getResult = await client.query(getQuery, [tenantId]);
+
+      // If not found, check platform_subscriptions
+      if (getResult.rows.length === 0) {
+        getQuery = `
+          SELECT metadata FROM platform_subscriptions
+          WHERE tenant_id = $1 AND status = 'active'
+          LIMIT 1
+        `;
+        getResult = await client.query(getQuery, [tenantId]);
+      }
 
       if (getResult.rows.length === 0) {
         throw new Error('No active subscription found');
@@ -745,15 +818,26 @@ class BillingService {
         payment_details: details,
       };
 
-      // Update metadata with payment method
-      const updateQuery = `
+      // Update metadata in tenant_subscriptions
+      let updateQuery = `
         UPDATE tenant_subscriptions
         SET metadata = $1, updated_at = NOW()
         WHERE tenant_id = $2 AND status = 'active'
         RETURNING *
       `;
 
-      await client.query(updateQuery, [JSON.stringify(updatedMetadata), tenantId]);
+      let updateResult = await client.query(updateQuery, [JSON.stringify(updatedMetadata), tenantId]);
+
+      // If no rows updated, update platform_subscriptions instead
+      if (updateResult.rowCount === 0) {
+        updateQuery = `
+          UPDATE platform_subscriptions
+          SET metadata = $1, updated_at = NOW()
+          WHERE tenant_id = $2 AND status = 'active'
+          RETURNING *
+        `;
+        await client.query(updateQuery, [JSON.stringify(updatedMetadata), tenantId]);
+      }
 
       return {
         success: true,

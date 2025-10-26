@@ -17,6 +17,11 @@ router.post('/refresh', AuthController.refreshToken);
 // Email existence check for registration (public - no auth required)
 router.get('/check-email', UserController.checkEmail);
 
+// Platform-specific login routes (public - no auth required)
+router.post('/platform/money-loan/login', AuthController.moneyLoanLogin);
+router.post('/platform/bnpl/login', AuthController.bnplLogin);
+router.post('/platform/pawnshop/login', AuthController.pawnshopLogin);
+
 // Protected routes (auth required)
 router.post('/logout', authMiddleware, AuthController.logout);
 router.post('/change-password', authMiddleware, AuthController.changePassword);
