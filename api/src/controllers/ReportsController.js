@@ -10,65 +10,62 @@ const CONSTANTS = require('../config/constants');
 class ReportsController {
   /**
    * GET /reports/subscription-history
-   * Get complete subscription history (tenant subscriptions + product subscriptions)
+   * Get tenant transaction history from payment_history table
    */
   static async getSubscriptionHistory(req, res, next) {
     try {
-      // Query combines both tenant_subscriptions (Platform) and product_subscriptions (Money Loan, BNPL, Pawnshop)
+      // Query payment_history table for all tenant transactions
       const result = await pool.query(
-        `-- Platform subscriptions (tenant_subscriptions)
-         SELECT 
-          ts.id,
-          ts.tenant_id,
+        `SELECT 
+          ph.id,
+          ph.tenant_id,
           t.name as tenant_name,
-          ts.plan_id,
-          sp.name as plan_name,
-          sp.product_type::text as product_type,
-          ts.status::text as status,
-          ts.monthly_price,
-          ts.started_at,
-          ts.expires_at,
-          ts.cancelled_at,
-          ts.cancellation_reason,
-          ts.created_at,
-          ts.updated_at
-         FROM tenant_subscriptions ts
-         JOIN tenants t ON ts.tenant_id = t.id
-         JOIN subscription_plans sp ON ts.plan_id = sp.id
-         
-         UNION ALL
-         
-         -- Product subscriptions (product_subscriptions: Money Loan, BNPL, Pawnshop)
-         SELECT 
-          ps.id,
-          ps.tenant_id,
-          t.name as tenant_name,
-          ps.subscription_plan_id as plan_id,
-          sp.name as plan_name,
-          ps.product_type::text as product_type,
-          ps.status::text as status,
-          ps.price as monthly_price,
-          ps.started_at,
-          ps.expires_at,
-          NULL as cancelled_at,
-          NULL as cancellation_reason,
-          ps.created_at,
-          ps.updated_at
-         FROM product_subscriptions ps
-         JOIN tenants t ON ps.tenant_id = t.id
-         LEFT JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
-         
-         ORDER BY created_at DESC`
+          ph.transaction_id as invoice_id,
+          INITCAP(ph.transaction_type) as type,
+          ph.amount,
+          ph.provider as payment_method,
+          ph.status,
+          ph.processed_at as payment_date,
+          ph.created_at,
+          ph.updated_at,
+          ph.plan_name,
+          ph.product_type,
+          CASE 
+            WHEN ph.description IS NOT NULL AND ph.description != '' THEN ph.description
+            WHEN ph.plan_name IS NOT NULL THEN 
+              'Subscribed to ' || COALESCE(ph.product_type, 'Product') || ' - ' || ph.plan_name || 
+              CASE 
+                WHEN ph.description LIKE '%monthly%' THEN ' - monthly billing'
+                WHEN ph.description LIKE '%yearly%' THEN ' - yearly billing'
+                ELSE ''
+              END
+            ELSE 'Transaction #' || COALESCE(ph.transaction_id, ph.id::text)
+          END as description,
+          CASE 
+            WHEN ph.transaction_id IS NOT NULL AND ph.transaction_id != '' 
+            THEN ph.transaction_id
+            ELSE 'INV-' || TO_CHAR(ph.created_at, 'YYYYMMDD') || '-' || ph.id
+          END as invoice
+         FROM payment_history ph
+         JOIN tenants t ON ph.tenant_id = t.id
+         ORDER BY ph.created_at DESC`,
       );
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         success: true,
-        data: result.rows,
-        message: 'Subscription history retrieved successfully'
+        data: result.rows || [],
+        message: result.rows.length > 0 ? 'Transaction history retrieved successfully' : 'No transaction history found',
       });
     } catch (err) {
-      logger.error(`Reports controller subscription history error: ${err.message}`);
-      next(err);
+      logger.error(`Reports controller transaction history error: ${err.message}`);
+      logger.error(`Error stack: ${err.stack}`);
+      
+      // Send user-friendly error message
+      res.status(CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Failed to load transaction history. The payment history table may not exist yet.',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+      });
     }
   }
 }

@@ -115,7 +115,7 @@ class TenantController {
   /**
    * PUT /tenants/current/products
    * Update current user's tenant product settings
-   * Automatically creates or cancels product subscriptions
+   * NOTE: Product subscriptions must be created manually by tenant
    */
   static async updateMyTenantProducts(req, res, next) {
     try {
@@ -148,8 +148,8 @@ class TenantController {
       // Update tenant flags
       const result = await TenantService.updateTenant(tenantId, updateData);
 
-      // Auto-sync product subscriptions based on the new flags
-      await TenantService.syncProductSubscriptionsOnUpdate(tenantId, updateData);
+      // NOTE: Auto-subscription disabled - tenants must manually subscribe from their side
+      // await TenantService.syncProductSubscriptionsOnUpdate(tenantId, updateData);
 
       res.status(CONSTANTS.HTTP_STATUS.OK).json({
         success: true,

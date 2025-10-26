@@ -89,12 +89,6 @@ interface SubscriptionPlan {
                   <!-- Product Type Badge -->
                   <div class="mt-1">
                     <span
-                      *ngIf="currentPlan.productType === 'platform'"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded"
-                    >
-                      🌐 Platform
-                    </span>
-                    <span
                       *ngIf="currentPlan.productType === 'money_loan'"
                       class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded"
                     >
@@ -187,7 +181,7 @@ interface SubscriptionPlan {
       </div>
 
       <!-- Available Plans -->
-      <div *ngIf="!loading()">
+      <div *ngIf="!loading() && availablePlans().length > 0">
         <h3 class="text-base font-bold text-gray-900 dark:text-white mb-3">
           Available Plans
         </h3>
@@ -195,8 +189,8 @@ interface SubscriptionPlan {
           <div
             *ngFor="let plan of availablePlans()"
             class="bg-white dark:bg-gray-800 rounded-lg border overflow-hidden hover:shadow-lg transition"
-            [class.border-gray-200]="plan.hasActiveSubscription || plan.productType === 'platform'"
-            [class.dark:border-gray-700]="plan.hasActiveSubscription || plan.productType === 'platform'"
+            [class.border-gray-200]="plan.hasActiveSubscription"
+            [class.dark:border-gray-700]="plan.hasActiveSubscription"
             [class.border-orange-300]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
             [class.dark:border-orange-700]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
             [class.opacity-90]="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available'"
@@ -207,15 +201,9 @@ interface SubscriptionPlan {
                 <div class="flex-1">
                   <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
                   <p *ngIf="plan.description" class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ plan.description }}</p>
-                  
+
                   <!-- Product Type Badge -->
                   <div class="mt-2">
-                    <span
-                      *ngIf="plan.productType === 'platform'"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded"
-                    >
-                      🌐 Platform Plan (All Products)
-                    </span>
                     <span
                       *ngIf="plan.productType === 'money_loan'"
                       class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded"
@@ -295,14 +283,14 @@ interface SubscriptionPlan {
                 </svg>
                 Current Plan
               </div>
-              
+
               <!-- Active Subscription - Different Tier -->
               <button
                 *ngIf="!plan.current && plan.hasActiveSubscription && canManageBilling()"
                 (click)="selectPlan(plan)"
                 class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition"
-                [class]="plan.recommended 
-                  ? 'text-white bg-blue-600 hover:bg-blue-700' 
+                [class]="plan.recommended
+                  ? 'text-white bg-blue-600 hover:bg-blue-700'
                   : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,7 +299,7 @@ interface SubscriptionPlan {
                 </svg>
                 {{ plan.price > getHighestSubscriptionPrice() ? 'Upgrade' : 'Switch' }}
               </button>
-              
+
               <!-- No Active Subscription - Subscribe Now -->
               <button
                 *ngIf="!plan.hasActiveSubscription && plan.subscriptionStatus === 'available' && canManageBilling()"
@@ -376,20 +364,17 @@ export class TenantSubscriptionsComponent implements OnInit {
     const currentSubscriptionNames = this.currentSubscriptions().map(s => s.name);
     const activeProductTypes = this.currentSubscriptions().map(s => s.productType);
     const enabled = this.enabledProducts();
-    
-    // Filter plans: show platform plans + only plans for enabled products
+
+    // Filter plans: show only plans for enabled products
     return this.allPlans()
       .filter(apiPlan => {
-        // Always show platform plans
-        if (apiPlan.productType === 'platform') return true;
-        
         // Show product plans only if the product is enabled
         return enabled.includes(apiPlan.productType || '');
       })
       .map(apiPlan => {
         const isCurrentPlan = currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name);
         const hasActiveSubscription = activeProductTypes.includes(apiPlan.productType);
-        
+
         // Determine subscription status
         let subscriptionStatus: 'available' | 'active' | 'pending' = 'available';
         if (hasActiveSubscription && isCurrentPlan) {
@@ -397,7 +382,7 @@ export class TenantSubscriptionsComponent implements OnInit {
         } else if (enabled.includes(apiPlan.productType || '') && !hasActiveSubscription) {
           subscriptionStatus = 'available';
         }
-        
+
         return {
           id: apiPlan.id, // Use the numeric ID from the database
           name: apiPlan.displayName || apiPlan.name,
@@ -429,7 +414,7 @@ export class TenantSubscriptionsComponent implements OnInit {
 
   loadSubscriptionData(): void {
     this.loading.set(true);
-    
+
     // Load active subscriptions and all available plans
     forkJoin({
       activeSubscriptions: this.tenantService.getMyActiveSubscriptions(),
@@ -438,13 +423,13 @@ export class TenantSubscriptionsComponent implements OnInit {
       next: ({ activeSubscriptions, plans }) => {
         console.log('📦 Active subscriptions response:', activeSubscriptions.data);
         console.log('📦 All available plans:', plans.data);
-        
+
         // Set active subscriptions directly from API
         if (activeSubscriptions.success && activeSubscriptions.data) {
           // Handle both old format (array) and new format (object with subscriptions + enabledProducts)
           let subscriptions: any[];
           let enabledProducts: string[];
-          
+
           if (Array.isArray(activeSubscriptions.data)) {
             // Old format: data is array of subscriptions
             subscriptions = activeSubscriptions.data;
@@ -455,19 +440,8 @@ export class TenantSubscriptionsComponent implements OnInit {
             subscriptions = activeSubscriptions.data.subscriptions || [];
             enabledProducts = activeSubscriptions.data.enabledProducts || [];
           }
-          
-          // Sort: Product subscriptions first, then platform
-          const sortedSubscriptions = [...subscriptions].sort((a, b) => {
-            const aIsPlatform = a.productType === 'platform';
-            const bIsPlatform = b.productType === 'platform';
-            
-            // Platform goes to the end
-            if (aIsPlatform && !bIsPlatform) return 1;
-            if (!aIsPlatform && bIsPlatform) return -1;
-            return 0;
-          });
-          
-          const transformedSubscriptions: SubscriptionPlan[] = sortedSubscriptions.map(apiPlan => ({
+
+          const transformedSubscriptions: SubscriptionPlan[] = subscriptions.map(apiPlan => ({
             id: apiPlan.name,
             name: apiPlan.displayName || apiPlan.name,
             description: apiPlan.description,
@@ -486,13 +460,13 @@ export class TenantSubscriptionsComponent implements OnInit {
             startedAt: apiPlan.startedAt,
             expiresAt: apiPlan.expiresAt
           }));
-          
+
           this.currentSubscriptions.set(transformedSubscriptions);
           this.enabledProducts.set(enabledProducts);
           console.log('✅ Loaded active subscriptions:', transformedSubscriptions.length);
           console.log('✅ Enabled products:', enabledProducts);
         }
-        
+
         // Set all available plans
         this.allPlans.set(plans.data || []);
         this.loading.set(false);

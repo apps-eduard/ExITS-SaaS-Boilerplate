@@ -86,7 +86,7 @@ interface ResourceGroup {
           <div class="flex-1">
             <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Tenant Role Permissions</h3>
             <p class="text-xs text-blue-700 dark:text-blue-400">
-              Tenant roles can only access tenant-space and product-specific permissions (Money Loan, BNPL, Pawnshop). 
+              Tenant roles can only access tenant-space and product-specific permissions (Money Loan, BNPL, Pawnshop).
               System-level permissions are automatically filtered out for security.
             </p>
           </div>
@@ -184,34 +184,34 @@ interface ResourceGroup {
             <!-- Quick Actions -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Selection</div>
-              
+
               <!-- Toggle System Only Button - Show if filter is 'all' or 'system' -->
               <button
                 *ngIf="filterState().space === 'all' || filterState().space === 'system'"
                 (click)="toggleSelectSystem()"
-                [class]="areAllSystemSelected() 
+                [class]="areAllSystemSelected()
                   ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
                   : 'w-full rounded bg-purple-50 px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 transition'"
               >
                 {{ areAllSystemSelected() ? '❌ Unselect System' : '⚡ Select System' }}
               </button>
-              
+
               <!-- Toggle Tenant Only Button - Show if filter is 'all' or 'tenant' -->
               <button
                 *ngIf="filterState().space === 'all' || filterState().space === 'tenant'"
                 (click)="toggleSelectTenant()"
-                [class]="areAllTenantSelected() 
+                [class]="areAllTenantSelected()
                   ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
                   : 'w-full rounded bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 transition'"
               >
                 {{ areAllTenantSelected() ? '❌ Unselect Tenant Core' : '🏠 Select Tenant Core' }}
               </button>
-              
+
               <!-- Toggle Money Loan Button - Show if filter is 'all' or 'tenant' -->
               <button
                 *ngIf="filterState().space === 'all' || filterState().space === 'tenant'"
                 (click)="toggleSelectMoneyLoan()"
-                [class]="areAllMoneyLoanSelected() 
+                [class]="areAllMoneyLoanSelected()
                   ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
                   : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition'"
               >
@@ -254,7 +254,7 @@ interface ResourceGroup {
 
             <!-- Enhanced Filter Section -->
             <div class="border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-              
+
               <!-- Header Row -->
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -263,7 +263,7 @@ interface ResourceGroup {
                   </svg>
                   Filter Permissions
                 </h3>
-                <button 
+                <button
                   *ngIf="activeFilters().length > 0"
                   (click)="clearAllFilters()"
                   class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors"
@@ -285,7 +285,7 @@ interface ResourceGroup {
                     (click)="setSpaceFilter('all')"
                     [disabled]="isReadOnlyMode()"
                     type="button"
-                    [class]="filterState().space === 'all' 
+                    [class]="filterState().space === 'all'
                       ? 'px-4 py-3 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 border-b-4 border-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
                       : 'px-4 py-3 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed'"
                   >
@@ -300,7 +300,7 @@ interface ResourceGroup {
                     (click)="setSpaceFilter('system')"
                     [disabled]="isReadOnlyMode() || isTenantContext()"
                     type="button"
-                    [class]="filterState().space === 'system' 
+                    [class]="filterState().space === 'system'
                       ? 'px-4 py-3 rounded-lg text-sm font-medium bg-purple-100 text-purple-700 border-b-4 border-purple-600 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
                       : 'px-4 py-3 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-purple-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed'"
                   >
@@ -315,7 +315,7 @@ interface ResourceGroup {
                     (click)="setSpaceFilter('tenant')"
                     [disabled]="isReadOnlyMode()"
                     type="button"
-                    [class]="filterState().space === 'tenant' 
+                    [class]="filterState().space === 'tenant'
                       ? 'px-4 py-3 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 border-b-4 border-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
                       : 'px-4 py-3 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed'"
                   >
@@ -338,7 +338,7 @@ interface ResourceGroup {
                     (click)="setProductFilter('all')"
                     [disabled]="isReadOnlyMode()"
                     type="button"
-                    [class]="filterState().product === 'all' 
+                    [class]="filterState().product === 'all'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-gray-200 text-gray-800 border-l-4 border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-400 transition-all'
                       : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-all'"
                   >
@@ -353,7 +353,7 @@ interface ResourceGroup {
                     (click)="setProductFilter('core')"
                     [disabled]="isReadOnlyMode() || isProductDisabled('core')"
                     type="button"
-                    [class]="filterState().product === 'core' 
+                    [class]="filterState().product === 'core'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-green-100 text-green-700 border-l-4 border-green-600 dark:bg-green-900/30 dark:text-green-300 transition-all'
                       : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
                   >
@@ -368,7 +368,7 @@ interface ResourceGroup {
                     (click)="setProductFilter('money-loan')"
                     [disabled]="isReadOnlyMode() || isProductDisabled('money-loan')"
                     type="button"
-                    [class]="filterState().product === 'money-loan' 
+                    [class]="filterState().product === 'money-loan'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-amber-100 text-amber-700 border-l-4 border-amber-600 dark:bg-amber-900/30 dark:text-amber-300 transition-all'
                       : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-amber-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
                   >
@@ -383,7 +383,7 @@ interface ResourceGroup {
                     (click)="setProductFilter('bnpl')"
                     [disabled]="isReadOnlyMode() || isProductDisabled('bnpl')"
                     type="button"
-                    [class]="filterState().product === 'bnpl' 
+                    [class]="filterState().product === 'bnpl'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-blue-100 text-blue-700 border-l-4 border-blue-600 transition-all'
                       : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 transition-all'"
                   >
@@ -398,7 +398,7 @@ interface ResourceGroup {
                     (click)="setProductFilter('pawnshop')"
                     [disabled]="isReadOnlyMode() || isProductDisabled('pawnshop')"
                     type="button"
-                    [class]="filterState().product === 'pawnshop' 
+                    [class]="filterState().product === 'pawnshop'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-pink-100 text-pink-700 border-l-4 border-pink-600 transition-all'
                       : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-pink-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 transition-all'"
                   >
@@ -464,7 +464,7 @@ interface ResourceGroup {
 
                   <!-- Action checkboxes (responsive grid) -->
                   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2">
-                    <label *ngFor="let action of group.actions" 
+                    <label *ngFor="let action of group.actions"
                            [class]="'flex items-center gap-1.5 px-2 py-1.5 rounded transition text-xs ' + (isPermissionDisabled(group.resource, action) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50')"
                            [title]="getPermissionTooltip(group.resource, action)">
                       <input
@@ -526,7 +526,7 @@ export class RoleEditorComponent implements OnInit {
   selectedTenantIds = signal<number[]>([]); // Used for creating (multiple tenants)
   tenants = signal<any[]>([]);
   loadingTenants = signal(false);
-  
+
   // Enhanced filter state with signals
   filterState = signal<{
     space: 'all' | 'system' | 'tenant';
@@ -558,7 +558,7 @@ export class RoleEditorComponent implements OnInit {
   activeFilters = computed(() => {
     const filters: Array<{id: string; label: string; icon: string}> = [];
     const state = this.filterState();
-    
+
     if (state.space !== 'all') {
       const spaceLabels = {
         system: { label: 'System', icon: '⚡' },
@@ -569,7 +569,7 @@ export class RoleEditorComponent implements OnInit {
         ...spaceLabels[state.space]
       });
     }
-    
+
     if (state.product !== 'all') {
       const productLabels = {
         core: { label: 'Core', icon: '🏠' },
@@ -582,7 +582,7 @@ export class RoleEditorComponent implements OnInit {
         ...productLabels[state.product]
       });
     }
-    
+
     return filters;
   });
 
@@ -608,6 +608,11 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'payments', displayName: '💳 Payments', description: 'System payment management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
     { resource: 'audit', displayName: '📋 Audit', description: 'System audit logs', actions: ['read', 'export'], category: 'system' },
     { resource: 'settings', displayName: '⚙️ Settings', description: 'System settings', actions: ['read', 'update'], category: 'system' },
+    { resource: 'system-logs', displayName: '📝 System Logs', description: 'System logging and monitoring', actions: ['view', 'export', 'delete', 'manage'], category: 'system' },
+    { resource: 'audit-logs', displayName: '🔍 Audit Logs', description: 'Audit trail and user actions', actions: ['view', 'export', 'delete', 'manage'], category: 'system' },
+    { resource: 'activity-dashboard', displayName: '📊 Activity Dashboard', description: 'System activity overview', actions: ['view', 'manage'], category: 'system' },
+    { resource: 'backup', displayName: '💾 System Backup', description: 'Database backup and restore', actions: ['view', 'create', 'delete', 'restore'], category: 'system' },
+    { resource: 'security-policy', displayName: '🔒 Security Policy', description: 'Security settings and policies', actions: ['view', 'update', 'manage'], category: 'system' },
 
     // Tenant level - keeping all UI structure but matching DB permission keys
     { resource: 'tenant-dashboard', displayName: '🏠 Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant', product: 'core' },
@@ -636,7 +641,7 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'money-loan:notifications', displayName: '💰 Money Loan: Notifications', description: 'System notifications', actions: ['read'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan:user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan:integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
-    
+
     // Legacy Money Loan (for backward compatibility - deprecated)
     { resource: 'money-loan', displayName: '💰 Money Loan (Legacy)', description: 'Deprecated - use granular permissions above', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan-customers', displayName: '💰 Money Loan: Customers', description: 'Customer management', actions: ['read', 'create', 'update', 'delete', 'view-high-risk'], category: 'tenant', product: 'money-loan' },
@@ -651,10 +656,10 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'money-loan-notifications', displayName: '💰 Money Loan: Notifications', description: 'System notifications', actions: ['read'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan-user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan-integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
-    
+
     // Legacy Money Loan (for backward compatibility - deprecated)
     { resource: 'money-loan', displayName: '💰 Money Loan (Legacy)', description: 'Deprecated - use granular permissions above', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant', product: 'money-loan' },
-    
+
     // BNPL & Pawnshop
     { resource: 'bnpl', displayName: 'ðŸ›’ Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'bnpl' },
     { resource: 'pawnshop', displayName: 'ðŸª Pawnshop', description: 'Pawnshop operations', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'pawnshop' },
@@ -662,10 +667,10 @@ export class RoleEditorComponent implements OnInit {
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
-  
+
   // Tenant context detection
   isTenantContext = signal(false);
-  
+
   // Read-only mode detection
   isReadOnlyMode = signal(false);
   readOnlyReason = signal('');
@@ -753,7 +758,7 @@ export class RoleEditorComponent implements OnInit {
     const url = this.router.url;
     const isTenantCtx = url.startsWith('/tenant/');
     this.isTenantContext.set(isTenantCtx);
-    
+
     // Auto-set space filter to tenant when in tenant context
     if (this.isTenantContext()) {
       this.setSpaceFilter('tenant');
@@ -767,7 +772,7 @@ export class RoleEditorComponent implements OnInit {
       // Only load tenants list for system admin context
       this.loadTenants();
     }
-    
+
     this.route.params.subscribe(params => {
       if (params['id'] && params['id'] !== 'new') {
         this.isEditing.set(true);
@@ -862,7 +867,7 @@ export class RoleEditorComponent implements OnInit {
   // Helper method to get the category of a permission
   getPermissionCategory(permKey: string): 'system' | 'tenant' | null {
     const [resource, action] = permKey.split(':');
-    
+
     // Find the group that matches both resource and action
     for (const group of this.resourceGroups) {
       if (group.resource === resource && group.actions.includes(action)) {
@@ -870,7 +875,7 @@ export class RoleEditorComponent implements OnInit {
         return group.category === 'business' ? 'tenant' : group.category;
       }
     }
-    
+
     return null;
   }
 
@@ -893,7 +898,7 @@ export class RoleEditorComponent implements OnInit {
 
   toggleSelectSystem(): void {
     const perms = new Set<string>();
-    
+
     if (this.areAllSystemSelected()) {
       // Unselect all system permissions only, keep others
       this.selectedPermissions().forEach(permKey => {
@@ -910,7 +915,7 @@ export class RoleEditorComponent implements OnInit {
           perms.add(permKey);
         }
       });
-      
+
       // Add all system permissions
       this.resourceGroups.forEach(group => {
         if (group.category === 'system') {
@@ -920,16 +925,16 @@ export class RoleEditorComponent implements OnInit {
         }
       });
     }
-    
+
     this.selectedPermissions.set(perms);
-    
+
     // Apply system filter to show what was just selected/unselected
     this.setSpaceFilter('system');
   }
 
   toggleSelectTenant(): void {
     const perms = new Set<string>();
-    
+
     if (this.areAllTenantSelected()) {
       // Unselect all tenant permissions only, keep others
       this.selectedPermissions().forEach(permKey => {
@@ -946,7 +951,7 @@ export class RoleEditorComponent implements OnInit {
           perms.add(permKey);
         }
       });
-      
+
       // Add all tenant permissions EXCEPT Money Loan (only core tenant permissions)
       this.resourceGroups.forEach(group => {
         if (group.category === 'tenant' && group.product === 'core') {
@@ -956,9 +961,9 @@ export class RoleEditorComponent implements OnInit {
         }
       });
     }
-    
+
     this.selectedPermissions.set(perms);
-    
+
     // Apply tenant filter with core product to show what was just selected/unselected
     this.setSpaceFilter('tenant');
     this.setProductFilter('core');
@@ -966,7 +971,7 @@ export class RoleEditorComponent implements OnInit {
 
   toggleSelectMoneyLoan(): void {
     const perms = new Set<string>();
-    
+
     if (this.areAllMoneyLoanSelected()) {
       // Unselect all Money Loan permissions only, keep others
       this.selectedPermissions().forEach(permKey => {
@@ -985,7 +990,7 @@ export class RoleEditorComponent implements OnInit {
           perms.add(permKey);
         }
       });
-      
+
       // Add all Money Loan permissions
       this.resourceGroups.forEach(group => {
         if (group.product === 'money-loan') {
@@ -995,9 +1000,9 @@ export class RoleEditorComponent implements OnInit {
         }
       });
     }
-    
+
     this.selectedPermissions.set(perms);
-    
+
     // Apply tenant filter with money-loan product to show what was just selected/unselected
     this.setSpaceFilter('tenant');
     this.setProductFilter('money-loan');
@@ -1016,7 +1021,7 @@ export class RoleEditorComponent implements OnInit {
   areAllSystemSelected(): boolean {
     let totalSystemPerms = 0;
     let selectedSystemPerms = 0;
-    
+
     this.resourceGroups.forEach(group => {
       if (group.category === 'system') {
         totalSystemPerms += group.actions.length;
@@ -1027,7 +1032,7 @@ export class RoleEditorComponent implements OnInit {
         });
       }
     });
-    
+
     return totalSystemPerms > 0 && selectedSystemPerms === totalSystemPerms;
   }
 
@@ -1035,7 +1040,7 @@ export class RoleEditorComponent implements OnInit {
   areAllTenantSelected(): boolean {
     let totalTenantPerms = 0;
     let selectedTenantPerms = 0;
-    
+
     this.resourceGroups.forEach(group => {
       // Only count core tenant permissions, not Money Loan
       if (group.category === 'tenant' && group.product === 'core') {
@@ -1047,7 +1052,7 @@ export class RoleEditorComponent implements OnInit {
         });
       }
     });
-    
+
     return totalTenantPerms > 0 && selectedTenantPerms === totalTenantPerms;
   }
 
@@ -1055,7 +1060,7 @@ export class RoleEditorComponent implements OnInit {
   areAllMoneyLoanSelected(): boolean {
     let totalMoneyLoanPerms = 0;
     let selectedMoneyLoanPerms = 0;
-    
+
     this.resourceGroups.forEach(group => {
       if (group.product === 'money-loan') {
         totalMoneyLoanPerms += group.actions.length;
@@ -1066,7 +1071,7 @@ export class RoleEditorComponent implements OnInit {
         });
       }
     });
-    
+
     return totalMoneyLoanPerms > 0 && selectedMoneyLoanPerms === totalMoneyLoanPerms;
   }
 

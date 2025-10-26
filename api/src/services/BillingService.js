@@ -66,7 +66,7 @@ class BillingService {
       )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [name, description, price, billing_cycle, features, max_users, max_storage_gb,
-       product_type || 'platform', trial_days || 0, is_featured || false, custom_pricing || false, 
+       product_type, trial_days || 0, is_featured || false, custom_pricing || false, 
        status || 'active']
     );
     

@@ -71,7 +71,7 @@ export const routes: Routes = [
   },
   {
     path: 'settings',
-    loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
+    loadComponent: () => import('./features/admin/settings/settings.component').then(m => m.SettingsComponent),
     canActivate: [authGuard]
   },
   {
@@ -234,10 +234,22 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/reports/tenant-usage.component').then(m => m.TenantUsageComponent)
           },
           {
+            path: 'revenue',
+            loadComponent: () => import('./features/admin/reports/revenue-reports.component').then(m => m.RevenueReportsComponent)
+          },
+          {
             path: 'subscription-history',
             loadComponent: () => import('./features/admin/reports/subscription-history.component').then(m => m.SubscriptionHistoryComponent)
           }
         ]
+      },
+      {
+        path: 'product-adoption',
+        loadComponent: () => import('./features/admin/reports/product-adoption.component').then(m => m.ProductAdoptionComponent)
+      },
+      {
+        path: 'system-activity-logs',
+        loadComponent: () => import('./features/admin/system/system-logs.component').then(m => m.SystemActivityLogsComponent)
       },
       {
         path: 'system',
@@ -259,8 +271,45 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/system/system-config.component').then(m => m.SystemConfigComponent)
           },
           {
+            path: 'backup',
+            loadComponent: () => import('./features/admin/system/system-backup.component').then(m => m.SystemBackupComponent)
+          },
+          {
+            path: 'security-policy',
+            loadComponent: () => import('./features/admin/system/security-policy.component').then(m => m.SecurityPolicyComponent)
+          },
+          {
             path: 'logs',
-            loadComponent: () => import('./features/admin/system/system-logs.component').then(m => m.SystemLogsComponent)
+            loadComponent: () => import('./features/admin/system/system-logs.component').then(m => m.SystemActivityLogsComponent)
+          }
+        ]
+      },
+      {
+        path: 'settings',
+        children: [
+          {
+            path: 'general',
+            loadComponent: () => import('./features/settings/general-settings.component').then(m => m.GeneralSettingsComponent)
+          },
+          {
+            path: 'security-policies',
+            loadComponent: () => import('./features/settings/security-policies-settings.component').then(m => m.SecurityPoliciesSettingsComponent)
+          },
+          {
+            path: 'email',
+            loadComponent: () => import('./features/settings/email-settings.component').then(m => m.EmailSettingsComponent)
+          },
+          {
+            path: 'storage',
+            loadComponent: () => import('./features/settings/storage-settings.component').then(m => m.StorageSettingsComponent)
+          },
+          {
+            path: 'performance',
+            loadComponent: () => import('./features/settings/performance-settings.component').then(m => m.PerformanceSettingsComponent)
+          },
+          {
+            path: 'notifications',
+            loadComponent: () => import('./features/admin/settings/notification-rules.component').then(m => m.NotificationRulesComponent)
           }
         ]
       },

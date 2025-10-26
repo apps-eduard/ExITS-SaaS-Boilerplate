@@ -14,90 +14,6 @@ exports.seed = async function(knex) {
   // 1. Create subscription plans
   console.log('1. Creating subscription plans...');
   const subscriptionPlans = await knex('subscription_plans').insert([
-    {
-      name: 'Trial',
-      description: 'Free 14-day trial to test all features',
-      price: 0.00,
-      billing_cycle: 'one_time',
-      max_users: 3,
-      max_storage_gb: 5,
-      product_type: 'platform', // Platform-level plan
-      features: JSON.stringify({
-        basic_support: true,
-        api_access: true,
-        advanced_reporting: true,
-        custom_branding: false,
-        trial_duration_days: 14
-      }),
-      status: 'active',
-      is_popular: false,
-      setup_fee: 0.00,
-      terms_and_conditions: 'Free 14-day trial. No credit card required. Trial expires after 14 days.'
-    },
-    {
-      name: 'Starter',
-      description: 'Perfect for small businesses getting started',
-      price: 29.99,
-      billing_cycle: 'monthly',
-      max_users: 5,
-      max_storage_gb: 10,
-      product_type: 'platform', // Platform-level plan
-      features: JSON.stringify({
-        basic_support: true,
-        api_access: false,
-        advanced_reporting: false,
-        custom_branding: false
-      }),
-      status: 'active',
-      is_popular: false,
-      setup_fee: 0.00,
-      terms_and_conditions: 'Standard terms apply for Starter plan.'
-    },
-    {
-      name: 'Pro',
-      description: 'Best for growing businesses with advanced needs',
-      price: 79.99,
-      billing_cycle: 'monthly',
-      max_users: 25,
-      max_storage_gb: 50,
-      product_type: 'platform', // Platform-level plan
-      features: JSON.stringify({
-        basic_support: true,
-        priority_support: true,
-        api_access: true,
-        advanced_reporting: true,
-        custom_branding: false,
-        integrations: true
-      }),
-      status: 'active',
-      is_popular: true,
-      setup_fee: 0.00,
-      terms_and_conditions: 'Standard terms apply for Professional plan.'
-    },
-    {
-      name: 'Enterprise',
-      description: 'For large organizations with enterprise requirements',
-      price: 199.99,
-      billing_cycle: 'monthly',
-      max_users: 100,
-      max_storage_gb: 200,
-      product_type: 'platform', // Platform-level plan
-      features: JSON.stringify({
-        basic_support: true,
-        priority_support: true,
-        dedicated_support: true,
-        api_access: true,
-        advanced_reporting: true,
-        custom_branding: true,
-        integrations: true,
-        sso: true,
-        advanced_security: true
-      }),
-      status: 'active',
-      is_popular: false,
-      setup_fee: 99.99,
-      terms_and_conditions: 'Enterprise terms and SLA apply.'
-    },
     // Product-specific plans
     {
       name: 'Money Loan - Starter',
@@ -272,46 +188,8 @@ exports.seed = async function(knex) {
   
   console.log(`✅ ${subscriptionPlans.length} subscription plans created`);
 
-  // 2. Create detailed plan features
-  console.log('2. Creating plan features...');
-  const planFeatures = [];
-
-  // Starter plan features
-  const starterPlan = subscriptionPlans.find(p => p.name === 'Starter');
-  planFeatures.push(
-    { plan_id: starterPlan.id, feature_key: 'users', feature_name: 'Maximum Users', description: 'Number of users allowed', feature_value: '5', limit_value: 5 },
-    { plan_id: starterPlan.id, feature_key: 'storage', feature_name: 'Storage (GB)', description: 'Storage space in GB', feature_value: '10', limit_value: 10 },
-    { plan_id: starterPlan.id, feature_key: 'support', feature_name: 'Email Support', description: 'Basic email support', feature_value: 'true' },
-    { plan_id: starterPlan.id, feature_key: 'reports', feature_name: 'Basic Reports', description: 'Standard reporting features', feature_value: 'true' }
-  );
-
-  // Pro plan features
-  const proPlan = subscriptionPlans.find(p => p.name === 'Pro');
-  planFeatures.push(
-    { plan_id: proPlan.id, feature_key: 'users', feature_name: 'Maximum Users', description: 'Number of users allowed', feature_value: '25', limit_value: 25 },
-    { plan_id: proPlan.id, feature_key: 'storage', feature_name: 'Storage (GB)', description: 'Storage space in GB', feature_value: '50', limit_value: 50 },
-    { plan_id: proPlan.id, feature_key: 'support', feature_name: 'Priority Support', description: 'Priority email and chat support', feature_value: 'true' },
-    { plan_id: proPlan.id, feature_key: 'reports', feature_name: 'Advanced Reports', description: 'Advanced reporting and analytics', feature_value: 'true' },
-    { plan_id: proPlan.id, feature_key: 'api', feature_name: 'API Access', description: 'REST API access', feature_value: 'true' },
-    { plan_id: proPlan.id, feature_key: 'integrations', feature_name: 'Third-party Integrations', description: 'Connect with external systems', feature_value: 'true' }
-  );
-
-  // Enterprise plan features
-  const enterprisePlan = subscriptionPlans.find(p => p.name === 'Enterprise');
-  planFeatures.push(
-    { plan_id: enterprisePlan.id, feature_key: 'users', feature_name: 'Maximum Users', description: 'Number of users allowed', feature_value: 'unlimited', limit_value: 999999 },
-    { plan_id: enterprisePlan.id, feature_key: 'storage', feature_name: 'Storage (GB)', description: 'Storage space in GB', feature_value: 'unlimited', limit_value: 999999 },
-    { plan_id: enterprisePlan.id, feature_key: 'support', feature_name: 'Dedicated Support', description: 'Dedicated account manager and support', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'reports', feature_name: 'Custom Reports', description: 'Custom reporting and dashboards', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'api', feature_name: 'Full API Access', description: 'Complete REST API access', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'integrations', feature_name: 'All Integrations', description: 'All available integrations', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'sso', feature_name: 'Single Sign-On', description: 'SAML/OIDC SSO integration', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'branding', feature_name: 'Custom Branding', description: 'White-label customization', feature_value: 'true' },
-    { plan_id: enterprisePlan.id, feature_key: 'security', feature_name: 'Advanced Security', description: 'Enhanced security features', feature_value: 'true' }
-  );
-
-  await knex('plan_features').insert(planFeatures);
-  console.log(`✅ ${planFeatures.length} plan features created`);
+  // 2. Plan features are now defined in the features JSON field of each plan
+  console.log('2. Plan features embedded in subscription plans');
 
   // 3. Create product subscriptions for existing tenants
   // NOTE: Changed: do NOT create any product_subscriptions by default during seed.
@@ -328,17 +206,13 @@ exports.seed = async function(knex) {
   console.log('\n✨ Products and subscriptions seed completed successfully!');
   console.log('\n📋 Summary:');
   console.log(`   • ${subscriptionPlans.length} subscription plans`);
-  console.log(`   • ${planFeatures.length} plan features`);
+  console.log(`   • Plan features embedded in each plan`);
   console.log(`   • ${productSubscriptionCount} product subscriptions`);
   console.log(`   • ${tenantSubscriptionCount} tenant subscriptions`);
   
   console.log('\n💰 Subscription Plans:');
   subscriptionPlans.forEach(plan => {
-    if (plan.name === 'Trial') {
-      console.log(`   • ${plan.name}: $${plan.price} (14-day trial)`);
-    } else {
-      console.log(`   • ${plan.name}: $${plan.price}/month`);
-    }
+    console.log(`   • ${plan.name} (${plan.product_type}): $${plan.price}/${plan.billing_cycle}`);
   });
 };
 

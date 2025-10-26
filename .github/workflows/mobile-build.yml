@@ -1,86 +1,86 @@
-name: Mobile Build & Test
+# name: Mobile Build & Test
 
-on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'mobile/**'
-      - '.github/workflows/mobile-build.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'mobile/**'
+# on:
+#   push:
+#     branches: [main, develop]
+#     paths:
+#       - 'mobile/**'
+#       - '.github/workflows/mobile-build.yml'
+#   pull_request:
+#     branches: [main, develop]
+#     paths:
+#       - 'mobile/**'
 
-jobs:
-  build:
-    name: Build & Lint
-    runs-on: ubuntu-latest
+# jobs:
+#   build:
+#     name: Build & Lint
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
+#           cache: 'npm'
+#           cache-dependency-path: mobile/package-lock.json
 
-      - name: Install dependencies
-        run: |
-          cd mobile
-          npm ci
+#       - name: Install dependencies
+#         run: |
+#           cd mobile
+#           npm ci
 
-      - name: Run linter
-        run: |
-          cd mobile
-          npm run lint
-        continue-on-error: true
+#       - name: Run linter
+#         run: |
+#           cd mobile
+#           npm run lint
+#         continue-on-error: true
 
-      - name: Build application
-        run: |
-          cd mobile
-          npm run build:prod
+#       - name: Build application
+#         run: |
+#           cd mobile
+#           npm run build:prod
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: mobile-build
-          path: mobile/www
-          retention-days: 5
+#       - name: Upload build artifacts
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: mobile-build
+#           path: mobile/www
+#           retention-days: 5
 
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
+#   test:
+#     name: Run Tests
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
+#           cache: 'npm'
+#           cache-dependency-path: mobile/package-lock.json
 
-      - name: Install dependencies
-        run: |
-          cd mobile
-          npm ci
+#       - name: Install dependencies
+#         run: |
+#           cd mobile
+#           npm ci
 
-      - name: Run tests
-        run: |
-          cd mobile
-          npm run test:coverage
-        env:
-          CI: true
+#       - name: Run tests
+#         run: |
+#           cd mobile
+#           npm run test:coverage
+#         env:
+#           CI: true
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./mobile/coverage/lcov.info
-          flags: mobile
-          name: mobile-coverage
-        continue-on-error: true
+#       - name: Upload coverage
+#         uses: codecov/codecov-action@v3
+#         with:
+#           files: ./mobile/coverage/lcov.info
+#           flags: mobile
+#           name: mobile-coverage
+#         continue-on-error: true

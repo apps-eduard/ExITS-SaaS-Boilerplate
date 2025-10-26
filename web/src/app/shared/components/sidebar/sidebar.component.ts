@@ -187,7 +187,7 @@ export class SidebarComponent {
       ]
     },
     {
-      label: 'Subscriptions & Billing',
+      label: 'Subscriptions',
       icon: '💳',
       anyPermission: ['subscriptions:read', 'subscriptions:create', 'tenant-billing:read'],
       children: [
@@ -200,26 +200,39 @@ export class SidebarComponent {
       ]
     },
     {
-      label: 'Settings',
-      icon: '⚙️',
-      anyPermission: ['settings:read', 'settings:update', 'audit:read'],
+      label: 'System',
+      icon: '🖥️',
+      anyPermission: ['settings:read', 'settings:update', 'backup:view', 'audit:read', 'activity-dashboard:view'],
       children: [
-        { label: 'Configuration', icon: '🔧', route: '/admin/system/config', permission: 'settings:update' },
-        { label: 'Notification Rules', icon: '🔔', route: '/admin/settings/notifications', permission: 'settings:update' },
-        { label: 'System and Audit Logs', icon: '🧾', route: '/admin/system/logs', permission: 'audit:read' },
-        { label: 'System Backups', icon: '🧱', route: '/admin/settings/backups', permission: 'settings:update' },
-        { label: 'Security Policies', icon: '🛡️', route: '/admin/settings/security', permission: 'settings:update' },
+        { label: 'Dashboard', icon: '📊', route: '/admin/system', permission: 'settings:read' },
+        { label: 'Health Monitor', icon: '💚', route: '/admin/system/health', permission: 'settings:read' },
+        { label: 'Performance', icon: '⚡', route: '/admin/system/performance', permission: 'settings:read' },
+        { label: 'System Logs', icon: '📝', route: '/admin/system/logs', permission: 'activity-dashboard:view' },
+        { label: 'Backup', icon: '💾', route: '/admin/system/backup', permission: 'backup:view' },
       ]
     },
     {
       label: 'Reports',
       icon: '📊',
-      anyPermission: ['reports:view', 'reports:export', 'analytics:view'],
+      anyPermission: ['reports:view', 'reports:export', 'analytics:view', 'activity-dashboard:view'],
       children: [
         { label: 'Tenant Usage', icon: '📈', route: '/admin/reports/tenant-usage', permission: 'reports:view' },
         { label: 'Revenue Reports', icon: '💰', route: '/admin/reports/revenue', permission: 'reports:view' },
-        { label: 'Product Adoption', icon: '🧩', route: '/admin/reports/product-adoption', permission: 'reports:view' },
-        { label: 'System Activity Logs', icon: '🧾', route: '/admin/reports/activity-logs', permission: 'audit:read' },
+        { label: 'Subscription History', icon: '📜', route: '/admin/reports/subscription-history', permission: 'reports:view' },
+        { label: 'Product Adoption', icon: '🧩', route: '/admin/product-adoption', permission: 'reports:view' },
+      ]
+    },
+    {
+      label: 'Settings',
+      icon: '⚙️',
+      anyPermission: ['settings:read', 'settings:update'],
+      children: [
+        { label: 'General', icon: '🔧', route: '/admin/settings/general', permission: 'settings:update' },
+        { label: 'Security & Policies', icon: '🔒', route: '/admin/settings/security-policies', permission: 'settings:update' },
+        { label: 'Email', icon: '📧', route: '/admin/settings/email', permission: 'settings:update' },
+        { label: 'Storage', icon: '💾', route: '/admin/settings/storage', permission: 'settings:update' },
+        { label: 'Performance', icon: '⚡', route: '/admin/settings/performance', permission: 'settings:update' },
+        { label: 'Notification Rules', icon: '🔔', route: '/admin/settings/notifications', permission: 'settings:update' },
       ]
     },
     {

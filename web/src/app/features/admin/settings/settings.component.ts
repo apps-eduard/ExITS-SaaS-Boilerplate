@@ -1,9 +1,9 @@
 import { Component, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { HeaderComponent } from '../../shared/components/header/header.component';
-import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
+import { AuthService } from '../../../core/services/auth.service';
+import { HeaderComponent } from '../../../shared/components/header/header.component';
+import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
 
 @Component({
   selector: 'app-settings',
@@ -167,6 +167,40 @@ import { SidebarComponent } from '../../shared/components/sidebar/sidebar.compon
             <div class="flex-1">
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Billing</h3>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage plans, subscriptions, and invoices</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Backup -->
+        <div *ngIf="authService.hasPermission('backup:view')"
+             routerLink="/admin/system/backup"
+             class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">System Backup</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage database backups and schedules</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Policy -->
+        <div *ngIf="authService.hasPermission('security-policy:view')"
+             routerLink="/admin/system/security-policy"
+             class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Security Policy</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Configure security settings and policies</p>
             </div>
           </div>
         </div>

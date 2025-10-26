@@ -309,8 +309,8 @@ class TenantService {
     const SubscriptionPlanService = require('./SubscriptionPlanService');
     
     try {
-      // First, sync product subscriptions to ensure they exist
-      await this.syncProductSubscriptions(tenantId);
+      // NOTE: Auto-sync disabled - tenants must manually subscribe
+      // await this.syncProductSubscriptions(tenantId);
 
       // Get tenant enabled products
       const tenantResult = await pool.query(

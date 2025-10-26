@@ -1,4 +1,4 @@
-# GitHub Actions Secrets Template
+<!-- # GitHub Actions Secrets Template
 
 ## Environment Setup
 
@@ -328,4 +328,4 @@ SSL_KEY_PATH=/etc/ssl/private/example.com.key
 
 - [GitHub Actions Security Best Practices](https://docs.github.com/en/actions/security-guides)
 - [GitHub Secrets Documentation](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
-- [SSH Key Best Practices](https://wiki.debian.org/SSH)
+- [SSH Key Best Practices](https://wiki.debian.org/SSH) -->

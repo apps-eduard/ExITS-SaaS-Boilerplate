@@ -73,14 +73,10 @@ interface PlanTemplate {
                   <div class="flex-1">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
                     <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ plan.description }}</p>
-                    
+
                     <!-- Product Type Badge -->
                     <div class="mt-2">
-                      @if (plan.productType === 'platform') {
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded">
-                          🌐 Platform Plan (All Products)
-                        </span>
-                      } @else if (plan.productType === 'money_loan') {
+                      @if (plan.productType === 'money_loan') {
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
                           💰 Money Loan
                         </span>
@@ -245,7 +241,6 @@ interface PlanTemplate {
                     [(ngModel)]="formData.productType"
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
-                    <option value="platform">🌐 Platform Plan (General)</option>
                     <option value="money_loan">💰 Money Loan</option>
                     <option value="bnpl">🛍️ Buy Now Pay Later (BNPL)</option>
                     <option value="pawnshop">💎 Pawnshop</option>
@@ -368,7 +363,7 @@ interface PlanTemplate {
                   </svg>
                   🌟 Features
                 </label>
-                
+
                 <div class="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-900/50 space-y-3">
                   @for (category of getCategoryKeys(); track category) {
                     <div class="bg-white dark:bg-gray-800 rounded p-2.5 border border-gray-200 dark:border-gray-700">
@@ -382,13 +377,13 @@ interface PlanTemplate {
                           <span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Multiple</span>
                         }
                       </div>
-                      
+
                       <div class="space-y-1.5">
                         @if (getCategory(category).mutuallyExclusive) {
                           <!-- Add "None" option for radio buttons -->
                           <label class="flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1.5 rounded cursor-pointer">
-                            <input 
-                              type="radio" 
+                            <input
+                              type="radio"
                               [name]="'category_' + category"
                               [value]="''"
                               [checked]="!isCategorySelected(category)"
@@ -398,12 +393,12 @@ interface PlanTemplate {
                             <span class="text-gray-500 dark:text-gray-400 italic">None</span>
                           </label>
                         }
-                        
+
                         @for (feature of getCategory(category).options; track feature) {
                           <label class="flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1.5 rounded cursor-pointer">
                             @if (getCategory(category).mutuallyExclusive) {
-                              <input 
-                                type="radio" 
+                              <input
+                                type="radio"
                                 [name]="'category_' + category"
                                 [value]="feature"
                                 [checked]="formData.features.includes(feature)"
@@ -411,7 +406,7 @@ interface PlanTemplate {
                                 class="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 focus:ring-primary-500"
                               />
                             } @else {
-                              <input 
+                              <input
                                 type="checkbox"
                                 [checked]="formData.features.includes(feature)"
                                 (change)="toggleCheckboxFeature(feature, $event)"
@@ -669,7 +664,7 @@ export class PlanTemplatesComponent implements OnInit {
     maxStorageGb: null as number | null,
     isFeatured: false,
     customPricing: false,
-    productType: 'platform' as string | null,
+    productType: 'money_loan' as string | null,
     features: [] as string[],
     isActive: true
   };
@@ -707,7 +702,7 @@ export class PlanTemplatesComponent implements OnInit {
           is_null: plan.product_type === null,
           is_undefined: plan.product_type === undefined,
           is_empty_string: plan.product_type === '',
-          will_become: plan.product_type || 'platform'
+          will_become: plan.product_type
         });
 
         return {
@@ -715,8 +710,8 @@ export class PlanTemplatesComponent implements OnInit {
           subscriber_count: parseInt(plan.subscriber_count || '0', 10), // Keep original property name for template
           subscriberCount: parseInt(plan.subscriber_count || '0', 10),  // Also keep camelCase version
           // Parse features if it's a JSON string
-          features: typeof plan.features === 'string' 
-            ? JSON.parse(plan.features) 
+          features: typeof plan.features === 'string'
+            ? JSON.parse(plan.features)
             : (Array.isArray(plan.features) ? plan.features : []),
           // Add template-compatible properties
           currency: 'PHP',
@@ -724,7 +719,7 @@ export class PlanTemplatesComponent implements OnInit {
           trialDays: plan.trial_days || 0,
           isActive: plan.status === 'active',
           // Product type is now always a string
-          productType: plan.product_type || 'platform'
+          productType: plan.product_type
         };
       });
 
@@ -753,7 +748,7 @@ export class PlanTemplatesComponent implements OnInit {
       maxStorageGb: plan.max_storage_gb,
       isFeatured: (plan as any).is_featured || false,
       customPricing: (plan as any).custom_pricing || false,
-      productType: (plan as any).productType || 'platform',
+      productType: (plan as any).productType || 'money_loan',
       features: typeof plan.features === 'string' ? JSON.parse(plan.features) : (Array.isArray(plan.features) ? [...plan.features] : []),
       isActive: plan.status === 'active'
     };
@@ -845,7 +840,7 @@ export class PlanTemplatesComponent implements OnInit {
   // Radio button handler (mutually exclusive categories)
   selectRadioFeature(categoryKey: string, feature: string) {
     const category = this.getCategory(categoryKey);
-    
+
     // Remove all features from this category first
     category.options.forEach((opt: string) => {
       const index = this.formData.features.indexOf(opt);
@@ -853,7 +848,7 @@ export class PlanTemplatesComponent implements OnInit {
         this.formData.features.splice(index, 1);
       }
     });
-    
+
     // Add the selected feature
     this.formData.features.push(feature);
   }
@@ -861,7 +856,7 @@ export class PlanTemplatesComponent implements OnInit {
   // Clear all selections from a radio category
   clearRadioCategory(categoryKey: string) {
     const category = this.getCategory(categoryKey);
-    
+
     // Remove all features from this category
     category.options.forEach((opt: string) => {
       const index = this.formData.features.indexOf(opt);
@@ -874,7 +869,7 @@ export class PlanTemplatesComponent implements OnInit {
   // Checkbox handler (multiple selection)
   toggleCheckboxFeature(feature: string, event: any) {
     const isChecked = event.target.checked;
-    
+
     if (isChecked) {
       if (!this.formData.features.includes(feature)) {
         this.formData.features.push(feature);
@@ -890,7 +885,7 @@ export class PlanTemplatesComponent implements OnInit {
   // Keep original toggleFeature for compatibility
   toggleFeature(categoryKey: string, feature: string, event: any) {
     const category = this.getCategory(categoryKey);
-    
+
     if (category.mutuallyExclusive) {
       // For radio-style categories
       this.selectRadioFeature(categoryKey, feature);
@@ -919,7 +914,7 @@ export class PlanTemplatesComponent implements OnInit {
       trial_days: this.formData.trialDays,
       is_featured: this.formData.isFeatured,
       custom_pricing: this.formData.customPricing,
-      product_type: this.formData.productType || 'platform',
+      product_type: this.formData.productType,
       status: this.formData.isActive ? 'active' : 'inactive'
     };
 

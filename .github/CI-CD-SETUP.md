@@ -1,4 +1,4 @@
-# GitHub Actions CI/CD Configuration
+<!-- # GitHub Actions CI/CD Configuration
 
 ## Overview
 
@@ -292,4 +292,4 @@ Before first production deployment:
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Docker Compose Best Practices](https://docs.github.com/en/packages/container-registry)
-- [SSH Keys with GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+- [SSH Keys with GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) -->
