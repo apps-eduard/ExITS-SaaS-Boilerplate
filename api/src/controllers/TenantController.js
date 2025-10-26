@@ -28,6 +28,13 @@ class TenantController {
         data: result,
       });
     } catch (err) {
+      // Handle unique constraint violation for contact_email
+      if (err.code === '23505' && err.constraint === 'tenants_contact_email_unique') {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Contact email already in use by another tenant',
+          error: 'DUPLICATE_CONTACT_EMAIL'
+        });
+      }
       next(err);
     }
   }
@@ -210,6 +217,13 @@ class TenantController {
         data: result,
       });
     } catch (err) {
+      // Handle unique constraint violation for contact_email
+      if (err.code === '23505' && err.constraint === 'tenants_contact_email_unique') {
+        return res.status(CONSTANTS.HTTP_STATUS.BAD_REQUEST).json({
+          message: 'Contact email already in use by another tenant',
+          error: 'DUPLICATE_CONTACT_EMAIL'
+        });
+      }
       next(err);
     }
   }

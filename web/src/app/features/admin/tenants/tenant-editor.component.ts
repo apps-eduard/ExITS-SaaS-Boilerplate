@@ -245,53 +245,6 @@ interface TenantForm {
           </div>
         </div>
 
-        <!-- Branding (Optional) -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-          <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-            <h2 class="text-xs font-semibold text-gray-900 dark:text-white">Branding (Optional)</h2>
-          </div>
-          <div class="p-4 space-y-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Logo URL
-              </label>
-              <input
-                type="url"
-                [(ngModel)]="form.logo_url"
-                name="logo_url"
-                placeholder="https://example.com/logo.png"
-                class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-              />
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Primary Color
-                </label>
-                <input
-                  type="color"
-                  [(ngModel)]="form.colors!.primary"
-                  name="primary_color"
-                  class="w-full h-8 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Secondary Color
-                </label>
-                <input
-                  type="color"
-                  [(ngModel)]="form.colors!.secondary"
-                  name="secondary_color"
-                  class="w-full h-8 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Actions -->
         <div class="flex items-center justify-between">
           <button
@@ -377,6 +330,11 @@ export class TenantEditorComponent implements OnInit {
           bnplEnabled: tenant.bnplEnabled,
           pawnshopEnabled: tenant.pawnshopEnabled
         });
+        console.log('   Contact info:', {
+          contactPerson: tenant.contactPerson,
+          contactEmail: tenant.contactEmail,
+          contactPhone: tenant.contactPhone
+        });
         
         this.form = {
           name: tenant.name,
@@ -386,9 +344,10 @@ export class TenantEditorComponent implements OnInit {
             primary: tenant.primaryColor || '#3b82f6', 
             secondary: tenant.secondaryColor || '#8b5cf6' 
           },
-          contact_person: tenant.contact_person || '',
-          contact_email: tenant.contact_email || '',
-          contact_phone: tenant.contact_phone || '',
+          // Fix: API returns camelCase (contactPerson) but form uses snake_case (contact_person)
+          contact_person: tenant.contactPerson || '',
+          contact_email: tenant.contactEmail || '',
+          contact_phone: tenant.contactPhone || '',
           money_loan_enabled: tenant.moneyLoanEnabled || false,
           bnpl_enabled: tenant.bnplEnabled || false,
           pawnshop_enabled: tenant.pawnshopEnabled || false

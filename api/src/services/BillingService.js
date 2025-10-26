@@ -133,20 +133,27 @@ class BillingService {
   }
 
   /**
-   * Get all tenant subscriptions
+   * Get all product subscriptions (used by All Subscriptions admin page)
    */
   static async getSubscriptions() {
     const result = await pool.query(
       `SELECT 
-        ts.*, 
+        ps.id,
+        ps.tenant_id,
+        ps.product_type,
+        ps.status,
+        ps.started_at,
+        ps.expires_at,
+        ps.price,
+        ps.billing_cycle,
+        ps.created_at,
+        ps.updated_at,
         t.name as tenant_name,
-        sp.name as plan_name,
-        sp.price as plan_price,
-        sp.billing_cycle
-       FROM tenant_subscriptions ts
-       JOIN tenants t ON ts.tenant_id = t.id
-       JOIN subscription_plans sp ON ts.plan_id = sp.id
-       ORDER BY ts.created_at DESC`
+        sp.name as plan_name
+       FROM product_subscriptions ps
+       JOIN tenants t ON ps.tenant_id = t.id
+       JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
+       ORDER BY ps.created_at DESC`
     );
     return result.rows;
   }

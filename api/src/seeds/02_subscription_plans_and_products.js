@@ -314,90 +314,16 @@ exports.seed = async function(knex) {
   console.log(`✅ ${planFeatures.length} plan features created`);
 
   // 3. Create product subscriptions for existing tenants
-  console.log('3. Creating product subscriptions for tenants...');
-  const tenants = await knex('tenants').select('id', 'name', 'money_loan_enabled', 'bnpl_enabled', 'pawnshop_enabled');
-  
-  let productSubscriptionCount = 0;
-  for (const tenant of tenants) {
-    // Subscribe to Money Loan if enabled
-    if (tenant.money_loan_enabled) {
-      const plan = tenant.name === 'ExITS Platform' 
-        ? subscriptionPlans.find(p => p.name === 'Money Loan - Enterprise')
-        : subscriptionPlans.find(p => p.name === 'Money Loan - Pro');
-      
-      await knex('product_subscriptions').insert({
-        tenant_id: tenant.id,
-        product_type: 'money_loan',
-        subscription_plan_id: plan.id,
-        status: 'active',
-        price: plan.price,
-        billing_cycle: 'monthly'
-      });
-      productSubscriptionCount++;
-    }
-
-    // Subscribe to BNPL if enabled
-    if (tenant.bnpl_enabled) {
-      const plan = tenant.name === 'ExITS Platform'
-        ? subscriptionPlans.find(p => p.name === 'BNPL - Pro')
-        : subscriptionPlans.find(p => p.name === 'BNPL - Starter');
-      
-      await knex('product_subscriptions').insert({
-        tenant_id: tenant.id,
-        product_type: 'bnpl',
-        subscription_plan_id: plan.id,
-        status: 'active',
-        price: plan.price,
-        billing_cycle: 'monthly'
-      });
-      productSubscriptionCount++;
-    }
-
-    // Subscribe to Pawnshop if enabled
-    if (tenant.pawnshop_enabled) {
-      const plan = tenant.name === 'ExITS Platform'
-        ? subscriptionPlans.find(p => p.name === 'Pawnshop - Pro')
-        : subscriptionPlans.find(p => p.name === 'Pawnshop - Starter');
-      
-      await knex('product_subscriptions').insert({
-        tenant_id: tenant.id,
-        product_type: 'pawnshop',
-        subscription_plan_id: plan.id,
-        status: 'active',
-        price: plan.price,
-        billing_cycle: 'monthly'
-      });
-      productSubscriptionCount++;
-    }
-  }
-  
-  console.log(`✅ ${productSubscriptionCount} product subscriptions created`);
+  // NOTE: Changed: do NOT create any product_subscriptions by default during seed.
+  // Leaving tenants and plans in place but intentionally skipping insertion of
+  // product_subscriptions so new environments start with no subscriptions.
+  console.log('3. Skipping creation of product subscriptions by default (seed adjusted to leave subscriptions empty).');
+  const productSubscriptionCount = 0;
 
   // 4. Create tenant subscriptions (main platform subscriptions)
-  console.log('4. Creating tenant subscriptions...');
-  let tenantSubscriptionCount = 0;
-  for (const tenant of tenants) {
-    let planName = 'Pro'; // Default
-    if (tenant.name === 'ExITS Platform') {
-      planName = 'Enterprise';
-    } else if (tenant.name === 'ACME Corporation') {
-      planName = 'Pro';
-    }
-    
-    const plan = subscriptionPlans.find(p => p.name === planName);
-    await knex('tenant_subscriptions').insert({
-      tenant_id: tenant.id,
-      plan_id: plan.id,
-      status: 'active',
-      monthly_price: plan.price,
-      started_at: knex.fn.now(),
-      expires_at: knex.raw("NOW() + INTERVAL '1 year'"),
-      next_billing_date: knex.raw("NOW() + INTERVAL '1 month'")
-    });
-    tenantSubscriptionCount++;
-  }
-  
-  console.log(`✅ ${tenantSubscriptionCount} tenant subscriptions created`);
+  // NOTE: Changed: do NOT create tenant_subscriptions by default during seed.
+  console.log('4. Skipping creation of tenant subscriptions by default (seed adjusted).');
+  const tenantSubscriptionCount = 0;
 
   console.log('\n✨ Products and subscriptions seed completed successfully!');
   console.log('\n📋 Summary:');

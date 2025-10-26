@@ -117,23 +117,45 @@ exports.seed = async function(knex) {
     { permission_key: 'recycle-bin:restore', resource: 'recycle-bin', action: 'restore', description: 'Restore deleted items', space: 'system' },
     { permission_key: 'recycle-bin:permanent-delete', resource: 'recycle-bin', action: 'permanent-delete', description: 'Permanently delete items', space: 'system' },
     
-    // Tenant permissions
-    { permission_key: 'users:create', resource: 'users', action: 'create', description: 'Create users', space: 'tenant' },
-    { permission_key: 'users:read', resource: 'users', action: 'read', description: 'View users', space: 'tenant' },
-    { permission_key: 'users:update', resource: 'users', action: 'update', description: 'Edit users', space: 'tenant' },
-    { permission_key: 'users:delete', resource: 'users', action: 'delete', description: 'Delete users', space: 'tenant' },
-    { permission_key: 'users:export', resource: 'users', action: 'export', description: 'Export user data', space: 'tenant' },
+    // System Settings & Configuration
+    { permission_key: 'settings:read', resource: 'settings', action: 'read', description: 'View system settings', space: 'system' },
+    { permission_key: 'settings:update', resource: 'settings', action: 'update', description: 'Edit system settings', space: 'system' },
     
-    { permission_key: 'roles:create', resource: 'roles', action: 'create', description: 'Create roles', space: 'tenant' },
-    { permission_key: 'roles:read', resource: 'roles', action: 'read', description: 'View roles', space: 'tenant' },
-    { permission_key: 'roles:update', resource: 'roles', action: 'update', description: 'Edit roles', space: 'tenant' },
-    { permission_key: 'roles:delete', resource: 'roles', action: 'delete', description: 'Delete roles', space: 'tenant' },
+    // System Audit Logs
+    { permission_key: 'audit:read', resource: 'audit', action: 'read', description: 'View system audit logs', space: 'system' },
+    { permission_key: 'audit:export', resource: 'audit', action: 'export', description: 'Export system audit logs', space: 'system' },
     
-    { permission_key: 'audit:read', resource: 'audit', action: 'read', description: 'View audit logs', space: 'tenant' },
-    { permission_key: 'audit:export', resource: 'audit', action: 'export', description: 'Export audit logs', space: 'tenant' },
+    // System-level User Management (for Super Admin to manage all users)
+    { permission_key: 'users:create', resource: 'users', action: 'create', description: 'Create users (system-wide)', space: 'system' },
+    { permission_key: 'users:read', resource: 'users', action: 'read', description: 'View users (system-wide)', space: 'system' },
+    { permission_key: 'users:update', resource: 'users', action: 'update', description: 'Edit users (system-wide)', space: 'system' },
+    { permission_key: 'users:delete', resource: 'users', action: 'delete', description: 'Delete users (system-wide)', space: 'system' },
+    { permission_key: 'users:export', resource: 'users', action: 'export', description: 'Export user data (system-wide)', space: 'system' },
     
-    { permission_key: 'settings:read', resource: 'settings', action: 'read', description: 'View settings', space: 'tenant' },
-    { permission_key: 'settings:update', resource: 'settings', action: 'update', description: 'Edit settings', space: 'tenant' },
+    // Tenant-scoped permissions (kept with tenant prefix to avoid conflicts)
+    { permission_key: 'tenant-users:create', resource: 'tenant-users', action: 'create', description: 'Create users within tenant', space: 'tenant' },
+    { permission_key: 'tenant-users:read', resource: 'tenant-users', action: 'read', description: 'View users within tenant', space: 'tenant' },
+    { permission_key: 'tenant-users:update', resource: 'tenant-users', action: 'update', description: 'Edit users within tenant', space: 'tenant' },
+    { permission_key: 'tenant-users:delete', resource: 'tenant-users', action: 'delete', description: 'Delete users within tenant', space: 'tenant' },
+    { permission_key: 'tenant-users:export', resource: 'tenant-users', action: 'export', description: 'Export tenant user data', space: 'tenant' },
+    
+    // System-level Role Management  
+    { permission_key: 'roles:create', resource: 'roles', action: 'create', description: 'Create roles (system-wide)', space: 'system' },
+    { permission_key: 'roles:read', resource: 'roles', action: 'read', description: 'View roles (system-wide)', space: 'system' },
+    { permission_key: 'roles:update', resource: 'roles', action: 'update', description: 'Edit roles (system-wide)', space: 'system' },
+    { permission_key: 'roles:delete', resource: 'roles', action: 'delete', description: 'Delete roles (system-wide)', space: 'system' },
+    
+    // Tenant-scoped role permissions
+    { permission_key: 'tenant-roles:create', resource: 'tenant-roles', action: 'create', description: 'Create roles within tenant', space: 'tenant' },
+    { permission_key: 'tenant-roles:read', resource: 'tenant-roles', action: 'read', description: 'View roles within tenant', space: 'tenant' },
+    { permission_key: 'tenant-roles:update', resource: 'tenant-roles', action: 'update', description: 'Edit roles within tenant', space: 'tenant' },
+    { permission_key: 'tenant-roles:delete', resource: 'tenant-roles', action: 'delete', description: 'Delete roles within tenant', space: 'tenant' },
+    
+    { permission_key: 'tenant-audit:read', resource: 'tenant-audit', action: 'read', description: 'View tenant audit logs', space: 'tenant' },
+    { permission_key: 'tenant-audit:export', resource: 'tenant-audit', action: 'export', description: 'Export tenant audit logs', space: 'tenant' },
+    
+    { permission_key: 'tenant-settings:read', resource: 'tenant-settings', action: 'read', description: 'View tenant settings', space: 'tenant' },
+    { permission_key: 'tenant-settings:update', resource: 'tenant-settings', action: 'update', description: 'Edit tenant settings', space: 'tenant' },
     
     // Tenant Products (Tenant Level)
     { permission_key: 'tenant-products:read', resource: 'tenant-products', action: 'read', description: 'View tenant product catalog', space: 'tenant' },
@@ -192,23 +214,11 @@ exports.seed = async function(knex) {
     { permission_key: 'payments:update', resource: 'payments', action: 'update', description: 'Update payments', space: 'system' },
     { permission_key: 'payments:delete', resource: 'payments', action: 'delete', description: 'Delete payments', space: 'system' },
     
-    // Tenant-level user management (additional permissions)
-    { permission_key: 'tenant-users:create', resource: 'tenant-users', action: 'create', description: 'Create tenant users', space: 'tenant' },
-    { permission_key: 'tenant-users:read', resource: 'tenant-users', action: 'read', description: 'View tenant users', space: 'tenant' },
-    { permission_key: 'tenant-users:update', resource: 'tenant-users', action: 'update', description: 'Update tenant users', space: 'tenant' },
-    { permission_key: 'tenant-users:delete', resource: 'tenant-users', action: 'delete', description: 'Delete tenant users', space: 'tenant' },
+    // Tenant-level user management (additional permissions) - kept for backward compatibility
     { permission_key: 'tenant-users:invite', resource: 'tenant-users', action: 'invite', description: 'Invite new users', space: 'tenant' },
     { permission_key: 'tenant-users:assign-roles', resource: 'tenant-users', action: 'assign-roles', description: 'Assign roles to users', space: 'tenant' },
     
-    // Tenant-level role management (additional permissions)
-    { permission_key: 'tenant-roles:create', resource: 'tenant-roles', action: 'create', description: 'Create tenant roles', space: 'tenant' },
-    { permission_key: 'tenant-roles:read', resource: 'tenant-roles', action: 'read', description: 'View tenant roles', space: 'tenant' },
-    { permission_key: 'tenant-roles:update', resource: 'tenant-roles', action: 'update', description: 'Update tenant roles', space: 'tenant' },
-    { permission_key: 'tenant-roles:delete', resource: 'tenant-roles', action: 'delete', description: 'Delete tenant roles', space: 'tenant' },
-    
-    // Tenant-level settings (additional permissions)
-    { permission_key: 'tenant-settings:read', resource: 'tenant-settings', action: 'read', description: 'View tenant settings', space: 'tenant' },
-    { permission_key: 'tenant-settings:update', resource: 'tenant-settings', action: 'update', description: 'Update tenant settings', space: 'tenant' },
+    // Tenant-level settings (additional permissions) - duplicate removed above
     
     // Tenant dashboard (additional permission)
     { permission_key: 'tenant-dashboard:view', resource: 'tenant-dashboard', action: 'view', description: 'View tenant dashboard', space: 'tenant' }

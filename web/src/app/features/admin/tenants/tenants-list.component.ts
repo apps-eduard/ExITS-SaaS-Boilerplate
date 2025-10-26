@@ -19,6 +19,15 @@ interface Tenant {
   pawnshopEnabled?: boolean;
   user_count?: number;
   role_count?: number;
+  subscriptions?: Array<{
+    productType: string;
+    planName: string;
+    status: string;
+    startedAt: string;
+    expiresAt: string | null;
+    price: string;
+    billingCycle: string;
+  }>;
 }
 
 interface Pagination {
@@ -57,12 +66,12 @@ interface Pagination {
       <!-- Filters & Search -->
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div class="p-3">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
               <select
                 [(ngModel)]="filters.status"
-                (change)="loadTenants()"
+                (ngModelChange)="resetToFirstPage(); loadTenants()"
                 class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">All Status</option>
@@ -77,17 +86,15 @@ interface Pagination {
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Plan</label>
               <select
                 [(ngModel)]="filters.plan"
-                (change)="loadTenants()"
+                (ngModelChange)="resetToFirstPage(); loadTenants()"
                 class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">All Plans</option>
-                <option value="basic">Basic</option>
-                <option value="professional">Professional</option>
-                <option value="enterprise">Enterprise</option>
+                <option *ngFor="let plan of availablePlans()" [value]="plan">{{ plan }}</option>
               </select>
             </div>
 
-            <div class="md:col-span-2">
+            <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
               <input
                 type="text"
@@ -96,6 +103,31 @@ interface Pagination {
                 placeholder="Search by name or subdomain..."
                 class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Page Size</label>
+              <select
+                [(ngModel)]="pageSize"
+                (ngModelChange)="onPageSizeChange()"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+              >
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">&nbsp;</label>
+              <button
+                (click)="clearFilters()"
+                [disabled]="!hasActiveFilters()"
+                class="w-full px-2 py-1.5 text-xs font-medium rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Clear Filters
+              </button>
             </div>
           </div>
         </div>
@@ -172,6 +204,7 @@ interface Pagination {
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenant</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subdomain</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Products Enabled</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subscriptions</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -206,6 +239,27 @@ interface Pagination {
                     </div>
                   </td>
                   <td class="px-4 py-2.5">
+                    <div *ngIf="tenant.subscriptions && tenant.subscriptions.length > 0" class="space-y-1">
+                      <div *ngFor="let sub of tenant.subscriptions" class="text-[10px]">
+                        <div class="flex items-center gap-1">
+                          <span class="font-medium text-gray-900 dark:text-white">{{ sub.planName }}</span>
+                          <span class="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-semibold" 
+                                [ngClass]="sub.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400'">
+                            {{ sub.status }}
+                          </span>
+                        </div>
+                        <div class="text-gray-600 dark:text-gray-400">
+                          <span>Started: {{ formatDate(sub.startedAt) }}</span>
+                          <span *ngIf="sub.expiresAt" class="ml-2">• Expires: {{ formatDate(sub.expiresAt) }}</span>
+                          <span *ngIf="!sub.expiresAt" class="ml-2 text-green-600 dark:text-green-400">• No expiration</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span *ngIf="!tenant.subscriptions || tenant.subscriptions.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic">
+                      No active subscriptions
+                    </span>
+                  </td>
+                  <td class="px-4 py-2.5">
                     <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded" [ngClass]="getStatusClass(tenant.status)">
                       {{ tenant.status.toUpperCase() }}
                     </span>
@@ -217,32 +271,30 @@ interface Pagination {
                     <div class="flex items-center justify-center gap-2">
                       <a
                         [routerLink]="['/admin/tenants', tenant.id]"
-                        class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium"
+                        class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                         title="View details"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        View
                       </a>
                       <button
                         *ngIf="canUpdateTenants()"
                         [routerLink]="['/admin/tenants', tenant.id, 'edit']"
-                        class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-xs font-medium"
+                        class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
                         title="Edit tenant"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        Edit
                       </button>
                       <button
                         *ngIf="canUpdateTenants()"
                         (click)="toggleTenantStatus(tenant)"
                         [class]="tenant.status === 'active'
-                          ? 'inline-flex items-center gap-1 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-xs font-medium'
-                          : 'inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-xs font-medium'"
+                          ? 'text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300'
+                          : 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'"
                         [title]="tenant.status === 'active' ? 'Suspend tenant' : 'Activate tenant'"
                       >
                         <svg *ngIf="tenant.status === 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,25 +303,23 @@ interface Pagination {
                         <svg *ngIf="tenant.status !== 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {{ tenant.status === 'active' ? 'Suspend' : 'Activate' }}
                       </button>
                       <button
                         *ngIf="canDeleteTenants()"
                         (click)="deleteTenant(tenant)"
-                        class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-medium"
+                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                         title="Delete tenant"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Delete
                       </button>
                     </div>
                   </td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="px-4 py-8 text-center">
+                  <td colspan="7" class="px-4 py-8 text-center">
                     <p class="text-xs text-gray-500 dark:text-gray-400">No tenants found</p>
                   </td>
                 </tr>
@@ -279,11 +329,22 @@ interface Pagination {
         </div>
 
         <!-- Pagination -->
-        <div *ngIf="pagination().pages > 1" class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-600 dark:text-gray-400">
-              Showing {{ (pagination().page - 1) * pagination().limit + 1 }} to {{ Math.min(pagination().page * pagination().limit, pagination().total) }} of {{ pagination().total }} results
-            </p>
+        <div *ngIf="pagination().pages > 0" class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span>Show</span>
+              <select
+                [(ngModel)]="pageSize"
+                (ngModelChange)="onPageSizeChange()"
+                class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+              >
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+              <span>entries ({{ (pagination().page - 1) * pagination().limit + 1 }} to {{ Math.min(pagination().page * pagination().limit, pagination().total) }} of {{ pagination().total }})</span>
+            </div>
             <div class="flex items-center gap-2">
               <button
                 (click)="changePage(pagination().page - 1)"
@@ -324,6 +385,7 @@ export class TenantsListComponent implements OnInit {
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
+  availablePlans = signal<string[]>([]);
 
   filters = {
     status: '',
@@ -331,6 +393,7 @@ export class TenantsListComponent implements OnInit {
   };
 
   searchQuery = '';
+  pageSize = 20;
 
   pagination = signal<Pagination>({
     page: 1,
@@ -354,7 +417,28 @@ export class TenantsListComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('🏢 TenantsListComponent initialized');
+    this.loadPlans();
     this.loadTenants();
+  }
+
+  loadPlans(): void {
+    // Load available subscription plans for the filter
+    this.http.get<any>('/api/subscriptions/plans').subscribe({
+      next: (response) => {
+        const plans = response.data || response;
+        // Extract unique plan names and filter out platform plans
+        const uniquePlans = [...new Set(plans
+          .filter((p: any) => p.product_type !== 'platform' && p.is_active)
+          .map((p: any) => p.name)
+        )] as string[];
+        this.availablePlans.set(uniquePlans);
+      },
+      error: (err) => {
+        console.error('Failed to load plans:', err);
+        // Use fallback plans if API fails
+        this.availablePlans.set(['Basic', 'Professional', 'Enterprise']);
+      }
+    });
   }
 
   loadTenants(): void {
@@ -398,8 +482,40 @@ export class TenantsListComponent implements OnInit {
   }
 
   onSearch(): void {
-    // Implement search debouncing if needed
+    // Reset to first page when searching
+    this.pagination.update(p => ({ ...p, page: 1 }));
     this.loadTenants();
+  }
+
+  hasActiveFilters(): boolean {
+    return this.searchQuery.trim() !== '' || this.filters.status !== '' || this.filters.plan !== '';
+  }
+
+  clearFilters(): void {
+    this.searchQuery = '';
+    this.filters.status = '';
+    this.filters.plan = '';
+    this.pagination.update(p => ({ ...p, page: 1 }));
+    this.loadTenants();
+  }
+
+  resetToFirstPage(): void {
+    this.pagination.update(p => ({ ...p, page: 1 }));
+  }
+
+  onPageSizeChange(): void {
+    this.pagination.update(p => ({ ...p, limit: this.pageSize, page: 1 }));
+    this.loadTenants();
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   }
 
   changePage(page: number): void {
@@ -497,13 +613,5 @@ export class TenantsListComponent implements OnInit {
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
     }
-  }
-
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   }
 }

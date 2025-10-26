@@ -22,6 +22,8 @@ interface SubscriptionPlan {
   recommended?: boolean;
   isActive?: boolean;
   subscriptionStatus?: 'available' | 'active' | 'pending'; // New field
+  startedAt?: string; // When subscription started
+  expiresAt?: string; // When subscription expires
 }
 
 @Component({
@@ -119,11 +121,19 @@ interface SubscriptionPlan {
                       / {{ currentPlan.billingCycle }}
                     </span>
                   </div>
-                  <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                  <!-- Expiration Date -->
+                  <p *ngIf="currentPlan.expiresAt" class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Next billing: {{ getNextBillingDate() }}
+                    Expires: {{ formatDate(currentPlan.expiresAt) }}
+                  </p>
+                  <!-- No Expiration (Unlimited) -->
+                  <p *ngIf="!currentPlan.expiresAt" class="mt-0.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Active (No expiration)
                   </p>
                 </div>
               </div>
@@ -472,7 +482,9 @@ export class TenantSubscriptionsComponent implements OnInit {
             hasActiveSubscription: true, // These are active subscriptions
             subscriptionStatus: 'active' as const,
             recommended: apiPlan.isRecommended,
-            isActive: apiPlan.isActive
+            isActive: apiPlan.isActive,
+            startedAt: apiPlan.startedAt,
+            expiresAt: apiPlan.expiresAt
           }));
           
           this.currentSubscriptions.set(transformedSubscriptions);
@@ -543,6 +555,16 @@ export class TenantSubscriptionsComponent implements OnInit {
       next.setFullYear(next.getFullYear() + 1);
     }
     return next.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric'

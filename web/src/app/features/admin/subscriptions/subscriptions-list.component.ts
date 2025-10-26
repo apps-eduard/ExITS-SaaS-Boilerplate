@@ -6,16 +6,15 @@ import { HttpClient } from '@angular/common/http';
 
 interface Subscription {
   id: number;
-  subscriberName: string;
-  subscriberEmail: string;
+  tenantName: string;
+  tenantId: number;
   planName: string;
-  status: 'active' | 'canceled' | 'expired' | 'paused';
-  startDate: string;
-  endDate: string;
-  paymentMethod: string;
-  amount: number;
-  currency: string;
-  billingCycle: 'monthly' | 'yearly' | 'quarterly';
+  status: 'active' | 'cancelled' | 'expired' | 'suspended';
+  startedAt: string;
+  expiresAt: string;
+  price: number;
+  billingCycle: string;
+  nextBillingDate?: string;
 }
 
 @Component({
@@ -58,8 +57,8 @@ interface Subscription {
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Paused</p>
-              <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{{ getStatusCount('paused') }}</p>
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Suspended</p>
+              <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{{ getStatusCount('suspended') }}</p>
             </div>
             <span class="text-2xl">⏸️</span>
           </div>
@@ -68,8 +67,8 @@ interface Subscription {
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Canceled</p>
-              <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ getStatusCount('canceled') }}</p>
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Cancelled</p>
+              <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ getStatusCount('cancelled') }}</p>
             </div>
             <span class="text-2xl">❌</span>
           </div>
@@ -88,7 +87,7 @@ interface Subscription {
 
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <!-- Search -->
           <div class="lg:col-span-2">
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
@@ -96,7 +95,8 @@ interface Subscription {
               <input
                 type="text"
                 [(ngModel)]="searchQuery"
-                placeholder="Search by subscriber or plan..."
+                (ngModelChange)="resetPagination()"
+                placeholder="Search by tenant or plan..."
                 class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,12 +110,13 @@ interface Subscription {
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
               [(ngModel)]="statusFilter"
+              (ngModelChange)="resetPagination()"
               class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Status</option>
               <option value="active">✅ Active</option>
-              <option value="paused">⏸️ Paused</option>
-              <option value="canceled">❌ Canceled</option>
+              <option value="suspended">⏸️ Suspended</option>
+              <option value="cancelled">❌ Cancelled</option>
               <option value="expired">⏱️ Expired</option>
             </select>
           </div>
@@ -125,6 +126,7 @@ interface Subscription {
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Cycle</label>
             <select
               [(ngModel)]="cycleFilter"
+              (ngModelChange)="resetPagination()"
               class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Cycles</option>
@@ -132,6 +134,20 @@ interface Subscription {
               <option value="quarterly">📆 Quarterly</option>
               <option value="yearly">🗓️ Yearly</option>
             </select>
+          </div>
+
+          <!-- Clear Filters Button -->
+          <div class="flex items-end">
+            <button
+              (click)="clearFilters()"
+              [disabled]="!hasActiveFilters()"
+              class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Clear Filters
+            </button>
           </div>
         </div>
       </div>
@@ -144,26 +160,32 @@ interface Subscription {
             <p class="text-sm text-gray-500 dark:text-gray-400">Loading subscriptions...</p>
           </div>
         </div>
+      } @else if (error()) {
+        <div class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900 rounded-lg p-4">
+          <p class="text-sm text-red-800 dark:text-red-200">{{ error() }}</p>
+        </div>
       } @else if (filteredSubscriptions().length === 0) {
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
           <span class="text-5xl mb-4 block">💳</span>
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No subscriptions found</h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            @if (searchQuery || statusFilter !== 'all' || cycleFilter !== 'all') {
+            @if (hasActiveFilters()) {
               Try adjusting your filters
             } @else {
-              Get started by creating your first subscription
+              No subscriptions have been created yet
             }
           </p>
-          <button
-            routerLink="/admin/subscriptions/new"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-600 text-white rounded hover:bg-primary-700 transition"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Create First Subscription
-          </button>
+          @if (hasActiveFilters()) {
+            <button
+              (click)="clearFilters()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-600 text-white rounded hover:bg-primary-700 transition"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Clear Filters
+            </button>
+          }
         </div>
       } @else {
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -171,13 +193,12 @@ interface Subscription {
             <table class="w-full text-sm">
               <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Subscriber</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Tenant</th>
                   <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Plan</th>
                   <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Status</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Start Date</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">End Date</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Started</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Expires</th>
                   <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Amount</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Payment</th>
                   <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
@@ -185,10 +206,7 @@ interface Subscription {
                 @for (sub of paginatedSubscriptions(); track sub.id) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                     <td class="px-4 py-3">
-                      <div class="flex flex-col">
-                        <span class="font-medium text-gray-900 dark:text-white text-xs">{{ sub.subscriberName }}</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ sub.subscriberEmail }}</span>
-                      </div>
+                      <span class="font-medium text-gray-900 dark:text-white text-xs">{{ sub.tenantName }}</span>
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex flex-col">
@@ -204,23 +222,19 @@ interface Subscription {
                         {{ getStatusIcon(sub.status) }} {{ sub.status }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white">{{ formatDate(sub.startDate) }}</td>
-                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white">{{ formatDate(sub.endDate) }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white">{{ formatDate(sub.startedAt) }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white">{{ formatDate(sub.expiresAt) }}</td>
                     <td class="px-4 py-3">
                       <span class="font-medium text-gray-900 dark:text-white text-xs">
-                        {{ sub.currency }} {{ sub.amount.toFixed(2) }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-3">
-                      <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
-                        {{ sub.paymentMethod }}
+                        {{ '$' + (sub.price || 0).toFixed(2) }}
                       </span>
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center justify-end gap-1">
                         <button
+                          [routerLink]="['/admin/tenants', sub.tenantId]"
                           class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
-                          title="View Details"
+                          title="View Tenant"
                         >
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -229,24 +243,18 @@ interface Subscription {
                         </button>
                         @if (sub.status === 'active') {
                           <button
+                            (click)="suspendSubscription(sub.id)"
                             class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded transition"
-                            title="Pause"
+                            title="Suspend"
                           >
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
                             </svg>
                           </button>
-                          <button
-                            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition"
-                            title="Upgrade"
-                          >
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
-                            </svg>
-                          </button>
                         }
-                        @if (sub.status === 'active' || sub.status === 'paused') {
+                        @if (sub.status === 'active' || sub.status === 'suspended') {
                           <button
+                            (click)="cancelSubscription(sub.id)"
                             class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
                             title="Cancel"
                           >
@@ -265,9 +273,22 @@ interface Subscription {
 
           <!-- Pagination -->
           <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-900">
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-gray-500 dark:text-gray-400">
-                Showing {{ getStartIndex() + 1 }} to {{ getEndIndex() }} of {{ filteredSubscriptions().length }} subscriptions
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
+                <select
+                  [(ngModel)]="pageSize"
+                  (ngModelChange)="onPageSizeChange()"
+                  class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                >
+                  <option [value]="10">10</option>
+                  <option [value]="25">25</option>
+                  <option [value]="50">50</option>
+                  <option [value]="100">100</option>
+                </select>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  entries ({{ getStartIndex() + 1 }} to {{ getEndIndex() }} of {{ filteredSubscriptions().length }})
+                </span>
               </div>
               <div class="flex items-center gap-2">
                 <button
@@ -306,6 +327,7 @@ export class SubscriptionsListComponent implements OnInit {
 
   subscriptions = signal<Subscription[]>([]);
   loading = signal(false);
+  error = signal<string | null>(null);
   searchQuery = '';
   statusFilter = 'all';
   cycleFilter = 'all';
@@ -320,8 +342,7 @@ export class SubscriptionsListComponent implements OnInit {
     if (this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(s =>
-        s.subscriberName.toLowerCase().includes(query) ||
-        s.subscriberEmail.toLowerCase().includes(query) ||
+        s.tenantName.toLowerCase().includes(query) ||
         s.planName.toLowerCase().includes(query)
       );
     }
@@ -340,7 +361,7 @@ export class SubscriptionsListComponent implements OnInit {
   });
 
   get totalPages(): number {
-    return Math.ceil(this.filteredSubscriptions().length / this.pageSize);
+    return Math.ceil(this.filteredSubscriptions().length / this.pageSize) || 1;
   }
 
   paginatedSubscriptions = computed(() => {
@@ -355,77 +376,31 @@ export class SubscriptionsListComponent implements OnInit {
 
   loadSubscriptions() {
     this.loading.set(true);
-    // Mock data
-    setTimeout(() => {
-      this.subscriptions.set([
-        {
-          id: 1,
-          subscriberName: 'Acme Corporation',
-          subscriberEmail: 'contact@acme.com',
-          planName: 'Enterprise Plan',
-          status: 'active',
-          startDate: '2024-01-15',
-          endDate: '2025-01-15',
-          paymentMethod: 'Credit Card',
-          amount: 299.99,
-          currency: 'USD',
-          billingCycle: 'monthly'
-        },
-        {
-          id: 2,
-          subscriberName: 'TechStart Inc',
-          subscriberEmail: 'billing@techstart.com',
-          planName: 'Professional Plan',
-          status: 'active',
-          startDate: '2024-03-01',
-          endDate: '2025-03-01',
-          paymentMethod: 'PayPal',
-          amount: 149.99,
-          currency: 'USD',
-          billingCycle: 'monthly'
-        },
-        {
-          id: 3,
-          subscriberName: 'Global Solutions',
-          subscriberEmail: 'admin@globalsol.com',
-          planName: 'Business Plan',
-          status: 'paused',
-          startDate: '2024-02-10',
-          endDate: '2025-02-10',
-          paymentMethod: 'Bank Transfer',
-          amount: 499.99,
-          currency: 'USD',
-          billingCycle: 'yearly'
-        },
-        {
-          id: 4,
-          subscriberName: 'Startup Hub',
-          subscriberEmail: 'finance@startuphub.io',
-          planName: 'Starter Plan',
-          status: 'canceled',
-          startDate: '2024-01-01',
-          endDate: '2024-12-31',
-          paymentMethod: 'Credit Card',
-          amount: 49.99,
-          currency: 'USD',
-          billingCycle: 'monthly'
-        },
-        {
-          id: 5,
-          subscriberName: 'Digital Ventures',
-          subscriberEmail: 'ops@digitalventures.com',
-          planName: 'Premium Plan',
-          status: 'expired',
-          startDate: '2023-06-15',
-          endDate: '2024-06-15',
-          paymentMethod: 'Credit Card',
-          amount: 199.99,
-          currency: 'USD',
-          billingCycle: 'quarterly'
-        }
-      ]);
-      this.loading.set(false);
-    }, 500);
+    this.error.set(null);
+    
+    this.http.get<any>('/api/billing/subscriptions').subscribe({
+      next: (response) => {
+        const subscriptions = response.data || response;
+        this.subscriptions.set(subscriptions.map((sub: any) => ({
+          id: sub.id,
+          tenantName: sub.tenant_name,
+          tenantId: sub.tenant_id,
+          planName: sub.plan_name,
+          status: sub.status,
+          startedAt: sub.started_at,
+          expiresAt: sub.expires_at,
+          price: parseFloat(sub.price || sub.plan_price || 0),
+          billingCycle: sub.billing_cycle,
+          nextBillingDate: sub.next_billing_date
+        })));
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading subscriptions:', err);
+        this.error.set(err.error?.message || 'Failed to load subscriptions');
+        this.loading.set(false);
+      }
+    });
   }
 
   getStatusCount(status: string): number {
@@ -435,8 +410,8 @@ export class SubscriptionsListComponent implements OnInit {
   getStatusIcon(status: string): string {
     const icons: Record<string, string> = {
       active: '✅',
-      paused: '⏸️',
-      canceled: '❌',
+      suspended: '⏸️',
+      cancelled: '❌',
       expired: '⏱️'
     };
     return icons[status] || '❓';
@@ -445,8 +420,8 @@ export class SubscriptionsListComponent implements OnInit {
   getStatusClass(status: string): string {
     const classes: Record<string, string> = {
       active: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-      paused: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
-      canceled: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+      suspended: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
+      cancelled: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
       expired: 'bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300'
     };
     return classes[status] || '';
@@ -456,12 +431,14 @@ export class SubscriptionsListComponent implements OnInit {
     const labels: Record<string, string> = {
       monthly: '📅 Monthly',
       quarterly: '📆 Quarterly',
-      yearly: '🗓️ Yearly'
+      yearly: '🗓️ Yearly',
+      one_time: '⚡ One-time'
     };
     return labels[cycle] || cycle;
   }
 
   formatDate(date: string): string {
+    if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -488,5 +465,47 @@ export class SubscriptionsListComponent implements OnInit {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
     }
+  }
+
+  hasActiveFilters(): boolean {
+    return this.searchQuery.trim() !== '' || this.statusFilter !== 'all' || this.cycleFilter !== 'all';
+  }
+
+  clearFilters() {
+    this.searchQuery = '';
+    this.statusFilter = 'all';
+    this.cycleFilter = 'all';
+    this.resetPagination();
+  }
+
+  resetPagination() {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChange() {
+    this.resetPagination();
+  }
+
+  suspendSubscription(id: number) {
+    if (!confirm('Are you sure you want to suspend this subscription?')) {
+      return;
+    }
+    // TODO: Implement suspend API call
+    console.log('Suspend subscription:', id);
+  }
+
+  cancelSubscription(id: number) {
+    if (!confirm('Are you sure you want to cancel this subscription?')) {
+      return;
+    }
+    
+    this.http.post(`/api/billing/subscriptions/${id}/cancel`, {}).subscribe({
+      next: () => {
+        this.loadSubscriptions();
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Failed to cancel subscription');
+      }
+    });
   }
 }

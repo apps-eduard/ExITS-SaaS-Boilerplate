@@ -22,6 +22,11 @@ class TenantService {
       logoUrl: dbTenant.logo_url,
       primaryColor: dbTenant.primary_color,
       secondaryColor: dbTenant.secondary_color,
+      // Contact information
+      contactPerson: dbTenant.contact_person,
+      contactEmail: dbTenant.contact_email,
+      contactPhone: dbTenant.contact_phone,
+      // Product enablement
       moneyLoanEnabled: dbTenant.money_loan_enabled,
       bnplEnabled: dbTenant.bnpl_enabled,
       pawnshopEnabled: dbTenant.pawnshop_enabled,
@@ -368,17 +373,21 @@ class TenantService {
       logger.info(`📊 Product subscriptions found: ${productSubsResult.rows.length}`);
 
       for (const sub of productSubsResult.rows) {
-        subscriptions.push(SubscriptionPlanService.transformPlan({
-          id: sub.plan_id,
-          name: sub.name,
-          description: sub.description,
-          price: sub.price,
-          billing_cycle: sub.billing_cycle,
-          features: sub.features,
-          product_type: sub.product_type,
-          is_popular: sub.is_popular,
-          status: sub.status
-        }));
+        subscriptions.push({
+          ...SubscriptionPlanService.transformPlan({
+            id: sub.plan_id,
+            name: sub.name,
+            description: sub.description,
+            price: sub.price,
+            billing_cycle: sub.billing_cycle,
+            features: sub.features,
+            product_type: sub.product_type,
+            is_popular: sub.is_popular,
+            status: sub.status
+          }),
+          startedAt: sub.started_at,
+          expiresAt: sub.expires_at
+        });
       }
 
       logger.info(`✅ Total active subscriptions: ${subscriptions.length}`);
@@ -604,11 +613,26 @@ class TenantService {
 
       const countQuery = `SELECT COUNT(*) as total FROM tenants ${whereClause}`;
       const dataQuery = `
-        SELECT id, name, subdomain, plan, status, max_users, created_at,
-               money_loan_enabled, bnpl_enabled, pawnshop_enabled
-        FROM tenants
+        SELECT t.id, t.name, t.subdomain, t.plan, t.status, t.max_users, t.created_at,
+               t.money_loan_enabled, t.bnpl_enabled, t.pawnshop_enabled,
+               (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as user_count,
+               (SELECT COUNT(*) FROM roles WHERE tenant_id = t.id) as role_count,
+               (SELECT json_agg(json_build_object(
+                  'productType', ps.product_type,
+                  'planName', sp.name,
+                  'status', ps.status,
+                  'startedAt', ps.started_at,
+                  'expiresAt', ps.expires_at,
+                  'price', ps.price,
+                  'billingCycle', ps.billing_cycle
+               ))
+                FROM product_subscriptions ps
+                JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
+                WHERE ps.tenant_id = t.id AND ps.status = 'active'
+               ) as subscriptions
+        FROM tenants t
         ${whereClause}
-        ORDER BY created_at DESC
+        ORDER BY t.created_at DESC
         LIMIT $${paramCount} OFFSET $${paramCount + 1}
       `;
 
@@ -630,7 +654,10 @@ class TenantService {
         createdAt: tenant.created_at,
         moneyLoanEnabled: tenant.money_loan_enabled,
         bnplEnabled: tenant.bnpl_enabled,
-        pawnshopEnabled: tenant.pawnshop_enabled
+        pawnshopEnabled: tenant.pawnshop_enabled,
+        user_count: tenant.user_count,
+        role_count: tenant.role_count,
+        subscriptions: tenant.subscriptions || []
       }));
 
       return {
