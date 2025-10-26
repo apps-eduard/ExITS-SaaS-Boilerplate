@@ -331,7 +331,7 @@ class TenantService {
       // Get platform subscription from tenant_subscriptions
       const platformSubResult = await pool.query(
         `SELECT ts.*, sp.id as plan_id, sp.name, sp.description, 
-                sp.price, sp.billing_cycle, sp.features, sp.product_type,
+                sp.price, sp.billing_cycle, sp.features, sp.platform_type,
                 sp.is_popular, sp.status
          FROM tenant_subscriptions ts
          JOIN subscription_plans sp ON ts.plan_id = sp.id
@@ -352,18 +352,18 @@ class TenantService {
           price: sub.price,
           billing_cycle: sub.billing_cycle,
           features: sub.features,
-          product_type: sub.product_type || 'platform',
+          platform_type: sub.platform_type || 'platform',
           is_popular: sub.is_popular,
           status: sub.status
         }));
       }
 
-      // Get product subscriptions from product_subscriptions
+      // Get product subscriptions from platform_subscriptions
       const productSubsResult = await pool.query(
         `SELECT ps.*, sp.id as plan_id, sp.name, sp.description,
-                sp.price, sp.billing_cycle, sp.features, sp.product_type,
+                sp.price, sp.billing_cycle, sp.features, sp.platform_type,
                 sp.is_popular, sp.status
-         FROM product_subscriptions ps
+         FROM platform_subscriptions ps
          JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
          WHERE ps.tenant_id = $1 AND ps.status = 'active'
          ORDER BY ps.created_at`,
@@ -381,7 +381,7 @@ class TenantService {
             price: sub.price,
             billing_cycle: sub.billing_cycle,
             features: sub.features,
-            product_type: sub.product_type,
+            platform_type: sub.platform_type,
             is_popular: sub.is_popular,
             status: sub.status
           }),
@@ -453,8 +453,8 @@ class TenantService {
     try {
       // Check if active subscription exists
       const existing = await pool.query(
-        `SELECT id FROM product_subscriptions 
-         WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'`,
+        `SELECT id FROM platform_subscriptions 
+         WHERE tenant_id = $1 AND platform_type = $2 AND status = 'active'`,
         [tenantId, productType]
       );
 
@@ -465,7 +465,7 @@ class TenantService {
       // Find matching product plan based on platform tier
       let planResult = await pool.query(
         `SELECT id, price, billing_cycle FROM subscription_plans 
-         WHERE product_type = $1 
+         WHERE platform_type = $1 
          AND name ILIKE $2
          AND status = 'active'
          LIMIT 1`,
@@ -476,7 +476,7 @@ class TenantService {
       if (planResult.rows.length === 0) {
         planResult = await pool.query(
           `SELECT id, price, billing_cycle FROM subscription_plans 
-           WHERE product_type = $1 
+           WHERE platform_type = $1 
            AND name ILIKE '%starter%'
            AND status = 'active'
            LIMIT 1`,
@@ -493,8 +493,8 @@ class TenantService {
 
       // Create the subscription
       await pool.query(
-        `INSERT INTO product_subscriptions 
-         (tenant_id, product_type, subscription_plan_id, status, started_at, price, billing_cycle)
+        `INSERT INTO platform_subscriptions 
+         (tenant_id, platform_type, subscription_plan_id, status, started_at, price, billing_cycle)
          VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
         [tenantId, productType, plan.id, plan.price, plan.billing_cycle || 'monthly']
       );
@@ -570,9 +570,9 @@ class TenantService {
   static async cancelProductSubscription(tenantId, productType) {
     try {
       const result = await pool.query(
-        `UPDATE product_subscriptions 
+        `UPDATE platform_subscriptions 
          SET status = 'cancelled', updated_at = NOW()
-         WHERE tenant_id = $1 AND product_type = $2 AND status = 'active'
+         WHERE tenant_id = $1 AND platform_type = $2 AND status = 'active'
          RETURNING id`,
         [tenantId, productType]
       );
@@ -618,7 +618,7 @@ class TenantService {
                (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as user_count,
                (SELECT COUNT(*) FROM roles WHERE tenant_id = t.id) as role_count,
                (SELECT json_agg(json_build_object(
-                  'productType', ps.product_type,
+                  'productType', ps.platform_type,
                   'planName', sp.name,
                   'status', ps.status,
                   'startedAt', ps.started_at,
@@ -626,7 +626,7 @@ class TenantService {
                   'price', ps.price,
                   'billingCycle', ps.billing_cycle
                ))
-                FROM product_subscriptions ps
+                FROM platform_subscriptions ps
                 JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
                 WHERE ps.tenant_id = t.id AND ps.status = 'active'
                ) as subscriptions
@@ -1025,23 +1025,23 @@ class TenantService {
       }
 
       const plan = planResult.rows[0];
-      const isProductPlan = plan.product_type && plan.product_type !== 'platform';
+      const isProductPlan = plan.platform_type && plan.platform_type !== 'platform';
       let transactionType = 'subscription';
 
       if (isProductPlan) {
         // Create/update product subscription
         // Check for ANY existing subscription (active or inactive) to avoid unique constraint violation
         const existingProductSub = await pool.query(
-          `SELECT id, status FROM product_subscriptions 
-           WHERE tenant_id = $1 AND product_type = $2`,
-          [tenantId, plan.product_type]
+          `SELECT id, status FROM platform_subscriptions 
+           WHERE tenant_id = $1 AND platform_type = $2`,
+          [tenantId, plan.platform_type]
         );
 
         if (existingProductSub.rows.length > 0) {
           // Update existing subscription (reactivate if needed)
           transactionType = existingProductSub.rows[0].status === 'active' ? 'upgrade' : 'subscription';
           await pool.query(
-            `UPDATE product_subscriptions 
+            `UPDATE platform_subscriptions 
              SET subscription_plan_id = $1, price = $2, billing_cycle = $3, 
                  status = 'active', started_at = NOW(), updated_at = NOW()
              WHERE id = $4`,
@@ -1050,14 +1050,14 @@ class TenantService {
         } else {
           // Create new product subscription
           await pool.query(
-            `INSERT INTO product_subscriptions 
-             (tenant_id, product_type, subscription_plan_id, status, started_at, price, billing_cycle)
+            `INSERT INTO platform_subscriptions 
+             (tenant_id, platform_type, subscription_plan_id, status, started_at, price, billing_cycle)
              VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
-            [tenantId, plan.product_type, planId, plan.price, billingCycle]
+            [tenantId, plan.platform_type, planId, plan.price, billingCycle]
           );
         }
 
-        logger.info(`✅ Created/Updated ${plan.product_type} subscription for tenant ${tenantId}`);
+        logger.info(`✅ Created/Updated ${plan.platform_type} subscription for tenant ${tenantId}`);
       } else {
         // Create/update platform subscription
         // Check for ANY existing subscription (active or inactive)
@@ -1113,10 +1113,10 @@ class TenantService {
           // Update any existing product subscriptions to active
           for (const productType of enabledProducts) {
             const updateResult = await pool.query(
-              `UPDATE product_subscriptions 
+              `UPDATE platform_subscriptions 
                SET status = 'active', updated_at = NOW()
-               WHERE tenant_id = $1 AND product_type = $2
-               RETURNING id, product_type, status`,
+               WHERE tenant_id = $1 AND platform_type = $2
+               RETURNING id, platform_type, status`,
               [tenantId, productType]
             );
             
@@ -1140,7 +1140,7 @@ class TenantService {
       await pool.query(
         `INSERT INTO payment_history 
          (tenant_id, user_id, subscription_plan_id, transaction_id, amount, currency, 
-          status, provider, transaction_type, plan_name, product_type, description, processed_at)
+          status, provider, transaction_type, plan_name, platform_type, description, processed_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
         [
           tenantId,
@@ -1153,7 +1153,7 @@ class TenantService {
           paymentMethod || 'credit_card',
           transactionType,
           plan.name,
-          plan.product_type || 'platform',
+          plan.platform_type || 'platform',
           `${transactionType === 'upgrade' ? 'Upgraded to' : 'Subscribed to'} ${plan.name} - ${billingCycle} billing`
         ]
       );
@@ -1163,7 +1163,7 @@ class TenantService {
       return {
         success: true,
         plan: plan.name,
-        productType: plan.product_type,
+        productType: plan.platform_type,
         billingCycle,
         paymentMethod
       };
@@ -1238,7 +1238,7 @@ class TenantService {
           status,
           provider as "paymentMethod",
           plan_name as "planName",
-          product_type as "productType",
+          platform_type as "productType",
           description,
           processed_at as "date",
           created_at as "createdAt"

@@ -16,11 +16,11 @@ class BillingService {
     console.log('🔍 BillingService.getPlans - Row count:', result.rows.length);
     if (result.rows.length > 0) {
       console.log('📋 First plan columns:', Object.keys(result.rows[0]));
-      console.log('📋 First plan product_type:', result.rows[0].product_type);
+      console.log('📋 First plan platform_type:', result.rows[0].platform_type);
       console.log('📋 Sample plans:', result.rows.slice(0, 3).map(p => ({ 
         id: p.id, 
         name: p.name, 
-        product_type: p.product_type 
+        platform_type: p.platform_type 
       })));
     }
     return result.rows;
@@ -52,7 +52,7 @@ class BillingService {
       features, 
       max_users, 
       max_storage_gb,
-      product_type,
+      platform_type,
       trial_days,
       is_featured,
       custom_pricing,
@@ -62,11 +62,11 @@ class BillingService {
     const result = await pool.query(
       `INSERT INTO subscription_plans (
         name, description, price, billing_cycle, features, max_users, max_storage_gb,
-        product_type, trial_days, is_featured, custom_pricing, status
+        platform_type, trial_days, is_featured, custom_pricing, status
       )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [name, description, price, billing_cycle, features, max_users, max_storage_gb,
-       product_type, trial_days || 0, is_featured || false, custom_pricing || false, 
+       platform_type, trial_days || 0, is_featured || false, custom_pricing || false, 
        status || 'active']
     );
     
@@ -86,28 +86,28 @@ class BillingService {
       max_users, 
       max_storage_gb, 
       status,
-      product_type,
+      platform_type,
       trial_days,
       is_featured,
       custom_pricing
     } = planData;
     
     console.log('🔍 Updating plan:', id);
-    console.log('📦 Plan data received:', { product_type, name });
+    console.log('📦 Plan data received:', { platform_type, name });
     console.log('📝 Full planData:', planData);
     
     const result = await pool.query(
       `UPDATE subscription_plans 
        SET name = $1, description = $2, price = $3, billing_cycle = $4, 
            features = $5, max_users = $6, max_storage_gb = $7, status = $8,
-           product_type = $9, trial_days = $10, is_featured = $11, custom_pricing = $12,
+           platform_type = $9, trial_days = $10, is_featured = $11, custom_pricing = $12,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $13 RETURNING *`,
       [name, description, price, billing_cycle, features, max_users, max_storage_gb, status, 
-       product_type, trial_days, is_featured, custom_pricing, id]
+       platform_type, trial_days, is_featured, custom_pricing, id]
     );
     
-    console.log('✅ Plan updated in DB:', result.rows[0].product_type);
+    console.log('✅ Plan updated in DB:', result.rows[0].platform_type);
     
     if (result.rows.length === 0) {
       throw new Error('Plan not found');
@@ -140,7 +140,7 @@ class BillingService {
       `SELECT 
         ps.id,
         ps.tenant_id,
-        ps.product_type,
+        ps.platform_type,
         ps.status,
         ps.started_at,
         ps.expires_at,
@@ -150,7 +150,7 @@ class BillingService {
         ps.updated_at,
         t.name as tenant_name,
         sp.name as plan_name
-       FROM product_subscriptions ps
+       FROM platform_subscriptions ps
        JOIN tenants t ON ps.tenant_id = t.id
        JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
        ORDER BY ps.created_at DESC`

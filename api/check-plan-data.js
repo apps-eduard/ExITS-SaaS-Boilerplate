@@ -2,9 +2,9 @@ const pool = require('./src/config/database');
 
 async function checkPlanData() {
   try {
-    console.log('=== Checking Product Subscriptions ===\n');
+    console.log('=== Checking Platform Subscriptions ===\n');
     
-    const productSubs = await pool.query(`
+    const platformSubs = await pool.query(`
       SELECT 
         ps.id,
         ps.tenant_id,
@@ -12,30 +12,30 @@ async function checkPlanData() {
         ps.subscription_plan_id,
         sp.id as actual_plan_id,
         sp.name as plan_name,
-        ps.product_type
-      FROM product_subscriptions ps
+        ps.platform_type
+      FROM platform_subscriptions ps
       JOIN tenants t ON ps.tenant_id = t.id
       LEFT JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
       ORDER BY ps.created_at DESC
     `);
 
-    console.log(`Found ${productSubs.rows.length} product subscriptions:`);
-    productSubs.rows.forEach(row => {
-      console.log(`  - ${row.tenant_name}: ${row.plan_name || 'NO PLAN NAME'} (plan_id: ${row.subscription_plan_id || 'NULL'}, product: ${row.product_type})`);
+    console.log(`Found ${platformSubs.rows.length} platform subscriptions:`);
+    platformSubs.rows.forEach(row => {
+      console.log(`  - ${row.tenant_name}: ${row.plan_name || 'NO PLAN NAME'} (plan_id: ${row.subscription_plan_id || 'NULL'}, platform: ${row.platform_type})`);
     });
 
     console.log('\n=== Checking All Subscription Plans ===\n');
     
     const allPlans = await pool.query(`
-      SELECT id, name, product_type
+      SELECT id, name, platform_type
       FROM subscription_plans
-      ORDER BY product_type, name
+      ORDER BY platform_type, name
     `);
 
     console.log(`Found ${allPlans.rows.length} total plans:`);
     const byType = allPlans.rows.reduce((acc, plan) => {
-      if (!acc[plan.product_type]) acc[plan.product_type] = [];
-      acc[plan.product_type].push(plan);
+      if (!acc[plan.platform_type]) acc[plan.platform_type] = [];
+      acc[plan.platform_type].push(plan);
       return acc;
     }, {});
 

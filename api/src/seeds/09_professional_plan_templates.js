@@ -52,7 +52,7 @@ exports.seed = async function(knex) {
         is_featured: false,
         custom_pricing: false,
         sort_order: 1,
-        product_type: 'platform',
+        platform_type: 'platform',
         status: 'active'
       },
 
@@ -79,7 +79,7 @@ exports.seed = async function(knex) {
         is_featured: false,
         custom_pricing: false,
         sort_order: 2,
-        product_type: 'platform',
+        platform_type: 'platform',
         status: 'active'
       },
 
@@ -112,7 +112,7 @@ exports.seed = async function(knex) {
         is_featured: true,  // ⭐ FEATURED
         custom_pricing: false,
         sort_order: 3,
-        product_type: 'platform',
+        platform_type: 'platform',
         status: 'active'
       },
 
@@ -148,7 +148,7 @@ exports.seed = async function(knex) {
         is_featured: false,
         custom_pricing: true,  // 💼 Contact Sales
         sort_order: 4,
-        product_type: 'platform',
+        platform_type: 'platform',
         status: 'active'
       }
     ])
@@ -189,7 +189,7 @@ exports.seed = async function(knex) {
         is_featured: false,
         custom_pricing: false,
         sort_order: 10,
-        product_type: 'money_loan',
+        platform_type: 'money_loan',
         status: 'active'
       },
       {
@@ -215,7 +215,7 @@ exports.seed = async function(knex) {
         is_featured: true,  // ⭐ FEATURED
         custom_pricing: false,
         sort_order: 11,
-        product_type: 'money_loan',
+        platform_type: 'money_loan',
         status: 'active'
       },
       {
@@ -242,7 +242,7 @@ exports.seed = async function(knex) {
         is_featured: false,
         custom_pricing: true,  // 💼 Contact Sales
         sort_order: 12,
-        product_type: 'money_loan',
+        platform_type: 'money_loan',
         status: 'active'
       }
     ])

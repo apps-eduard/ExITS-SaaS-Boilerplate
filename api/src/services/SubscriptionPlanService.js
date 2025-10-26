@@ -54,9 +54,9 @@ class SubscriptionPlanService {
       maxUsers: dbPlan.max_users,
       maxStorageGb: dbPlan.max_storage_gb,
       features: features,
-      productType: dbPlan.product_type, // Add product_type
+      productType: dbPlan.platform_type, // Add platform_type
       isActive: dbPlan.status === 'active',
-      isRecommended: dbPlan.name.toLowerCase() === 'pro' || dbPlan.name.toLowerCase() === 'professional', // Pro is recommended
+      isRecommended: dbPlan.name.toLowerCase() === 'pro' || dbPlan.name.toLowerCase() === 'professional', // Pro is recommended,
       createdAt: dbPlan.created_at,
       updatedAt: dbPlan.updated_at
     };
@@ -68,11 +68,11 @@ class SubscriptionPlanService {
   static async getAllPlans() {
     const client = await pool.connect();
     try {
-      // Only return platform subscription plans (product_type IS NULL)
-      // Product-specific plans are handled separately
+      // Only return platform subscription plans (platform_type IS NULL)
+      // Platform-specific plans are handled separately
       const result = await client.query(
         `SELECT * FROM subscription_plans 
-         WHERE status = 'active' AND product_type IS NULL 
+         WHERE status = 'active' AND platform_type IS NULL 
          ORDER BY price ASC`
       );
 
@@ -89,16 +89,16 @@ class SubscriptionPlanService {
   static async getAllPlansIncludingProducts() {
     const client = await pool.connect();
     try {
-      // Return ALL active plans (both platform and product-specific)
+      // Return ALL active plans (both platform and platform-specific)
       const result = await client.query(
         `SELECT * FROM subscription_plans 
          WHERE status = 'active' 
          ORDER BY 
            CASE 
-             WHEN product_type IS NULL THEN 0 
+             WHEN platform_type IS NULL THEN 0 
              ELSE 1 
            END,
-           product_type,
+           platform_type,
            price ASC`
       );
 

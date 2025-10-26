@@ -328,10 +328,10 @@ interface ResourceGroup {
                 </div>
               </div>
 
-              <!-- Product Tabs (only show for Tenant or All space) -->
+              <!-- Platform Tabs (only show for Tenant or All space) -->
               <div *ngIf="filterState().space === 'tenant' || filterState().space === 'all'" class="mb-3">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Products
+                  Platforms
                 </label>
                 <div class="grid grid-cols-5 gap-2">
                   <button
@@ -599,7 +599,7 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'roles', displayName: '🔐 Roles', description: 'System role management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
     { resource: 'modules', displayName: '🧩 Modules', description: 'System module management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
     { resource: 'permissions', displayName: '🔑 Permissions', description: 'Permission management', actions: ['read', 'create', 'update', 'delete'], category: 'system' },
-    { resource: 'products', displayName: '📦 Products', description: 'Product catalog and management', actions: ['read', 'create', 'update', 'delete', 'manage-catalog'], category: 'system' },
+    { resource: 'platforms', displayName: '📦 Platforms', description: 'Platform catalog and management', actions: ['read', 'create', 'update', 'delete', 'manage-catalog'], category: 'system' },
     { resource: 'subscriptions', displayName: '💳 Subscriptions', description: 'Subscription management', actions: ['read', 'create', 'update', 'delete', 'manage-plans'], category: 'system' },
     { resource: 'reports', displayName: '📈 Reports & Analytics', description: 'System reports and analytics', actions: ['view', 'export', 'tenant-usage', 'revenue'], category: 'system' },
     { resource: 'analytics', displayName: '📊 Analytics', description: 'Analytics dashboard', actions: ['view'], category: 'system' },
@@ -618,9 +618,9 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'tenant-dashboard', displayName: '🏠 Tenant Dashboard', description: 'Tenant dashboard access', actions: ['view'], category: 'tenant', product: 'core' },
     { resource: 'tenant-users', displayName: '👤 Tenant Users', description: 'Manage users within tenant', actions: ['read', 'create', 'update', 'delete', 'assign-roles', 'invite'], category: 'tenant', product: 'core' },
     { resource: 'tenant-roles', displayName: '🎭 Tenant Roles', description: 'Manage tenant roles', actions: ['read', 'create', 'update', 'delete'], category: 'tenant', product: 'core' },
-    { resource: 'tenant-products', displayName: '🎁 Tenant Products', description: 'Tenant product catalog', actions: ['read', 'configure', 'manage-settings'], category: 'tenant', product: 'core' },
+    { resource: 'tenant-platforms', displayName: '🎁 Tenant Platforms', description: 'Tenant platform catalog', actions: ['read', 'configure', 'manage-settings'], category: 'tenant', product: 'core' },
     { resource: 'tenant-billing', displayName: '💳 Tenant Billing', description: 'Tenant billing and subscriptions', actions: ['read', 'view-subscriptions', 'view-invoices', 'manage-renewals', 'view-overview'], category: 'tenant', product: 'core' },
-    { resource: 'tenant-reports', displayName: '📋 Tenant Reports', description: 'Tenant reports and analytics', actions: ['view', 'product-usage', 'user-activity', 'billing-summary', 'transactions', 'export'], category: 'tenant', product: 'core' },
+    { resource: 'tenant-reports', displayName: '📋 Tenant Reports', description: 'Tenant reports and analytics', actions: ['view', 'platform-usage', 'user-activity', 'billing-summary', 'transactions', 'export'], category: 'tenant', product: 'core' },
     { resource: 'tenant-recycle-bin', displayName: '♻️ Tenant Recycle Bin', description: 'Tenant deleted items recovery', actions: ['view', 'restore', 'view-history'], category: 'tenant', product: 'core' },
     { resource: 'tenant-settings', displayName: '🔧 Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant', product: 'core' },
 

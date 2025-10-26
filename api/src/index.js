@@ -33,6 +33,7 @@ const systemLogsRoutes = require('./routes/systemLogsRoutes');
 const moneyLoanRoutes = require('./modules/products/money-loan/routes');
 const customerRoutes = require('./modules/customer/routes');
 const mfaRoutes = require('./routes/mfa');
+const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -97,6 +98,7 @@ app.use('/api/system-logs', systemLogsRoutes);
 app.use('/api/money-loan', moneyLoanRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/mfa', mfaRoutes);
+app.use('/api/payment-history', paymentHistoryRoutes);
 
 // ==================== 404 HANDLER ====================
 

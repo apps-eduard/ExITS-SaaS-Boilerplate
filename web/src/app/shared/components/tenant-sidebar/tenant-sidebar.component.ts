@@ -143,30 +143,30 @@ export class TenantSidebarComponent implements OnInit {
   tenantName = signal('My Tenant'); // Will be loaded from API
   tenantData = signal<Tenant | null>(null);
 
-  // Check if any products are enabled
-  hasAnyProductEnabled = computed(() => {
+  // Check if any platforms are enabled
+  hasAnyPlatformEnabled = computed(() => {
     const tenant = this.tenantData();
     if (!tenant) {
-      console.log('🔍 hasAnyProductEnabled: No tenant data');
+      console.log('🔍 hasAnyPlatformEnabled: No tenant data');
       return false;
     }
-    const hasProducts = tenant.moneyLoanEnabled || tenant.pawnshopEnabled || tenant.bnplEnabled;
-    console.log('🔍 hasAnyProductEnabled:', {
+    const hasPlatforms = tenant.moneyLoanEnabled || tenant.pawnshopEnabled || tenant.bnplEnabled;
+    console.log('🔍 hasAnyPlatformEnabled:', {
       tenant: tenant.name,
       moneyLoanEnabled: tenant.moneyLoanEnabled,
       pawnshopEnabled: tenant.pawnshopEnabled,
       bnplEnabled: tenant.bnplEnabled,
-      result: hasProducts
+      result: hasPlatforms
     });
-    return hasProducts;
+    return hasPlatforms;
   });
 
-  // Filter menu items based on permissions (Products menu always visible)
+  // Filter menu items based on permissions (Platforms menu always visible)
   filteredMenuItems = computed(() => {
     const items = this.baseMenuItems();
-    
-    // Don't filter out Products menu - let users see "No Products Available" message
-    // This encourages them to purchase products
+
+    // Don't filter out Platforms menu - let users see "No Platforms Available" message
+    // This encourages them to purchase platforms
     return items;
   });
 
@@ -183,13 +183,13 @@ export class TenantSidebarComponent implements OnInit {
       ]
     },
     {
-      label: 'Products',
+      label: 'Platforms',
       icon: '🧩',
-      menuKey: 'tenant-products',
+      menuKey: 'tenant-platforms',
       children: [
-        { label: 'My Product Catalog', icon: '�', route: '/tenant/products', menuKey: 'tenant-products' },
-        { label: 'Product Settings / Features', icon: '�', route: '/tenant/products/settings', menuKey: 'tenant-products' },
-        { label: 'Product Configuration', icon: '⚙️', route: '/tenant/products/config', menuKey: 'tenant-products' },
+        { label: 'My Platform Catalog', icon: '📦', route: '/tenant/platforms', menuKey: 'tenant-platforms' },
+        { label: 'Platform Settings / Features', icon: '⚙️', route: '/tenant/platforms/settings', menuKey: 'tenant-platforms' },
+        { label: 'Platform Configuration', icon: '⚙️', route: '/tenant/platforms/config', menuKey: 'tenant-platforms' },
       ]
     },
     {
@@ -208,7 +208,7 @@ export class TenantSidebarComponent implements OnInit {
       icon: '📊',
       menuKey: 'tenant-reports',
       children: [
-        { label: 'Product Usage', icon: '📈', route: '/tenant/reports/product-usage', menuKey: 'tenant-reports' },
+        { label: 'Platform Usage', icon: '📈', route: '/tenant/reports/platform-usage', menuKey: 'tenant-reports' },
         { label: 'User Activity', icon: '🧍‍♂️', route: '/tenant/reports/user-activity', menuKey: 'tenant-reports' },
         { label: 'Billing / Payment Summary', icon: '💰', route: '/tenant/reports/billing-summary', menuKey: 'tenant-reports' },
         { label: 'Transaction History', icon: '🧾', route: '/tenant/reports/transactions', menuKey: 'tenant-reports' },

@@ -3,10 +3,10 @@
  * @returns { Promise<void> } 
  */
 exports.seed = async function(knex) {
-  console.log('🏪 Seeding subscription plans and products...\n');
+  console.log('🏪 Seeding subscription plans and platforms...\n');
 
   // Clean up existing data
-  await knex('product_subscriptions').del();
+  await knex('platform_subscriptions').del();
   await knex('tenant_subscriptions').del();
   await knex('plan_features').del();
   await knex('subscription_plans').del();
@@ -14,7 +14,7 @@ exports.seed = async function(knex) {
   // 1. Create subscription plans
   console.log('1. Creating subscription plans...');
   const subscriptionPlans = await knex('subscription_plans').insert([
-    // Product-specific plans
+    // Platform-specific plans
     {
       name: 'Money Loan - Starter',
       description: 'Basic money lending features for small operations',
@@ -22,7 +22,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'money_loan',
+      platform_type: 'money_loan',
       features: JSON.stringify({
         max_active_loans: 50,
         loan_origination: true,
@@ -45,7 +45,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'money_loan',
+      platform_type: 'money_loan',
       features: JSON.stringify({
         max_active_loans: 500,
         loan_origination: true,
@@ -71,7 +71,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'money_loan',
+      platform_type: 'money_loan',
       features: JSON.stringify({
         max_active_loans: -1, // Unlimited
         loan_origination: true,
@@ -100,7 +100,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'bnpl',
+      platform_type: 'bnpl',
       features: JSON.stringify({
         max_transactions_per_month: 100,
         payment_splitting: true,
@@ -121,7 +121,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'bnpl',
+      platform_type: 'bnpl',
       features: JSON.stringify({
         max_transactions_per_month: 1000,
         payment_splitting: true,
@@ -145,7 +145,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'pawnshop',
+      platform_type: 'pawnshop',
       features: JSON.stringify({
         max_active_items: 200,
         item_valuation: true,
@@ -166,7 +166,7 @@ exports.seed = async function(knex) {
       billing_cycle: 'monthly',
       max_users: 0,
       max_storage_gb: 0,
-      product_type: 'pawnshop',
+      platform_type: 'pawnshop',
       features: JSON.stringify({
         max_active_items: 2000,
         item_valuation: true,
@@ -184,35 +184,35 @@ exports.seed = async function(knex) {
       setup_fee: 0.00,
       terms_and_conditions: 'Pawnshop Pro plan terms apply.'
     }
-  ]).returning(['id', 'name', 'price', 'product_type']);
+  ]).returning(['id', 'name', 'price', 'platform_type']);
   
   console.log(`✅ ${subscriptionPlans.length} subscription plans created`);
 
   // 2. Plan features are now defined in the features JSON field of each plan
   console.log('2. Plan features embedded in subscription plans');
 
-  // 3. Create product subscriptions for existing tenants
-  // NOTE: Changed: do NOT create any product_subscriptions by default during seed.
+  // 3. Create platform subscriptions for existing tenants
+  // NOTE: Changed: do NOT create any platform_subscriptions by default during seed.
   // Leaving tenants and plans in place but intentionally skipping insertion of
-  // product_subscriptions so new environments start with no subscriptions.
-  console.log('3. Skipping creation of product subscriptions by default (seed adjusted to leave subscriptions empty).');
-  const productSubscriptionCount = 0;
+  // platform_subscriptions so new environments start with no subscriptions.
+  console.log('3. Skipping creation of platform subscriptions by default (seed adjusted to leave subscriptions empty).');
+  const platformSubscriptionCount = 0;
 
   // 4. Create tenant subscriptions (main platform subscriptions)
   // NOTE: Changed: do NOT create tenant_subscriptions by default during seed.
   console.log('4. Skipping creation of tenant subscriptions by default (seed adjusted).');
   const tenantSubscriptionCount = 0;
 
-  console.log('\n✨ Products and subscriptions seed completed successfully!');
+  console.log('\n✨ Platforms and subscriptions seed completed successfully!');
   console.log('\n📋 Summary:');
   console.log(`   • ${subscriptionPlans.length} subscription plans`);
   console.log(`   • Plan features embedded in each plan`);
-  console.log(`   • ${productSubscriptionCount} product subscriptions`);
+  console.log(`   • ${platformSubscriptionCount} platform subscriptions`);
   console.log(`   • ${tenantSubscriptionCount} tenant subscriptions`);
   
   console.log('\n💰 Subscription Plans:');
   subscriptionPlans.forEach(plan => {
-    console.log(`   • ${plan.name} (${plan.product_type}): $${plan.price}/${plan.billing_cycle}`);
+    console.log(`   • ${plan.name} (${plan.platform_type}): $${plan.price}/${plan.billing_cycle}`);
   });
 };
 

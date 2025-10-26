@@ -2,24 +2,15 @@ import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 import { RBACService } from '../../../core/services/rbac.service';
 import { ToastService } from '../../../core/services/toast.service';
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  date: string;
-  dueDate: string;
-  amount: number;
-  status: 'paid' | 'pending' | 'overdue' | 'cancelled';
-  description: string;
-  pdfUrl?: string;
-}
+import { InvoiceService, Invoice } from '../../../core/services/invoice.service';
 
 @Component({
   selector: 'app-tenant-invoices',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, HttpClientModule],
   template: `
     <div class="p-6 space-y-6">
       <!-- Header -->
@@ -97,7 +88,7 @@ interface Invoice {
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
             <select
               [(ngModel)]="selectedStatus"
-              (ngModelChange)="applyFilters()"
+              (ngModelChange)="onFilterChange()"
               class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="all">All Statuses</option>
@@ -112,10 +103,11 @@ interface Invoice {
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Year:</span>
             <select
               [(ngModel)]="selectedYear"
-              (ngModelChange)="applyFilters()"
+              (ngModelChange)="onFilterChange()"
               class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="all">All Years</option>
+              <option value="2025">2025</option>
               <option value="2024">2024</option>
               <option value="2023">2023</option>
               <option value="2022">2022</option>
@@ -249,8 +241,8 @@ interface Invoice {
           </div>
           <p class="text-gray-600 dark:text-gray-400 mb-2">No invoices found</p>
           <p class="text-sm text-gray-500 dark:text-gray-500">
-            {{ searchTerm || selectedStatus !== 'all' || selectedYear !== 'all' 
-              ? 'Try adjusting your filters' 
+            {{ searchTerm || selectedStatus !== 'all' || selectedYear !== 'all'
+              ? 'Try adjusting your filters'
               : 'Your invoices will appear here' }}
           </p>
         </div>
@@ -283,56 +275,17 @@ interface Invoice {
 export class TenantInvoicesComponent implements OnInit {
   private rbacService = inject(RBACService);
   private toastService = inject(ToastService);
+  private invoiceService = inject(InvoiceService);
 
   searchTerm = '';
   selectedStatus = 'all';
   selectedYear = 'all';
-  
+
   private searchDebounceTimer: any = null;
+  isLoading = signal(false);
+  totalStats = signal({ total: 0, paid: 0, pending: 0, overdue: 0 });
 
-  allInvoices = signal<Invoice[]>([
-    {
-      id: 'inv_001',
-      invoiceNumber: 'INV-2024-001',
-      date: '2024-01-05',
-      dueDate: '2024-01-15',
-      amount: 249900,
-      status: 'paid',
-      description: 'Monthly Subscription - Professional Plan (January 2024)',
-      pdfUrl: '/invoices/inv_001.pdf'
-    },
-    {
-      id: 'inv_002',
-      invoiceNumber: 'INV-2024-002',
-      date: '2024-02-05',
-      dueDate: '2024-02-15',
-      amount: 249900,
-      status: 'paid',
-      description: 'Monthly Subscription - Professional Plan (February 2024)',
-      pdfUrl: '/invoices/inv_002.pdf'
-    },
-    {
-      id: 'inv_003',
-      invoiceNumber: 'INV-2024-003',
-      date: '2024-03-05',
-      dueDate: '2024-03-15',
-      amount: 249900,
-      status: 'pending',
-      description: 'Monthly Subscription - Professional Plan (March 2024)',
-      pdfUrl: '/invoices/inv_003.pdf'
-    },
-    {
-      id: 'inv_004',
-      invoiceNumber: 'INV-2024-004',
-      date: '2024-04-05',
-      dueDate: '2024-04-15',
-      amount: 249900,
-      status: 'overdue',
-      description: 'Monthly Subscription - Professional Plan (April 2024)',
-      pdfUrl: '/invoices/inv_004.pdf'
-    }
-  ]);
-
+  allInvoices = signal<Invoice[]>([]);
   filteredInvoices = signal<Invoice[]>([]);
 
   canViewBilling = computed(() =>
@@ -341,7 +294,46 @@ export class TenantInvoicesComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('📄 TenantInvoicesComponent initialized');
-    this.applyFilters();
+    this.loadInvoices();
+    this.loadStats();
+  }
+
+  loadInvoices(): void {
+    this.isLoading.set(true);
+
+    const filters = {
+      status: this.selectedStatus !== 'all' ? this.selectedStatus : undefined,
+      year: this.selectedYear !== 'all' ? this.selectedYear : undefined,
+      limit: 100
+    };
+
+    this.invoiceService.getInvoices(filters).subscribe({
+      next: (response) => {
+        this.allInvoices.set(response.invoices);
+        this.applyFilters();
+        this.isLoading.set(false);
+        console.log(`✅ Loaded ${response.invoices.length} invoices`);
+      },
+      error: (error) => {
+        console.error('❌ Error loading invoices:', error);
+        this.toastService.error('Failed to load invoices');
+        this.isLoading.set(false);
+        this.allInvoices.set([]);
+        this.filteredInvoices.set([]);
+      }
+    });
+  }
+
+  loadStats(): void {
+    this.invoiceService.getInvoiceStats().subscribe({
+      next: (stats) => {
+        this.totalStats.set(stats);
+        console.log('📊 Invoice stats loaded:', stats);
+      },
+      error: (error) => {
+        console.error('❌ Error loading stats:', error);
+      }
+    });
   }
 
   onSearchChange(): void {
@@ -349,14 +341,16 @@ export class TenantInvoicesComponent implements OnInit {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
     }
-    
+
     // Set new timer - apply filters after 300ms of no typing
     this.searchDebounceTimer = setTimeout(() => {
-      this.applyFilters();
+      this.loadInvoices(); // Reload from server with search
     }, 300);
   }
 
-  applyFilters(): void {
+  onFilterChange(): void {
+    this.loadInvoices(); // Reload from server with new filters
+  }  applyFilters(): void {
     let filtered = this.allInvoices();
 
     // Filter by status
@@ -383,11 +377,15 @@ export class TenantInvoicesComponent implements OnInit {
   }
 
   getTotalCount(): number {
-    return this.allInvoices().length;
+    return this.totalStats().total;
   }
 
   getStatusCount(status: string): number {
-    return this.allInvoices().filter(inv => inv.status === status).length;
+    const stats = this.totalStats();
+    if (status === 'total' || status === 'paid' || status === 'pending' || status === 'overdue') {
+      return stats[status] || 0;
+    }
+    return 0;
   }
 
   formatCurrency(amount: number): string {

@@ -91,12 +91,12 @@ exports.seed = async function(knex) {
     { permission_key: 'permissions:update', resource: 'permissions', action: 'update', description: 'Edit permissions', space: 'system' },
     { permission_key: 'permissions:delete', resource: 'permissions', action: 'delete', description: 'Delete permissions', space: 'system' },
     
-    // Product management (System Level)
-    { permission_key: 'products:create', resource: 'products', action: 'create', description: 'Create new products', space: 'system' },
-    { permission_key: 'products:read', resource: 'products', action: 'read', description: 'View products', space: 'system' },
-    { permission_key: 'products:update', resource: 'products', action: 'update', description: 'Edit product details', space: 'system' },
-    { permission_key: 'products:delete', resource: 'products', action: 'delete', description: 'Delete products', space: 'system' },
-    { permission_key: 'products:manage-catalog', resource: 'products', action: 'manage-catalog', description: 'Manage product catalog', space: 'system' },
+    // Platform management (System Level)
+    { permission_key: 'platforms:create', resource: 'platforms', action: 'create', description: 'Create new platforms', space: 'system' },
+    { permission_key: 'platforms:read', resource: 'platforms', action: 'read', description: 'View platforms', space: 'system' },
+    { permission_key: 'platforms:update', resource: 'platforms', action: 'update', description: 'Edit platform details', space: 'system' },
+    { permission_key: 'platforms:delete', resource: 'platforms', action: 'delete', description: 'Delete platforms', space: 'system' },
+    { permission_key: 'platforms:manage-catalog', resource: 'platforms', action: 'manage-catalog', description: 'Manage platform catalog', space: 'system' },
     
     // Subscriptions Management (System Level)
     { permission_key: 'subscriptions:create', resource: 'subscriptions', action: 'create', description: 'Create new subscriptions', space: 'system' },
@@ -157,10 +157,10 @@ exports.seed = async function(knex) {
     { permission_key: 'tenant-settings:read', resource: 'tenant-settings', action: 'read', description: 'View tenant settings', space: 'tenant' },
     { permission_key: 'tenant-settings:update', resource: 'tenant-settings', action: 'update', description: 'Edit tenant settings', space: 'tenant' },
     
-    // Tenant Products (Tenant Level)
-    { permission_key: 'tenant-products:read', resource: 'tenant-products', action: 'read', description: 'View tenant product catalog', space: 'tenant' },
-    { permission_key: 'tenant-products:configure', resource: 'tenant-products', action: 'configure', description: 'Configure tenant products', space: 'tenant' },
-    { permission_key: 'tenant-products:manage-settings', resource: 'tenant-products', action: 'manage-settings', description: 'Manage product settings/features', space: 'tenant' },
+    // Tenant Platforms (Tenant Level)
+    { permission_key: 'tenant-platforms:read', resource: 'tenant-platforms', action: 'read', description: 'View tenant platform catalog', space: 'tenant' },
+    { permission_key: 'tenant-platforms:configure', resource: 'tenant-platforms', action: 'configure', description: 'Configure tenant platforms', space: 'tenant' },
+    { permission_key: 'tenant-platforms:manage-settings', resource: 'tenant-platforms', action: 'manage-settings', description: 'Manage platform settings/features', space: 'tenant' },
     
     // Tenant Billing
     { permission_key: 'tenant-billing:read', resource: 'tenant-billing', action: 'read', description: 'View tenant billing information', space: 'tenant' },

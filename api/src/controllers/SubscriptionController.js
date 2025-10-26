@@ -16,7 +16,7 @@ class SubscriptionController {
     try {
       const result = await pool.query(
         `SELECT sp.id, sp.name, sp.description, sp.price, sp.billing_cycle, sp.features, 
-                sp.max_users, sp.max_storage_gb, sp.status, sp.product_type, 
+                sp.max_users, sp.max_storage_gb, sp.status, sp.platform_type, 
                 sp.trial_days, sp.is_featured, sp.custom_pricing,
                 sp.created_at, sp.updated_at,
                 (
@@ -25,9 +25,9 @@ class SubscriptionController {
                   FROM tenant_subscriptions ts 
                   WHERE ts.plan_id = sp.id AND ts.status = 'active'
                 ) + (
-                  -- Count from product_subscriptions (Money Loan, BNPL, Pawnshop plans)
+                  -- Count from platform_subscriptions (Money Loan, BNPL, Pawnshop plans)
                   SELECT COUNT(*) 
-                  FROM product_subscriptions ps 
+                  FROM platform_subscriptions ps 
                   WHERE ps.subscription_plan_id = sp.id AND ps.status::text = 'active'
                 ) as subscriber_count
          FROM subscription_plans sp
@@ -122,7 +122,7 @@ class SubscriptionController {
 
       const result = await pool.query(
         `SELECT COUNT(*) as count
-         FROM product_subscriptions
+         FROM platform_subscriptions
          WHERE subscription_plan_id = $1 AND status = 'active'`,
         [id]
       );
@@ -153,7 +153,7 @@ class SubscriptionController {
         max_users,
         max_storage_gb,
         status,
-        product_type,
+        platform_type,
         trial_days,
         is_featured,
         custom_pricing
@@ -183,10 +183,10 @@ class SubscriptionController {
       const result = await pool.query(
         `INSERT INTO subscription_plans 
          (name, description, price, billing_cycle, features, max_users, max_storage_gb, status, 
-          product_type, trial_days, is_featured, custom_pricing)
+          platform_type, trial_days, is_featured, custom_pricing)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, 
-                   status, product_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
+                   status, platform_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
         [
           name,
           description,
@@ -196,7 +196,7 @@ class SubscriptionController {
           max_users || null,
           max_storage_gb || null,
           status || 'active',
-          product_type || 'platform',
+          platform_type || 'platform',
           trial_days || 0,
           is_featured || false,
           custom_pricing || false
@@ -232,7 +232,7 @@ class SubscriptionController {
         max_users,
         max_storage_gb,
         status,
-        product_type,
+        platform_type,
         trial_days,
         is_featured,
         custom_pricing
@@ -276,14 +276,14 @@ class SubscriptionController {
              max_users = COALESCE($6, max_users),
              max_storage_gb = COALESCE($7, max_storage_gb),
              status = COALESCE($8, status),
-             product_type = COALESCE($9, product_type),
+             platform_type = COALESCE($9, platform_type),
              trial_days = COALESCE($10, trial_days),
              is_featured = COALESCE($11, is_featured),
              custom_pricing = COALESCE($12, custom_pricing),
              updated_at = NOW()
          WHERE id = $13
          RETURNING id, name, description, price, billing_cycle, features, max_users, max_storage_gb, 
-                   status, product_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
+                   status, platform_type, trial_days, is_featured, custom_pricing, created_at, updated_at`,
         [
           name, 
           description, 
@@ -293,7 +293,7 @@ class SubscriptionController {
           max_users, 
           max_storage_gb, 
           status,
-          product_type,
+          platform_type,
           trial_days,
           is_featured,
           custom_pricing,
@@ -337,7 +337,7 @@ class SubscriptionController {
 
       // Check if plan has active subscriptions
       const activeSubscriptions = await pool.query(
-        'SELECT COUNT(*) as count FROM product_subscriptions WHERE subscription_plan_id = $1 AND status = $2',
+        'SELECT COUNT(*) as count FROM platform_subscriptions WHERE subscription_plan_id = $1 AND status = $2',
         [id, 'active']
       );
 
@@ -377,15 +377,15 @@ class SubscriptionController {
     try {
       const result = await pool.query(
         `SELECT id, name, description, price, billing_cycle, features, 
-                max_users, max_storage_gb, product_type, status, created_at, updated_at
+                max_users, max_storage_gb, platform_type, status, created_at, updated_at
          FROM subscription_plans
          WHERE status = 'active'
          ORDER BY 
            CASE 
-             WHEN product_type IS NULL THEN 0 
+             WHEN platform_type IS NULL THEN 0 
              ELSE 1 
            END,
-           product_type,
+           platform_type,
            price ASC`
       );
 
@@ -400,7 +400,7 @@ class SubscriptionController {
         features: row.features,
         maxUsers: row.max_users,
         maxStorageGb: row.max_storage_gb,
-        productType: row.product_type, // Transform to camelCase
+        productType: row.platform_type, // Transform to camelCase
         status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at

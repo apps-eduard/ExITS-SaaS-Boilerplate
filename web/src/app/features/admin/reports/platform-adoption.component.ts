@@ -18,7 +18,7 @@ interface AdoptionTrend {
 }
 
 @Component({
-  selector: 'app-product-adoption',
+  selector: 'app-platform-adoption',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
@@ -26,7 +26,7 @@ interface AdoptionTrend {
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Product Adoption Report</h1>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Platform Adoption Report</h1>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Track feature usage and engagement across the platform
           </p>
@@ -355,7 +355,7 @@ interface AdoptionTrend {
     </div>
   `
 })
-export class ProductAdoptionComponent {
+export class PlatformAdoptionComponent {
   timePeriod = '30d';
   selectedTenant = 'all';
   selectedPlan = 'all';
@@ -426,6 +426,6 @@ export class ProductAdoptionComponent {
   }
 
   exportReport(format: 'csv' | 'pdf') {
-    alert(`Exporting product adoption report as ${format.toUpperCase()}...`);
+    alert(`Exporting Platform Adoption report as ${format.toUpperCase()}...`);
   }
 }

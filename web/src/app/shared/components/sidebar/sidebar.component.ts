@@ -154,23 +154,23 @@ export class SidebarComponent {
     },
     {
       label: 'Users',
-      icon: '👥',
+      icon: '🧑‍🤝‍🧑',
       anyPermission: ['users:read', 'users:create', 'users:update', 'tenant-users:read'],
       children: [
-        { label: 'All Users', icon: '👤', route: '/admin/users', anyPermission: ['users:read', 'tenant-users:read'] },
+        { label: 'All Users', icon: '🧍', route: '/admin/users', anyPermission: ['users:read', 'tenant-users:read'] },
         { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', anyPermission: ['users:create', 'tenant-users:invite'] },
         { label: 'Roles & Permissions', icon: '🔐', route: '/admin/roles', permission: 'roles:read' },
       ]
     },
     {
-      label: 'Products',
+      label: 'Platforms',
       icon: '📦',
-      anyPermission: ['products:read', 'products:create', 'products:update'],
+      anyPermission: ['platforms:read', 'platforms:create', 'platforms:update'],
       children: [
-        { label: 'Add Product', icon: '➕', route: '/admin/products/new', permission: 'products:create' },
-        { label: 'Product Catalog', icon: '📦', route: '/admin/products', permission: 'products:read' },
-        { label: 'Product Mapping', icon: '🔗', route: '/admin/products/mapping', permission: 'products:update' },
-        { label: 'Product Settings', icon: '⚙️', route: '/admin/products/settings', permission: 'products:update' },
+        { label: 'Add Platform', icon: '➕', route: '/admin/platforms/new', permission: 'platforms:create' },
+        { label: 'Platform Catalog', icon: '📦', route: '/admin/platforms', permission: 'platforms:read' },
+        { label: 'Platform Mapping', icon: '🌐', route: '/admin/platforms/mapping', permission: 'platforms:update' },
+        { label: 'Platform Settings', icon: '⚙️', route: '/admin/platforms/settings', permission: 'platforms:update' },
       ]
     },
     {
@@ -219,7 +219,7 @@ export class SidebarComponent {
         { label: 'Tenant Usage', icon: '📈', route: '/admin/reports/tenant-usage', permission: 'reports:view' },
         { label: 'Revenue Reports', icon: '💰', route: '/admin/reports/revenue', permission: 'reports:view' },
         { label: 'Subscription History', icon: '📜', route: '/admin/reports/subscription-history', permission: 'reports:view' },
-        { label: 'Product Adoption', icon: '🧩', route: '/admin/product-adoption', permission: 'reports:view' },
+        { label: 'Platform Adoption', icon: '🧩', route: '/admin/platform-adoption', permission: 'reports:view' },
       ]
     },
     {

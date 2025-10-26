@@ -167,23 +167,23 @@ export const routes: Routes = [
         ]
       },
       {
-        path: 'products',
+        path: 'platforms',
         children: [
           {
             path: '',
-            loadComponent: () => import('./features/admin/products/products-list.component').then(m => m.ProductsListComponent)
+            loadComponent: () => import('./features/admin/platforms/platforms-list.component').then(m => m.PlatformsListComponent)
           },
           {
             path: 'new',
-            loadComponent: () => import('./features/admin/products/product-new.component').then(m => m.ProductNewComponent)
+            loadComponent: () => import('./features/admin/platforms/platform-new.component').then(m => m.PlatformNewComponent)
           },
           {
             path: 'mapping',
-            loadComponent: () => import('./features/admin/products/product-mapping.component').then(m => m.ProductMappingComponent)
+            loadComponent: () => import('./features/admin/platforms/platform-mapping.component').then(m => m.PlatformMappingComponent)
           },
           {
             path: 'settings',
-            loadComponent: () => import('./features/admin/products/product-settings.component').then(m => m.ProductSettingsComponent)
+            loadComponent: () => import('./features/admin/platforms/platform-settings.component').then(m => m.PlatformSettingsComponent)
           }
         ]
       },
@@ -244,8 +244,8 @@ export const routes: Routes = [
         ]
       },
       {
-        path: 'product-adoption',
-        loadComponent: () => import('./features/admin/reports/product-adoption.component').then(m => m.ProductAdoptionComponent)
+        path: 'platform-adoption',
+        loadComponent: () => import('./features/admin/reports/platform-adoption.component').then(m => m.PlatformAdoptionComponent)
       },
       {
         path: 'system-activity-logs',
@@ -380,19 +380,19 @@ export const routes: Routes = [
         ]
       },
       {
-        path: 'products',
+        path: 'platforms',
         children: [
           {
             path: '',
-            loadComponent: () => import('./features/tenant/products/tenant-products.component').then(m => m.TenantProductsComponent)
+            loadComponent: () => import('./features/tenant/platforms/tenant-platforms.component').then(m => m.TenantPlatformsComponent)
           },
           {
             path: 'settings',
-            loadComponent: () => import('./features/tenant/products/tenant-product-settings.component').then(m => m.TenantProductSettingsComponent)
+            loadComponent: () => import('./features/tenant/platforms/tenant-platform-settings.component').then(m => m.TenantPlatformSettingsComponent)
           },
           {
             path: 'config',
-            loadComponent: () => import('./features/tenant/products/tenant-product-config.component').then(m => m.TenantProductConfigComponent)
+            loadComponent: () => import('./features/tenant/platforms/tenant-platform-config.component').then(m => m.TenantPlatformConfigComponent)
           }
         ]
       },
@@ -425,8 +425,8 @@ export const routes: Routes = [
         path: 'reports',
         children: [
           {
-            path: 'product-usage',
-            loadComponent: () => import('./features/tenant/reports/product-usage.component').then(m => m.ProductUsageComponent)
+            path: 'platform-usage',
+            loadComponent: () => import('./features/tenant/reports/platform-usage.component').then(m => m.PlatformUsageComponent)
           },
           {
             path: 'user-activity',

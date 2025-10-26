@@ -16,7 +16,7 @@ class ProductSubscriptionService {
         `SELECT 
           ps.id,
           ps.tenant_id,
-          ps.product_type,
+          ps.platform_type,
           ps.subscription_plan_id,
           ps.status,
           ps.started_at as starts_at,
@@ -36,10 +36,10 @@ class ProductSubscriptionService {
             'max_users', sp.max_users,
             'max_storage_gb', sp.max_storage_gb
           ) as subscription_plan
-         FROM product_subscriptions ps
+         FROM platform_subscriptions ps
          LEFT JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
          WHERE ps.tenant_id = $1
-         ORDER BY ps.product_type`,
+         ORDER BY ps.platform_type`,
         [tenantId]
       );
 
@@ -70,10 +70,10 @@ class ProductSubscriptionService {
       const price = planResult.rows[0].price;
 
       const result = await pool.query(
-        `INSERT INTO product_subscriptions 
-          (tenant_id, product_type, subscription_plan_id, price, billing_cycle, started_at, expires_at, status)
+        `INSERT INTO platform_subscriptions 
+          (tenant_id, platform_type, subscription_plan_id, price, billing_cycle, started_at, expires_at, status)
          VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), $7, 'active')
-         ON CONFLICT (tenant_id, product_type) 
+         ON CONFLICT (tenant_id, platform_type) 
          DO UPDATE SET
            subscription_plan_id = EXCLUDED.subscription_plan_id,
            price = EXCLUDED.price,
@@ -107,9 +107,9 @@ class ProductSubscriptionService {
   static async unsubscribeFromProduct(tenantId, productType) {
     try {
       const result = await pool.query(
-        `UPDATE product_subscriptions 
+        `UPDATE platform_subscriptions 
          SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
-         WHERE tenant_id = $1 AND product_type = $2
+         WHERE tenant_id = $1 AND platform_type = $2
          RETURNING *`,
         [tenantId, productType]
       );
@@ -181,9 +181,9 @@ class ProductSubscriptionService {
       }
 
       const query = `
-        UPDATE product_subscriptions
+        UPDATE platform_subscriptions
         SET ${fieldsToUpdate.join(', ')}, updated_at = CURRENT_TIMESTAMP
-        WHERE tenant_id = $1 AND product_type = $2
+        WHERE tenant_id = $1 AND platform_type = $2
         RETURNING *
       `;
 
