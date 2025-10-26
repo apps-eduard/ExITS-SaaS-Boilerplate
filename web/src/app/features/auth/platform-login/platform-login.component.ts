@@ -61,11 +61,14 @@ export class PlatformLoginComponent {
     this.authService.login(this.email, this.password).subscribe({
       next: (response: any) => {
         this.loading.set(false);
-        this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
-
+        
         const user = response.data.user;
         const platforms = response.data.platforms || [];
         const roles = response.data.roles || [];
+        
+        // Show welcome message with proper name fallback
+        const userName = user.first_name || user.email.split('@')[0];
+        this.toastService.success(`Welcome back, ${userName}!`);
 
         // Check if user is System Admin
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;

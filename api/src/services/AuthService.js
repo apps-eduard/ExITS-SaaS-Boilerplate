@@ -106,21 +106,21 @@ class AuthService {
       // Audit log
       await this.auditLog(user.id, user.tenant_id, 'login', 'user', user.id, {}, ipAddress);
 
-      // Fetch user's platforms if tenant user (only if user_products table exists)
+      // Fetch user's platforms if tenant user (from employee_product_access table)
       let platforms = [];
       if (user.tenant_id) {
         try {
           const platformsResult = await pool.query(
             `SELECT product_type as "productType", access_level as "accessLevel", is_primary as "isPrimary"
-             FROM user_products
-             WHERE user_id = $1
+             FROM employee_product_access
+             WHERE user_id = $1 AND status = 'active'
              ORDER BY is_primary DESC, product_type`,
             [user.id]
           );
           platforms = platformsResult.rows;
           logger.info(`✅ Fetched ${platforms.length} platforms for user ${user.id}`);
         } catch (platformErr) {
-          // user_products table might not exist yet - that's okay for admin logins
+          // employee_product_access table might not exist yet - that's okay for admin logins
           logger.warn(`Could not fetch platforms for user ${user.id}: ${platformErr.message}`);
           platforms = [];
         }
@@ -430,8 +430,8 @@ class AuthService {
 
       // Check if user has access to this specific platform
       const platformAccess = await pool.query(
-        `SELECT * FROM user_products 
-         WHERE user_id = $1 AND product_type = $2`,
+        `SELECT * FROM employee_product_access 
+         WHERE user_id = $1 AND product_type = $2 AND status = 'active'`,
         [user.id, platformType]
       );
 
