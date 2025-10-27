@@ -18,8 +18,11 @@ interface ModuleItem {
     <div class="p-6">
       <!-- Header -->
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Module Registry</h1>
-        <p class="mt-1 text-gray-600 dark:text-gray-400">View and manage available modules and their action keys</p>
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span class="text-xl">📦</span>
+          Module Registry
+        </h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">View and manage available modules and their action keys</p>
       </div>
 
       <!-- Stats -->
@@ -37,28 +40,48 @@ interface ModuleItem {
       <!-- Modules Table -->
       <div class="rounded-lg border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-900">
         <table class="w-full">
-          <thead class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+          <thead class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <tr>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Menu Key</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Display Name</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Space</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Action Keys</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <span class="inline-flex items-center gap-1">
+                  <span class="w-3.5 h-3.5">🔑</span>
+                  Menu Key
+                </span>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <span class="inline-flex items-center gap-1">
+                  <span class="w-3.5 h-3.5">📝</span>
+                  Display Name
+                </span>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <span class="inline-flex items-center gap-1">
+                  <span class="w-3.5 h-3.5">🌐</span>
+                  Space
+                </span>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <span class="inline-flex items-center gap-1">
+                  <span class="w-3.5 h-3.5">⚡</span>
+                  Action Keys
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr *ngFor="let module of modules()" class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-              <td class="px-6 py-4 font-mono text-sm font-medium text-gray-900 dark:text-white">
+              <td class="px-3 py-2 font-mono text-xs font-medium text-gray-900 dark:text-white">
                 {{ module.menuKey }}
               </td>
-              <td class="px-6 py-4 text-gray-900 dark:text-white">
+              <td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
                 {{ module.displayName }}
               </td>
-              <td class="px-6 py-4">
+              <td class="px-3 py-2">
                 <span [class]="'px-2 py-1 rounded text-xs font-medium ' + (module.space === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300')">
                   {{ module.space | uppercase }}
                 </span>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1">
                   <span *ngFor="let action of module.actionKeys" class="inline-block rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
                     {{ action }}

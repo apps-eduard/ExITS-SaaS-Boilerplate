@@ -6,7 +6,7 @@ exports.up = async function(knex) {
   // Create ENUM types using raw SQL with existence check
   const enumTypes = [
     { name: 'user_status', values: ['active', 'suspended', 'deleted'] },
-    { name: 'role_space', values: ['system', 'tenant'] },
+    { name: 'role_space', values: ['system', 'tenant', 'customer'] },
     { name: 'tenant_status', values: ['active', 'suspended', 'deleted'] },
     { name: 'session_status', values: ['active', 'revoked', 'expired'] },
     { name: 'audit_status', values: ['success', 'failure', 'pending'] },

@@ -17,8 +17,11 @@ import { RBACService } from '../../../core/services/rbac.service';
       <!-- Header with Navigation Tabs -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">👥 User Management</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span class="text-xl">👥</span>
+            User Management
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ isTenantContext() ? 'Manage your tenant users' : 'Manage system and tenant users' }}
           </p>
         </div>
@@ -135,24 +138,35 @@ import { RBACService } from '../../../core/services/rbac.service';
         </div>
       </div>
 
-      <!-- Filters Row -->
-      <div class="grid grid-cols-5 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
-            <input
-              [(ngModel)]="searchQuery"
-              (keyup.enter)="search()"
-              placeholder="Email, name..."
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
+      <!-- Filters Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+          <!-- Search -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Search
+            </label>
+            <div class="relative">
+              <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                (keyup.enter)="search()"
+                placeholder="Search by email, name..."
+                class="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
           </div>
 
+          <!-- Status Filter -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Status
+            </label>
             <select
               [(ngModel)]="filterStatus"
               (change)="applyFilters()"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
@@ -162,12 +176,15 @@ import { RBACService } from '../../../core/services/rbac.service';
             </select>
           </div>
 
+          <!-- Type Filter -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Type
+            </label>
             <select
               [(ngModel)]="filterType"
               (change)="applyFilters()"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="">All</option>
               <option value="system">System Admin</option>
@@ -175,12 +192,15 @@ import { RBACService } from '../../../core/services/rbac.service';
             </select>
           </div>
 
+          <!-- Role Filter -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Role
+            </label>
             <select
               [(ngModel)]="filterRole"
               (change)="applyFilters()"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="">All Roles</option>
               <option *ngFor="let role of roleService.rolesSignal()" [value]="role.id">
@@ -188,20 +208,48 @@ import { RBACService } from '../../../core/services/rbac.service';
               </option>
             </select>
           </div>
+        </div>
 
-          <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">&nbsp;</label>
+        <!-- Action Buttons Row -->
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-2">
             <button
               (click)="clearFilters()"
-              class="inline-flex items-center justify-center gap-1.5 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear Filters
+              <span class="w-3.5 h-3.5">🔄</span>
+              Clear
+            </button>
+            <button
+              (click)="exportSelected()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+            >
+              <span class="w-3.5 h-3.5">📥</span>
+              Export CSV
+            </button>
+            <button
+              (click)="exportPDF()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+            >
+              <span class="w-3.5 h-3.5">📄</span>
+              Export PDF
             </button>
           </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-gray-600 dark:text-gray-400">Show:</label>
+            <select
+              [(ngModel)]="pageSize"
+              (ngModelChange)="onPageSizeChange()"
+              class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            >
+              <option [value]="10">10</option>
+              <option [value]="25">25</option>
+              <option [value]="50">50</option>
+              <option [value]="100">100</option>
+            </select>
+          </div>
         </div>
+      </div>
 
       <!-- Bulk Actions -->
       <div *ngIf="selectedUsers().size > 0" class="flex items-center gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900">
@@ -212,15 +260,6 @@ import { RBACService } from '../../../core/services/rbac.service';
           {{ selectedUsers().size }} user(s) selected
         </span>
         <div class="flex-1"></div>
-        <button
-          (click)="exportSelected()"
-          class="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition shadow-sm"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Export CSV
-        </button>
         <button
           *ngIf="canDeleteUsers()"
           (click)="bulkDelete()"
@@ -262,9 +301,9 @@ import { RBACService } from '../../../core/services/rbac.service';
       <div *ngIf="!userService.loadingSignal() && filteredUsers.length > 0" class="rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <thead class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider w-12">
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
                   <input
                     type="checkbox"
                     [checked]="selectAll()"
@@ -272,18 +311,53 @@ import { RBACService } from '../../../core/services/rbac.service';
                     class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">User</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Email</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Tenant</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Roles</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Last Login</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">👤</span>
+                    User
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📧</span>
+                    Email
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🏢</span>
+                    Tenant
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🎭</span>
+                    Roles
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔘</span>
+                    Status
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🕐</span>
+                    Last Login
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">⚙️</span>
+                    Actions
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr *ngFor="let user of filteredUsers" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-2 text-center">
                   <input
                     type="checkbox"
                     [checked]="isUserSelected(user.id)"
@@ -291,7 +365,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                     class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                       <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -308,10 +382,10 @@ import { RBACService } from '../../../core/services/rbac.service';
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-3 py-2">
                   <div class="text-gray-900 dark:text-white">{{ user.email }}</div>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-2 text-center">
                   <span *ngIf="!user.tenantId" class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                     System Admin
                   </span>
@@ -319,7 +393,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                     {{ user.tenant?.name || 'Tenant User' }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-2 text-center">
                   <div class="flex flex-wrap gap-1 justify-center">
                     <span *ngFor="let role of user.roles"
                           class="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -330,65 +404,50 @@ import { RBACService } from '../../../core/services/rbac.service';
                     </span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-2 text-center">
                   <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + getStatusClass(user.status)">
                     {{ user.status | titlecase }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-2 text-center">
                   <span class="text-xs text-gray-600 dark:text-gray-400">
                     {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
                   </span>
                 </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center justify-center gap-2">
+                <td class="px-3 py-2">
+                  <div class="flex items-center justify-center gap-1">
                     <button
                       [routerLink]="(isTenantContext() ? '/tenant/users/' : '/admin/users/') + user.id + '/profile'"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-300 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 transition"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
                       title="View Profile"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      Profile
+                      <span class="w-3.5 h-3.5">👁️</span>
                     </button>
                     <button
                       *ngIf="canUpdateUsers()"
                       [routerLink]="(isTenantContext() ? '/tenant/users/' : '/admin/users/') + user.id"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
                       title="Edit User"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit
+                      <span class="w-3.5 h-3.5">✏️</span>
                     </button>
                     <button
                       *ngIf="canUpdateUsers() && user.status !== 'deleted'"
                       (click)="toggleUserStatus(user)"
                       [class]="user.status === 'active'
-                        ? 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 transition'
-                        : 'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50 transition'"
-                      [title]="user.status === 'active' ? 'Suspend User' : 'Enable User'"
+                        ? 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded shadow-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition'
+                        : 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition'"
+                      [title]="user.status === 'active' ? 'Suspend User' : 'Activate User'"
                     >
-                      <svg *ngIf="user.status === 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                      </svg>
-                      <svg *ngIf="user.status !== 'active'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                      <span class="w-3.5 h-3.5">{{ user.status === 'active' ? '⏸️' : '▶️' }}</span>
                     </button>
                     <button
                       *ngIf="canDeleteUsers() && user.status !== 'deleted'"
                       (click)="deleteUser(user)"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded shadow-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition"
                       title="Delete User"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
+                      <span class="w-3.5 h-3.5">🗑️</span>
                     </button>
                   </div>
                 </td>
@@ -398,32 +457,49 @@ import { RBACService } from '../../../core/services/rbac.service';
         </div>
 
         <!-- Pagination -->
-        <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
-          <div class="text-xs text-gray-600 dark:text-gray-400">
-            Showing {{ (userService.paginationSignal().page - 1) * userService.paginationSignal().limit + 1 }}
-            to {{ Math.min(userService.paginationSignal().page * userService.paginationSignal().limit, userService.paginationSignal().total) }}
-            of {{ userService.paginationSignal().total }} users
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+          <!-- Left side: Page size selector and info -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-gray-600 dark:text-gray-400">Show:</label>
+              <select
+                [(ngModel)]="pageSize"
+                (ngModelChange)="onPageSizeChange()"
+                class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              >
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">
+              Showing {{ (userService.paginationSignal().page - 1) * userService.paginationSignal().limit + 1 }} to {{ Math.min(userService.paginationSignal().page * userService.paginationSignal().limit, userService.paginationSignal().total) }} of {{ userService.paginationSignal().total }}
+            </div>
           </div>
-          <div class="flex gap-2">
+
+          <!-- Right side: Page navigation -->
+          <div class="flex items-center gap-2">
             <button
               (click)="previousPage()"
               [disabled]="userService.paginationSignal().page === 1"
-              class="inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
+              <span class="w-3.5 h-3.5">←</span>
               Previous
             </button>
+
+            <span class="text-xs text-gray-600 dark:text-gray-400">
+              Page {{ userService.paginationSignal().page }} of {{ userService.paginationSignal().pages }}
+            </span>
+
             <button
               (click)="nextPage()"
               [disabled]="userService.paginationSignal().page >= userService.paginationSignal().pages"
-              class="inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               Next
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
+              <span class="w-3.5 h-3.5">→</span>
             </button>
           </div>
         </div>
@@ -458,6 +534,7 @@ import { RBACService } from '../../../core/services/rbac.service';
 export class UsersListComponent implements OnInit {
   searchQuery = '';
   Math = Math;
+  pageSize = 10; // Page size selector
 
   // Context detection
   isTenantContext = signal(false);
@@ -509,12 +586,12 @@ export class UsersListComponent implements OnInit {
     
     console.log('📋 UsersListComponent initialized - Tenant context:', this.isTenantContext());
     
-    this.userService.loadUsers();
+    this.userService.loadUsers(1, this.pageSize);
     this.roleService.loadRoles(); // Load roles for user creation/editing
   }
 
   search(): void {
-    this.userService.loadUsers(1, 20, this.searchQuery);
+    this.userService.loadUsers(1, this.pageSize, this.searchQuery);
   }
 
   get filteredUsers() {
@@ -657,18 +734,99 @@ export class UsersListComponent implements OnInit {
     console.log(`✅ Exported ${users.length} users`);
   }
 
+  exportPDF(): void {
+    const users = this.filteredUsers.filter(u => this.selectedUsers().has(u.id));
+
+    if (users.length === 0) {
+      alert('No users selected for export');
+      return;
+    }
+
+    // Create a simple HTML table for PDF generation
+    let htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Users Export</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #333; font-size: 24px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background-color: #4F46E5; color: white; padding: 10px; text-align: left; font-size: 12px; }
+          td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 11px; }
+          tr:nth-child(even) { background-color: #f9fafb; }
+          .footer { margin-top: 30px; font-size: 10px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <h1>Users Export - ${new Date().toLocaleDateString()}</h1>
+        <p>Total Users: ${users.length}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Roles</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${users.map(u => `
+              <tr>
+                <td>${u.id}</td>
+                <td>${u.email}</td>
+                <td>${u.firstName || ''} ${u.lastName || ''}</td>
+                <td>${u.status}</td>
+                <td>${u.tenantId ? 'Tenant' : 'System'}</td>
+                <td>${u.roles?.map(r => r.name).join(', ') || 'N/A'}</td>
+                <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Open in new window for printing to PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Trigger print dialog after content loads
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+
+    console.log(`✅ PDF export initiated for ${users.length} users`);
+  }
+
   nextPage(): void {
     const nextPage = this.userService.paginationSignal().page + 1;
     if (nextPage <= this.userService.paginationSignal().pages) {
-      this.userService.loadUsers(nextPage, 20, this.searchQuery);
+      this.userService.loadUsers(nextPage, this.pageSize, this.searchQuery);
     }
   }
 
   previousPage(): void {
     const prevPage = this.userService.paginationSignal().page - 1;
     if (prevPage >= 1) {
-      this.userService.loadUsers(prevPage, 20, this.searchQuery);
+      this.userService.loadUsers(prevPage, this.pageSize, this.searchQuery);
     }
+  }
+
+  onPageSizeChange(): void {
+    // Reset to page 1 when changing page size
+    this.userService.loadUsers(1, this.pageSize, this.searchQuery);
   }
 
   getInitials(user: User): string {

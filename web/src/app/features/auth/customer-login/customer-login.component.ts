@@ -182,9 +182,18 @@ import { ThemeService } from '../../../core/services/theme.service';
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 Don't have an account? Contact your loan officer.
               </p>
-              <a routerLink="/login" class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
-                Staff Login →
-              </a>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                System Administrator?
+                <a routerLink="/login" class="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+                  System Login →
+                </a>
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Platform Employee?
+                <a routerLink="/platform/login" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                  Platform Login →
+                </a>
+              </p>
             </div>
           </form>
         </div>

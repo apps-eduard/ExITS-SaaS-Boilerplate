@@ -32,6 +32,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const systemLogsRoutes = require('./routes/systemLogsRoutes');
 const moneyLoanRoutes = require('./modules/products/money-loan/routes');
 const customerRoutes = require('./modules/customer/routes');
+const customersRoutes = require('./routes/customerRoutes');
 const mfaRoutes = require('./routes/mfa');
 const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes');
 
@@ -97,6 +98,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/system-logs', systemLogsRoutes);
 app.use('/api/money-loan', moneyLoanRoutes);
 app.use('/api/customer', customerRoutes);
+app.use('/api/customers', customersRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/payment-history', paymentHistoryRoutes);
 

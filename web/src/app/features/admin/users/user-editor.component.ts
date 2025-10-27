@@ -122,6 +122,17 @@ interface Tenant {
               <span class="text-lg">🔐</span>
               Password
             </button>
+            <button
+              type="button"
+              (click)="activeTab.set('employee')"
+              [class]="activeTab() === 'employee' 
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+            >
+              <span class="text-lg">👔</span>
+              Employee Profile
+            </button>
           </div>
         </div>
 
@@ -408,19 +419,11 @@ interface Tenant {
 
           <!-- Address Tab -->
           <div *ngIf="activeTab() === 'address'">
-            <div class="flex items-center justify-between mb-4">
+            <div class="mb-4">
               <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Address Information</h2>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="includeAddress"
-                  class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Add address</span>
-              </label>
             </div>
 
-          <div *ngIf="includeAddress" class="space-y-3">
+          <div class="space-y-3">
             <!-- Tabs -->
             <div class="border-b border-gray-200 dark:border-gray-700">
               <div class="flex gap-1">
@@ -662,10 +665,6 @@ interface Tenant {
               </div>
             </div>
           </div>
-
-            <div *ngIf="!includeAddress" class="text-center py-3 text-xs text-gray-500 dark:text-gray-400">
-              Address can be added later in the user profile
-            </div>
           </div>
 
           <!-- Reset Password Tab (Edit mode only) -->
@@ -722,6 +721,179 @@ interface Tenant {
             </div>
           </div>
         </div>
+
+          <!-- Employee Profile Tab -->
+          <div *ngIf="activeTab() === 'employee'">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">👔 Employee Profile</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Employee-specific information and details</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Employment Information -->
+              <div>
+                <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3">Employment Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <!-- Employee ID -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Employee ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="EMP-001"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Job Title -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Job Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Software Engineer"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Department -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Department
+                    </label>
+                    <select
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Department</option>
+                      <option value="it">IT</option>
+                      <option value="hr">Human Resources</option>
+                      <option value="finance">Finance</option>
+                      <option value="operations">Operations</option>
+                      <option value="sales">Sales</option>
+                      <option value="marketing">Marketing</option>
+                    </select>
+                  </div>
+
+                  <!-- Employment Type -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Employment Type
+                    </label>
+                    <select
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="full-time">Full-time</option>
+                      <option value="part-time">Part-time</option>
+                      <option value="contract">Contract</option>
+                      <option value="intern">Intern</option>
+                    </select>
+                  </div>
+
+                  <!-- Hire Date -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Hire Date
+                    </label>
+                    <input
+                      type="date"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Manager -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Reports To (Manager)
+                    </label>
+                    <select
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Manager</option>
+                      <option value="1">John Doe</option>
+                      <option value="2">Jane Smith</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div>
+                <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3">Contact Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <!-- Work Phone -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Work Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Work Email Extension -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Extension
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="1234"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Emergency Contact Name -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Emergency Contact Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contact name"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+
+                  <!-- Emergency Contact Phone -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Emergency Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Additional Information -->
+              <div>
+                <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3">Additional Information</h3>
+                <div class="grid grid-cols-1 gap-3">
+                  <!-- Notes -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      rows="3"
+                      placeholder="Additional employee notes..."
+                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
         </div>
 

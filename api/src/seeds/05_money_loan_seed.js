@@ -31,7 +31,7 @@ exports.seed = async function(knex) {
   await knex('repayment_schedules').where('tenant_id', tenantId).del();
   await knex('loans').where('tenant_id', tenantId).del();
   await knex('loan_applications').where('tenant_id', tenantId).del();
-  await knex('customers').where('tenant_id', tenantId).del();
+  // Don't delete customers - they're created in initial seed
   await knex('loan_products').where('tenant_id', tenantId).del();
 
   // 1. Insert Loan Products
@@ -106,117 +106,18 @@ exports.seed = async function(knex) {
 
   console.log(`✅ Created ${loanProducts.length} loan products`);
 
-  // 2. Insert Test Customers (Note: Address data now goes in separate addresses table)
-  const customers = await knex('customers').insert([
-    {
-      tenant_id: tenantId,
-      customer_code: 'CUST-2025-0001',
-      customer_type: 'individual',
-      first_name: 'Juan',
-      middle_name: 'Santos',
-      last_name: 'Dela Cruz',
-      date_of_birth: '1990-05-15',
-      gender: 'male',
-      civil_status: 'married',
-      email: 'juan.delacruz@example.com',
-      phone: '+639171234567',
-      alternate_phone: '+639281234567',
-      id_type: 'national_id',
-      id_number: 'NID-1234-5678-9012',
-      tin_number: '123-456-789-000',
-      sss_number: '12-3456789-0',
-      employment_status: 'employed',
-      employer_name: 'ABC Corporation',
-      employer_address: '456 Corporate Ave, BGC, Taguig City',
-      employer_phone: '+6328765432',
-      occupation: 'Software Engineer',
-      monthly_income: 45000,
-      source_of_income: 'Salary',
-      years_employed: 3,
-      credit_score: 720,
-      risk_level: 'low',
-      kyc_status: 'verified',
-      kyc_verified_at: new Date(),
-      status: 'active',
-      money_loan_approved: true,
-      bnpl_approved: false,
-      pawnshop_approved: false,
-      emergency_contact_name: 'Maria Dela Cruz',
-      emergency_contact_relationship: 'Spouse',
-      emergency_contact_phone: '+639171234568'
-    },
-    {
-      tenant_id: tenantId,
-      customer_code: 'CUST-2025-0002',
-      customer_type: 'individual',
-      first_name: 'Maria',
-      middle_name: 'Garcia',
-      last_name: 'Santos',
-      date_of_birth: '1985-08-22',
-      gender: 'female',
-      civil_status: 'single',
-      email: 'maria.santos@example.com',
-      phone: '+639181234567',
-      id_type: 'drivers_license',
-      id_number: 'DL-ABC-123456',
-      tin_number: '987-654-321-000',
-      employment_status: 'self-employed',
-      employer_name: 'Maria\'s Catering Services',
-      occupation: 'Business Owner',
-      monthly_income: 35000,
-      source_of_income: 'Business Income',
-      years_employed: 2,
-      business_name: 'Maria\'s Catering Services',
-      business_type: 'Food Service',
-      annual_revenue: 420000,
-      credit_score: 680,
-      risk_level: 'medium',
-      kyc_status: 'verified',
-      kyc_verified_at: new Date(),
-      status: 'active',
-      money_loan_approved: true,
-      bnpl_approved: true,
-      pawnshop_approved: false,
-      emergency_contact_name: 'Rosa Garcia',
-      emergency_contact_relationship: 'Mother',
-      emergency_contact_phone: '+639181234568'
-    },
-    {
-      tenant_id: tenantId,
-      customer_code: 'CUST-2025-0003',
-      customer_type: 'individual',
-      first_name: 'Pedro',
-      middle_name: 'Reyes',
-      last_name: 'Gonzales',
-      date_of_birth: '1995-03-10',
-      gender: 'male',
-      civil_status: 'single',
-      email: 'pedro.gonzales@example.com',
-      phone: '+639191234567',
-      id_type: 'umid',
-      id_number: 'UMID-9876543210',
-      tin_number: '456-789-012-000',
-      sss_number: '98-7654321-0',
-      employment_status: 'employed',
-      employer_name: 'XYZ Manufacturing Inc.',
-      occupation: 'Factory Supervisor',
-      monthly_income: 28000,
-      source_of_income: 'Salary',
-      years_employed: 1,
-      credit_score: 620,
-      risk_level: 'medium',
-      kyc_status: 'pending',
-      status: 'active',
-      money_loan_approved: false,
-      bnpl_approved: false,
-      pawnshop_approved: false,
-      emergency_contact_name: 'Anna Gonzales',
-      emergency_contact_relationship: 'Sister',
-      emergency_contact_phone: '+639191234568'
-    }
-  ]).returning('*');
-
-  console.log(`✅ Created ${customers.length} test customers`);
+  // 2. Get existing customers from initial seed (don't create new ones)
+  const customers = await knex('customers')
+    .where('tenant_id', tenantId)
+    .where('customer_code', 'like', 'CUST-2025-%')
+    .orderBy('customer_code', 'asc');
+  
+  if (customers.length === 0) {
+    console.log('⚠️ No customers found - customers should be created in initial seed (01_initial_data.js)');
+    return;
+  }
+  
+  console.log(`✅ Using ${customers.length} existing customers from initial seed`);
 
   // 3. Create a sample loan application and active loan for first customer
   const loanApplication = await knex('loan_applications').insert({

@@ -67,11 +67,11 @@ export class PlatformLoginComponent {
         const roles = response.data.roles || [];
         
         // Show welcome message with proper name fallback
-        const userName = user.first_name || user.email.split('@')[0];
+        const userName = user.firstName || user.email.split('@')[0];
         this.toastService.success(`Welcome back, ${userName}!`);
 
-        // Check if user is System Admin
-        const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
+        // Check if user is System Admin (uses camelCase tenantId from API)
+        const isSystemAdmin = user.tenantId === null || user.tenantId === undefined;
 
         if (isSystemAdmin) {
           this.error = 'This login is for platform users only. Please use the main login.';

@@ -139,6 +139,13 @@ exports.seed = async function(knex) {
     { permission_key: 'tenant-users:delete', resource: 'tenant-users', action: 'delete', description: 'Delete users within tenant', space: 'tenant' },
     { permission_key: 'tenant-users:export', resource: 'tenant-users', action: 'export', description: 'Export tenant user data', space: 'tenant' },
     
+    // Tenant Customers Management
+    { permission_key: 'tenant-customers:create', resource: 'tenant-customers', action: 'create', description: 'Create customers within tenant', space: 'tenant' },
+    { permission_key: 'tenant-customers:read', resource: 'tenant-customers', action: 'read', description: 'View customers within tenant', space: 'tenant' },
+    { permission_key: 'tenant-customers:update', resource: 'tenant-customers', action: 'update', description: 'Edit customers within tenant', space: 'tenant' },
+    { permission_key: 'tenant-customers:delete', resource: 'tenant-customers', action: 'delete', description: 'Delete customers within tenant', space: 'tenant' },
+    { permission_key: 'tenant-customers:export', resource: 'tenant-customers', action: 'export', description: 'Export tenant customer data', space: 'tenant' },
+    
     // System-level Role Management  
     { permission_key: 'roles:create', resource: 'roles', action: 'create', description: 'Create roles (system-wide)', space: 'system' },
     { permission_key: 'roles:read', resource: 'roles', action: 'read', description: 'View roles (system-wide)', space: 'system' },
@@ -218,10 +225,17 @@ exports.seed = async function(knex) {
     { permission_key: 'tenant-users:invite', resource: 'tenant-users', action: 'invite', description: 'Invite new users', space: 'tenant' },
     { permission_key: 'tenant-users:assign-roles', resource: 'tenant-users', action: 'assign-roles', description: 'Assign roles to users', space: 'tenant' },
     
-    // Tenant-level settings (additional permissions) - duplicate removed above
-    
     // Tenant dashboard (additional permission)
-    { permission_key: 'tenant-dashboard:view', resource: 'tenant-dashboard', action: 'view', description: 'View tenant dashboard', space: 'tenant' }
+    { permission_key: 'tenant-dashboard:view', resource: 'tenant-dashboard', action: 'view', description: 'View tenant dashboard', space: 'tenant' },
+    
+    // Customer-specific permissions (Customer Portal)
+    { permission_key: 'customer-profile:read', resource: 'customer-profile', action: 'read', description: 'View own customer profile', space: 'customer' },
+    { permission_key: 'customer-profile:update', resource: 'customer-profile', action: 'update', description: 'Update own customer profile', space: 'customer' },
+    { permission_key: 'customer-loans:read', resource: 'customer-loans', action: 'read', description: 'View own loans', space: 'customer' },
+    { permission_key: 'customer-loans:apply', resource: 'customer-loans', action: 'apply', description: 'Apply for new loan', space: 'customer' },
+    { permission_key: 'customer-payments:read', resource: 'customer-payments', action: 'read', description: 'View own payment history', space: 'customer' },
+    { permission_key: 'customer-payments:create', resource: 'customer-payments', action: 'create', description: 'Make loan payments', space: 'customer' },
+    { permission_key: 'customer-dashboard:view', resource: 'customer-dashboard', action: 'view', description: 'View customer dashboard', space: 'customer' }
   ];
   
   // Filter out permissions that already exist from migrations
@@ -251,6 +265,7 @@ exports.seed = async function(knex) {
   
   // Tenant Administrator role for each tenant
   const tenantAdminRoles = [];
+  const customerRoles = [];
   for (const tenant of tenants) {
     const [tenantAdminRole] = await knex('roles').insert({
       tenant_id: tenant.id,
@@ -260,8 +275,18 @@ exports.seed = async function(knex) {
       status: 'active'
     }).returning(['id', 'name', 'tenant_id']);
     tenantAdminRoles.push(tenantAdminRole);
+    
+    // Create Customer role for each tenant
+    const [customerRole] = await knex('roles').insert({
+      tenant_id: tenant.id,
+      name: 'Customer',
+      description: 'Customer portal access only',
+      space: 'customer',
+      status: 'active'
+    }).returning(['id', 'name', 'tenant_id']);
+    customerRoles.push(customerRole);
   }
-  console.log(`✅ 1 system role + ${tenantAdminRoles.length} tenant roles created`);
+  console.log(`✅ 1 system role + ${tenantAdminRoles.length} tenant roles + ${customerRoles.length} customer roles created`);
 
   // 5. Create users
   console.log('5. Creating users...');
@@ -292,6 +317,123 @@ exports.seed = async function(knex) {
     }).returning(['id', 'email', 'tenant_id']);
     tenantAdmins.push(tenantAdmin);
   }
+  
+  // Create test customers (only for ACME Corporation - tenant 2)
+  const acmeTenant = tenants.find(t => t.name === 'ACME Corporation');
+  if (acmeTenant) {
+    console.log('5a. Creating test customers for ACME Corporation...');
+    const customerPasswordHash = await bcrypt.hash('Customer@123', 10);
+    
+    const testCustomersData = [
+      {
+        email: 'juan.delacruz@test.com',
+        firstName: 'Juan',
+        middleName: 'Santos',
+        lastName: 'Dela Cruz',
+        customerCode: 'CUST-2025-001',
+        phone: '+639171234567',
+        dateOfBirth: '1990-05-15',
+        gender: 'male',
+        civilStatus: 'married',
+        idType: 'national_id',
+        idNumber: 'NID-TEST-001',
+        employer: 'ABC Corporation',
+        occupation: 'Software Engineer',
+        monthlyIncome: 45000,
+        yearsEmployed: 3,
+        creditScore: 720,
+        riskLevel: 'low'
+      },
+      {
+        email: 'maria.santos@test.com',
+        firstName: 'Maria',
+        middleName: 'Garcia',
+        lastName: 'Santos',
+        customerCode: 'CUST-2025-002',
+        phone: '+639181234567',
+        dateOfBirth: '1985-08-22',
+        gender: 'female',
+        civilStatus: 'single',
+        idType: 'drivers_license',
+        idNumber: 'DL-TEST-002',
+        employer: 'Maria\'s Catering Services',
+        occupation: 'Business Owner',
+        monthlyIncome: 35000,
+        yearsEmployed: 2,
+        creditScore: 680,
+        riskLevel: 'medium'
+      },
+      {
+        email: 'pedro.gonzales@test.com',
+        firstName: 'Pedro',
+        middleName: 'Reyes',
+        lastName: 'Gonzales',
+        customerCode: 'CUST-2025-003',
+        phone: '+639191234567',
+        dateOfBirth: '1995-03-10',
+        gender: 'male',
+        civilStatus: 'single',
+        idType: 'umid',
+        idNumber: 'UMID-TEST-003',
+        employer: 'XYZ Manufacturing Inc.',
+        occupation: 'Factory Supervisor',
+        monthlyIncome: 28000,
+        yearsEmployed: 1,
+        creditScore: 620,
+        riskLevel: 'medium'
+      }
+    ];
+    
+    for (const testCustomer of testCustomersData) {
+      // Create user account for customer
+      const [customerUser] = await knex('users').insert({
+        tenant_id: acmeTenant.id,
+        email: testCustomer.email,
+        password_hash: customerPasswordHash,
+        first_name: testCustomer.firstName,
+        last_name: testCustomer.lastName,
+        status: 'active',
+        email_verified: true
+      }).returning('*');
+      
+      // Create customer record
+      await knex('customers').insert({
+        tenant_id: acmeTenant.id,
+        user_id: customerUser.id,
+        customer_code: testCustomer.customerCode,
+        customer_type: 'individual',
+        first_name: testCustomer.firstName,
+        middle_name: testCustomer.middleName,
+        last_name: testCustomer.lastName,
+        date_of_birth: testCustomer.dateOfBirth,
+        gender: testCustomer.gender,
+        civil_status: testCustomer.civilStatus,
+        email: testCustomer.email,
+        phone: testCustomer.phone,
+        id_type: testCustomer.idType,
+        id_number: testCustomer.idNumber,
+        employment_status: 'employed',
+        employer_name: testCustomer.employer,
+        occupation: testCustomer.occupation,
+        monthly_income: testCustomer.monthlyIncome,
+        source_of_income: 'Salary',
+        years_employed: testCustomer.yearsEmployed,
+        credit_score: testCustomer.creditScore,
+        risk_level: testCustomer.riskLevel,
+        kyc_status: 'verified',
+        kyc_verified_at: new Date(),
+        status: 'active',
+        money_loan_approved: true,
+        bnpl_approved: false,
+        pawnshop_approved: false,
+        emergency_contact_name: 'Emergency Contact',
+        emergency_contact_relationship: 'Family',
+        emergency_contact_phone: testCustomer.phone.replace('9', '8')
+      });
+    }
+    console.log(`✅ Created ${testCustomersData.length} test customers`);
+  }
+  
   console.log(`✅ 1 system user + ${tenantAdmins.length} tenant users created`);
 
   // 6. Assign roles to users
@@ -352,6 +494,23 @@ exports.seed = async function(knex) {
       console.log(`   ✅ Granted ${tenantRolePermissions.length} TENANT permissions to Tenant Admin (tenant_id: ${tenantAdminRole.tenant_id})`);
     }
   }
+  
+  // Grant customer permissions to Customer roles
+  const customerPermissions = allPermissions.filter(p => p.permission_key.startsWith('customer-'));
+  console.log(`\n7. Assigning customer permissions to Customer roles...`);
+  for (const customerRole of customerRoles) {
+    if (customerPermissions.length > 0) {
+      // Clear existing permissions for this role to avoid duplicates
+      await knex('role_permissions').where('role_id', customerRole.id).del();
+      
+      const customerRolePermissions = customerPermissions.map(perm => ({
+        role_id: customerRole.id,
+        permission_id: perm.id
+      }));
+      await knex('role_permissions').insert(customerRolePermissions);
+      console.log(`   ✅ Granted ${customerRolePermissions.length} CUSTOMER permissions to Customer role (tenant_id: ${customerRole.tenant_id})`);
+    }
+  }
   console.log(`✅ All roles granted appropriate permissions (space-separated)`);
 
   console.log('\n✨ Seed completed successfully!');
@@ -359,14 +518,16 @@ exports.seed = async function(knex) {
   console.log(`   • ${tenants.length} tenants`);
   console.log(`   • ${modules.length} modules`);
   console.log(`   • ${allPermissions.length} comprehensive permissions`);
-  console.log(`   • ${1 + tenantAdminRoles.length} roles (1 system + ${tenantAdminRoles.length} tenant)`);
+  console.log(`   • ${1 + tenantAdminRoles.length + customerRoles.length} roles (1 system + ${tenantAdminRoles.length} tenant + ${customerRoles.length} customer)`);
   console.log(`   • ${1 + tenantAdmins.length} users (1 system + ${tenantAdmins.length} tenant)`);
   
   console.log('\n🔐 Permission Assignments:');
   console.log(`   • Super Admin: ${systemPermissions.length} system permissions (100%)`);
   console.log(`   • Tenant Admin(s): ${tenantPermissions.length} tenant permissions each (100%)`);
+  console.log(`   • Customer(s): ${allPermissions.filter(p => p.permission_key.startsWith('customer-')).length} customer permissions each (100%)`);
   console.log(`   • Total System Permissions: ${systemPermissions.length}`);
   console.log(`   • Total Tenant Permissions: ${tenantPermissions.length}`);
+  console.log(`   • Total Customer Permissions: ${allPermissions.filter(p => p.permission_key.startsWith('customer-')).length}`);
   
   console.log('\n📦 Permission Breakdown:');
   console.log('   • User Management, Roles & Permissions');

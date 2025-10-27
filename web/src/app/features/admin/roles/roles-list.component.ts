@@ -12,94 +12,209 @@ import { RBACService } from '../../../core/services/rbac.service';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="p-4 space-y-4">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Role Management</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            {{ isTenantContext() ? 'Manage your tenant roles and permissions' : 'Define roles and control access permissions across your system' }}
-          </p>
+    <div class="p-4">
+      <!-- Header with Icon -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">👥</span>
+              <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                Role Management
+              </h1>
+            </div>
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              {{ isTenantContext() ? 'Manage your tenant roles and permissions' : 'Define roles and control access permissions across your system' }}
+            </p>
+          </div>
+          <button
+            *ngIf="canCreateRoles()"
+            [routerLink]="isTenantContext() ? '/tenant/roles/new' : '/admin/roles/new'"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition"
+          >
+            <span class="w-3.5 h-3.5">➕</span>
+            Create Role
+          </button>
         </div>
-        <button
-          *ngIf="canCreateRoles()"
-          [routerLink]="isTenantContext() ? '/tenant/roles/new' : '/admin/roles/new'"
-          class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 shadow-sm transition"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          Create Role
-        </button>
       </div>
 
-      <!-- Stats & Filters -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-        <!-- Stats Cards -->
-        <div class="lg:col-span-8 grid grid-cols-4 gap-2">
-          <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total Roles</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white">
-              {{ roleService.roleCountComputed() }}
-            </p>
-          </div>
-          <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Active</p>
-            <p class="text-lg font-bold text-green-600 dark:text-green-400">
-              {{ getActiveRoles() }}
-            </p>
-          </div>
-          <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Disabled</p>
-            <p class="text-lg font-bold text-gray-600 dark:text-gray-400">
-              {{ getInactiveRoles() }}
-            </p>
-          </div>
-          <div class="rounded border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total Perms</p>
-            <p class="text-lg font-bold text-blue-600 dark:text-blue-400">
-              {{ getTotalPermissions() }}
-            </p>
+      <!-- Summary Cards (kept as requested) -->
+      <div class="grid grid-cols-4 gap-3 mb-3">
+        <div class="group rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total Roles</p>
+              <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                {{ roleService.roleCountComputed() }}
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <span class="text-lg">👥</span>
+            </div>
           </div>
         </div>
+        <div class="group rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Active</p>
+              <p class="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
+                {{ getActiveRoles() }}
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <span class="text-lg">✅</span>
+            </div>
+          </div>
+        </div>
+        <div class="group rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Disabled</p>
+              <p class="text-xl font-bold text-gray-600 dark:text-gray-400 mt-1">
+                {{ getInactiveRoles() }}
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <span class="text-lg">⏸️</span>
+            </div>
+          </div>
+        </div>
+        <div class="group rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total Perms</p>
+              <p class="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                {{ getTotalPermissions() }}
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <span class="text-lg">🔑</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Filters -->
-        <div class="lg:col-span-4 grid grid-cols-3 gap-2">
+      <!-- Filters Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <!-- Search -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Search
+            </label>
+            <div class="relative">
+              <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <input
+                type="text"
+                [ngModel]="searchQuery()"
+                (ngModelChange)="searchQuery.set($event)"
+                placeholder="Search by role name or description..."
+                class="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Space Filter (System Admin Only) -->
           <div *ngIf="!isTenantContext()">
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Space</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Space
+            </label>
             <select
-              [(ngModel)]="filterSpace"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              [ngModel]="filterSpace()"
+              (ngModelChange)="filterSpace.set($event)"
+              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
-              <option value="">All</option>
+              <option value="">All Spaces</option>
               <option value="system">System</option>
               <option value="tenant">Tenant</option>
             </select>
           </div>
+
+          <!-- Tenant Filter (System Admin Only) -->
           <div *ngIf="!isTenantContext()">
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tenant</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tenant
+            </label>
             <select
-              [(ngModel)]="filterTenant"
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              [ngModel]="filterTenant()"
+              (ngModelChange)="filterTenant.set($event)"
+              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
-              <option value="">All</option>
+              <option value="">All Tenants</option>
               <option *ngFor="let tenant of availableTenants()" [value]="tenant">{{ tenant }}</option>
             </select>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
-            <input
-              [(ngModel)]="searchQuery"
-              placeholder="Role name..."
-              class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
+        </div>
+
+        <!-- Action Buttons Row -->
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-2">
+            <button
+              (click)="clearFilters()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+            >
+              <span class="w-3.5 h-3.5">🔄</span>
+              Clear
+            </button>
+            
+            @if (getSelectedCount() > 0) {
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  {{ getSelectedCount() }} selected
+                </span>
+                <button
+                  (click)="clearSelection()"
+                  class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  Clear
+                </button>
+              </div>
+            }
+            
+            <select
+              [(ngModel)]="pageSize"
+              (change)="onPageSizeChange()"
+              class="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
+            >
+              <option [value]="10">10 per page</option>
+              <option [value]="25">25 per page</option>
+              <option [value]="50">50 per page</option>
+              <option [value]="100">100 per page</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            @if (getSelectedCount() > 0) {
+              <button
+                (click)="exportSelected()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition"
+              >
+                <span class="w-3.5 h-3.5">📥</span>
+                Export Selected
+              </button>
+            }
+            
+            <button
+              (click)="exportAll()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+            >
+              <span class="w-3.5 h-3.5">📊</span>
+              Export All
+            </button>
+            
+            <span class="text-xs text-gray-600 dark:text-gray-400">
+              Showing {{ paginatedRoles().length }} of {{ filteredRoles().length }}
+            </span>
           </div>
         </div>
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="roleService.loadingSignal()" class="text-center py-6">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Loading roles...</p>
+      <div *ngIf="roleService.loadingSignal()" class="flex items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">Loading roles...</p>
+        </div>
       </div>
 
       <!-- Error State -->
@@ -125,131 +240,197 @@ import { RBACService } from '../../../core/services/rbac.service';
       </div>
 
       <!-- Roles Table -->
-      <div *ngIf="!roleService.loadingSignal() && filteredRoles().length > 0" class="rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Role Name</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Description</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Space</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Tenant</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Permissions</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr *ngFor="let role of filteredRoles()" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                <td class="px-4 py-3">
-                  <div class="font-medium text-gray-900 dark:text-white">{{ role.name }}</div>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="text-gray-600 dark:text-gray-400 max-w-xs truncate">{{ role.description || '—' }}</div>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span [class]="'inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (role.space === 'system' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300')">
-                    {{ role.space | uppercase }}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="text-sm text-gray-900 dark:text-white">
-                    {{ role.tenantName || '—' }}
-                  </div>
-                  <div *ngIf="role.space === 'system'" class="text-xs text-gray-500 dark:text-gray-400">
-                    All tenants
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                    </svg>
-                    <span class="font-semibold text-gray-900 dark:text-white">{{ role.permissions?.length || 0 }}</span>
-                  </div>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <button
-                    (click)="toggleRoleStatus(role)"
-                    [class]="'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ' + (role.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600')"
-                    [title]="role.status === 'active' ? 'Click to disable' : 'Click to enable'"
+      @if (!roleService.loadingSignal() && paginatedRoles().length > 0) {
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-3 py-2 text-left">
+                    <input
+                      type="checkbox"
+                      [checked]="selectAll"
+                      (change)="toggleSelectAll()"
+                      class="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">👥</span>
+                      Role Name
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">📝</span>
+                      Description
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">🏢</span>
+                      Space
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">🔑</span>
+                      Permissions
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">🔘</span>
+                      Status
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">⚙️</span>
+                      Actions
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                @for (role of paginatedRoles(); track role.id) {
+                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        [checked]="isSelected(role.id)"
+                        (change)="toggleRole(role.id)"
+                        class="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
+                      />
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <div class="text-xs font-medium text-gray-900 dark:text-white">{{ role.name }}</div>
+                      @if (role.tenantName) {
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ role.tenantName }}</div>
+                      }
+                    </td>
+                    <td class="px-3 py-2">
+                      <div class="text-xs text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                        {{ role.description || '—' }}
+                      </div>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <span [class]="'px-2 py-0.5 text-xs font-semibold rounded ' + (role.space === 'system' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300')">
+                        {{ role.space | uppercase }}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        {{ role.permissions?.length || 0 }}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <span [class]="'px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' + (role.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300')">
+                        {{ role.status === 'active' ? 'Active' : 'Disabled' }}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <div class="flex items-center gap-1">
+                        <button
+                          [routerLink]="(isTenantContext() ? '/tenant/roles/' : '/admin/roles/') + role.id"
+                          class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+                          title="Edit Role"
+                        >
+                          <span class="w-3.5 h-3.5">✏️</span>
+                        </button>
+                        <button
+                          (click)="toggleRoleStatus(role)"
+                          [class]="'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded shadow-sm transition ' + (role.status === 'active' ? 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30' : 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30')"
+                          [title]="role.status === 'active' ? 'Disable role' : 'Enable role'"
+                        >
+                          <span class="w-3.5 h-3.5">{{ role.status === 'active' ? '⏸️' : '▶️' }}</span>
+                        </button>
+                        <button
+                          (click)="deleteRole(role)"
+                          class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded shadow-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                          title="Delete Role"
+                        >
+                          <span class="w-3.5 h-3.5">🗑️</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <!-- Left side: Page size selector and info -->
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600 dark:text-gray-400">Show:</label>
+                  <select
+                    [(ngModel)]="pageSize"
+                    (ngModelChange)="onPageSizeChange()"
+                    class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path *ngIf="role.status === 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      <path *ngIf="role.status !== 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {{ role.status === 'active' ? 'Active' : 'Disabled' }}
-                  </button>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center justify-end gap-2">
-                    <button
-                      (click)="toggleRoleStatus(role)"
-                      [class]="'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition ' + (role.status === 'active' ? 'text-orange-700 bg-orange-50 hover:bg-orange-100 dark:text-orange-300 dark:bg-orange-900/30 dark:hover:bg-orange-900/50' : 'text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-900/50')"
-                      [title]="role.status === 'active' ? 'Disable role' : 'Enable role'"
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path *ngIf="role.status === 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        <path *ngIf="role.status !== 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {{ role.status === 'active' ? 'Disable' : 'Enable' }}
-                    </button>
-                    <button
-                      [routerLink]="(isTenantContext() ? '/tenant/roles/' : '/admin/roles/') + role.id"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition"
-                      title="Edit Role"
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      (click)="deleteRole(role)"
-                      class="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition"
-                      title="Delete Role"
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <option [value]="10">10</option>
+                    <option [value]="25">25</option>
+                    <option [value]="50">50</option>
+                    <option [value]="100">100</option>
+                  </select>
+                </div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">
+                  Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ currentPage * pageSize > filteredRoles().length ? filteredRoles().length : currentPage * pageSize }} of {{ filteredRoles().length }}
+                </div>
+              </div>
+
+              <!-- Right side: Page navigation -->
+              <div class="flex items-center gap-2">
+                <button
+                  (click)="previousPage()"
+                  [disabled]="currentPage === 1"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <span class="w-3.5 h-3.5">←</span>
+                  Previous
+                </button>
+
+                <span class="text-xs text-gray-600 dark:text-gray-400">
+                  Page {{ currentPage }} of {{ totalPages() }}
+                </span>
+
+                <button
+                  (click)="nextPage()"
+                  [disabled]="currentPage >= totalPages()"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Next
+                  <span class="w-3.5 h-3.5">→</span>
+                </button>
+              </div>
+            </div>
+          }
         </div>
-      </div>
+      }
 
       <!-- Empty State -->
-      <div *ngIf="!roleService.loadingSignal() && filteredRoles().length === 0" class="text-center py-12 rounded border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-        <div class="max-w-sm mx-auto">
-          <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <p class="mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            {{ roleService.rolesSignal().length === 0 ? 'No roles created yet' : 'No roles match your filters' }}
+      @if (!roleService.loadingSignal() && paginatedRoles().length === 0) {
+        <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <span class="text-4xl mb-3 block">👥</span>
+          <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-1">No roles found</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {{ filteredRoles().length === 0 && roleService.rolesSignal().length > 0 ? 'Try adjusting your filters' : 'Get started by creating your first role' }}
           </p>
-          <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
-            {{ roleService.rolesSignal().length === 0 ? 'Create your first role to start managing permissions' : 'Try adjusting your search or filter criteria' }}
-          </p>
-          <button
-            *ngIf="roleService.rolesSignal().length === 0"
-            [routerLink]="isTenantContext() ? '/tenant/roles/new' : '/admin/roles/new'"
-            class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm transition"
-          >
-            ➕ Create First Role
-          </button>
-          <button
-            *ngIf="roleService.rolesSignal().length > 0"
-            (click)="clearFilters()"
-            class="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 transition"
-          >
-            Clear Filters
-          </button>
+          @if (searchQuery() || filterSpace() || filterTenant()) {
+            <button
+              (click)="clearFilters()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600"
+            >
+              <span class="w-3.5 h-3.5">🔄</span>
+              Clear Filters
+            </button>
+          }
         </div>
-      </div>
+      }
     </div>
   `,
   styles: []
@@ -258,6 +439,16 @@ export class RolesListComponent implements OnInit {
   searchQuery = signal('');
   filterSpace = signal<'' | 'system' | 'tenant'>('');
   filterTenant = signal('');
+
+  // Pagination
+  pageSize = 25;
+  currentPage = 1;
+  totalPages = signal(1);
+  paginatedRoles = signal<Role[]>([]);
+  
+  // Selection state
+  selectedRoles = new Set<string>();
+  selectAll = false;
 
   // Context detection
   isTenantContext = signal(false);
@@ -329,6 +520,9 @@ export class RolesListComponent implements OnInit {
         (r.description && r.description.toLowerCase().includes(query))
       );
     }
+
+    // Update pagination after filtering
+    setTimeout(() => this.updatePagination(roles), 0);
 
     return roles;
   });
@@ -423,5 +617,116 @@ export class RolesListComponent implements OnInit {
         console.log(`✅ Role ${action}d: ${role.name}`);
       }
     }
+  }
+
+  // Pagination methods
+  updatePagination(roles: Role[]) {
+    const total = Math.ceil(roles.length / this.pageSize);
+    this.totalPages.set(total || 1);
+
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedRoles.set(roles.slice(startIndex, endIndex));
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 1;
+    this.updatePagination(this.filteredRoles());
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePagination(this.filteredRoles());
+    }
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages()) {
+      this.currentPage++;
+      this.updatePagination(this.filteredRoles());
+    }
+  }
+
+  // Selection methods
+  toggleSelectAll() {
+    this.selectAll = !this.selectAll;
+    if (this.selectAll) {
+      this.paginatedRoles().forEach(role => {
+        this.selectedRoles.add(role.id);
+      });
+    } else {
+      this.selectedRoles.clear();
+    }
+  }
+
+  toggleRole(id: string) {
+    if (this.selectedRoles.has(id)) {
+      this.selectedRoles.delete(id);
+      this.selectAll = false;
+    } else {
+      this.selectedRoles.add(id);
+      const allSelected = this.paginatedRoles().every(r => this.selectedRoles.has(r.id));
+      this.selectAll = allSelected;
+    }
+  }
+
+  isSelected(id: string): boolean {
+    return this.selectedRoles.has(id);
+  }
+
+  getSelectedCount(): number {
+    return this.selectedRoles.size;
+  }
+
+  clearSelection() {
+    this.selectedRoles.clear();
+    this.selectAll = false;
+  }
+
+  // Export methods
+  exportSelected() {
+    if (this.selectedRoles.size === 0) {
+      return;
+    }
+
+    const selectedData = this.roleService.rolesSignal().filter(r => this.selectedRoles.has(r.id));
+    this.exportToCSV(selectedData, 'selected-roles.csv');
+  }
+
+  exportAll() {
+    const data = this.filteredRoles();
+    if (data.length === 0) {
+      return;
+    }
+    this.exportToCSV(data, 'all-roles.csv');
+  }
+
+  exportToCSV(data: Role[], filename: string) {
+    const headers = ['Role Name', 'Description', 'Space', 'Tenant', 'Permissions Count', 'Status'];
+
+    const csvRows = [
+      headers.join(','),
+      ...data.map(role => [
+        role.name,
+        role.description || '',
+        role.space,
+        role.tenantName || '',
+        role.permissions?.length || 0,
+        role.status
+      ].map(field => `"${field}"`).join(','))
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }

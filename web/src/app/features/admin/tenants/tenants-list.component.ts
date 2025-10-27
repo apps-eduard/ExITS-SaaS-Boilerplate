@@ -46,8 +46,11 @@ interface Pagination {
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">🏢 Tenant Management</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span class="text-xl">🏢</span>
+            Tenant Management
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             Manage tenant organizations and subscriptions
           </p>
         </div>
@@ -199,30 +202,65 @@ interface Pagination {
       <div *ngIf="!loading() && !error()" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <thead class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenant</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subdomain</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Products Enabled</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subscriptions</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🏢</span>
+                    Tenant
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🌐</span>
+                    Subdomain
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📦</span>
+                    Products Enabled
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📊</span>
+                    Subscriptions
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔘</span>
+                    Status
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">👥</span>
+                    Users
+                  </span>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">⚙️</span>
+                    Actions
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @for (tenant of tenants(); track tenant.id) {
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <td class="px-4 py-2.5">
+                  <td class="px-3 py-2">
                     <div>
                       <p class="text-xs font-medium text-gray-900 dark:text-white">{{ tenant.name }}</p>
                       <p class="text-[10px] text-gray-500 dark:text-gray-400">ID: {{ tenant.id }}</p>
                     </div>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-3 py-2">
                     <code class="text-xs text-blue-600 dark:text-blue-400">{{ tenant.subdomain }}</code>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-3 py-2">
                     <div class="flex flex-wrap gap-1">
                       <span *ngIf="tenant.moneyLoanEnabled" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                         💸 Money Loan
@@ -238,7 +276,7 @@ interface Pagination {
                       </span>
                     </div>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-3 py-2">
                     <div *ngIf="tenant.subscriptions && tenant.subscriptions.length > 0" class="space-y-1">
                       <div *ngFor="let sub of tenant.subscriptions" class="text-[10px]">
                         <div class="flex items-center gap-1">
@@ -259,60 +297,48 @@ interface Pagination {
                       No active subscriptions
                     </span>
                   </td>
-                  <td class="px-4 py-2.5">
+                  <td class="px-3 py-2">
                     <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded" [ngClass]="getStatusClass(tenant.status)">
                       {{ tenant.status.toUpperCase() }}
                     </span>
                   </td>
-                  <td class="px-4 py-2.5 text-center">
+                  <td class="px-3 py-2 text-center">
                     <span class="text-xs text-gray-900 dark:text-white">{{ tenant.user_count || 0 }} / {{ tenant.maxUsers }}</span>
                   </td>
-                  <td class="px-4 py-2.5">
-                    <div class="flex items-center justify-center gap-2">
+                  <td class="px-3 py-2">
+                    <div class="flex items-center justify-center gap-1">
                       <a
                         [routerLink]="['/admin/tenants', tenant.id]"
-                        class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
                         title="View details"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
+                        <span class="w-3.5 h-3.5">👁️</span>
                       </a>
                       <button
                         *ngIf="canUpdateTenants()"
                         [routerLink]="['/admin/tenants', tenant.id, 'edit']"
-                        class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                        class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20 rounded shadow-sm hover:bg-gray-100 dark:hover:bg-gray-900/30 transition"
                         title="Edit tenant"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        <span class="w-3.5 h-3.5">✏️</span>
                       </button>
                       <button
                         *ngIf="canUpdateTenants()"
                         (click)="toggleTenantStatus(tenant)"
                         [class]="tenant.status === 'active'
-                          ? 'text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300'
-                          : 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'"
+                          ? 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded shadow-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition'
+                          : 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition'"
                         [title]="tenant.status === 'active' ? 'Suspend tenant' : 'Activate tenant'"
                       >
-                        <svg *ngIf="tenant.status === 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        </svg>
-                        <svg *ngIf="tenant.status !== 'active'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <span class="w-3.5 h-3.5">{{ tenant.status === 'active' ? '⏸️' : '▶️' }}</span>
                       </button>
                       <button
                         *ngIf="canDeleteTenants()"
                         (click)="deleteTenant(tenant)"
-                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                        class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded shadow-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition"
                         title="Delete tenant"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <span class="w-3.5 h-3.5">🗑️</span>
                       </button>
                     </div>
                   </td>
@@ -329,47 +355,39 @@ interface Pagination {
         </div>
 
         <!-- Pagination -->
-        <div *ngIf="pagination().pages > 0" class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <span>Show</span>
-              <select
-                [(ngModel)]="pageSize"
-                (ngModelChange)="onPageSizeChange()"
-                class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
-              >
-                <option [value]="10">10</option>
-                <option [value]="25">25</option>
-                <option [value]="50">50</option>
-                <option [value]="100">100</option>
-              </select>
-              <span>entries ({{ (pagination().page - 1) * pagination().limit + 1 }} to {{ Math.min(pagination().page * pagination().limit, pagination().total) }} of {{ pagination().total }})</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                (click)="changePage(pagination().page - 1)"
-                [disabled]="pagination().page === 1"
-                class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
-              <span class="text-xs text-gray-600 dark:text-gray-400">
-                Page {{ pagination().page }} of {{ pagination().pages }}
-              </span>
-              <button
-                (click)="changePage(pagination().page + 1)"
-                [disabled]="pagination().page === pagination().pages"
-                class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
+        <div *ngIf="pagination().pages > 0" class="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+          <div class="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
+            <span>Show:</span>
+            <select
+              [(ngModel)]="pageSize"
+              (ngModelChange)="onPageSizeChange()"
+              class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            >
+              <option [value]="10">10</option>
+              <option [value]="25">25</option>
+              <option [value]="50">50</option>
+              <option [value]="100">100</option>
+            </select>
+            <span>Showing {{ (pagination().page - 1) * pagination().limit + 1 }} to {{ Math.min(pagination().page * pagination().limit, pagination().total) }} of {{ pagination().total }}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              (click)="changePage(pagination().page - 1)"
+              [disabled]="pagination().page === 1"
+              class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Previous
+            </button>
+            <span class="text-xs text-gray-600 dark:text-gray-400">
+              Page {{ pagination().page }} of {{ pagination().pages }}
+            </span>
+            <button
+              (click)="changePage(pagination().page + 1)"
+              [disabled]="pagination().page === pagination().pages"
+              class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
           </div>
         </div>
       </div>

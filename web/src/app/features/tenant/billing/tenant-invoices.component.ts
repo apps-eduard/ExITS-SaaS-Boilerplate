@@ -12,84 +12,87 @@ import { InvoiceService, Invoice } from '../../../core/services/invoice.service'
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, HttpClientModule],
   template: `
-    <div class="p-6 space-y-6">
+    <div class="p-6 space-y-4">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">📄 Invoices</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6">💳</span>
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">Invoices</h1>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             View and download your billing invoices
           </p>
         </div>
         <a
           routerLink="/tenant/billing"
-          class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
         >
-          <span>💰</span>
+          <span class="w-3.5 h-3.5">💰</span>
           <span>Back to Billing</span>
         </a>
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <span class="text-xl">📊</span>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <span class="text-base">📄</span>
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">Total Invoices</p>
-              <p class="text-xl font-bold text-gray-900 dark:text-white">{{ getTotalCount() }}</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white">{{ getTotalCount() }}</p>
             </div>
           </div>
         </div>
 
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-              <span class="text-xl">✅</span>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <span class="text-base">✅</span>
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">Paid</p>
-              <p class="text-xl font-bold text-green-600 dark:text-green-400">{{ getStatusCount('paid') }}</p>
+              <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ getStatusCount('paid') }}</p>
             </div>
           </div>
         </div>
 
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-              <span class="text-xl">⏳</span>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+              <span class="text-base">⏳</span>
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">Pending</p>
-              <p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">{{ getStatusCount('pending') }}</p>
+              <p class="text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ getStatusCount('pending') }}</p>
             </div>
           </div>
         </div>
 
-        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-              <span class="text-xl">⚠️</span>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+              <span class="text-base">⚠️</span>
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">Overdue</p>
-              <p class="text-xl font-bold text-red-600 dark:text-red-400">{{ getStatusCount('overdue') }}</p>
+              <p class="text-lg font-bold text-red-600 dark:text-red-400">{{ getStatusCount('overdue') }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <div class="flex flex-wrap items-center gap-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Status:</span>
             <select
               [(ngModel)]="selectedStatus"
               (ngModelChange)="onFilterChange()"
-              class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              class="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>
@@ -100,11 +103,11 @@ import { InvoiceService, Invoice } from '../../../core/services/invoice.service'
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Year:</span>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Year:</span>
             <select
               [(ngModel)]="selectedYear"
               (ngModelChange)="onFilterChange()"
-              class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              class="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Years</option>
               <option value="2025">2025</option>
@@ -122,110 +125,121 @@ import { InvoiceService, Invoice } from '../../../core/services/invoice.service'
               [(ngModel)]="searchTerm"
               (ngModelChange)="onSearchChange()"
               placeholder="Search invoices..."
-              class="rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white w-64"
+              class="rounded border border-gray-300 bg-white pl-8 pr-3 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white w-56"
             />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <span class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5">🔍</span>
           </div>
         </div>
       </div>
 
       <!-- Invoices Table -->
-      <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <!-- Invoices Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
+            <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Invoice
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔖</span>
+                    Invoice
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Description
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📝</span>
+                    Description
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Date
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📅</span>
+                    Date
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Due Date
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">⏰</span>
+                    Due Date
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Amount
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">💰</span>
+                    Amount
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Status
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔘</span>
+                    Status
+                  </div>
                 </th>
-                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                  Actions
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">⚙️</span>
+                    Actions
+                  </div>
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-800">
-              <tr *ngFor="let invoice of filteredInvoices()" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xl">📄</span>
-                    <div>
-                      <p class="text-sm font-medium text-gray-900 dark:text-white">
-                        {{ invoice.invoiceNumber }}
-                      </p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        ID: {{ invoice.id }}
-                      </p>
-                    </div>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let invoice of filteredInvoices()" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <div class="flex flex-col">
+                    <span class="font-mono text-xs font-medium text-gray-900 dark:text-white">
+                      {{ invoice.invoiceNumber }}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      ID: {{ invoice.id }}
+                    </span>
                   </div>
                 </td>
-                <td class="px-6 py-4">
-                  <p class="text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                <td class="px-3 py-2">
+                  <span class="text-xs text-gray-900 dark:text-white max-w-xs truncate block">
                     {{ invoice.description }}
-                  </p>
+                  </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
                   {{ formatDate(invoice.date) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
                   {{ formatDate(invoice.dueDate) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="text-xs font-semibold text-gray-900 dark:text-white">
                     {{ formatCurrency(invoice.amount) }}
-                  </p>
+                  </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" [class]="getStatusBadgeClass(invoice.status)">
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" [class]="getStatusBadgeClass(invoice.status)">
                     {{ invoice.status | uppercase }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div class="flex items-center justify-end gap-2">
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <div class="flex items-center gap-1">
                     <button
                       (click)="viewInvoice(invoice)"
-                      class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition"
-                      title="View Invoice"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+                      title="View Details"
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                      <span class="w-3.5 h-3.5">👁️</span>
                     </button>
                     <button
                       (click)="downloadInvoice(invoice)"
-                      class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition"
                       title="Download PDF"
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                      <span class="w-3.5 h-3.5">📥</span>
                     </button>
                     <button
                       *ngIf="invoice.status === 'pending' || invoice.status === 'overdue'"
                       (click)="payInvoice(invoice)"
-                      class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
                       title="Pay Now"
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
+                      <span class="w-3.5 h-3.5">💳</span>
                     </button>
                   </div>
                 </td>
@@ -236,11 +250,9 @@ import { InvoiceService, Invoice } from '../../../core/services/invoice.service'
 
         <!-- Empty State -->
         <div *ngIf="filteredInvoices().length === 0" class="text-center py-12">
-          <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-            <span class="text-3xl">📄</span>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 mb-2">No invoices found</p>
-          <p class="text-sm text-gray-500 dark:text-gray-500">
+          <span class="text-4xl mb-3 block">💳</span>
+          <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-1">No invoices found</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ searchTerm || selectedStatus !== 'all' || selectedYear !== 'all'
               ? 'Try adjusting your filters'
               : 'Your invoices will appear here' }}
@@ -250,21 +262,23 @@ import { InvoiceService, Invoice } from '../../../core/services/invoice.service'
 
       <!-- Pagination -->
       <div *ngIf="filteredInvoices().length > 0" class="flex items-center justify-between">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-xs text-gray-600 dark:text-gray-400">
           Showing <span class="font-medium">{{ filteredInvoices().length }}</span> of <span class="font-medium">{{ allInvoices().length }}</span> invoices
         </p>
         <div class="flex gap-2">
           <button
-            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled
           >
+            <span class="w-3.5 h-3.5">←</span>
             Previous
           </button>
           <button
-            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled
           >
             Next
+            <span class="w-3.5 h-3.5">→</span>
           </button>
         </div>
       </div>

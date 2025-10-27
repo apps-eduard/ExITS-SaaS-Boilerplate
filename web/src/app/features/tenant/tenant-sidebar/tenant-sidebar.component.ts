@@ -158,11 +158,12 @@ export class TenantSidebarComponent implements OnInit {
   baseMenuItems = signal<MenuItem[]>([
     { label: 'Dashboard', icon: '📊', route: '/tenant/dashboard', menuKey: 'tenant-dashboard' },
     {
-      label: 'Users',
+      label: 'User Management',
       icon: '👥',
       menuKey: 'tenant-users',
       children: [
-        { label: 'All Users', icon: '👤', route: '/tenant/users', menuKey: 'tenant-users' },
+        { label: 'All Employees', icon: '👤', route: '/tenant/users', menuKey: 'tenant-users' },
+        { label: 'All Customers', icon: '👥', route: '/tenant/customers', menuKey: 'tenant-customers' },
         { label: 'Invite User', icon: '➕', route: '/tenant/users/invite', menuKey: 'tenant-users', requiredAction: 'create' },
         { label: 'Roles & Permissions', icon: '🧩', route: '/tenant/roles', menuKey: 'tenant-roles' },
       ]

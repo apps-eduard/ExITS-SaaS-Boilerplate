@@ -140,26 +140,10 @@ export class UsersSidebarComponent {
 
   menuItems = signal<MenuItem[]>([
     { label: 'All Users', icon: '👥', route: '/admin/users', menuKey: 'users' },
-    {
-      label: 'Users',
-      icon: '👤',
-      menuKey: 'users',
-      children: [
-        { label: 'List Users', icon: '📋', route: '/admin/users', menuKey: 'users' },
-        { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
-        { label: 'Admin Users', icon: '👑', route: '/admin/users/admins', menuKey: 'users' },
-        { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
-      ]
-    },
-    {
-      label: 'Roles & Permissions',
-      icon: '🔐',
-      menuKey: 'roles',
-      children: [
-        { label: 'Role Management', icon: '👔', route: '/admin/roles', menuKey: 'roles' },
-        { label: 'Permissions', icon: '🔑', route: '/admin/roles/permissions', menuKey: 'roles' },
-      ]
-    },
+    { label: 'Admin Users', icon: '👨‍�', route: '/admin/users/admins', menuKey: 'users' },
+    { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', menuKey: 'users', requiredAction: 'create' },
+    { label: 'User Activity', icon: '👣', route: '/admin/users/activity', menuKey: 'users' },
+    { label: 'Roles & Permissions', icon: '🔐', route: '/admin/roles', menuKey: 'roles' },
     {
       label: 'Audit',
       icon: '📋',

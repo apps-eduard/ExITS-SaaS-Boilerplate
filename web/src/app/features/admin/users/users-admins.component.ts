@@ -4,19 +4,13 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService, User } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/users-sidebar.component';
 
 @Component({
   selector: 'app-users-admins',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, UsersSidebarComponent],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="flex">
-      <!-- Sidebar -->
-      <app-users-sidebar></app-users-sidebar>
-
-      <!-- Main Content -->
-      <div class="flex-1 p-4 space-y-4">
+    <div class="flex-1 p-4 space-y-4">
         <!-- Header -->
         <div class="flex items-center justify-between">
           <div>
@@ -57,32 +51,37 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
           </div>
         </div>
 
-        <!-- Search -->
-        <div class="flex gap-2">
-          <input
-            [(ngModel)]="searchQuery"
-            (keyup.enter)="search()"
-            placeholder="Search admin users..."
-            class="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-          />
-          <button
-            (click)="search()"
-            class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            Search
-          </button>
-          <button
-            (click)="clearSearch()"
-            class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Clear
-          </button>
+        <!-- Filters Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <!-- Search -->
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Search
+              </label>
+              <div class="relative">
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  placeholder="Search by name or email..."
+                  class="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">&nbsp;</label>
+              <button
+                (click)="clearSearch()"
+                class="inline-flex items-center gap-1.5 w-full justify-center px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+              >
+                <span class="w-3.5 h-3.5">🔄</span>
+                Clear
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Admin Users Table -->
@@ -99,7 +98,7 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr *ngFor="let user of filteredAdminUsers()" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                <tr *ngFor="let user of paginatedAdminUsers()" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-2">
                       <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
@@ -142,6 +141,54 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination -->
+          <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <!-- Left side: Page size selector and info -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Show:</label>
+                <select
+                  [(ngModel)]="pageSize"
+                  (ngModelChange)="onPageSizeChange()"
+                  class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option [value]="10">10</option>
+                  <option [value]="25">25</option>
+                  <option [value]="50">50</option>
+                  <option [value]="100">100</option>
+                </select>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400">
+                Showing {{ getStartIndex() }} to {{ getEndIndex() }} of {{ filteredAdminUsers().length }}
+              </div>
+            </div>
+
+            <!-- Right side: Page navigation -->
+            <div class="flex items-center gap-2">
+              <button
+                (click)="previousPage()"
+                [disabled]="currentPage === 1"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <span class="w-3.5 h-3.5">←</span>
+                Previous
+              </button>
+
+              <span class="text-xs text-gray-600 dark:text-gray-400">
+                Page {{ currentPage }} of {{ totalPages() }}
+              </span>
+
+              <button
+                (click)="nextPage()"
+                [disabled]="currentPage >= totalPages()"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next
+                <span class="w-3.5 h-3.5">→</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Empty State -->
@@ -153,7 +200,6 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
           <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ searchQuery ? 'Try a different search' : 'No system administrators yet' }}</p>
         </div>
       </div>
-    </div>
   `,
   styles: []
 })
@@ -161,11 +207,23 @@ export class UsersAdminsComponent implements OnInit {
   userService = inject(UserService);
   private authService = inject(AuthService);
   searchQuery = '';
+  
+  // Pagination
+  currentPage = 1;
+  pageSize = 10;
 
   adminUsers = signal<User[]>([]);
   filteredAdminUsers = signal<User[]>([]);
   activeAdminsCount = computed(() => this.adminUsers().filter(u => u.status === 'active').length);
   suspendedAdminsCount = computed(() => this.adminUsers().filter(u => u.status === 'suspended').length);
+
+  // Pagination computed
+  totalPages = computed(() => Math.ceil(this.filteredAdminUsers().length / this.pageSize));
+  paginatedAdminUsers = computed(() => {
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.filteredAdminUsers().slice(start, end);
+  });
 
   // Permission checks
   canCreateUsers = computed(() => this.authService.hasPermission('users:create'));
@@ -200,6 +258,32 @@ export class UsersAdminsComponent implements OnInit {
   clearSearch(): void {
     this.searchQuery = '';
     this.filteredAdminUsers.set(this.adminUsers());
+  }
+
+  // Pagination methods
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+    }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages()) {
+      this.currentPage++;
+    }
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1; // Reset to first page when changing page size
+  }
+
+  getStartIndex(): number {
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  getEndIndex(): number {
+    const end = this.currentPage * this.pageSize;
+    return end > this.filteredAdminUsers().length ? this.filteredAdminUsers().length : end;
   }
 
   getInitials(user: User): string {

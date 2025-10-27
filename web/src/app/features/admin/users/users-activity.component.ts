@@ -4,19 +4,13 @@ import { RouterLink } from '@angular/router';
 import { UserService } from '../../../core/services/user.service';
 import type { User } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/users-sidebar.component';
 
 @Component({
   selector: 'app-users-activity',
   standalone: true,
-  imports: [CommonModule, RouterLink, UsersSidebarComponent],
+  imports: [CommonModule, RouterLink],
   template: `
-    <div class="flex">
-      <!-- Sidebar -->
-      <app-users-sidebar></app-users-sidebar>
-
-      <!-- Main Content -->
-      <div class="flex-1 p-4 space-y-4">
+    <div class="flex-1 p-4 space-y-4">
         <!-- Header -->
         <div class="flex items-center justify-between">
           <div>
@@ -127,7 +121,6 @@ import { UsersSidebarComponent } from '../../../shared/components/users-sidebar/
           </div>
         </div>
       </div>
-    </div>
   `,
   styles: []
 })

@@ -30,8 +30,11 @@ interface Platform {
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Product Catalog</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span class="text-xl">📦</span>
+            Product Catalog
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             Manage your product offerings and configurations
           </p>
         </div>

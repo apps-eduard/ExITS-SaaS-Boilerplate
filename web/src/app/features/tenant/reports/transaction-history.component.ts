@@ -25,86 +25,79 @@ interface Transaction {
       <!-- Page Header with Export Button -->
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Transaction History</h2>
-          <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">View all your subscription payments and transactions</p>
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6">🧾</span>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Transaction History</h2>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">View all your subscription payments and transactions</p>
         </div>
         <button
           (click)="exportTransactions()"
           type="button"
-          class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded shadow-sm transition text-white bg-blue-600 hover:bg-blue-700"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
         >
-          <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          Export to CSV
+          <span class="w-3.5 h-3.5">📥</span>
+          Export CSV
         </button>
       </div>
 
       <!-- Summary Stats Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Total Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ filteredTransactions().length }}</p>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <span class="text-base">📊</span>
             </div>
-            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
+            <div>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Total</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white">{{ filteredTransactions().length }}</p>
             </div>
           </div>
         </div>
 
         <!-- Completed Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Completed</p>
-              <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ countByStatus('success') }}</p>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <span class="text-base">✅</span>
             </div>
-            <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Completed</p>
+              <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ countByStatus('success') }}</p>
             </div>
           </div>
         </div>
 
         <!-- Pending Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Pending</p>
-              <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{{ countByStatus('pending') }}</p>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+              <span class="text-base">⏳</span>
             </div>
-            <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Pending</p>
+              <p class="text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ countByStatus('pending') }}</p>
             </div>
           </div>
         </div>
 
         <!-- Failed Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Failed</p>
-              <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ countByStatus('failed') }}</p>
+        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+              <span class="text-base">❌</span>
             </div>
-            <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Failed</p>
+              <p class="text-lg font-bold text-red-600 dark:text-red-400">{{ countByStatus('failed') }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <!-- Status Filter -->
           <div>
@@ -162,11 +155,9 @@ interface Transaction {
             <button
               (click)="clearFilters()"
               type="button"
-              class="w-full px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+              class="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition"
             >
-              <svg class="w-3.5 h-3.5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
+              <span class="w-3.5 h-3.5">🔄</span>
               Clear Filters
             </button>
           </div>
@@ -174,39 +165,77 @@ interface Transaction {
       </div>
 
       <!-- Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Description</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Invoice</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Type</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Payment Method</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">Amount</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Status</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Date</th>
-                <th class="px-3 py-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300">Action</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📝</span>
+                    Description
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔖</span>
+                    Invoice
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🏷️</span>
+                    Type
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">💳</span>
+                    Payment
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center justify-end gap-1">
+                    <span class="w-3.5 h-3.5">💰</span>
+                    Amount
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔘</span>
+                    Status
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">📅</span>
+                    Date
+                  </div>
+                </th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <div class="flex items-center justify-center gap-1">
+                    <span class="w-3.5 h-3.5">⚙️</span>
+                    Action
+                  </div>
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr *ngIf="isLoading()" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td colspan="8" class="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngIf="isLoading()" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <td colspan="8" class="px-3 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
                   Loading transactions...
                 </td>
               </tr>
-              <tr *ngIf="!isLoading() && paginatedTransactions().length === 0" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <tr *ngIf="!isLoading() && paginatedTransactions().length === 0" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <td colspan="8" class="px-3 py-4 text-center">
                   <div class="flex flex-col items-center gap-2 py-8">
-                    <svg class="w-12 h-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
+                    <span class="text-4xl mb-2">🧾</span>
                     <p class="text-sm font-medium text-gray-900 dark:text-white">No transactions found</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Try adjusting your filters or date range</p>
                   </div>
                 </td>
               </tr>
-              <tr *ngFor="let transaction of paginatedTransactions()" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <tr *ngFor="let transaction of paginatedTransactions()" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <td class="px-3 py-2 text-xs text-gray-900 dark:text-white">
                   {{ transaction.description }}
                 </td>
@@ -238,13 +267,10 @@ interface Transaction {
                   <button
                     (click)="viewTransaction(transaction)"
                     type="button"
-                    class="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                    class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
                     title="View Details"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
+                    <span class="w-3.5 h-3.5">👁️</span>
                   </button>
                 </td>
               </tr>
@@ -253,22 +279,21 @@ interface Transaction {
         </div>
 
         <!-- Pagination Controls -->
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
           <!-- Left side: Page size selector and info -->
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
             <div class="flex items-center gap-2">
               <label class="text-xs text-gray-600 dark:text-gray-400">Show:</label>
               <select
                 [ngModel]="pageSize()"
                 (ngModelChange)="changePageSize($event)"
-                class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
                 <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
               </select>
-              <span class="text-xs text-gray-600 dark:text-gray-400">per page</span>
             </div>
             <div class="text-xs text-gray-600 dark:text-gray-400">
-              Showing {{ (currentPage() - 1) * pageSize() + 1 }} to {{ Math.min(currentPage() * pageSize(), filteredTransactions().length) }} of {{ filteredTransactions().length }} transactions
+              Showing {{ (currentPage() - 1) * pageSize() + 1 }} to {{ Math.min(currentPage() * pageSize(), filteredTransactions().length) }} of {{ filteredTransactions().length }}
             </div>
           </div>
 
@@ -277,27 +302,23 @@ interface Transaction {
             <button
               (click)="previousPage()"
               [disabled]="currentPage() === 1"
-              class="px-3 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-              </svg>
+              <span class="w-3.5 h-3.5">←</span>
+              Previous
             </button>
 
-            <div class="flex items-center gap-1">
-              <span class="text-xs text-gray-600 dark:text-gray-400">Page</span>
-              <span class="px-2 py-1 text-xs font-medium text-gray-900 dark:text-white">{{ currentPage() }}</span>
-              <span class="text-xs text-gray-600 dark:text-gray-400">of {{ totalPages() || 1 }}</span>
-            </div>
+            <span class="text-xs text-gray-600 dark:text-gray-400">
+              Page {{ currentPage() }} of {{ totalPages() || 1 }}
+            </span>
 
             <button
               (click)="nextPage()"
               [disabled]="currentPage() === totalPages() || totalPages() === 0"
-              class="px-3 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
+              Next
+              <span class="w-3.5 h-3.5">→</span>
             </button>
           </div>
         </div>

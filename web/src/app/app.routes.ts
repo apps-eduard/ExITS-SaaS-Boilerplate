@@ -355,7 +355,7 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
+            loadComponent: () => import('./features/tenant/employees/employees-list.component').then(m => m.EmployeesListComponent)
           },
           {
             path: 'new',
@@ -364,6 +364,15 @@ export const routes: Routes = [
           {
             path: ':id',
             loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
+          }
+        ]
+      },
+      {
+        path: 'customers',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/tenant/customers/customers-list.component').then(m => m.CustomersListComponent)
           }
         ]
       },
