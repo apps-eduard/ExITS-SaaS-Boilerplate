@@ -14,7 +14,7 @@ import { ThemeService } from '../../../core/services/theme.service';
     <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <!-- Background Pattern -->
       <div class="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      
+
       <div class="relative w-full max-w-md">
         <!-- Logo & Branding -->
         <div class="text-center mb-8">
@@ -220,7 +220,7 @@ import { ThemeService } from '../../../core/services/theme.service';
   `,
   styles: [`
     .bg-grid-pattern {
-      background-image: 
+      background-image:
         linear-gradient(to right, rgb(200, 200, 200) 1px, transparent 1px),
         linear-gradient(to bottom, rgb(200, 200, 200) 1px, transparent 1px);
       background-size: 20px 20px;
@@ -231,7 +231,7 @@ export class CustomerLoginComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
   private apiUrl = 'http://localhost:3000/api';
-  
+
   toastService = inject(ToastService);
   themeService = inject(ThemeService);
 
@@ -243,8 +243,9 @@ export class CustomerLoginComponent {
   error = '';
 
   testAccounts = [
-    { email: 'customer1@test.com', password: 'Customer@123', label: 'Customer 1 (Money Loan)' },
-    { email: 'customer2@test.com', password: 'Customer@123', label: 'Customer 2 (BNPL)' }
+    { email: 'juan.delacruz@test.com', password: 'Customer@123', label: 'Juan Dela Cruz' },
+    { email: 'maria.santos@test.com', password: 'Customer@123', label: 'Maria Santos' },
+    { email: 'pedro.gonzales@test.com', password: 'Customer@123', label: 'Pedro Gonzales' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
@@ -282,16 +283,16 @@ export class CustomerLoginComponent {
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
-        
+
         // Store customer auth data
         if (response.data) {
           localStorage.setItem('customerToken', response.data.tokens.accessToken);
           localStorage.setItem('customerRefreshToken', response.data.tokens.refreshToken);
           localStorage.setItem('customerData', JSON.stringify(response.data.customer));
-          
+
           const customerName = response.data.customer.firstName + ' ' + response.data.customer.lastName;
           this.toastService.success(`Welcome back, ${customerName}!`);
-          
+
           // Redirect to customer dashboard
           setTimeout(() => {
             this.router.navigate(['/customer/dashboard']);

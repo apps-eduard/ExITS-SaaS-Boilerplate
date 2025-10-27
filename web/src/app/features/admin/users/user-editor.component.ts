@@ -68,69 +68,69 @@ interface Tenant {
             <button
               type="button"
               (click)="activeTab.set('basic')"
-              [class]="activeTab() === 'basic' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'basic'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">👤</span>
+              <span class="text-base">👤</span>
               Basic Info
             </button>
             <button
               type="button"
               (click)="activeTab.set('roles')"
-              [class]="activeTab() === 'roles' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'roles'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">🔑</span>
+              <span class="text-base">🔑</span>
               Roles
             </button>
             <button
-              *ngIf="userType === 'tenant'"
+              *ngIf="userType === 'tenant' || isTenantContext()"
               type="button"
               (click)="activeTab.set('platforms')"
-              [class]="activeTab() === 'platforms' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'platforms'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">🚀</span>
+              <span class="text-base">🚀</span>
               Platforms
             </button>
             <button
               type="button"
               (click)="activeTab.set('address')"
-              [class]="activeTab() === 'address' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'address'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">📍</span>
+              <span class="text-base">📍</span>
               Address
             </button>
             <button
               *ngIf="isEditMode()"
               type="button"
               (click)="activeTab.set('password')"
-              [class]="activeTab() === 'password' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'password'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">🔐</span>
+              <span class="text-base">🔐</span>
               Password
             </button>
             <button
               type="button"
               (click)="activeTab.set('employee')"
-              [class]="activeTab() === 'employee' 
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800' 
+              [class]="activeTab() === 'employee'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors rounded-t"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
             >
-              <span class="text-lg">👔</span>
+              <span class="text-base">👔</span>
               Employee Profile
             </button>
           </div>
@@ -138,6 +138,7 @@ interface Tenant {
 
         <!-- Tab Content -->
         <div class="rounded-b-lg border border-t-0 border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+
           <!-- Basic Information Tab -->
           <div *ngIf="activeTab() === 'basic'">
             <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
@@ -155,6 +156,7 @@ interface Tenant {
                 placeholder="John"
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">User's given name</p>
             </div>
 
             <!-- Last Name -->
@@ -170,6 +172,7 @@ interface Tenant {
                 placeholder="Doe"
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">User's family name or surname</p>
             </div>
 
             <!-- Email -->
@@ -184,14 +187,14 @@ interface Tenant {
                 (blur)="onEmailBlur()"
                 type="email"
                 placeholder="john.doe@example.com"
-                [disabled]="isEditMode()"
-                class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-700"
+                class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 required
               />
               <div class="mt-1 text-xs">
                 <span *ngIf="emailCheckInProgress()" class="text-gray-500">Checking email...</span>
                 <span *ngIf="emailExists()" class="text-red-600">This email is already registered</span>
                 <span *ngIf="emailCheckError()" class="text-yellow-600">{{ emailCheckError() }}</span>
+                <span *ngIf="!emailCheckInProgress() && !emailExists() && !emailCheckError()" class="text-gray-500">Required - Valid email address for login and notifications</span>
               </div>
             </div>
 
@@ -208,7 +211,7 @@ interface Tenant {
                 class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 required
               />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum 8 characters</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - Minimum 8 characters with letters and numbers</p>
             </div>
 
             <!-- Status (Edit only) -->
@@ -225,6 +228,7 @@ interface Tenant {
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
               </select>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Active users can login, inactive/suspended cannot</p>
             </div>
 
             <!-- User Type (only shown in system admin context) -->
@@ -242,6 +246,7 @@ interface Tenant {
                 <option value="system">System Admin</option>
                 <option value="tenant">Tenant User</option>
               </select>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">System admins manage platform, tenant users manage specific tenants</p>
             </div>
 
             <!-- Tenant Info (read-only for edit mode) -->
@@ -284,7 +289,7 @@ interface Tenant {
             </select>
 
             <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              💡 This user will only have access to the selected tenant's data
+              💡 Required - Choose which organization this user belongs to
             </p>
           </div>
         </div>
@@ -430,8 +435,8 @@ interface Tenant {
                 <button
                   type="button"
                   (click)="activeAddressTab.set('location')"
-                  [class]="activeAddressTab() === 'location' 
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                  [class]="activeAddressTab() === 'location'
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                   class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
                 >
@@ -441,8 +446,8 @@ interface Tenant {
                 <button
                   type="button"
                   (click)="activeAddressTab.set('contact')"
-                  [class]="activeAddressTab() === 'contact' 
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                  [class]="activeAddressTab() === 'contact'
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                   class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
                 >
@@ -452,8 +457,8 @@ interface Tenant {
                 <button
                   type="button"
                   (click)="activeAddressTab.set('additional')"
-                  [class]="activeAddressTab() === 'additional' 
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+                  [class]="activeAddressTab() === 'additional'
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                   class="flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors"
                 >
@@ -483,6 +488,7 @@ interface Tenant {
                     <option value="shipping">📦 Shipping</option>
                     <option value="other">📌 Other</option>
                   </select>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - Select address category</p>
                 </div>
 
                 <!-- Region -->
@@ -500,6 +506,7 @@ interface Tenant {
                       {{ region.name }}
                     </option>
                   </select>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - Philippine region (e.g., NCR, Region IV-A)</p>
                 </div>
 
                 <!-- Province -->
@@ -514,6 +521,7 @@ interface Tenant {
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     required
                   />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - Province or special administrative region</p>
                 </div>
 
                 <!-- City/Municipality -->
@@ -528,6 +536,7 @@ interface Tenant {
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     required
                   />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - City or municipality name</p>
                 </div>
 
                 <!-- Barangay -->
@@ -542,6 +551,7 @@ interface Tenant {
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     required
                   />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - Smallest administrative division</p>
                 </div>
 
                 <!-- Zip Code -->
@@ -555,6 +565,7 @@ interface Tenant {
                     placeholder="e.g., 1121"
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Postal code (4 digits in the Philippines)</p>
                 </div>
 
                 <!-- Street -->
@@ -569,6 +580,7 @@ interface Tenant {
                     class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     required
                   />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Required - House/building number, street name, subdivision</p>
                 </div>
               </div>
 
@@ -703,11 +715,11 @@ interface Tenant {
                   placeholder="Confirm new password"
                   class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 />
-                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword !== resetPasswordData.confirmPassword" 
+                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword !== resetPasswordData.confirmPassword"
                    class="text-xs text-red-500 dark:text-red-400 mt-0.5">
                   ⚠️ Passwords do not match
                 </p>
-                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword === resetPasswordData.confirmPassword" 
+                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword === resetPasswordData.confirmPassword"
                    class="text-xs text-green-500 dark:text-green-400 mt-0.5">
                   ✓ Passwords match
                 </p>
@@ -895,6 +907,118 @@ interface Tenant {
             </div>
           </div>
 
+          <!-- Required Fields Checklist -->
+          <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Required Fields Checklist</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  <!-- Email -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="formData.email && formData.email.includes('@') ? 'text-green-600 dark:text-green-400' : 'text-red-500'">
+                      {{ formData.email && formData.email.includes('@') ? '✓' : '✱' }}
+                    </span>
+                    <span [class]="formData.email && formData.email.includes('@') ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-900 dark:text-white font-medium'">
+                      Email address
+                    </span>
+                  </div>
+
+                  <!-- Password (create mode only) -->
+                  <div *ngIf="!isEditMode()" class="flex items-center gap-2">
+                    <span [class]="formData.password && formData.password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-red-500'">
+                      {{ formData.password && formData.password.length >= 8 ? '✓' : '✱' }}
+                    </span>
+                    <span [class]="formData.password && formData.password.length >= 8 ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-900 dark:text-white font-medium'">
+                      Password (min 8 chars)
+                    </span>
+                  </div>
+
+                  <!-- Tenant Selection (for tenant users in system context) -->
+                  <div *ngIf="userType === 'tenant' && !isEditMode() && !isTenantContext()" class="flex items-center gap-2">
+                    <span [class]="formData.tenantId ? 'text-green-600 dark:text-green-400' : 'text-red-500'">
+                      {{ formData.tenantId ? '✓' : '✱' }}
+                    </span>
+                    <span [class]="formData.tenantId ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-900 dark:text-white font-medium'">
+                      Select Tenant
+                    </span>
+                  </div>
+
+                  <!-- Address Type (if adding address) -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.addressType ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.addressType ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.addressType ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      Address Type
+                    </span>
+                  </div>
+
+                  <!-- Region -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.region ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.region ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.region ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      Region
+                    </span>
+                  </div>
+
+                  <!-- Province -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.province ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.province ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.province ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      Province
+                    </span>
+                  </div>
+
+                  <!-- City/Municipality -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.cityMunicipality ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.cityMunicipality ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.cityMunicipality ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      City/Municipality
+                    </span>
+                  </div>
+
+                  <!-- Barangay -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.barangay ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.barangay ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.barangay ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      Barangay
+                    </span>
+                  </div>
+
+                  <!-- Street Address -->
+                  <div class="flex items-center gap-2">
+                    <span [class]="addressData.street ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                      {{ addressData.street ? '✓' : '○' }}
+                    </span>
+                    <span [class]="addressData.street ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-700 dark:text-gray-400'">
+                      Street Address
+                    </span>
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
+                    <span class="text-red-500 font-semibold">✱</span> Required to save •
+                    <span class="text-green-600 dark:text-green-400 font-semibold">✓</span> Completed •
+                    <span class="text-gray-400 font-semibold">○</span> Optional (for address)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Actions -->
@@ -902,15 +1026,25 @@ interface Tenant {
           <button
             (click)="goBack()"
             type="button"
-            class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow"
           >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
             Cancel
           </button>
           <button
             (click)="save()"
             [disabled]="saving() || !isFormValid()"
-            class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-xs font-medium text-white hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
           >
+            <svg *ngIf="!saving()" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <svg *ngIf="saving()" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             {{ saving() ? 'Saving...' : (isEditMode() ? 'Update User' : 'Create User') }}
           </button>
         </div>
@@ -926,6 +1060,7 @@ export class UserEditorComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   userType = 'system'; // 'system' or 'tenant' - default to system admin
   isTenantContext = signal(false); // Track if we're in tenant context
+  loadedUser: any = null; // Store loaded user data including tenant info
 
   // Main tab navigation
   activeTab = signal<string>('basic'); // 'basic', 'roles', 'platforms', 'address', 'password'
@@ -975,7 +1110,7 @@ export class UserEditorComponent implements OnInit {
   // Tenant data and platform subscriptions
   currentTenantData = signal<any>(null);
   tenantPlatformSubscriptions = signal<ProductSubscription[]>([]);
-  
+
   // Computed property to determine which platforms are available
   // Uses tenant's enabled flags (same logic as Platform Catalog)
   availablePlatforms = computed(() => {
@@ -1063,53 +1198,64 @@ export class UserEditorComponent implements OnInit {
     // Load user if editing
     if (this.isEditMode() && this.userId) {
       console.log('🔍 Loading user ID:', this.userId);
-      const user = await this.userService.getUser(this.userId);
-      console.log('📦 User data received:', user);
+      try {
+        const user = await this.userService.getUser(this.userId);
+        console.log('📦 User data received:', user);
 
-      if (user) {
-        console.log('✅ User data found:', {
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          status: user.status,
-          tenantId: user.tenantId,
-          roles: user.roles
-        });
+        if (user) {
+          // Store the complete user data including tenant info
+          this.loadedUser = user;
 
-        // Update form data - create new object to trigger change detection
-        this.formData = {
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          email: user.email,
-          password: '',
-          status: user.status || 'active',
-          tenantId: user.tenantId
-        };
+          console.log('✅ User data found:', {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            status: user.status,
+            tenantId: user.tenantId,
+            tenant: user.tenant,
+            roles: user.roles
+          });
 
-        console.log('📝 Form data set to:', this.formData);
+          // Update form data directly (not creating new object)
+          this.formData.firstName = user.firstName || '';
+          this.formData.lastName = user.lastName || '';
+          this.formData.email = user.email || '';
+          this.formData.password = '';
+          this.formData.status = user.status || 'active';
+          this.formData.tenantId = user.tenantId || null;
 
-        // Set user type
-        this.userType = user.tenantId ? 'tenant' : 'system';
+          console.log('📝 Form data set to:', this.formData);
 
-        // Set selected roles
-        if (user.roles) {
-          this.selectedRoles.set(new Set(user.roles.map(r => r.id)));
-          console.log('👥 Selected roles:', Array.from(this.selectedRoles()));
+          // Set user type
+          this.userType = user.tenantId ? 'tenant' : 'system';
+
+          // Set selected roles
+          if (user.roles && Array.isArray(user.roles)) {
+            const roleIds = user.roles.map(r => typeof r === 'object' ? r.id : r);
+            this.selectedRoles.set(new Set(roleIds));
+            console.log('👥 Selected roles:', Array.from(this.selectedRoles()));
+          }
+
+          // Load product access for tenant users
+          if (user.tenantId) {
+            // Load tenant's platform subscriptions to show available platforms
+            this.loadTenantPlatformSubscriptions(Number(user.tenantId));
+            // Load user's current product access
+            await this.loadUserProducts(this.userId);
+          }
+
+          // Force change detection
+          setTimeout(() => {
+            this.cdr.detectChanges();
+            console.log('🔄 Change detection triggered');
+          }, 100);
+        } else {
+          console.error('❌ No user data returned from API');
+          this.errorMessage.set('Failed to load user data');
         }
-
-        // Load product access for tenant users
-        if (user.tenantId) {
-          // Load tenant's platform subscriptions to show available platforms
-          this.loadTenantPlatformSubscriptions(Number(user.tenantId));
-          // Load user's current product access
-          await this.loadUserProducts(this.userId);
-        }
-
-        // Manually trigger change detection
-        this.cdr.detectChanges();
-        console.log('🔄 Change detection triggered');
-      } else {
-        console.error('❌ No user data returned from API');
+      } catch (error) {
+        console.error('❌ Error loading user:', error);
+        this.errorMessage.set('Failed to load user: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }
   }
@@ -1140,7 +1286,7 @@ export class UserEditorComponent implements OnInit {
 
   loadTenantPlatformSubscriptions(tenantId: number) {
     console.log('🔍 Loading tenant data and platform subscriptions for tenant:', tenantId);
-    
+
     // First, load the tenant data to get enabled platform flags
     this.http.get<any>(`/api/tenants/${tenantId}`).subscribe({
       next: (response) => {
@@ -1194,8 +1340,15 @@ export class UserEditorComponent implements OnInit {
     if (!this.formData.tenantId) {
       return 'No tenant assigned';
     }
+
+    // First check if we have tenant info from loaded user
+    if (this.loadedUser && this.loadedUser.tenant) {
+      return `${this.loadedUser.tenant.name} (${this.loadedUser.tenant.subdomain})`;
+    }
+
+    // Otherwise check tenants list
     const tenant = this.tenants().find(t => t.id === this.formData.tenantId);
-    return tenant ? `${tenant.name} (${tenant.subdomain})` : 'Unknown tenant';
+    return tenant ? `${tenant.name} (${tenant.subdomain})` : 'Loading...';
   }
 
   isRoleSelected(roleId: string): boolean {
