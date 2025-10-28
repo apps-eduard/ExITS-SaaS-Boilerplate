@@ -194,7 +194,7 @@ export const routes: Routes = [
       },
       {
         path: 'money-loan',
-        loadChildren: () => import('./features/platforms/money-loan/money-loan-routes/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
+        loadChildren: () => import('./features/platforms/money-loan/modules/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
       },
       {
         path: 'subscriptions',
