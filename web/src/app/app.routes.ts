@@ -548,6 +548,14 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () => import('./features/tenant/customers/customers-list.component').then(m => m.CustomersListComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
           }
         ]
       },

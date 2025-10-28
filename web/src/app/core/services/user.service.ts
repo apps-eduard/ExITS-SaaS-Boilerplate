@@ -145,6 +145,8 @@ export class UserService {
       );
 
       if (response && response.data) {
+        console.log('🔍 User data received:', response.data);
+        console.log('🔍 Tenant info:', response.data.tenant);
         this.currentUserSignal.set(response.data);
         console.log(`✅ Loaded user: ${response.data.email}`);
         return response.data;

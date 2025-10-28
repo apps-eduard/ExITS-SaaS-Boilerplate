@@ -111,12 +111,16 @@ class UserService {
     try {
       // System admins (tenantId = null) can view any user, tenant admins can only view their own tenant users
       const query = tenantId 
-        ? `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
-           FROM users
-           WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)`
-        : `SELECT id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, last_login, created_at, updated_at
-           FROM users
-           WHERE id = $1`;
+        ? `SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.mfa_enabled, u.last_login, u.created_at, u.updated_at,
+                  t.name as tenant_name, t.subdomain as tenant_subdomain
+           FROM users u
+           LEFT JOIN tenants t ON u.tenant_id = t.id
+           WHERE u.id = $1 AND (u.tenant_id = $2 OR u.tenant_id IS NULL)`
+        : `SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.mfa_enabled, u.last_login, u.created_at, u.updated_at,
+                  t.name as tenant_name, t.subdomain as tenant_subdomain
+           FROM users u
+           LEFT JOIN tenants t ON u.tenant_id = t.id
+           WHERE u.id = $1`;
 
       const params = tenantId ? [userId, tenantId] : [userId];
       const userResult = await pool.query(query, params);
@@ -125,7 +129,26 @@ class UserService {
         throw new Error('User not found');
       }
 
-      const user = this.transformUser(userResult.rows[0]);
+      const userData = userResult.rows[0];
+      const user = this.transformUser(userData);
+
+      console.log('🔍 UserService.getUserById - Raw userData:', {
+        tenant_id: userData.tenant_id,
+        tenant_name: userData.tenant_name,
+        tenant_subdomain: userData.tenant_subdomain
+      });
+
+      // Add tenant info if available
+      if (userData.tenant_id && userData.tenant_name) {
+        user.tenant = {
+          id: userData.tenant_id,
+          name: userData.tenant_name,
+          subdomain: userData.tenant_subdomain
+        };
+        console.log('✅ UserService.getUserById - Tenant info added:', user.tenant);
+      } else {
+        console.log('⚠️ UserService.getUserById - No tenant info found');
+      }
 
       // Get user roles
       const rolesResult = await pool.query(

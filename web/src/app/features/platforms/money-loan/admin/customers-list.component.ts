@@ -141,6 +141,12 @@ import { LoanCustomer } from '../shared/models/loan.models';
             <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                <th class="px-3 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                  <div class="flex items-center gap-1">
+                    <span class="w-3.5 h-3.5">🔖</span>
+                    Code
+                  </div>
+                </th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Contact</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">KYC</th>
@@ -152,7 +158,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <div class="flex items-center justify-center gap-2">
                       <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -164,7 +170,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
                 </tr>
               } @else if (customers().length === 0) {
                 <tr>
-                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No customers found
                   </td>
                 </tr>
@@ -178,9 +184,14 @@ import { LoanCustomer } from '../shared/models/loan.models';
                         </div>
                         <div>
                           <p class="text-sm font-medium text-gray-900 dark:text-white">{{ customer.firstName }} {{ customer.lastName }}</p>
-                          <p class="text-xs text-gray-500 dark:text-gray-400">{{ customer.customerCode }}</p>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ customer.id }}</p>
                         </div>
                       </div>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <span class="text-xs font-mono text-gray-900 dark:text-white font-medium">
+                        {{ customer.customerCode }}
+                      </span>
                     </td>
                     <td class="px-4 py-3">
                       <div class="text-sm">

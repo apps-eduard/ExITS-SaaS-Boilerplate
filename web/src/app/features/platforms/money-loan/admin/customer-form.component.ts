@@ -1,7 +1,10 @@
-import { Component, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, signal, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { CustomerService } from '../shared/services/customer.service';
 import { LoanCustomer } from '../shared/models/loan.models';
 
@@ -206,10 +209,12 @@ import { LoanCustomer } from '../shared/models/loan.models';
                     </label>
                     <input
                       type="text"
-                      value="Loading..."
+                      [value]="getTenantDisplayName()"
                       disabled
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Tenant cannot be changed after user creation</p>
+                    @if (!isInTenantContext()) {
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Tenant cannot be changed after customer creation</p>
+                    }
                   </div>
                 </div>
               </div>
@@ -684,13 +689,34 @@ import { LoanCustomer } from '../shared/models/loan.models';
 })
 export class CustomerFormComponent implements OnInit {
   private customerService = inject(CustomerService);
+  private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
+  private toastService = inject(ToastService);
 
   isEditMode = signal(false);
   saving = signal(false);
   activeTab = signal<'basic' | 'employment' | 'kyc' | 'address'>('basic');
   customerId: number | null = null;
+  tenantName = signal<string>('');
+  
+  // Helper to check if we're in tenant context (public for template)
+  isInTenantContext(): boolean {
+    return this.router.url.includes('/tenant/customers');
+  }
+  
+  // Get tenant display name (public for template)
+  getTenantDisplayName(): string {
+    if (this.isInTenantContext()) {
+      // In tenant space, get from current user
+      const user = this.authService.currentUser();
+      return user?.tenantId ? this.tenantName() || 'Current Tenant' : 'No Tenant';
+    }
+    // In Money Loan platform, show from customer data
+    return this.tenantName() || 'Loading...';
+  }
 
   formData: any = {
     firstName: '',
@@ -728,18 +754,147 @@ export class CustomerFormComponent implements OnInit {
       this.customerId = parseInt(id);
       this.isEditMode.set(true);
       this.loadCustomer();
+    } else {
+      // Create mode: Load tenant name for Money Loan platform
+      if (!this.isInTenantContext()) {
+        this.loadCurrentUserTenantName();
+      }
     }
+    
+    // Load tenant name if in tenant context
+    if (this.isInTenantContext()) {
+      this.loadTenantName();
+    }
+    
+    // Log current route to debug
+    console.log('🔍 Current route:', this.router.url);
+  }
+  
+  loadCurrentUserTenantName() {
+    // Get current user's tenant name for Money Loan platform
+    this.http.get<any>('http://localhost:3000/api/tenants/current').subscribe({
+      next: (response: any) => {
+        if (response.success && response.data && response.data.name) {
+          this.tenantName.set(response.data.name);
+          console.log('✅ Tenant name loaded for create mode:', response.data.name);
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading tenant name:', error);
+        this.tenantName.set('Current Tenant');
+      }
+    });
+  }
+  
+  loadTenantName() {
+    // Get tenant info from /api/tenants/current
+    this.http.get<any>('http://localhost:3000/api/tenants/current').subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          this.tenantName.set(response.data.name || 'Unknown Tenant');
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading tenant name:', error);
+        this.tenantName.set('Current Tenant');
+      }
+    });
   }
 
   loadCustomer() {
     if (!this.customerId) return;
 
-    this.customerService.getCustomerById(this.customerId).subscribe({
-      next: (customer: any) => {
-        this.formData = { ...customer };
+    // Use different API endpoint based on context
+    if (this.isInTenantContext()) {
+      // Tenant space: use /api/customers/:id
+      this.http.get<any>(`http://localhost:3000/api/customers/${this.customerId}`).subscribe({
+        next: (response: any) => {
+          if (response.success && response.data) {
+            const customer = response.data;
+            
+            // Map snake_case API response to camelCase form fields
+            // Use Object.assign to preserve object reference for ngModel binding
+            Object.assign(this.formData, {
+              firstName: customer.first_name || '',
+              lastName: customer.last_name || '',
+              dateOfBirth: customer.date_of_birth ? customer.date_of_birth.split('T')[0] : '',
+              gender: customer.gender || '',
+              email: customer.email || '',
+              phone: customer.phone || '',
+              streetAddress: customer.street_address || '',
+              houseNumber: customer.house_number || '',
+              streetName: customer.street_name || '',
+              subdivision: customer.subdivision || '',
+              barangay: customer.barangay || '',
+              cityMunicipality: customer.city_municipality || '',
+              province: customer.province || '',
+              region: customer.region || '',
+              zipCode: customer.zip_code || '',
+              country: customer.country || 'Philippines',
+              addressType: customer.address_type || 'home',
+              isPrimary: customer.is_primary !== undefined ? customer.is_primary : true,
+              employmentStatus: customer.employment_status || '',
+              employerName: customer.employer_name || '',
+              monthlyIncome: customer.monthly_income || null,
+              sourceOfIncome: customer.source_of_income || '',
+              idType: customer.id_type || '',
+              idNumber: customer.id_number || '',
+              kycStatus: customer.kyc_status || 'pending',
+              creditScore: customer.credit_score || 650,
+              status: customer.status || 'active'
+            });
+            
+            console.log('✅ Tenant customer data loaded:', this.formData);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (error: any) => {
+          console.error('Error loading tenant customer:', error);
+        }
+      });
+    } else {
+      // Money Loan platform: use CustomerService
+      this.customerService.getCustomerById(this.customerId).subscribe({
+        next: (response: any) => {
+          if (response.success && response.data) {
+            const customer = response.data;
+            Object.assign(this.formData, customer);
+            
+            // Set tenant name directly from customer data (no need for separate API call)
+            if (customer.tenantName) {
+              this.tenantName.set(customer.tenantName);
+              console.log('✅ Tenant name from customer data:', customer.tenantName);
+            } else if (customer.tenantId) {
+              // Fallback: try to load by ID if tenantName not included
+              this.loadTenantNameById(customer.tenantId);
+            }
+            
+            console.log('✅ Money Loan customer data loaded:', this.formData);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (error: any) => {
+          console.error('Error loading Money Loan customer:', error);
+        }
+      });
+    }
+  }
+  
+  loadTenantNameById(tenantId: number) {
+    // Get tenant info by ID for Money Loan platform
+    this.http.get<any>(`http://localhost:3000/api/tenants/${tenantId}`).subscribe({
+      next: (response: any) => {
+        // Response format: { message: '...', data: { name: '...', ... } }
+        if (response.data && response.data.name) {
+          this.tenantName.set(response.data.name);
+          console.log('✅ Loaded tenant name:', response.data.name);
+        } else {
+          this.tenantName.set('Unknown Tenant');
+        }
       },
       error: (error: any) => {
-        console.error('Error loading customer:', error);
+        console.error('Error loading tenant name by ID:', error);
+        this.tenantName.set('Tenant ID: ' + tenantId);
       }
     });
   }
@@ -748,35 +903,106 @@ export class CustomerFormComponent implements OnInit {
     return value !== null && value !== undefined && value !== '';
   }
 
-  onSubmit() {
-    this.saving.set(true);
+  validateForm(): string | null {
+    // Validate required fields
+    if (!this.formData.firstName?.trim()) return 'First name is required';
+    if (!this.formData.lastName?.trim()) return 'Last name is required';
+    if (!this.formData.email?.trim()) return 'Email is required';
+    if (!this.formData.phone?.trim()) return 'Phone number is required';
+    if (!this.formData.dateOfBirth) return 'Date of birth is required';
+    if (!this.formData.gender) return 'Gender is required';
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.formData.email)) return 'Invalid email format';
+    
+    return null; // No errors
+  }
 
-    if (this.isEditMode() && this.customerId) {
-      this.customerService.updateCustomer(this.customerId, this.formData).subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
-        },
-        error: (error: any) => {
-          console.error('Error updating customer:', error);
-          this.saving.set(false);
-        }
-      });
+  onSubmit() {
+    // Validate form
+    const validationError = this.validateForm();
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+    
+    this.saving.set(true);
+    
+    // Determine return path based on current route
+    const currentUrl = this.router.url;
+    const returnPath = currentUrl.includes('/tenant/customers') 
+      ? '/tenant/customers' 
+      : '/platforms/money-loan/dashboard/customers/all';
+
+    if (this.isInTenantContext()) {
+      // Tenant space: use /api/customers
+      if (this.isEditMode() && this.customerId) {
+        this.http.put<any>(`http://localhost:3000/api/customers/${this.customerId}`, this.formData).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.toastService.success('Customer updated successfully');
+            this.router.navigate([returnPath]);
+          },
+          error: (error: any) => {
+            console.error('Error updating tenant customer:', error);
+            this.toastService.error('Failed to update customer: ' + (error.error?.message || error.message));
+            this.saving.set(false);
+          }
+        });
+      } else {
+        this.http.post<any>('http://localhost:3000/api/customers', this.formData).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.toastService.success('Customer created successfully');
+            this.router.navigate([returnPath]);
+          },
+          error: (error: any) => {
+            console.error('Error creating tenant customer:', error);
+            this.toastService.error('Failed to create customer: ' + (error.error?.message || error.message));
+            this.saving.set(false);
+          }
+        });
+      }
     } else {
-      this.customerService.createCustomer(this.formData).subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
-        },
-        error: (error: any) => {
-          console.error('Error creating customer:', error);
-          this.saving.set(false);
-        }
-      });
+      // Money Loan platform: use CustomerService
+      if (this.isEditMode() && this.customerId) {
+        this.customerService.updateCustomer(this.customerId, this.formData).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.toastService.success('Customer updated successfully');
+            this.router.navigate([returnPath]);
+          },
+          error: (error: any) => {
+            console.error('Error updating Money Loan customer:', error);
+            this.toastService.error('Failed to update customer: ' + (error.error?.message || error.message));
+            this.saving.set(false);
+          }
+        });
+      } else {
+        this.customerService.createCustomer(this.formData).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.toastService.success('Customer created successfully');
+            this.router.navigate([returnPath]);
+          },
+          error: (error: any) => {
+            console.error('Error creating Money Loan customer:', error);
+            this.toastService.error('Failed to create customer: ' + (error.error?.message || error.message));
+            this.saving.set(false);
+          }
+        });
+      }
     }
   }
 
   goBack() {
-    this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
+    // Check if we're in tenant space or money-loan platform
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('/tenant/customers')) {
+      this.router.navigate(['/tenant/customers']);
+    } else {
+      this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
+    }
   }
 }

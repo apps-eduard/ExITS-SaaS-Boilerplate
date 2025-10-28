@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
 
@@ -25,7 +25,7 @@ interface Customer {
 @Component({
   selector: 'app-customers-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="p-4">
       <!-- Header with Icon -->
@@ -433,6 +433,8 @@ export class CustomersListComponent implements OnInit {
   loadCustomers() {
     console.log('loadCustomers called');
     console.log('HttpClient in loadCustomers:', this.http);
+    console.log('🔑 Token in localStorage:', localStorage.getItem('access_token')?.substring(0, 20) + '...');
+    console.log('🔑 All localStorage keys:', Object.keys(localStorage));
     this.loading.set(true);
 
     this.http.get<any>('http://localhost:3000/api/customers').subscribe({

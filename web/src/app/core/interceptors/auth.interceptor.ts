@@ -4,6 +4,7 @@ import { AuthService } from '../services/auth.service';
 import { catchError, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  console.log('🔵 AUTH INTERCEPTOR CALLED for:', req.url, req.method);
   const authService = inject(AuthService);
   
   // Public routes that don't need authentication

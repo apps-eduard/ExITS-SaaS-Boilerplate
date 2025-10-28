@@ -125,6 +125,7 @@ router.get('/customers',
 /**
  * GET /api/money-loan/customers/high-risk
  * View high-risk customers
+ * NOTE: This MUST come BEFORE /customers/:id to avoid route conflicts
  */
 router.get('/customers/high-risk',
   authenticate,
@@ -148,6 +149,146 @@ router.get('/customers/high-risk',
     } catch (error) {
       console.error('Error fetching high-risk customers:', error);
       res.status(500).json({ error: 'Failed to fetch high-risk customers' });
+    }
+  }
+);
+
+/**
+ * POST /api/money-loan/customers
+ * Create a new customer
+ */
+router.post('/customers',
+  authenticate,
+  checkProductAccess('money_loan'),
+  checkPermission('money-loan:customers:create'),
+  async (req, res) => {
+    try {
+      const { tenant_id, id: user_id } = req.user;
+
+      // Create customer
+      const [customer] = await knex('shared_customers')
+        .insert({
+          ...req.body,
+          tenant_id,
+          product_type: 'money_loan',
+          created_by: user_id,
+          updated_by: user_id
+        })
+        .returning('*');
+
+      res.status(201).json({ 
+        success: true,
+        message: 'Customer created successfully',
+        data: customer 
+      });
+
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to create customer' 
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/money-loan/customers/:id
+ * Get a single customer by ID
+ */
+router.get('/customers/:id',
+  authenticate,
+  checkProductAccess('money_loan'),
+  checkPermission('money-loan:customers:read'),
+  async (req, res) => {
+    try {
+      const { tenant_id } = req.user;
+      const { id } = req.params;
+
+      console.log('🔍 GET /customers/:id - ID:', id, 'Tenant:', tenant_id);
+
+      const customer = await knex('shared_customers')
+        .where({
+          id,
+          tenant_id,
+          product_type: 'money_loan'
+        })
+        .first();
+
+      console.log('🔍 Customer found:', customer ? 'YES' : 'NO');
+
+      if (!customer) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Customer not found' 
+        });
+      }
+
+      res.json({ 
+        success: true,
+        data: customer 
+      });
+
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch customer' 
+      });
+    }
+  }
+);
+
+/**
+ * PUT /api/money-loan/customers/:id
+ * Update a customer
+ */
+router.put('/customers/:id',
+  authenticate,
+  checkProductAccess('money_loan'),
+  checkPermission('money-loan:customers:update'),
+  async (req, res) => {
+    try {
+      const { tenant_id } = req.user;
+      const { id } = req.params;
+
+      // Check if customer exists and belongs to tenant
+      const existing = await knex('shared_customers')
+        .where({
+          id,
+          tenant_id,
+          product_type: 'money_loan'
+        })
+        .first();
+
+      if (!existing) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Customer not found' 
+        });
+      }
+
+      // Update customer
+      const [updated] = await knex('shared_customers')
+        .where({ id })
+        .update({
+          ...req.body,
+          updated_at: knex.fn.now()
+        })
+        .returning('*');
+
+      res.json({ 
+        success: true,
+        message: 'Customer updated successfully',
+        data: updated 
+      });
+
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to update customer' 
+      });
     }
   }
 );

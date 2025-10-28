@@ -1337,18 +1337,30 @@ export class UserEditorComponent implements OnInit {
   }
 
   getTenantName(): string {
+    console.log('🔍 getTenantName - formData.tenantId:', this.formData.tenantId);
+    console.log('🔍 getTenantName - loadedUser:', this.loadedUser);
+    console.log('🔍 getTenantName - loadedUser.tenant:', this.loadedUser?.tenant);
+    console.log('🔍 getTenantName - tenants list:', this.tenants());
+    
     if (!this.formData.tenantId) {
       return 'No tenant assigned';
     }
 
     // First check if we have tenant info from loaded user
     if (this.loadedUser && this.loadedUser.tenant) {
+      console.log('✅ Found tenant from loadedUser:', this.loadedUser.tenant);
       return `${this.loadedUser.tenant.name} (${this.loadedUser.tenant.subdomain})`;
     }
 
     // Otherwise check tenants list
     const tenant = this.tenants().find(t => t.id === this.formData.tenantId);
-    return tenant ? `${tenant.name} (${tenant.subdomain})` : 'Loading...';
+    if (tenant) {
+      console.log('✅ Found tenant from list:', tenant);
+      return `${tenant.name} (${tenant.subdomain})`;
+    }
+    
+    console.log('⚠️ Tenant not found, returning Loading...');
+    return 'Loading...';
   }
 
   isRoleSelected(roleId: string): boolean {
