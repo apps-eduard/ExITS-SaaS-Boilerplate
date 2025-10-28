@@ -32,12 +32,12 @@ export class PlatformLoginComponent {
 
   // Test accounts for platform users (Tenant Admins and Employees only)
   testAccounts = [
-    { email: 'admin@acme.com', password: 'Password@123', label: 'ACME - Tenant Admin' },
-    { email: 'employee1@acme.com', password: 'Password@123', label: 'ACME - Employee 1 (Money Loan)' },
-    { email: 'employee2@acme.com', password: 'Password@123', label: 'ACME - Employee 2 (Money Loan)' },
-    { email: 'admin@techstart.com', password: 'Password@123', label: 'TechStart - Tenant Admin' },
-    { email: 'employee1@techstart.com', password: 'Password@123', label: 'TechStart - Employee 1 (Money Loan)' },
-    { email: 'employee2@techstart.com', password: 'Password@123', label: 'TechStart - Employee 2 (Money Loan)' }
+    { email: 'admin-1@example.com', password: 'Admin@123', label: 'ACME - Tenant Admin' },
+    { email: 'employee1@acme.com', password: 'Admin@123', label: 'ACME - Employee 1 (Loan Officer)' },
+    { email: 'employee2@acme.com', password: 'Admin@123', label: 'ACME - Employee 2 (Collections)' },
+    { email: 'admin-2@example.com', password: 'Admin@123', label: 'TechStart - Tenant Admin' },
+    { email: 'employee1@techstart.com', password: 'Admin@123', label: 'TechStart - Employee 1 (Loan Officer)' },
+    { email: 'employee2@techstart.com', password: 'Admin@123', label: 'TechStart - Employee 2 (Collections)' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {

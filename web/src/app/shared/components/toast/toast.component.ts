@@ -7,9 +7,9 @@ import { ToastService } from '../../../core/services/toast.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 space-y-2 max-w-md w-full px-4">
       @for (toast of toastService.toasts(); track toast.id) {
-        <div 
+        <div
           class="flex items-center gap-2 px-3 py-2 rounded shadow-lg backdrop-blur-sm animate-slide-in border"
           [ngClass]="{
             'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800': toast.type === 'success',
@@ -42,7 +42,7 @@ import { ToastService } from '../../../core/services/toast.service';
             }
           </div>
           <p class="flex-1 text-xs font-medium">{{ toast.message }}</p>
-          <button 
+          <button
             (click)="toastService.remove(toast.id)"
             class="flex-shrink-0 p-0.5 hover:bg-black/5 dark:hover:bg-white/5 rounded transition">
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">

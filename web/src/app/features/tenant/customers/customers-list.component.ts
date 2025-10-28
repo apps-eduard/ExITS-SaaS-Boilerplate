@@ -396,10 +396,10 @@ interface Customer {
   styles: []
 })
 export class CustomersListComponent implements OnInit {
-  private http = inject(HttpClient);
-  private toastService = inject(ToastService);
-  private router = inject(Router);
-  public themeService = inject(ThemeService);
+  private http: HttpClient;
+  private toastService: ToastService;
+  private router: Router;
+  public themeService: ThemeService;
 
   customers = signal<Customer[]>([]);
   filteredCustomers = signal<Customer[]>([]);
@@ -417,11 +417,22 @@ export class CustomersListComponent implements OnInit {
   selectedCustomers = new Set<number>();
   selectAll = false;
 
+  constructor() {
+    this.http = inject(HttpClient);
+    this.toastService = inject(ToastService);
+    this.router = inject(Router);
+    this.themeService = inject(ThemeService);
+  }
+
   ngOnInit() {
+    console.log('CustomersListComponent ngOnInit called');
+    console.log('HttpClient instance:', this.http);
     this.loadCustomers();
   }
 
   loadCustomers() {
+    console.log('loadCustomers called');
+    console.log('HttpClient in loadCustomers:', this.http);
     this.loading.set(true);
 
     this.http.get<any>('http://localhost:3000/api/customers').subscribe({

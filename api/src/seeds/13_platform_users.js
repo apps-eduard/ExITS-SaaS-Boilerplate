@@ -41,7 +41,7 @@ exports.seed = async function(knex) {
   }
 
   // Hash password for employees
-  const passwordHash = await bcrypt.hash('Employee@123', 10);
+  const passwordHash = await bcrypt.hash('Admin@123', 10);
 
   // ========================================
   // 1. Create Employee 1 - Money Loan View
@@ -176,7 +176,7 @@ exports.seed = async function(knex) {
   console.log('═══════════════════════════════════════════════════');
   console.log('📋 Test Accounts Summary:');
   console.log('═══════════════════════════════════════════════════');
-  console.log('\n🔹 Employees (Password: Employee@123):');
+  console.log('\n🔹 Employees (Password: Admin@123):');
   console.log('   • employee1@tenant1.com - Money Loan (View only)');
   console.log('   • employee2@tenant1.com - Money Loan (Manage) + BNPL (View)');
   console.log('\n🔹 Customers (created in 01_initial_data.js):');

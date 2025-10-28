@@ -20,28 +20,28 @@ exports.seed = async function(knex) {
   console.log('1. Creating tenants...');
   const tenants = await knex('tenants').insert([
     {
-      name: 'ExITS Platform',
-      subdomain: 'exits-platform',
+      name: 'ACME Corporation',
+      subdomain: 'acme',
       plan: 'enterprise',
       status: 'active',
       max_users: 1000,
-      contact_person: 'System Admin',
-      contact_email: 'admin@exits-platform.com',
+      contact_person: 'John Doe',
+      contact_email: 'admin@acme.com',
       contact_phone: '+63-917-123-4567',
-      money_loan_enabled: false,
-      bnpl_enabled: false,
+      money_loan_enabled: true,
+      bnpl_enabled: true,
       pawnshop_enabled: false
     },
     {
-      name: 'ACME Corporation',
-      subdomain: 'acme',
+      name: 'TechStart Solutions',
+      subdomain: 'techstart',
       plan: 'pro',
       status: 'active',
       max_users: 100,
-      contact_person: 'John Doe',
-      contact_email: 'john.doe@acme.com',
-      contact_phone: '+63-917-123-4567',
-      money_loan_enabled: false,
+      contact_person: 'Jane Smith',
+      contact_email: 'admin@techstart.com',
+      contact_phone: '+63-917-987-6543',
+      money_loan_enabled: true,
       bnpl_enabled: false,
       pawnshop_enabled: false
     }
@@ -266,6 +266,7 @@ exports.seed = async function(knex) {
   // Tenant Administrator role for each tenant
   const tenantAdminRoles = [];
   const customerRoles = [];
+  const employeeRoles = [];
   for (const tenant of tenants) {
     const [tenantAdminRole] = await knex('roles').insert({
       tenant_id: tenant.id,
@@ -275,6 +276,16 @@ exports.seed = async function(knex) {
       status: 'active'
     }).returning(['id', 'name', 'tenant_id']);
     tenantAdminRoles.push(tenantAdminRole);
+    
+    // Create Employee role for each tenant
+    const [employeeRole] = await knex('roles').insert({
+      tenant_id: tenant.id,
+      name: 'Employee',
+      description: 'Platform access for employees',
+      space: 'tenant',
+      status: 'active'
+    }).returning(['id', 'name', 'tenant_id']);
+    employeeRoles.push(employeeRole);
     
     // Create Customer role for each tenant
     const [customerRole] = await knex('roles').insert({
@@ -286,7 +297,7 @@ exports.seed = async function(knex) {
     }).returning(['id', 'name', 'tenant_id']);
     customerRoles.push(customerRole);
   }
-  console.log(`✅ 1 system role + ${tenantAdminRoles.length} tenant roles + ${customerRoles.length} customer roles created`);
+  console.log(`✅ 1 system role + ${tenantAdminRoles.length} tenant roles + ${employeeRoles.length} employee roles + ${customerRoles.length} customer roles created`);
 
   // 5. Create users
   console.log('5. Creating users...');
@@ -322,7 +333,7 @@ exports.seed = async function(knex) {
   const acmeTenant = tenants.find(t => t.name === 'ACME Corporation');
   if (acmeTenant) {
     console.log('5a. Creating test customers for ACME Corporation...');
-    const customerPasswordHash = await bcrypt.hash('Customer@123', 10);
+    const customerPasswordHash = await bcrypt.hash('Admin@123', 10);
     
     const testCustomersData = [
       {
@@ -434,6 +445,144 @@ exports.seed = async function(knex) {
     console.log(`✅ Created ${testCustomersData.length} test customers`);
   }
   
+  // Create employees and additional customers for both tenants
+  console.log('5b. Creating employees and customers for all tenants...');
+  const employeePasswordHash = await bcrypt.hash('Admin@123', 10);
+  const additionalCustomerPasswordHash = await bcrypt.hash('Admin@123', 10);
+  
+  for (const tenant of tenants) {
+    const tenantSubdomain = tenant.name === 'ACME Corporation' ? 'acme' : 
+                            tenant.name === 'TechStart Solutions' ? 'techstart' : null;
+    
+    if (!tenantSubdomain) continue; // Skip if subdomain not found
+    
+    const employeeRoleForTenant = employeeRoles.find(r => r.tenant_id === tenant.id);
+    const customerRoleForTenant = customerRoles.find(r => r.tenant_id === tenant.id);
+    
+    // Create 2 employees
+    for (let i = 1; i <= 2; i++) {
+      const empEmail = `employee${i}@${tenantSubdomain}.com`;
+      const [employee] = await knex('users').insert({
+        tenant_id: tenant.id,
+        email: empEmail,
+        password_hash: employeePasswordHash,
+        first_name: `Employee${i}`,
+        last_name: tenant.name.split(' ')[0],
+        status: 'active',
+        email_verified: true
+      }).returning('*');
+      
+      // Assign employee role
+      await knex('user_roles').insert({
+        user_id: employee.id,
+        role_id: employeeRoleForTenant.id
+      });
+      
+      // Create employee profile
+      const [profile] = await knex('employee_profiles').insert({
+        tenant_id: tenant.id,
+        user_id: employee.id,
+        employee_code: `EMP-${tenantSubdomain.toUpperCase()}-${String(i).padStart(3, '0')}`,
+        position: i === 1 ? 'Loan Officer' : 'Collections Specialist',
+        department: 'Operations',
+        employment_type: 'full-time',
+        employment_status: 'active',
+        hire_date: i === 1 ? '2024-01-15' : '2024-02-01',
+        basic_salary: 30000 + (i * 5000),
+        status: 'active'
+      }).returning('id');
+      
+      // Assign Money Loan platform access
+      await knex('employee_product_access').insert({
+        tenant_id: tenant.id,
+        user_id: employee.id,
+        employee_id: profile.id,
+        product_type: 'money_loan',
+        access_level: 'manage',
+        is_primary: true,
+        can_approve_loans: i === 1,
+        max_approval_amount: i === 1 ? 100000 : 50000,
+        can_disburse_funds: true,
+        can_view_reports: true,
+        can_modify_interest: false,
+        can_waive_penalties: i === 1,
+        status: 'active',
+        assigned_date: new Date()
+      });
+    }
+    
+    // Create 2 additional customers (with user accounts for portal access)
+    for (let i = 1; i <= 2; i++) {
+      const customerCode = `CUST-${tenantSubdomain.toUpperCase()}-${String(i).padStart(4, '0')}`;
+      const customerEmail = `customer${i}@${tenantSubdomain}.com`;
+      
+      // Create user account for customer
+      const [customerUser] = await knex('users').insert({
+        tenant_id: tenant.id,
+        email: customerEmail,
+        password_hash: additionalCustomerPasswordHash,
+        first_name: `Customer${i}`,
+        last_name: tenant.name.split(' ')[0],
+        status: 'active',
+        email_verified: true
+      }).returning('*');
+      
+      // Assign customer role
+      await knex('user_roles').insert({
+        user_id: customerUser.id,
+        role_id: customerRoleForTenant.id
+      });
+      
+      await knex('customers').insert({
+        tenant_id: tenant.id,
+        user_id: customerUser.id, // With login access
+        customer_code: customerCode,
+        customer_type: 'individual',
+        first_name: `Customer${i}`,
+        last_name: tenant.name.split(' ')[0],
+        email: customerEmail,
+        phone: `+63 917 ${String(tenant.id * 100000 + i).padStart(7, '0')}`,
+        date_of_birth: i === 1 ? '1985-05-15' : '1990-08-22',
+        gender: i === 1 ? 'male' : 'female',
+        nationality: 'Filipino',
+        civil_status: i === 1 ? 'single' : 'married',
+        employment_status: 'employed',
+        employer_name: i === 1 ? 'ABC Company' : 'XYZ Corporation',
+        occupation: i === 1 ? 'Software Engineer' : 'Sales Manager',
+        monthly_income: 50000 + (i * 10000),
+        credit_score: 700 + (i * 50),
+        risk_level: 'low',
+        status: 'active',
+        kyc_status: 'verified',
+        money_loan_approved: true,
+        bnpl_approved: false,
+        pawnshop_approved: false,
+        preferred_language: 'en',
+        preferred_contact_method: 'sms',
+        platform_tags: JSON.stringify(['moneyloan'])
+      });
+      
+      // Create Money Loan customer profile
+      const customerRecord = await knex('customers')
+        .where({ tenant_id: tenant.id, customer_code: customerCode })
+        .first();
+      
+      await knex('moneyloan_customer_profiles').insert({
+        customer_id: customerRecord.id,
+        tenant_id: tenant.id,
+        max_loan_amount: 100000,
+        current_loan_limit: 100000,
+        outstanding_balance: 0,
+        on_time_payment_rate: 100,
+        auto_debit_enabled: false,
+        preferred_payment_day: 15,
+        status: 'active'
+      });
+    }
+  }
+  
+  console.log(`✅ Employees and customers created for all tenants`);
+  
   console.log(`✅ 1 system user + ${tenantAdmins.length} tenant users created`);
 
   // 6. Assign roles to users
@@ -495,9 +644,39 @@ exports.seed = async function(knex) {
     }
   }
   
+  // Grant Employee permissions (dashboard + customers + money-loan)
+  console.log(`\n7b. Assigning employee permissions to Employee roles...`);
+  for (const employeeRole of employeeRoles) {
+    // Get dashboard permission
+    const dashboardPerm = allPermissions.find(p => p.permission_key === 'tenant-dashboard:view');
+    
+    // Get customer permissions
+    const customerPerms = allPermissions.filter(p => p.resource === 'tenant-customers');
+    
+    // Get all money-loan permissions
+    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permission_key.startsWith('money-loan:'));
+    
+    const employeePermissions = [];
+    if (dashboardPerm) employeePermissions.push(dashboardPerm);
+    employeePermissions.push(...customerPerms);
+    employeePermissions.push(...moneyLoanPerms);
+    
+    if (employeePermissions.length > 0) {
+      await knex('role_permissions').where('role_id', employeeRole.id).del();
+      
+      const employeeRolePermissions = employeePermissions.map(perm => ({
+        role_id: employeeRole.id,
+        permission_id: perm.id
+      }));
+      await knex('role_permissions').insert(employeeRolePermissions);
+      console.log(`   ✅ Granted ${employeeRolePermissions.length} permissions to Employee role (tenant_id: ${employeeRole.tenant_id})`);
+      console.log(`      • Dashboard: 1, Customers: ${customerPerms.length}, Money Loan: ${moneyLoanPerms.length}`);
+    }
+  }
+  
   // Grant customer permissions to Customer roles
   const customerPermissions = allPermissions.filter(p => p.permission_key.startsWith('customer-'));
-  console.log(`\n7. Assigning customer permissions to Customer roles...`);
+  console.log(`\n7c. Assigning customer permissions to Customer roles...`);
   for (const customerRole of customerRoles) {
     if (customerPermissions.length > 0) {
       // Clear existing permissions for this role to avoid duplicates

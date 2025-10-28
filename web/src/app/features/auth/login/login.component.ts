@@ -27,8 +27,8 @@ export class LoginComponent {
 
   testAccounts = [
     { email: 'admin@exitsaas.com', password: 'Admin@123', label: 'System Admin', role: 'system' },
-    { email: 'admin@acme.com', password: 'Password@123', label: 'Tenant Admin - ACME Corporation', role: 'tenant' },
-    { email: 'admin@techstart.com', password: 'Password@123', label: 'Tenant Admin - TechStart Solutions', role: 'tenant' }
+    { email: 'admin-1@example.com', password: 'Admin@123', label: 'Tenant Admin - ACME Corporation', role: 'tenant' },
+    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant Admin - TechStart Solutions', role: 'tenant' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
