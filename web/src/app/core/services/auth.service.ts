@@ -8,10 +8,10 @@ import { RoleService } from './role.service';
 export interface User {
   id: string | number;
   email: string;
-  first_name: string;
-  last_name: string;
-  tenant_id: string | number | null;
-  role_id?: string;
+  firstName: string;
+  lastName: string;
+  tenantId: string | number | null;
+  roleId?: string;
   role?: {
     name: string;
     permissions: string[];
@@ -67,15 +67,15 @@ export class AuthService {
           this.userPermissions.set(permissions);
           localStorage.setItem('permissions', JSON.stringify(permissions));
 
-          // Transform API response (camelCase) to frontend format (snake_case)
+          // Transform API response (camelCase) to frontend format (camelCase)
           const apiUser = response.data.user;
           const user: User = {
             id: apiUser.id,
             email: apiUser.email,
-            first_name: apiUser.firstName || apiUser.first_name || '',
-            last_name: apiUser.lastName || apiUser.last_name || '',
-            tenant_id: apiUser.tenantId !== undefined ? apiUser.tenantId : apiUser.tenant_id,
-            role_id: apiUser.roleId || apiUser.role_id,
+            firstName: apiUser.firstName || '',
+            lastName: apiUser.lastName || '',
+            tenantId: apiUser.tenantId,
+            roleId: apiUser.roleId || apiUser.role_id,
             role: apiUser.role
           };
 
@@ -178,15 +178,15 @@ export class AuthService {
 
   isSystemAdmin(): boolean {
     const user = this.currentUser();
-    return user?.tenant_id === null || user?.tenant_id === undefined;
+    return user?.tenantId === null || user?.tenantId === undefined;
   }
 
   isTenantUser(): boolean {
     const user = this.currentUser();
-    return user?.tenant_id !== null && user?.tenant_id !== undefined;
+    return user?.tenantId !== null && user?.tenantId !== undefined;
   }
 
   getTenantId(): string | number | null {
-    return this.currentUser()?.tenant_id ?? null;
+    return this.currentUser()?.tenantId ?? null;
   }
 }

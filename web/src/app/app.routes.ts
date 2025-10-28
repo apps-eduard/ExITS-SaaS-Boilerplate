@@ -65,7 +65,12 @@ export const routes: Routes = [
     ]
   },
   {
-    path: 'products/money-loan/dashboard',
+    path: 'platforms/money-loan/admin',
+    loadChildren: () => import('./features/platforms/money-loan/modules/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'platforms/money-loan/dashboard',
     loadComponent: () => import('./features/platforms/money-loan/dashboard/money-loan-layout.component').then(m => m.MoneyLoanLayoutComponent),
     canActivate: [authGuard],
     children: [
@@ -100,15 +105,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
       },
       {
+        path: 'customers/:id',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
+      },
+      {
+        path: 'customers/:id/edit',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
+      },
+      {
         path: 'customers/kyc-pending',
         loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
       },
       {
         path: 'customers/high-risk',
-        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
-      },
-      {
-        path: 'customers/search',
         loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
       },
       // Loans

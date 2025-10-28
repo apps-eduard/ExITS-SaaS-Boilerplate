@@ -203,7 +203,7 @@ import { RBACService } from '../../../core/services/rbac.service';
               class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
             >
               <option value="">All Roles</option>
-              <option *ngFor="let role of roleService.rolesSignal()" [value]="role.id">
+              <option *ngFor="let role of uniqueRoles()" [value]="role.id">
                 {{ role.name }}
               </option>
             </select>
@@ -550,6 +550,27 @@ export class UsersListComponent implements OnInit {
   selectedUsers = signal<Set<string>>(new Set());
   selectAll = signal(false);
 
+  // Get unique roles (remove duplicates by both id and name)
+  uniqueRoles = computed(() => {
+    const roles = this.roleService.rolesSignal();
+    const seenIds = new Set();
+    const seenNames = new Set();
+    const uniqueRoles: any[] = [];
+    
+    for (const role of roles) {
+      // Skip if we've already seen this ID or name
+      if (seenIds.has(role.id) || seenNames.has(role.name)) {
+        continue;
+      }
+      
+      seenIds.add(role.id);
+      seenNames.add(role.name);
+      uniqueRoles.push(role);
+    }
+    
+    return uniqueRoles;
+  });
+
   constructor(
     public userService: UserService,
     public roleService: RoleService,
@@ -600,7 +621,7 @@ export class UsersListComponent implements OnInit {
     // In tenant context, only show tenant users for the current tenant
     if (this.isTenantContext()) {
       const currentUser = this.authService.currentUser();
-      users = users.filter(u => u.tenantId === currentUser?.tenant_id);
+      users = users.filter(u => u.tenantId === currentUser?.tenantId);
     }
 
     // Filter by status

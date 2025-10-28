@@ -27,7 +27,7 @@ import { Router } from '@angular/router';
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <!-- Total Loans -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
-             (click)="navigateTo('/products/money-loan/dashboard/loans/all')">
+             (click)="navigateTo('/platforms/money-loan/dashboard/loans/all')">
           <div class="flex items-center justify-between mb-2">
             <span class="text-2xl">💵</span>
             <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">+12%</span>
@@ -39,7 +39,7 @@ import { Router } from '@angular/router';
 
         <!-- Collection Rate -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
-             (click)="navigateTo('/products/money-loan/dashboard/payments/today')">
+             (click)="navigateTo('/platforms/money-loan/dashboard/payments/today')">
           <div class="flex items-center justify-between mb-2">
             <span class="text-2xl">📈</span>
             <span class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded">Good</span>
@@ -51,7 +51,7 @@ import { Router } from '@angular/router';
 
         <!-- Overdue % -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
-             (click)="navigateTo('/products/money-loan/dashboard/loans/overdue')">
+             (click)="navigateTo('/platforms/money-loan/dashboard/loans/overdue')">
           <div class="flex items-center justify-between mb-2">
             <span class="text-2xl">⏳</span>
             <span class="text-xs px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">Alert</span>
@@ -74,7 +74,7 @@ import { Router } from '@angular/router';
 
         <!-- Active Loans -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
-             (click)="navigateTo('/products/money-loan/dashboard/loans/active')">
+             (click)="navigateTo('/platforms/money-loan/dashboard/loans/active')">
           <div class="flex items-center justify-between mb-2">
             <span class="text-2xl">🔄</span>
             <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">Active</span>
@@ -100,32 +100,32 @@ import { Router } from '@angular/router';
       <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
         <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          <button (click)="navigateTo('/products/money-loan/dashboard/customers/all')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/customers/all')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>👥</span>
             <span class="hidden sm:inline">Customers</span>
           </button>
-          <button (click)="navigateTo('/products/money-loan/dashboard/loans/pending')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/loans/pending')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>📝</span>
             <span class="hidden sm:inline">Approvals</span>
           </button>
-          <button (click)="navigateTo('/products/money-loan/dashboard/loans/disbursement')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/loans/disbursement')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>💸</span>
             <span class="hidden sm:inline">Disburse</span>
           </button>
-          <button (click)="navigateTo('/products/money-loan/dashboard/payments/today')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/payments/today')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>💳</span>
             <span class="hidden sm:inline">Payments</span>
           </button>
-          <button (click)="navigateTo('/products/money-loan/dashboard/kyc/pending')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/kyc/pending')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>✅</span>
             <span class="hidden sm:inline">KYC</span>
           </button>
-          <button (click)="navigateTo('/products/money-loan/dashboard/reports/periodic')"
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/reports/periodic')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>📊</span>
             <span class="hidden sm:inline">Reports</span>
@@ -142,7 +142,7 @@ import { Router } from '@angular/router';
               <span>📝</span>
               <span>Pending Approvals</span>
             </h2>
-            <button (click)="navigateTo('/products/money-loan/dashboard/loans/pending')"
+            <button (click)="navigateTo('/platforms/money-loan/dashboard/loans/pending')"
                     class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
               <span>View All</span>
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ import { Router } from '@angular/router';
               <span>⚠️</span>
               <span>Overdue Alerts</span>
             </h2>
-            <button (click)="navigateTo('/products/money-loan/dashboard/loans/overdue')"
+            <button (click)="navigateTo('/platforms/money-loan/dashboard/loans/overdue')"
                     class="text-xs text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1">
               <span>View All</span>
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -648,8 +648,8 @@ export class ProfileComponent implements OnInit {
   ngOnInit(): void {
     const currentUser = this.user();
     if (currentUser) {
-      this.form.first_name = currentUser.first_name;
-      this.form.last_name = currentUser.last_name;
+      this.form.first_name = currentUser.firstName || '';
+      this.form.last_name = currentUser.lastName || '';
       this.loadAddresses();
     }
   }

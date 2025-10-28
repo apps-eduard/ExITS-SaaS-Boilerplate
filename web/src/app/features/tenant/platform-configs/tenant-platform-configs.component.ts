@@ -286,7 +286,7 @@ export class TenantPlatformConfigsComponent implements OnInit {
   }
 
   navigateToConfig(platformId: string, path: string) {
-    // Path is already the full route path (e.g., /products/money-loan/dashboard/interest/rates)
+    // Path is already the full route path (e.g., /platforms/money-loan/dashboard/interest/rates)
     this.router.navigateByUrl(path);
   }
 

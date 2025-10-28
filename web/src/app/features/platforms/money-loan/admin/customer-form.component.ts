@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -33,21 +33,56 @@ import { LoanCustomer } from '../shared/models/loan.models';
 
       <!-- Tabs -->
       <div class="border-b border-gray-200 dark:border-gray-700">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav class="-mb-px flex space-x-6" aria-label="Tabs">
           <button
             type="button"
-            (click)="activeTab.set('customer')"
-            [class.border-blue-500]="activeTab() === 'customer'"
-            [class.text-blue-600]="activeTab() === 'customer'"
-            [class.dark:text-blue-400]="activeTab() === 'customer'"
-            [class.border-transparent]="activeTab() !== 'customer'"
-            [class.text-gray-500]="activeTab() !== 'customer'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600">
+            (click)="activeTab.set('basic')"
+            [class.border-blue-500]="activeTab() === 'basic'"
+            [class.text-blue-600]="activeTab() === 'basic'"
+            [class.dark:text-blue-400]="activeTab() === 'basic'"
+            [class.border-transparent]="activeTab() !== 'basic'"
+            [class.text-gray-500]="activeTab() !== 'basic'"
+            [class.dark:text-gray-400]="activeTab() !== 'basic'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
             <span class="flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
-              Customer Information
+              Basic Information
+            </span>
+          </button>
+          <button
+            type="button"
+            (click)="activeTab.set('employment')"
+            [class.border-blue-500]="activeTab() === 'employment'"
+            [class.text-blue-600]="activeTab() === 'employment'"
+            [class.dark:text-blue-400]="activeTab() === 'employment'"
+            [class.border-transparent]="activeTab() !== 'employment'"
+            [class.text-gray-500]="activeTab() !== 'employment'"
+            [class.dark:text-gray-400]="activeTab() !== 'employment'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+            <span class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              Employment Information
+            </span>
+          </button>
+          <button
+            type="button"
+            (click)="activeTab.set('kyc')"
+            [class.border-blue-500]="activeTab() === 'kyc'"
+            [class.text-blue-600]="activeTab() === 'kyc'"
+            [class.dark:text-blue-400]="activeTab() === 'kyc'"
+            [class.border-transparent]="activeTab() !== 'kyc'"
+            [class.text-gray-500]="activeTab() !== 'kyc'"
+            [class.dark:text-gray-400]="activeTab() !== 'kyc'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+            <span class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              KYC Information
             </span>
           </button>
           <button
@@ -58,7 +93,8 @@ import { LoanCustomer } from '../shared/models/loan.models';
             [class.dark:text-blue-400]="activeTab() === 'address'"
             [class.border-transparent]="activeTab() !== 'address'"
             [class.text-gray-500]="activeTab() !== 'address'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600">
+            [class.dark:text-gray-400]="activeTab() !== 'address'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
             <span class="flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -70,306 +106,556 @@ import { LoanCustomer } from '../shared/models/loan.models';
         </nav>
       </div>
 
-      <form id="customerForm" (ngSubmit)="onSubmit()" class="space-y-6">
-        <!-- Customer Information Tab -->
-        @if (activeTab() === 'customer') {
-        <!-- Personal Information -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-            </svg>
-            Personal Information
-          </h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form - 2 columns -->
+        <div class="lg:col-span-2">
+          <form id="customerForm" (ngSubmit)="onSubmit()" class="space-y-6">
+            
+            <!-- Basic Information Tab -->
+            @if (activeTab() === 'basic') {
+              <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  Personal Information
+                </h2>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                First Name <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.firstName"
-                name="firstName"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      First Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.firstName"
+                      name="firstName"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Last Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.lastName"
+                      name="lastName"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Date of Birth <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      [(ngModel)]="formData.dateOfBirth"
+                      name="dateOfBirth"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gender <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="formData.gender"
+                      name="gender"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Email <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      [(ngModel)]="formData.email"
+                      name="email"
+                      required
+                      placeholder="customer@example.com"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Phone <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      [(ngModel)]="formData.phone"
+                      name="phone"
+                      required
+                      placeholder="+63"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tenant
+                    </label>
+                    <input
+                      type="text"
+                      value="Loading..."
+                      disabled
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Tenant cannot be changed after user creation</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Employment Information Tab -->
+            @if (activeTab() === 'employment') {
+              <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                  Employment Information
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Employment Status
+                    </label>
+                    <select
+                      [(ngModel)]="formData.employmentStatus"
+                      name="employmentStatus"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Status</option>
+                      <option value="employed">Employed</option>
+                      <option value="self-employed">Self-Employed</option>
+                      <option value="unemployed">Unemployed</option>
+                      <option value="retired">Retired</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Employer Name
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.employerName"
+                      name="employerName"
+                      placeholder="Company name"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Monthly Income
+                    </label>
+                    <input
+                      type="number"
+                      [(ngModel)]="formData.monthlyIncome"
+                      name="monthlyIncome"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Source of Income
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.sourceOfIncome"
+                      name="sourceOfIncome"
+                      placeholder="e.g., Salary, Business, Freelance"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- KYC Information Tab -->
+            @if (activeTab() === 'kyc') {
+              <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                  KYC Information
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      ID Type
+                    </label>
+                    <select
+                      [(ngModel)]="formData.idType"
+                      name="idType"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select ID Type</option>
+                      <option value="passport">Passport</option>
+                      <option value="drivers_license">Driver's License</option>
+                      <option value="national_id">National ID</option>
+                      <option value="sss">SSS ID</option>
+                      <option value="umid">UMID</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      ID Number
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.idNumber"
+                      name="idNumber"
+                      placeholder="Enter ID number"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      KYC Status
+                    </label>
+                    <select
+                      [(ngModel)]="formData.kycStatus"
+                      name="kycStatus"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="pending">Pending</option>
+                      <option value="verified">Verified</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Credit Score
+                    </label>
+                    <input
+                      type="number"
+                      [(ngModel)]="formData.creditScore"
+                      name="creditScore"
+                      min="0"
+                      max="1000"
+                      placeholder="650"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Address Information Tab -->
+            @if (activeTab() === 'address') {
+              <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  Address Information
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Region <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="formData.region"
+                      name="region"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Region</option>
+                      <option value="NCR">NCR - National Capital Region</option>
+                      <option value="CAR">CAR - Cordillera Administrative Region</option>
+                      <option value="Region_I">Region I - Ilocos Region</option>
+                      <option value="Region_II">Region II - Cagayan Valley</option>
+                      <option value="Region_III">Region III - Central Luzon</option>
+                      <option value="Region_IV_A">Region IV-A - CALABARZON</option>
+                      <option value="Region_IV_B">Region IV-B - MIMAROPA</option>
+                      <option value="Region_V">Region V - Bicol Region</option>
+                      <option value="Region_VI">Region VI - Western Visayas</option>
+                      <option value="Region_VII">Region VII - Central Visayas</option>
+                      <option value="Region_VIII">Region VIII - Eastern Visayas</option>
+                      <option value="Region_IX">Region IX - Zamboanga Peninsula</option>
+                      <option value="Region_X">Region X - Northern Mindanao</option>
+                      <option value="Region_XI">Region XI - Davao Region</option>
+                      <option value="Region_XII">Region XII - SOCCSKSARGEN</option>
+                      <option value="Region_XIII">Region XIII - Caraga</option>
+                      <option value="BARMM">BARMM - Bangsamoro Autonomous Region</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Province <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.province"
+                      name="province"
+                      required
+                      placeholder="Province name"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      City/Municipality <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.cityMunicipality"
+                      name="cityMunicipality"
+                      required
+                      placeholder="City or Municipality"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Barangay <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.barangay"
+                      name="barangay"
+                      required
+                      placeholder="Barangay name"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      House/Building Number
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.houseNumber"
+                      name="houseNumber"
+                      placeholder="House or Building No."
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Street Name
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.streetName"
+                      name="streetName"
+                      placeholder="Street name"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Subdivision/Village
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.subdivision"
+                      name="subdivision"
+                      placeholder="Subdivision or Village"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      ZIP Code
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.zipCode"
+                      name="zipCode"
+                      placeholder="Postal Code"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Address Type <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="formData.addressType"
+                      name="addressType"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="home">Home</option>
+                      <option value="work">Work</option>
+                      <option value="billing">Billing</option>
+                      <option value="shipping">Shipping</option>
+                      <option value="business">Business</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Country <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="formData.country"
+                      name="country"
+                      required
+                      value="Philippines"
+                      readonly
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="formData.isPrimary"
+                        name="isPrimary"
+                        class="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500">
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Set as primary address</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            }
+          </form>
+        </div>
+
+        <!-- Required Fields Checklist Sidebar - 1 column -->
+        <div class="lg:col-span-1">
+          <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-5 sticky top-4">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-blue-900 dark:text-blue-100">Required Fields Checklist</h3>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Last Name <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.lastName"
-                name="lastName"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <!-- Basic Information -->
+            <div class="mb-4">
+              <div class="flex items-center gap-2 mb-2">
+                @if (isFieldFilled(formData.email)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.email)" [class.dark:text-gray-400]="!isFieldFilled(formData.email)" [class.text-gray-900]="isFieldFilled(formData.email)" [class.dark:text-white]="isFieldFilled(formData.email)" class="text-sm font-medium">Email address</span>
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Date of Birth <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                [(ngModel)]="formData.dateOfBirth"
-                name="dateOfBirth"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="border-t border-blue-200 dark:border-blue-700 pt-3 mb-3"></div>
+
+            <!-- Address Information -->
+            <div class="space-y-2 mb-3">
+              <h4 class="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide mb-2">Address Type</h4>
+              
+              <div class="flex items-center gap-2">
+                @if (isFieldFilled(formData.region)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.region)" [class.dark:text-gray-400]="!isFieldFilled(formData.region)" [class.text-gray-900]="isFieldFilled(formData.region)" [class.dark:text-white]="isFieldFilled(formData.region)" class="text-sm">Region</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (isFieldFilled(formData.province)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.province)" [class.dark:text-gray-400]="!isFieldFilled(formData.province)" [class.text-gray-900]="isFieldFilled(formData.province)" [class.dark:text-white]="isFieldFilled(formData.province)" class="text-sm">Province</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (isFieldFilled(formData.cityMunicipality)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.cityMunicipality)" [class.dark:text-gray-400]="!isFieldFilled(formData.cityMunicipality)" [class.text-gray-900]="isFieldFilled(formData.cityMunicipality)" [class.dark:text-white]="isFieldFilled(formData.cityMunicipality)" class="text-sm">City/Municipality</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (isFieldFilled(formData.barangay)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.barangay)" [class.dark:text-gray-400]="!isFieldFilled(formData.barangay)" [class.text-gray-900]="isFieldFilled(formData.barangay)" [class.dark:text-white]="isFieldFilled(formData.barangay)" class="text-sm">Barangay</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (isFieldFilled(formData.streetName)) {
+                  <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5 text-gray-400 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                  </svg>
+                }
+                <span [class.text-gray-600]="!isFieldFilled(formData.streetName)" [class.dark:text-gray-400]="!isFieldFilled(formData.streetName)" [class.text-gray-900]="isFieldFilled(formData.streetName)" [class.dark:text-white]="isFieldFilled(formData.streetName)" class="text-sm">Street Name (optional)</span>
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Gender <span class="text-red-500">*</span>
-              </label>
-              <select
-                [(ngModel)]="formData.gender"
-                name="gender"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                [(ngModel)]="formData.email"
-                name="email"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Phone <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                [(ngModel)]="formData.phone"
-                name="phone"
-                required
-                placeholder="+63"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="border-t border-blue-200 dark:border-blue-700 pt-3 text-xs text-blue-800 dark:text-blue-200">
+              <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span><span class="text-red-500">*</span> Required to save</span>
+              </div>
+              <div class="flex items-start gap-2 mt-1">
+                <svg class="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>Completed</span>
+              </div>
+              <div class="flex items-start gap-2 mt-1">
+                <svg class="w-4 h-4 text-gray-400 dark:text-gray-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
+                </svg>
+                <span>Optional (for address)</span>
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- Employment Information -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            Employment Information
-          </h2>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Employment Status
-              </label>
-              <select
-                [(ngModel)]="formData.employmentStatus"
-                name="employmentStatus"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select Status</option>
-                <option value="employed">Employed</option>
-                <option value="self-employed">Self-Employed</option>
-                <option value="unemployed">Unemployed</option>
-                <option value="retired">Retired</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Employer Name
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.employerName"
-                name="employerName"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Monthly Income
-              </label>
-              <input
-                type="number"
-                [(ngModel)]="formData.monthlyIncome"
-                name="monthlyIncome"
-                step="0.01"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Source of Income
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.sourceOfIncome"
-                name="sourceOfIncome"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-        </div>
-
-        <!-- KYC Information -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            KYC Information
-          </h2>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ID Type
-              </label>
-              <select
-                [(ngModel)]="formData.idType"
-                name="idType"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select ID Type</option>
-                <option value="passport">Passport</option>
-                <option value="drivers_license">Driver's License</option>
-                <option value="national_id">National ID</option>
-                <option value="sss">SSS ID</option>
-                <option value="umid">UMID</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ID Number
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.idNumber"
-                name="idNumber"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                KYC Status
-              </label>
-              <select
-                [(ngModel)]="formData.kycStatus"
-                name="kycStatus"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="pending">Pending</option>
-                <option value="verified">Verified</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Credit Score
-              </label>
-              <input
-                type="number"
-                [(ngModel)]="formData.creditScore"
-                name="creditScore"
-                min="0"
-                max="1000"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-        </div>
-        }
-
-        <!-- Address Information Tab -->
-        @if (activeTab() === 'address') {
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            Address Information
-          </h2>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Street Address <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.address"
-                name="address"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                City <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.city"
-                name="city"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Province/State <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.province"
-                name="province"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Postal Code
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.postalCode"
-                name="postalCode"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Country <span class="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="formData.country"
-                name="country"
-                required
-                value="Philippines"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-        </div>
-        }
-      </form>
+      </div>
 
       <!-- Form Actions - Always Visible -->
-      <div class="flex items-center justify-end gap-3">
+      <div class="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
         <button
           type="button"
           (click)="goBack()"
@@ -403,7 +689,7 @@ export class CustomerFormComponent implements OnInit {
 
   isEditMode = signal(false);
   saving = signal(false);
-  activeTab = signal<'customer' | 'address'>('customer');
+  activeTab = signal<'basic' | 'employment' | 'kyc' | 'address'>('basic');
   customerId: number | null = null;
 
   formData: any = {
@@ -413,11 +699,18 @@ export class CustomerFormComponent implements OnInit {
     gender: '',
     email: '',
     phone: '',
-    address: '',
-    city: '',
+    streetAddress: '',
+    houseNumber: '',
+    streetName: '',
+    subdivision: '',
+    barangay: '',
+    cityMunicipality: '',
     province: '',
-    postalCode: '',
+    region: '',
+    zipCode: '',
     country: 'Philippines',
+    addressType: 'home',
+    isPrimary: true,
     employmentStatus: '',
     employerName: '',
     monthlyIncome: null,
@@ -451,6 +744,10 @@ export class CustomerFormComponent implements OnInit {
     });
   }
 
+  isFieldFilled(value: any): boolean {
+    return value !== null && value !== undefined && value !== '';
+  }
+
   onSubmit() {
     this.saving.set(true);
 
@@ -458,7 +755,7 @@ export class CustomerFormComponent implements OnInit {
       this.customerService.updateCustomer(this.customerId, this.formData).subscribe({
         next: () => {
           this.saving.set(false);
-          this.router.navigate(['/products/money-loan/admin/customers']);
+          this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
         },
         error: (error: any) => {
           console.error('Error updating customer:', error);
@@ -469,7 +766,7 @@ export class CustomerFormComponent implements OnInit {
       this.customerService.createCustomer(this.formData).subscribe({
         next: () => {
           this.saving.set(false);
-          this.router.navigate(['/products/money-loan/admin/customers']);
+          this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
         },
         error: (error: any) => {
           console.error('Error creating customer:', error);
@@ -480,10 +777,6 @@ export class CustomerFormComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/products/money-loan/admin/customers']);
+    this.router.navigate(['/platforms/money-loan/dashboard/customers/all']);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

@@ -153,9 +153,9 @@ export class PlatformLoginComponent {
 
   getPlatformRoute(productType: string): string {
     const routes: Record<string, string> = {
-      'money_loan': '/products/money-loan/dashboard',
-      'bnpl': '/products/bnpl/dashboard',
-      'pawnshop': '/products/pawnshop/dashboard'
+      'money_loan': '/platforms/money-loan/dashboard',
+      'bnpl': '/platforms/bnpl/dashboard',
+      'pawnshop': '/platforms/pawnshop/dashboard'
     };
     return routes[productType] || '/tenant/dashboard';
   }

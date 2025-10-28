@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LoanService } from '../shared/services/loan.service';
@@ -288,22 +288,18 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   navigateToApplyLoan() {
-    this.router.navigate(['/products/money-loan/customer/apply']);
+    this.router.navigate(['/platforms/money-loan/customer/apply']);
   }
 
   navigateToMakePayment() {
-    this.router.navigate(['/products/money-loan/customer/payment']);
+    this.router.navigate(['/platforms/money-loan/customer/payment']);
   }
 
   navigateToMyLoans() {
-    this.router.navigate(['/products/money-loan/customer/loans']);
+    this.router.navigate(['/platforms/money-loan/customer/loans']);
   }
 
   viewLoanDetails(loanId: number) {
-    this.router.navigate(['/products/money-loan/customer/loans', loanId]);
+    this.router.navigate(['/platforms/money-loan/customer/loans', loanId]);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

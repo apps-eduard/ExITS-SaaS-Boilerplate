@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -265,7 +265,7 @@ export class PaymentFormComponent implements OnInit {
     this.loanService.recordPayment(this.formData).subscribe({
       next: () => {
         this.saving.set(false);
-        this.router.navigate(['/products/money-loan/admin/loans', this.formData.loanId]);
+  this.router.navigate(['/platforms/money-loan/dashboard/loans', this.formData.loanId]);
       },
       error: (error: any) => {
         console.error('Error recording payment:', error);
@@ -276,13 +276,9 @@ export class PaymentFormComponent implements OnInit {
 
   goBack() {
     if (this.formData.loanId) {
-      this.router.navigate(['/products/money-loan/admin/loans', this.formData.loanId]);
+  this.router.navigate(['/platforms/money-loan/dashboard/loans', this.formData.loanId]);
     } else {
-      this.router.navigate(['/products/money-loan/admin/loans']);
+  this.router.navigate(['/platforms/money-loan/dashboard/loans']);
     }
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

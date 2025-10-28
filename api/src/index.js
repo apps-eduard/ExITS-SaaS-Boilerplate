@@ -38,6 +38,9 @@ const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes');
 // Platform routes (modular architecture)
 const moneyloanPlatformRoutes = require('./modules/platforms/money-loan/routes');
 
+// Product routes (money-loan module)
+const moneyLoanRoutes = require('./modules/products/money-loan/routes');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -102,6 +105,9 @@ app.use('/api/customer', customerRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/payment-history', paymentHistoryRoutes);
+
+// Product routes
+app.use('/api/money-loan', moneyLoanRoutes);
 
 // Platform routes (tenant-centric modular architecture)
 app.use('/api/tenants/:tenantId/platforms/moneyloan', moneyloanPlatformRoutes);

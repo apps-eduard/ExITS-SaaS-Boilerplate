@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, inject, output, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -48,22 +48,23 @@ import { ThemeService } from '../../../core/services/theme.service';
         </button>
 
         <!-- User Menu -->
-        <div class="relative">
+        <div class="relative user-menu-container">
           <button
-            (click)="showUserMenu = !showUserMenu"
-            class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
+            type="button"
+            (click)="toggleUserMenu($event)"
+            class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+            <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium cursor-pointer pointer-events-none">
               {{ getUserInitials() }}
             </div>
-            <div class="hidden lg:block text-left">
+            <div class="hidden lg:block text-left pointer-events-none">
               <div class="text-sm font-medium text-gray-900 dark:text-white">
                 {{ getUserDisplayName() }}
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400">
-                {{ authService.isSystemAdmin() ? 'System Admin' : 'User' }}
+                {{ user()?.email || (authService.isSystemAdmin() ? 'System Admin' : 'User') }}
               </div>
             </div>
-            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="w-4 h-4 text-gray-400 pointer-events-none" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
           </button>
@@ -71,7 +72,7 @@ import { ThemeService } from '../../../core/services/theme.service';
           @if (showUserMenu) {
             <div class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
               <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user()?.first_name }} {{ user()?.last_name }}</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user()?.firstName }} {{ user()?.lastName }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ user()?.email }}</p>
               </div>
               <button
@@ -118,20 +119,32 @@ export class HeaderComponent {
   showUserMenu = false;
   user = this.authService.currentUser;
 
+  toggleUserMenu(event: Event): void {
+    event.stopPropagation();
+    this.showUserMenu = !this.showUserMenu;
+    console.log('User menu toggled:', this.showUserMenu);
+  }
+
   getUserInitials(): string {
     const user = this.user();
     if (!user) return '?';
-    const firstInitial = user.first_name?.[0] || '';
-    const lastInitial = user.last_name?.[0] || '';
+    const firstInitial = user.firstName?.[0] || '';
+    const lastInitial = user.lastName?.[0] || '';
     return `${firstInitial}${lastInitial}`.toUpperCase() || '??';
   }
 
   getUserDisplayName(): string {
     const user = this.user();
-    if (!user) return 'User';
-    const firstName = user.first_name || '';
-    const lastName = user.last_name || '';
-    return `${firstName} ${lastName}`.trim() || user.email || 'User';
+    if (!user) return 'Loading...';
+    
+    const firstName = user.firstName || '';
+    const lastName = user.lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    if (fullName) return fullName;
+    if (user.email) return user.email;
+    
+    return 'User';
   }
 
   canAccessSettings(): boolean {
@@ -142,12 +155,32 @@ export class HeaderComponent {
   }
 
   navigateTo(path: string): void {
+    this.showUserMenu = false;
     this.router.navigate([path]);
   }
 
   logout() {
-    this.authService.logout().subscribe(() => {
-      this.router.navigate(['/login']);
+    console.log('Logout clicked');
+    this.showUserMenu = false;
+    this.authService.logout().subscribe({
+      next: () => {
+        console.log('Logout successful, navigating to login');
+        this.router.navigate(['/login']);
+      },
+      error: (err) => {
+        console.error('Logout error:', err);
+        this.router.navigate(['/login']);
+      }
     });
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const userMenuButton = target.closest('.user-menu-container');
+    
+    if (!userMenuButton && this.showUserMenu) {
+      this.showUserMenu = false;
+    }
   }
 }

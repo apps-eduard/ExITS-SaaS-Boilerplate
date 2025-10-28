@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LoanService } from '../shared/services/loan.service';
@@ -338,17 +338,13 @@ export class LoanDetailsComponent implements OnInit {
   navigateToPayment() {
     const loanId = this.loan()?.id;
     if (loanId) {
-      this.router.navigate(['/products/money-loan/admin/payments/new'], {
+  this.router.navigate(['/platforms/money-loan/dashboard/payments/new'], {
         queryParams: { loanId }
       });
     }
   }
 
   goBack() {
-    this.router.navigate(['/products/money-loan/admin/loans']);
+  this.router.navigate(['/platforms/money-loan/dashboard/loans']);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

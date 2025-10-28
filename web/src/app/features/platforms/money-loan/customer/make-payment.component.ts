@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -281,7 +281,7 @@ export class CustomerMakePaymentComponent implements OnInit {
       next: () => {
         this.processing.set(false);
         // Show success message (you'd implement this)
-        this.router.navigate(['/products/money-loan/customer/loans', this.selectedLoan()!.id]);
+        this.router.navigate(['/platforms/money-loan/customer/loans', this.selectedLoan()!.id]);
       },
       error: (error: any) => {
         console.error('Error processing payment:', error);
@@ -296,10 +296,6 @@ export class CustomerMakePaymentComponent implements OnInit {
   }
 
   cancel() {
-    this.router.navigate(['/products/money-loan/customer/dashboard']);
+    this.router.navigate(['/platforms/money-loan/customer/dashboard']);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

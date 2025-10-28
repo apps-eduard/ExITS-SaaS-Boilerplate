@@ -106,6 +106,24 @@ class AuthService {
       // Audit log
       await this.auditLog(user.id, user.tenant_id, 'login', 'user', user.id, {}, ipAddress);
 
+      // Fetch user's roles (for role-based login checks)
+      const rolesResult = await pool.query(
+        `SELECT 
+           r.id, 
+           r.name, 
+           r.description, 
+           r.space, 
+           r.status, 
+           r.tenant_id as "tenantId"
+         FROM user_roles ur
+         JOIN roles r ON ur.role_id = r.id
+         WHERE ur.user_id = $1
+         ORDER BY r.name`,
+        [user.id]
+      );
+      const roles = rolesResult.rows;
+      logger.info(`✅ Fetched ${roles.length} roles for user ${user.id}`);
+
       // Fetch user's platforms if tenant user (from employee_product_access table)
       let platforms = [];
       if (user.tenant_id) {
@@ -140,7 +158,8 @@ class AuthService {
         tokens: { accessToken, refreshToken },
         session: { created: true, tokenHash: sessionHash },
         permissions,
-        platforms,  // Include platforms array
+        roles,       // Include roles array for login checks
+        platforms,   // Include platforms array
       };
     } catch (err) {
       logger.error(`Auth service login error: ${err.message}`);

@@ -32,7 +32,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
         <!-- Navigation -->
         <nav class="p-4 space-y-1">
           <!-- Dashboard -->
-          <a routerLink="/products/money-loan/customer/dashboard"
+          <a routerLink="/platforms/money-loan/customer/dashboard"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              [routerLinkActiveOptions]="{exact: true}"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -43,7 +43,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- My Loans -->
-          <a routerLink="/products/money-loan/customer/loans"
+          <a routerLink="/platforms/money-loan/customer/loans"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +53,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- Apply for Loan -->
-          <a routerLink="/products/money-loan/customer/apply"
+          <a routerLink="/platforms/money-loan/customer/apply"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- Make Payment -->
-          <a routerLink="/products/money-loan/customer/payment"
+          <a routerLink="/platforms/money-loan/customer/payment"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           <div class="my-4 border-t border-gray-200 dark:border-gray-700"></div>
 
           <!-- Account -->
-          <a routerLink="/products/money-loan/customer/account"
+          <a routerLink="/platforms/money-loan/customer/account"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

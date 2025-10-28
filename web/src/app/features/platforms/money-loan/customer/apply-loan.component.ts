@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -343,7 +343,7 @@ export class ApplyLoanComponent implements OnInit {
       next: () => {
         this.submitting.set(false);
         // Show success message
-        this.router.navigate(['/products/money-loan/customer/loans']);
+        this.router.navigate(['/platforms/money-loan/customer/loans']);
       },
       error: (error: any) => {
         console.error('Error submitting application:', error);
@@ -358,10 +358,6 @@ export class ApplyLoanComponent implements OnInit {
   }
 
   cancel() {
-    this.router.navigate(['/products/money-loan/customer/dashboard']);
+    this.router.navigate(['/platforms/money-loan/customer/dashboard']);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

@@ -219,7 +219,7 @@ import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.com
           <div class="text-center">
             <p class="text-xs text-gray-500 dark:text-gray-400">User Type</p>
             <p class="text-sm font-semibold text-gray-900 dark:text-white mt-1">
-              {{ authService.currentUser()?.tenant_id ? 'Tenant' : 'System' }}
+              {{ authService.currentUser()?.tenantId ? 'Tenant' : 'System' }}
             </p>
           </div>
           <div class="text-center">

@@ -57,7 +57,7 @@ export class FeatureGateService {
    * Load tenant's subscription plan and features
    */
   async loadTenantPlan(): Promise<void> {
-    const tenantId = this.authService.currentUser()?.tenant_id;
+    const tenantId = this.authService.currentUser()?.tenantId;
     if (!tenantId) {
       console.warn('⚠️ No tenant ID found, skipping plan load');
       return;
@@ -157,7 +157,7 @@ export class FeatureGateService {
    * Get current user count for tenant
    */
   async getCurrentUserCount(): Promise<number> {
-    const tenantId = this.authService.currentUser()?.tenant_id;
+    const tenantId = this.authService.currentUser()?.tenantId;
     if (!tenantId) return 0;
 
     try {

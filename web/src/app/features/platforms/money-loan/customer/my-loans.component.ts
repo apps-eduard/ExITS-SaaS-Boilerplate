@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LoanService } from '../shared/services/loan.service';
@@ -260,21 +260,17 @@ export class MyLoansComponent implements OnInit {
   }
 
   viewLoanDetails(loanId: number) {
-    this.router.navigate(['/products/money-loan/customer/loans', loanId]);
+    this.router.navigate(['/platforms/money-loan/customer/loans', loanId]);
   }
 
   makePayment(loanId: number, event: Event) {
     event.stopPropagation();
-    this.router.navigate(['/products/money-loan/customer/payment'], {
+    this.router.navigate(['/platforms/money-loan/customer/payment'], {
       queryParams: { loanId }
     });
   }
 
   navigateToApply() {
-    this.router.navigate(['/products/money-loan/customer/apply']);
+    this.router.navigate(['/platforms/money-loan/customer/apply']);
   }
-}
-
-function inject(service: any): any {
-  return null as any;
 }

@@ -58,16 +58,23 @@ export class LoginComponent {
     this.authService.login(this.email, this.password).subscribe({
       next: (response: any) => {
         this.loading.set(false);
-        this.toastService.success(`Welcome back, ${response.data.user.first_name}!`);
+        this.toastService.success(`Welcome back, ${response.data.user.firstName || response.data.user.email}!`);
 
         const user = response.data.user;
         const roles = response.data.roles || [];
         const platforms = response.data.platforms || [];
 
-        const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
+        console.log('Login response user:', user);
+        console.log('Login response roles:', roles);
+        console.log('Login response platforms:', platforms);
+
+        const isSystemAdmin = user.tenantId === null || user.tenantId === undefined;
         const isTenantAdmin = roles.some((r: any) =>
           r.name === 'Tenant Admin' && r.space === 'tenant'
         );
+
+        console.log('isSystemAdmin:', isSystemAdmin);
+        console.log('isTenantAdmin:', isTenantAdmin);
 
         // Allow System Admins AND Tenant Admins
         if (!isSystemAdmin && !isTenantAdmin) {

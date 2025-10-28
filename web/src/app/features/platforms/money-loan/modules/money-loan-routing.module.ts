@@ -50,6 +50,11 @@ const routes: Routes = [
     data: { title: 'Add Customer', permission: 'money_loan:customers:create' }
   },
   {
+    path: 'customers/:id',
+    component: CustomerFormComponent,
+    data: { title: 'View Customer', permission: 'money_loan:customers:view', viewMode: true }
+  },
+  {
     path: 'customers/:id/edit',
     component: CustomerFormComponent,
     data: { title: 'Edit Customer', permission: 'money_loan:customers:update' }

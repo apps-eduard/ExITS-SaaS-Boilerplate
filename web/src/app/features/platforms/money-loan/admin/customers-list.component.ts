@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -18,7 +18,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
           <p class="text-sm text-gray-600 dark:text-gray-400">Manage loan customers and KYC verification</p>
         </div>
         <button
-          (click)="navigateToAddCustomer()"
+          (click)="addCustomer()"
           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -292,17 +292,17 @@ export class CustomersListComponent implements OnInit {
 
   loadCustomers() {
     this.loading.set(true);
-    this.customerService.listCustomers(
-      this.currentPage(),
-      this.pageSize(),
-      this.searchTerm,
-      this.filterStatus,
-      this.filterKyc
-    ).subscribe({
+    this.customerService.listCustomers({
+      page: this.currentPage(),
+      limit: this.pageSize(),
+      search: this.searchTerm,
+      status: this.filterStatus,
+      kycStatus: this.filterKyc
+    }).subscribe({
       next: (response: any) => {
         this.customers.set(response.data);
-        this.totalRecords.set(response.total);
-        this.totalPages.set(Math.ceil(response.total / this.pageSize()));
+        this.totalRecords.set(response.pagination?.total || 0);
+        this.totalPages.set(response.pagination?.pages || 0);
         this.loading.set(false);
       },
       error: (error: any) => {
@@ -381,20 +381,15 @@ export class CustomersListComponent implements OnInit {
     }
   }
 
-  navigateToAddCustomer() {
-    this.router.navigate(['/products/money-loan/admin/customers/new']);
+  addCustomer() {
+    this.router.navigate(['/platforms/money-loan/dashboard/customers/new']);
   }
 
   viewCustomer(id: number) {
-    this.router.navigate(['/products/money-loan/admin/customers', id]);
+    this.router.navigate(['/platforms/money-loan/dashboard/customers', id]);
   }
 
   editCustomer(id: number) {
-    this.router.navigate(['/products/money-loan/admin/customers', id, 'edit']);
+    this.router.navigate(['/platforms/money-loan/dashboard/customers', id, 'edit']);
   }
-}
-
-function inject(service: any): any {
-  // This will be properly injected by Angular's DI system
-  return null as any;
 }

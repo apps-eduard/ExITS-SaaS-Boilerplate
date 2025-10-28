@@ -495,7 +495,7 @@ export class RolesListComponent implements OnInit {
     // In tenant context, only show tenant roles for the current tenant
     if (this.isTenantContext()) {
       const currentUser = this.authService.currentUser();
-      roles = roles.filter(r => r.space === 'tenant' && r.tenantId === currentUser?.tenant_id);
+      roles = roles.filter(r => r.space === 'tenant' && r.tenantId === currentUser?.tenantId);
     }
 
     // Filter by space (only in system admin context)

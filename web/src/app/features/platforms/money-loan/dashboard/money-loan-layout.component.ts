@@ -32,7 +32,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
         <!-- Navigation -->
         <nav class="p-4 space-y-1">
           <!-- Overview -->
-          <a routerLink="/products/money-loan/dashboard"
+          <a routerLink="/platforms/money-loan/dashboard"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              [routerLinkActiveOptions]="{exact: true}"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -54,25 +54,21 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().customers) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/customers/all" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/all" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧑‍🤝‍🧑 All Customers
                 </a>
-                <a routerLink="/products/money-loan/dashboard/customers/new" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/new" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✨ New Customers
                 </a>
-                <a routerLink="/products/money-loan/dashboard/customers/kyc-pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/kyc-pending" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⏳ KYC Pending
                 </a>
-                <a routerLink="/products/money-loan/dashboard/customers/high-risk" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/high-risk" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚠️ High-Risk Flags
-                </a>
-                <a routerLink="/products/money-loan/dashboard/customers/search" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  🔍 Customer Search
                 </a>
               </div>
             }
@@ -92,31 +88,31 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().loans) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/loans/all" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/all" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 All Loans
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📝 Pending Approval
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/active" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/active" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Active Loans
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/overdue" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/overdue" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🕔 Overdue Loans
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/closed" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/closed" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✅ Closed/Paid Off
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/disbursement" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/disbursement" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   💸 Loan Disbursement
                 </a>
-                <a routerLink="/products/money-loan/dashboard/loans/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧮 Loan Calculator
                 </a>
@@ -138,27 +134,27 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().payments) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/payments/today" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/today" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📅 Today's Collections
                 </a>
-                <a routerLink="/products/money-loan/dashboard/payments/history" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/history" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 Payment History
                 </a>
-                <a routerLink="/products/money-loan/dashboard/payments/bulk-import" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/bulk-import" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📤 Bulk Import Payments
                 </a>
-                <a routerLink="/products/money-loan/dashboard/payments/refunds" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/refunds" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Refunds & Waivers
                 </a>
-                <a routerLink="/products/money-loan/dashboard/payments/failed" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/failed" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚠️ Failed Payments
                 </a>
-                <a routerLink="/products/money-loan/dashboard/payments/gateway-settings" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/gateway-settings" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚙️ Payment Gateway Settings
                 </a>
@@ -180,19 +176,19 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().interest) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/interest/rates" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/rates" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📉 Interest Rates
                 </a>
-                <a routerLink="/products/money-loan/dashboard/interest/auto-rules" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/auto-rules" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Auto Rate Rules
                 </a>
-                <a routerLink="/products/money-loan/dashboard/interest/manual-overrides" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/manual-overrides" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🖊️ Manual Overrides
                 </a>
-                <a routerLink="/products/money-loan/dashboard/interest/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧮 Interest Calculator
                 </a>
@@ -214,19 +210,19 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().collections) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/collections/overdue-workflow" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/overdue-workflow" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📈 Overdue Workflow
                 </a>
-                <a routerLink="/products/money-loan/dashboard/collections/strategies" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/strategies" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📋 Collection Strategies
                 </a>
-                <a routerLink="/products/money-loan/dashboard/collections/legal-actions" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/legal-actions" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚖️ Legal Actions
                 </a>
-                <a routerLink="/products/money-loan/dashboard/collections/recovery" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/recovery" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Recovery Dashboard
                 </a>
@@ -248,23 +244,23 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().kyc) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/kyc/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⏳ Pending Reviews
                 </a>
-                <a routerLink="/products/money-loan/dashboard/kyc/verified" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/verified" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✅ Verified Customers
                 </a>
-                <a routerLink="/products/money-loan/dashboard/kyc/rejected" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/rejected" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ❌ Rejected Customers
                 </a>
-                <a routerLink="/products/money-loan/dashboard/kyc/audit-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/audit-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 KYC Audit Logs
                 </a>
-                <a routerLink="/products/money-loan/dashboard/kyc/webhook-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/webhook-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📡 Onfido Webhook Logs
                 </a>
@@ -286,19 +282,19 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().reports) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/reports/periodic" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/periodic" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🗓️ Daily/Weekly/Monthly
                 </a>
-                <a routerLink="/products/money-loan/dashboard/reports/tax-summary" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/tax-summary" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧾 Tax Summary
                 </a>
-                <a routerLink="/products/money-loan/dashboard/reports/export" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/export" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📤 Export Data
                 </a>
-                <a routerLink="/products/money-loan/dashboard/reports/custom-queries" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/custom-queries" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧑‍💻 Custom Queries
                 </a>
@@ -320,23 +316,23 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             </button>
             @if (expandedSections().settings) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/products/money-loan/dashboard/settings/roles-permissions" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/settings/roles-permissions" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔑 Roles & Permissions
                 </a>
-                <a routerLink="/products/money-loan/dashboard/settings/loan-products" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/settings/loan-products" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🏷️ Loan Product Settings
                 </a>
-                <a routerLink="/products/money-loan/dashboard/settings/templates" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/settings/templates" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📨 SMS/Email Templates
                 </a>
-                <a routerLink="/products/money-loan/dashboard/settings/branding" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/settings/branding" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🎨 Company Branding
                 </a>
-                <a routerLink="/products/money-loan/dashboard/settings/api-keys" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/settings/api-keys" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔑 API Keys
                 </a>
@@ -345,7 +341,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </div>
 
           <!-- Audit Log -->
-          <a routerLink="/products/money-loan/dashboard/audit-log"
+          <a routerLink="/platforms/money-loan/dashboard/audit-log"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <span class="text-xl">📜</span>
@@ -353,7 +349,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- Notifications -->
-          <a routerLink="/products/money-loan/dashboard/notifications"
+          <a routerLink="/platforms/money-loan/dashboard/notifications"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <span class="text-xl">🔔</span>
@@ -361,7 +357,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- User Management -->
-          <a routerLink="/products/money-loan/dashboard/users"
+          <a routerLink="/platforms/money-loan/dashboard/users"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <span class="text-xl">🧑‍💻</span>
@@ -369,7 +365,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           </a>
 
           <!-- Integration Settings -->
-          <a routerLink="/products/money-loan/dashboard/integrations"
+          <a routerLink="/platforms/money-loan/dashboard/integrations"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <span class="text-xl">🔌</span>
