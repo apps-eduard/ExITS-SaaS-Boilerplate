@@ -105,20 +105,20 @@ export const routes: Routes = [
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
       },
       {
+        path: 'customers/kyc-pending',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-pending.component').then(m => m.KycPendingComponent)
+      },
+      {
+        path: 'customers/high-risk',
+        loadComponent: () => import('./features/platforms/money-loan/admin/high-risk-customers.component').then(m => m.HighRiskCustomersComponent)
+      },
+      {
         path: 'customers/:id',
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
       },
       {
         path: 'customers/:id/edit',
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
-      },
-      {
-        path: 'customers/kyc-pending',
-        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
-      },
-      {
-        path: 'customers/high-risk',
-        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
       },
       // Loans
       {
