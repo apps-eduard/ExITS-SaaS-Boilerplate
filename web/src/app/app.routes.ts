@@ -65,6 +65,172 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'products/money-loan/dashboard',
+    loadComponent: () => import('./features/platforms/money-loan/dashboard/money-loan-layout.component').then(m => m.MoneyLoanLayoutComponent),
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-overview.component').then(m => m.LoanOverviewComponent)
+      },
+      // Interest & Configuration
+      {
+        path: 'interest/rates',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/interest-rates.component').then(m => m.InterestRatesComponent)
+      },
+      {
+        path: 'interest/auto-rules',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/approval-rules.component').then(m => m.ApprovalRulesComponent)
+      },
+      {
+        path: 'interest/manual-override',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/loan-modifications.component').then(m => m.LoanModificationsComponent)
+      },
+      {
+        path: 'interest/calculator',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-overview.component').then(m => m.LoanOverviewComponent)
+      },
+      // Customers
+      {
+        path: 'customers/all',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
+      },
+      {
+        path: 'customers/new',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
+      },
+      {
+        path: 'customers/kyc-pending',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
+      },
+      {
+        path: 'customers/high-risk',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
+      },
+      {
+        path: 'customers/search',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
+      },
+      // Loans
+      {
+        path: 'loans/all',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+      },
+      {
+        path: 'loans/pending',
+        loadComponent: () => import('./features/platforms/money-loan/admin/applications/loan-applications.component').then(m => m.LoanApplicationsComponent)
+      },
+      {
+        path: 'loans/active',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+      },
+      {
+        path: 'loans/overdue',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+      },
+      {
+        path: 'loans/closed',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+      },
+      {
+        path: 'loans/disbursement',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+      },
+      {
+        path: 'loans/calculator',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-overview.component').then(m => m.LoanOverviewComponent)
+      },
+      // Payments
+      {
+        path: 'payments/today',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payments/payment-processing.component').then(m => m.PaymentProcessingComponent)
+      },
+      {
+        path: 'payments/history',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payment-form.component').then(m => m.PaymentFormComponent)
+      },
+      {
+        path: 'payments/bulk-import',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payment-form.component').then(m => m.PaymentFormComponent)
+      },
+      {
+        path: 'payments/refunds',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payment-form.component').then(m => m.PaymentFormComponent)
+      },
+      {
+        path: 'payments/failed',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payment-form.component').then(m => m.PaymentFormComponent)
+      },
+      {
+        path: 'payments/gateway-settings',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
+      },
+      // Reports
+      {
+        path: 'reports/performance',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/collections',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/arrears',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/write-offs',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/revenue',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/disbursements',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/profit-loss',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      // Settings
+      {
+        path: 'settings/roles-permissions',
+        loadComponent: () => import('./features/admin/roles/roles-list.component').then(m => m.RolesListComponent)
+      },
+      {
+        path: 'settings/loan-products',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
+      },
+      {
+        path: 'settings/templates',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
+      },
+      {
+        path: 'settings/branding',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
+      },
+      {
+        path: 'settings/api-keys',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
+      },
+      {
+        path: 'settings/audit-log',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      // Audit
+      {
+        path: 'audit/data-changes',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'audit/export',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      }
+    ]
+  },
+  {
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [systemAdminGuard]
@@ -406,7 +572,7 @@ export const routes: Routes = [
           },
           {
             path: 'config',
-            loadComponent: () => import('./features/tenant/platforms/tenant-platform-config.component').then(m => m.TenantPlatformConfigComponent)
+            loadComponent: () => import('./features/tenant/platform-configs/tenant-platform-configs.component').then(m => m.TenantPlatformConfigsComponent)
           }
         ]
       },
@@ -460,6 +626,10 @@ export const routes: Routes = [
             pathMatch: 'full'
           }
         ]
+      },
+      {
+        path: 'modules/money-loan',
+        loadChildren: () => import('./features/platforms/money-loan/modules/money-loan-routing.module').then(m => m.MoneyLoanRoutingModule)
       },
       {
         path: '',

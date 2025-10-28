@@ -27,7 +27,6 @@ import { LoanCustomer } from '../shared/models/loan.models';
         </button>
       </div>
 
-      <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">

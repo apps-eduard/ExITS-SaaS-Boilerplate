@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
 
@@ -25,7 +25,7 @@ interface Customer {
 @Component({
   selector: 'app-customers-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   template: `
     <div class="p-4">
       <!-- Header with Icon -->
@@ -106,7 +106,7 @@ interface Customer {
               <span class="w-3.5 h-3.5">🔄</span>
               Clear
             </button>
-            
+
             @if (getSelectedCount() > 0) {
               <div class="flex items-center gap-2">
                 <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -120,7 +120,7 @@ interface Customer {
                 </button>
               </div>
             }
-            
+
             <select
               [(ngModel)]="pageSize"
               (change)="onPageSizeChange()"
@@ -143,7 +143,7 @@ interface Customer {
                 Export Selected
               </button>
             }
-            
+
             <button
               (click)="exportAll()"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
@@ -151,7 +151,7 @@ interface Customer {
               <span class="w-3.5 h-3.5">📊</span>
               Export All
             </button>
-            
+
             <span class="text-xs text-gray-600 dark:text-gray-400">
               Showing {{ paginatedCustomers().length }} of {{ filteredCustomers().length }}
             </span>
@@ -412,7 +412,7 @@ export class CustomersListComponent implements OnInit {
   pageSize = 25;
   currentPage = 1;
   totalPages = signal(1);
-  
+
   // Selection state
   selectedCustomers = new Set<number>();
   selectAll = false;
@@ -423,7 +423,7 @@ export class CustomersListComponent implements OnInit {
 
   loadCustomers() {
     this.loading.set(true);
-    
+
     this.http.get<any>('http://localhost:3000/api/customers').subscribe({
       next: (response) => {
         if (response.success) {
@@ -494,7 +494,7 @@ export class CustomersListComponent implements OnInit {
         updated_at: new Date().toISOString()
       }
     ];
-    
+
     this.customers.set(mockCustomers);
     this.filteredCustomers.set(mockCustomers);
     this.updatePagination();
@@ -765,7 +765,7 @@ export class CustomersListComponent implements OnInit {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

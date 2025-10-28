@@ -27,7 +27,8 @@ export class LoginComponent {
 
   testAccounts = [
     { email: 'admin@exitsaas.com', password: 'Admin@123', label: 'System Admin', role: 'system' },
-    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant Admin', role: 'tenant' }
+    { email: 'admin@acme.com', password: 'Password@123', label: 'Tenant Admin - ACME Corporation', role: 'tenant' },
+    { email: 'admin@techstart.com', password: 'Password@123', label: 'Tenant Admin - TechStart Solutions', role: 'tenant' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
@@ -64,7 +65,7 @@ export class LoginComponent {
         const platforms = response.data.platforms || [];
 
         const isSystemAdmin = user.tenant_id === null || user.tenant_id === undefined;
-        const isTenantAdmin = roles.some((r: any) => 
+        const isTenantAdmin = roles.some((r: any) =>
           r.name === 'Tenant Admin' && r.space === 'tenant'
         );
 

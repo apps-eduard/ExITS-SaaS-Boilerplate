@@ -8,18 +8,21 @@ import { ThemeService } from '../../../core/services/theme.service';
 
 interface Employee {
   id: number;
-  user_id: number;
+  user_id?: number;
   tenant_id: number;
   email: string;
   first_name: string;
   last_name: string;
-  department: string;
-  position: string;
-  employment_type: string;
-  employment_status: string;
-  hire_date: string;
+  department?: string;
+  position?: string;
+  employment_type?: string;
+  employment_status?: string;
+  hire_date?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  status: string;
+  roles?: Array<{ id: number; name: string; space: string; description?: string }>;
+  platforms?: string[]; // Array of platform types: ['money_loan', 'bnpl', 'pawnshop']
 }
 
 @Component({
@@ -108,7 +111,7 @@ interface Employee {
               <span class="w-3.5 h-3.5">🔄</span>
               Clear
             </button>
-            
+
             @if (getSelectedCount() > 0) {
               <div class="flex items-center gap-2">
                 <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -122,7 +125,7 @@ interface Employee {
                 </button>
               </div>
             }
-            
+
             <select
               [(ngModel)]="pageSize"
               (change)="onPageSizeChange()"
@@ -145,7 +148,7 @@ interface Employee {
                 Export Selected
               </button>
             }
-            
+
             <button
               (click)="exportAll()"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
@@ -153,7 +156,7 @@ interface Employee {
               <span class="w-3.5 h-3.5">📊</span>
               Export All
             </button>
-            
+
             <span class="text-xs text-gray-600 dark:text-gray-400">
               Showing {{ paginatedEmployees().length }} of {{ filteredEmployees().length }}
             </span>
@@ -206,7 +209,19 @@ interface Employee {
                   </th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     <div class="flex items-center gap-1">
-                      <span class="w-3.5 h-3.5">💼</span>
+                      <span class="w-3.5 h-3.5">🔑</span>
+                      Role
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">🎯</span>
+                      Platform Access
+                    </div>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <div class="flex items-center gap-1">
+                      <span class="w-3.5 h-3.5">�</span>
                       Position
                     </div>
                   </th>
@@ -255,7 +270,7 @@ interface Employee {
                             {{ employee.first_name }} {{ employee.last_name }}
                           </div>
                           <div class="text-xs text-gray-500 dark:text-gray-400">
-                            Hired: {{ formatDate(employee.hire_date) }}
+                            Hired: {{ employee.hire_date ? formatDate(employee.hire_date) : 'N/A' }}
                           </div>
                         </div>
                       </div>
@@ -269,18 +284,44 @@ interface Employee {
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
+                      <div class="flex flex-wrap gap-1">
+                        @if (employee.roles && employee.roles.length > 0) {
+                          @for (role of employee.roles; track role.id) {
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                              {{ role.name }}
+                            </span>
+                          }
+                        } @else {
+                          <span class="px-2 py-0.5 text-xs text-gray-400">No Role</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                      <div class="flex flex-wrap gap-1">
+                        @if (employee.platforms && employee.platforms.length > 0) {
+                          @for (platform of employee.platforms; track platform) {
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                              {{ getPlatformLabel(platform) }}
+                            </span>
+                          }
+                        } @else {
+                          <span class="px-2 py-0.5 text-xs text-gray-400">No Access</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
                       <div class="text-xs text-gray-900 dark:text-white">
                         {{ employee.position || 'N/A' }}
                       </div>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getEmploymentTypeClass(employee.employment_type)">
-                        {{ employee.employment_type }}
+                      <span [class]="getEmploymentTypeClass(employee.employment_type || '')">
+                        {{ employee.employment_type || 'N/A' }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getStatusClass(employee.employment_status)">
-                        {{ employee.employment_status }}
+                      <span [class]="getStatusClass(employee.employment_status || '')">
+                        {{ employee.employment_status || 'N/A' }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
@@ -413,7 +454,7 @@ export class EmployeesListComponent implements OnInit {
   pageSize = 25;
   currentPage = 1;
   totalPages = signal(1);
-  
+
   // Selection state
   selectedEmployees = new Set<number>();
   selectAll = false;
@@ -424,12 +465,42 @@ export class EmployeesListComponent implements OnInit {
 
   loadEmployees() {
     this.loading.set(true);
-    
-    this.http.get<any>('http://localhost:3000/api/employees').subscribe({
+
+    this.http.get<any>('http://localhost:3000/api/users').subscribe({
       next: (response) => {
-        if (response.success) {
-          this.employees.set(response.data || []);
-          this.filteredEmployees.set(response.data || []);
+        if (response.success || response.data) {
+          const users = response.data || [];
+          // Filter to show only tenant employees (exclude system admins and customers)
+          const tenantEmployees = users.filter((u: any) => {
+            // Must have tenantId (not system admin)
+            if (u.tenantId === null || u.tenantId === undefined) return false;
+
+            // Check if user has roles
+            if (!u.roles || u.roles.length === 0) {
+              // No roles = likely a customer, exclude
+              return false;
+            }
+
+            // Must NOT have customer space roles
+            const hasCustomerRole = u.roles.some((r: any) =>
+              r.space === 'customer' ||
+              r.name?.toLowerCase().includes('customer')
+            );
+
+            // Must have tenant space roles (Tenant Admin or Employee roles)
+            const hasTenantRole = u.roles.some((r: any) =>
+              r.space === 'tenant'
+            );
+
+            return !hasCustomerRole && hasTenantRole;
+          });
+
+          console.log('Total users:', users.length);
+          console.log('Filtered employees:', tenantEmployees.length);
+          console.log('Employees:', tenantEmployees);
+
+          this.employees.set(tenantEmployees);
+          this.filteredEmployees.set(tenantEmployees);
           this.updatePagination();
         } else {
           this.toastService.error('Failed to load employees');
@@ -462,7 +533,10 @@ export class EmployeesListComponent implements OnInit {
         employment_status: 'active',
         hire_date: '2024-01-15',
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        status: 'active',
+        roles: [{ id: 1, name: 'Employee', space: 'tenant' }],
+        platforms: ['money_loan', 'bnpl']
       },
       {
         id: 2,
@@ -477,10 +551,13 @@ export class EmployeesListComponent implements OnInit {
         employment_status: 'active',
         hire_date: '2024-02-20',
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        status: 'active',
+        roles: [{ id: 2, name: 'Tenant Admin', space: 'tenant' }],
+        platforms: ['money_loan']
       }
     ];
-    
+
     this.employees.set(mockEmployees);
     this.filteredEmployees.set(mockEmployees);
     this.updatePagination();
@@ -594,6 +671,15 @@ export class EmployeesListComponent implements OnInit {
       default:
         return `${baseClass} bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300`;
     }
+  }
+
+  getPlatformLabel(platform: string): string {
+    const platformLabels: Record<string, string> = {
+      'money_loan': 'Money Loan',
+      'bnpl': 'BNPL',
+      'pawnshop': 'Pawnshop'
+    };
+    return platformLabels[platform] || platform;
   }
 
   viewEmployee(id: number) {
@@ -739,7 +825,7 @@ export class EmployeesListComponent implements OnInit {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

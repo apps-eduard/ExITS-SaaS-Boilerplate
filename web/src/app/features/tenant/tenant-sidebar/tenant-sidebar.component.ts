@@ -28,8 +28,8 @@ interface MenuItem {
 
     <!-- Sidebar: Fixed overlay on mobile, sticky on desktop -->
     <aside
-      [class]="isOpen() && !isDesktop() ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-      class="fixed lg:sticky top-0 left-0 z-50 h-screen w-64 flex-shrink-0 transform transition-transform duration-300 ease-in-out lg:z-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700"
+      [class]="isOpen() ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed top-0 left-0 z-50 h-screen w-64 flex-shrink-0 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700"
     >
       <div class="flex h-full flex-col">
         <!-- Logo -->
@@ -121,7 +121,7 @@ export class TenantSidebarComponent implements OnInit {
   rbacService = inject(RBACService);
   tenantService = inject(TenantService);
 
-  isOpen = signal(false);
+  isOpen = signal(true);
   isDesktop = signal(window.innerWidth >= 1024);
   expandedGroups = signal(new Set<string>(['Dashboard']));
 
@@ -175,7 +175,7 @@ export class TenantSidebarComponent implements OnInit {
       children: [
         { label: 'My Platform Catalog', icon: '📦', route: '/tenant/platforms', menuKey: 'tenant-platforms' },
         { label: 'Platform Settings / Features', icon: '⚙️', route: '/tenant/platforms/settings', menuKey: 'tenant-platforms' },
-        { label: 'Platform Configuration', icon: '⚙️', route: '/tenant/platforms/config', menuKey: 'tenant-platforms' },
+        { label: 'All Platform Configurations', icon: '🔧', route: '/tenant/platforms/config', menuKey: 'tenant-platforms' },
       ]
     },
     {
@@ -278,6 +278,9 @@ export class TenantSidebarComponent implements OnInit {
   }
 
   closeMenu() {
-    this.isOpen.set(false);
+    // Only close sidebar on mobile (width < 1024px)
+    if (!this.isDesktop()) {
+      this.isOpen.set(false);
+    }
   }
 }

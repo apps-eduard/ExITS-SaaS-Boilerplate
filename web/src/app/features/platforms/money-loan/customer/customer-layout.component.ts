@@ -9,10 +9,11 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
   template: `
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Sidebar -->
-      <aside [class.hidden]="!sidebarOpen()" 
-             class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0"
-             [class.-translate-x-full]="!sidebarOpen()">
-        
+      <aside [class.hidden]="!sidebarOpen()"
+             class="fixed md:relative inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out"
+             [class.-translate-x-full]="!sidebarOpen()"
+             [class.translate-x-0]="sidebarOpen()">
+
         <!-- Logo -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-2">
@@ -109,16 +110,35 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
       </aside>
 
       <!-- Main Content -->
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Bar (Mobile) -->
-        <header class="md:hidden flex items-center justify-between h-16 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <button (click)="toggleSidebar()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-          <span class="text-lg font-bold text-gray-900 dark:text-white">Money Loan</span>
-          <div class="w-6"></div>
+      <div
+        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+        [style.margin-left]="sidebarOpen() ? '16rem' : '0'">
+        <!-- Top Navigation Bar -->
+        <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
+          <!-- Left: Menu Toggle -->
+          <div class="flex items-center gap-4">
+            <button
+              (click)="toggleSidebar()"
+              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+            </button>
+            <span class="text-lg font-bold text-gray-900 dark:text-white md:hidden">Money Loan</span>
+          </div>
+
+          <!-- Right: User Info -->
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ customerName() }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ customerEmail() }}</p>
+              </div>
+              <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                <span class="text-white font-semibold">{{ getInitials() }}</span>
+              </div>
+            </div>
+          </div>
         </header>
 
         <!-- Page Content -->
@@ -129,7 +149,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 
       <!-- Overlay (Mobile) -->
       @if (sidebarOpen()) {
-        <div (click)="toggleSidebar()" 
+        <div (click)="toggleSidebar()"
              class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>
       }
     </div>
@@ -137,7 +157,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 })
 export class CustomerLayoutComponent {
   private router = Router;
-  
+
   sidebarOpen = signal(false);
   customerName = signal('Guest');
   customerEmail = signal('');

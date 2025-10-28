@@ -110,30 +110,6 @@ interface ConfigSection {
             </div>
           }
         </div>
-
-        <!-- Quick Access Section -->
-        <div class="mt-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Quick Access</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Frequently modified settings</p>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              @for (quick of quickAccessLinks(); track quick.id) {
-                <button (click)="navigateToConfig(quick.platformId, quick.path)"
-                        class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left group">
-                  <div class="flex items-center gap-3 mb-2">
-                    <span class="text-xl">{{ quick.icon }}</span>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
-                      {{ quick.name }}
-                    </h3>
-                  </div>
-                  <p class="text-xs text-gray-600 dark:text-gray-400">{{ quick.platform }}</p>
-                </button>
-              }
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   `,
@@ -143,7 +119,6 @@ export class TenantPlatformConfigsComponent implements OnInit {
   private router: Router;
 
   platforms = signal<PlatformConfig[]>([]);
-  quickAccessLinks = signal<any[]>([]);
 
   constructor(router: Router) {
     this.router = router;
@@ -151,7 +126,6 @@ export class TenantPlatformConfigsComponent implements OnInit {
 
   ngOnInit() {
     this.loadPlatformConfigs();
-    this.loadQuickAccess();
   }
 
   loadPlatformConfigs() {
@@ -169,42 +143,42 @@ export class TenantPlatformConfigsComponent implements OnInit {
             id: 'interest-rates',
             name: 'Interest Rates',
             description: 'Configure loan product interest rates',
-            path: '/config/interest-rates',
+            path: '/tenant/modules/money-loan/config/interest-rates',
             icon: 'percent'
           },
           {
             id: 'payment-schedules',
             name: 'Payment Schedules',
             description: 'Set up payment frequencies and penalties',
-            path: '/config/payment-schedules',
+            path: '/tenant/modules/money-loan/config/payment-schedules',
             icon: 'calendar'
           },
           {
             id: 'fees',
             name: 'Fee Structures',
             description: 'Manage loan fees and charges',
-            path: '/config/fees',
+            path: '/tenant/modules/money-loan/config/fees',
             icon: 'dollar'
           },
           {
             id: 'approval-rules',
             name: 'Approval Rules',
             description: 'Credit scoring and approval criteria',
-            path: '/config/approval-rules',
+            path: '/tenant/modules/money-loan/config/approval-rules',
             icon: 'check'
           },
           {
             id: 'modifications',
             name: 'Loan Modifications',
             description: 'Restructuring and modification policies',
-            path: '/config/modifications',
+            path: '/tenant/modules/money-loan/config/modifications',
             icon: 'edit'
           },
           {
             id: 'products',
             name: 'Loan Products',
             description: 'Manage available loan products',
-            path: '/config/products',
+            path: '/tenant/modules/money-loan/config',
             icon: 'package',
             badge: '3'
           }
@@ -307,66 +281,13 @@ export class TenantPlatformConfigsComponent implements OnInit {
             icon: 'tag'
           }
         ]
-      },
-      {
-        id: 'remittance',
-        name: 'Remittance',
-        icon: '💸',
-        description: 'Money transfer and remittance services',
-        enabled: false,
-        color: 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20',
-        configSections: [
-          {
-            id: 'exchange-rates',
-            name: 'Exchange Rates',
-            description: 'Currency conversion rates',
-            path: '/config/exchange-rates',
-            icon: 'refresh'
-          },
-          {
-            id: 'transfer-fees',
-            name: 'Transfer Fees',
-            description: 'Service fees and commissions',
-            path: '/config/transfer-fees',
-            icon: 'dollar'
-          },
-          {
-            id: 'corridors',
-            name: 'Remittance Corridors',
-            description: 'Supported countries and routes',
-            path: '/config/corridors',
-            icon: 'globe'
-          },
-          {
-            id: 'limits',
-            name: 'Transaction Limits',
-            description: 'Daily and monthly limits',
-            path: '/config/limits',
-            icon: 'shield'
-          },
-          {
-            id: 'partners',
-            name: 'Partner Network',
-            description: 'Payout partner integrations',
-            path: '/config/partners',
-            icon: 'users'
-          }
-        ]
       }
     ]);
   }
 
-  loadQuickAccess() {
-    this.quickAccessLinks.set([
-      { id: 1, name: 'Interest Rates', platform: 'Money Loan', platformId: 'money-loan', path: '/config/interest-rates', icon: '💰' },
-      { id: 2, name: 'Installment Plans', platform: 'BNPL', platformId: 'bnpl', path: '/config/installment-plans', icon: '🛒' },
-      { id: 3, name: 'Appraisal Rules', platform: 'Pawnshop', platformId: 'pawnshop', path: '/config/appraisal-rules', icon: '💎' },
-      { id: 4, name: 'Exchange Rates', platform: 'Remittance', platformId: 'remittance', path: '/config/exchange-rates', icon: '💸' }
-    ]);
-  }
-
   navigateToConfig(platformId: string, path: string) {
-    this.router.navigate(['/platforms', platformId, path]);
+    // Path is already the full route path (e.g., /products/money-loan/dashboard/interest/rates)
+    this.router.navigateByUrl(path);
   }
 
   getPlatformIconBg(colorClass: string): string {

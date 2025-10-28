@@ -27,13 +27,9 @@ interface MenuItem {
 
     <!-- Sidebar -->
     <aside
-      class="fixed lg:sticky top-0 w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ease-in-out z-50 lg:z-0"
-      [class.top-0]="!isDesktop()"
-      [class.left-0]="!isDesktop()"
-      [class.z-40]="!isDesktop()"
-      [class.h-screen]="!isDesktop()"
-      [class.-translate-x-full]="!isOpen() && !isDesktop()"
-      [class.translate-x-0]="isOpen() || isDesktop()">
+      class="fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ease-in-out z-50"
+      [class.-translate-x-full]="!isOpen()"
+      [class.translate-x-0]="isOpen()">
 
       <!-- Logo -->
       <div class="h-14 flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-700">
@@ -136,7 +132,7 @@ export class SidebarComponent {
   authService = inject(AuthService);
   rbacService = inject(RBACService);
 
-  isOpen = signal(false);
+  isOpen = signal(true);
   isDesktop = signal(window.innerWidth >= 1024);
   expandedGroups = signal(new Set<string>(['Dashboard']));
 
@@ -323,6 +319,9 @@ export class SidebarComponent {
   }
 
   closeMenu() {
-    this.isOpen.set(false);
+    // Only close sidebar on mobile (width < 1024px)
+    if (!this.isDesktop()) {
+      this.isOpen.set(false);
+    }
   }
 }

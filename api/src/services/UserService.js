@@ -38,6 +38,15 @@ class UserService {
       };
     }
 
+    // Add employee profile information if available (from JOIN query)
+    if (dbUser.position !== undefined || dbUser.department !== undefined) {
+      user.position = dbUser.position;
+      user.department = dbUser.department;
+      user.employment_type = dbUser.employment_type;
+      user.employment_status = dbUser.employment_status;
+      user.hire_date = dbUser.hire_date;
+    }
+
     return user;
   }
 
@@ -197,9 +206,11 @@ class UserService {
 
       const baseQuery = `
         SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login, u.created_at,
-               t.name as tenant_name, t.subdomain as tenant_subdomain
+               t.name as tenant_name, t.subdomain as tenant_subdomain,
+               ep.position, ep.department, ep.employment_type, ep.employment_status, ep.hire_date
         FROM users u
         LEFT JOIN tenants t ON u.tenant_id = t.id
+        LEFT JOIN employee_profiles ep ON u.id = ep.user_id
         ${tenantFilter}
         ${searchCondition}
       `;
@@ -234,6 +245,15 @@ class UserService {
           `;
           const rolesResult = await pool.query(rolesQuery, [row.id]);
           user.roles = rolesResult.rows;
+          
+          // Fetch platform access for this user
+          const platformsQuery = `
+            SELECT DISTINCT product_type
+            FROM employee_product_access
+            WHERE user_id = $1 AND status = 'active'
+          `;
+          const platformsResult = await pool.query(platformsQuery, [row.id]);
+          user.platforms = platformsResult.rows.map(p => p.product_type);
           
           return user;
         })

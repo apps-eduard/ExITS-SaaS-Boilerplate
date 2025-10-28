@@ -11,10 +11,12 @@ import { SidebarComponent } from '../components/sidebar/sidebar.component';
   template: `
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <app-sidebar #sidebar />
-      
-      <div class="flex-1 flex flex-col overflow-hidden">
+
+      <div
+        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+        [style.margin-left]="sidebar?.isOpen() ? '16rem' : '0'">
         <app-header (menuToggle)="toggleSidebar()" />
-        
+
         <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
           <router-outlet />
         </main>

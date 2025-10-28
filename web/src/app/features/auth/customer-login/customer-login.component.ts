@@ -243,9 +243,10 @@ export class CustomerLoginComponent {
   error = '';
 
   testAccounts = [
-    { email: 'juan.delacruz@test.com', password: 'Customer@123', label: 'Juan Dela Cruz' },
-    { email: 'maria.santos@test.com', password: 'Customer@123', label: 'Maria Santos' },
-    { email: 'pedro.gonzales@test.com', password: 'Customer@123', label: 'Pedro Gonzales' }
+    { email: 'customer1@acme.com', password: 'Customer@123', label: 'ACME - Customer 1' },
+    { email: 'customer2@acme.com', password: 'Customer@123', label: 'ACME - Customer 2' },
+    { email: 'customer1@techstart.com', password: 'Customer@123', label: 'TechStart - Customer 1' },
+    { email: 'customer2@techstart.com', password: 'Customer@123', label: 'TechStart - Customer 2' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {

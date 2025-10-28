@@ -14,7 +14,7 @@ import { ThemeService } from '../../../core/services/theme.service';
       <div class="flex items-center gap-4">
         <button
           (click)="menuToggle.emit()"
-          class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
           </svg>
@@ -74,7 +74,7 @@ import { ThemeService } from '../../../core/services/theme.service';
                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user()?.first_name }} {{ user()?.last_name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ user()?.email }}</p>
               </div>
-              <button 
+              <button
                 (click)="navigateTo('/profile'); showUserMenu = false"
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ import { ThemeService } from '../../../core/services/theme.service';
                 Profile
               </button>
               @if (canAccessSettings()) {
-                <button 
+                <button
                   (click)="navigateTo('/settings'); showUserMenu = false"
                   class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +136,7 @@ export class HeaderComponent {
 
   canAccessSettings(): boolean {
     // Settings accessible to system admins or users with system:view or settings:view permission
-    return this.authService.isSystemAdmin() || 
+    return this.authService.isSystemAdmin() ||
            this.authService.hasPermission('system:view') ||
            this.authService.hasPermission('settings:view');
   }

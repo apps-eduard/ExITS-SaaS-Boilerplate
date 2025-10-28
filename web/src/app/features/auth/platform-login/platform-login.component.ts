@@ -25,17 +25,19 @@ export class PlatformLoginComponent {
   email = '';
   password = '';
   loading = signal(false);
-  
+
   // Platform selector state
   showPlatformSelector = signal(false);
   userPlatforms = signal<any[]>([]);
 
   // Test accounts for platform users (Tenant Admins and Employees only)
   testAccounts = [
-    { email: 'admin-1@example.com', password: 'Admin@123', label: 'Tenant 1 Admin' },
-    { email: 'admin-2@example.com', password: 'Admin@123', label: 'Tenant 2 Admin' },
-    { email: 'employee1@tenant1.com', password: 'Employee@123', label: 'Employee 1 (Money Loan View)' },
-    { email: 'employee2@tenant1.com', password: 'Employee@123', label: 'Employee 2 (Multi-Platform)' }
+    { email: 'admin@acme.com', password: 'Password@123', label: 'ACME - Tenant Admin' },
+    { email: 'employee1@acme.com', password: 'Password@123', label: 'ACME - Employee 1 (Money Loan)' },
+    { email: 'employee2@acme.com', password: 'Password@123', label: 'ACME - Employee 2 (Money Loan)' },
+    { email: 'admin@techstart.com', password: 'Password@123', label: 'TechStart - Tenant Admin' },
+    { email: 'employee1@techstart.com', password: 'Password@123', label: 'TechStart - Employee 1 (Money Loan)' },
+    { email: 'employee2@techstart.com', password: 'Password@123', label: 'TechStart - Employee 2 (Money Loan)' }
   ];
 
   fillCredentials(account: { email: string; password: string }) {
@@ -61,11 +63,11 @@ export class PlatformLoginComponent {
     this.authService.login(this.email, this.password).subscribe({
       next: (response: any) => {
         this.loading.set(false);
-        
+
         const user = response.data.user;
         const platforms = response.data.platforms || [];
         const roles = response.data.roles || [];
-        
+
         // Show welcome message with proper name fallback
         const userName = user.firstName || user.email.split('@')[0];
         this.toastService.success(`Welcome back, ${userName}!`);
@@ -81,7 +83,7 @@ export class PlatformLoginComponent {
         }
 
         // Check if user is Tenant Admin
-        const isTenantAdmin = roles.some((r: any) => 
+        const isTenantAdmin = roles.some((r: any) =>
           r.name === 'Tenant Admin' && r.space === 'tenant'
         );
 
