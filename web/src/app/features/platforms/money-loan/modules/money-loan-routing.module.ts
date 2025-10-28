@@ -7,6 +7,27 @@ import { CustomerFormComponent } from '../admin/customer-form.component';
 import { LoanDetailsComponent } from '../admin/loan-details.component';
 import { PaymentFormComponent } from '../admin/payment-form.component';
 
+// Configuration Management
+import { ConfigurationDashboardComponent } from '../admin/configuration/configuration-dashboard.component';
+import { InterestRatesComponent } from '../admin/configuration/interest-rates.component';
+import { PaymentSchedulesComponent } from '../admin/configuration/payment-schedules.component';
+import { FeeStructuresComponent } from '../admin/configuration/fee-structures.component';
+import { ApprovalRulesComponent } from '../admin/configuration/approval-rules.component';
+import { LoanModificationsComponent } from '../admin/configuration/loan-modifications.component';
+
+// Loan Applications
+import { LoanApplicationsComponent } from '../admin/applications/loan-applications.component';
+
+// Reports
+import { ReportsDashboardComponent } from '../admin/reports/reports-dashboard.component';
+
+// Payments
+import { PaymentProcessingComponent } from '../admin/payments/payment-processing.component';
+
+// Customer Components
+import { LoanApplicationFormComponent } from '../customer/loan-application-form.component';
+import { LoanStatusTrackingComponent } from '../customer/loan-status-tracking.component';
+
 const routes: Routes = [
   {
     path: '',
@@ -47,6 +68,65 @@ const routes: Routes = [
     path: 'payments/record',
     component: PaymentFormComponent,
     data: { title: 'Record Payment', permission: 'money_loan:payments:create' }
+  },
+  {
+    path: 'payments/process/:id',
+    component: PaymentProcessingComponent,
+    data: { title: 'Process Payment', permission: 'money_loan:payments:create' }
+  },
+  // Configuration routes
+  {
+    path: 'config',
+    component: ConfigurationDashboardComponent,
+    data: { title: 'Configuration', permission: 'money_loan:config:view' }
+  },
+  {
+    path: 'config/interest-rates',
+    component: InterestRatesComponent,
+    data: { title: 'Interest Rates', permission: 'money_loan:config:edit' }
+  },
+  {
+    path: 'config/payment-schedules',
+    component: PaymentSchedulesComponent,
+    data: { title: 'Payment Schedules', permission: 'money_loan:config:edit' }
+  },
+  {
+    path: 'config/fees',
+    component: FeeStructuresComponent,
+    data: { title: 'Fee Structures', permission: 'money_loan:config:edit' }
+  },
+  {
+    path: 'config/approval-rules',
+    component: ApprovalRulesComponent,
+    data: { title: 'Approval Rules', permission: 'money_loan:config:edit' }
+  },
+  {
+    path: 'config/modifications',
+    component: LoanModificationsComponent,
+    data: { title: 'Loan Modifications', permission: 'money_loan:config:edit' }
+  },
+  // Application routes
+  {
+    path: 'applications',
+    component: LoanApplicationsComponent,
+    data: { title: 'Loan Applications', permission: 'money_loan:applications:view' }
+  },
+  // Reports routes
+  {
+    path: 'reports',
+    component: ReportsDashboardComponent,
+    data: { title: 'Reports & Analytics', permission: 'money_loan:reports:view' }
+  },
+  // Customer routes
+  {
+    path: 'customer/apply',
+    component: LoanApplicationFormComponent,
+    data: { title: 'Apply for Loan' }
+  },
+  {
+    path: 'customer/status/:id',
+    component: LoanStatusTrackingComponent,
+    data: { title: 'Loan Status' }
   }
 ];
 

@@ -1,6 +1,5 @@
 •	Use KNEX for any database changes
-•	Maintain all camelCase
-
+•	Maintain all camelCase backend and frontend
 
 •	Maintain compact design
 •	Maintain all buttons with icon
@@ -56,5 +55,4 @@ Label Above (Input Fields)
 •	Label Color: text-gray-700 / dark:text-gray-300
 •	Label Margin: mb-1 (4px below label)
 
-
-better visual hierarchy, modern card styles, and enhanced aesthetics:
+better visual hierarchy, modern card styles, and enhanced aesthetics

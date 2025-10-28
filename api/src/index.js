@@ -30,11 +30,13 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const subscriptionPlanRoutes = require('./routes/subscriptionPlanRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const systemLogsRoutes = require('./routes/systemLogsRoutes');
-const moneyLoanRoutes = require('./modules/products/money-loan/routes');
 const customerRoutes = require('./modules/customer/routes');
 const customersRoutes = require('./routes/customerRoutes');
 const mfaRoutes = require('./routes/mfa');
 const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes');
+
+// Platform routes (modular architecture)
+const moneyloanPlatformRoutes = require('./modules/platforms/money-loan/routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -96,11 +98,13 @@ app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/platform-subscriptions', require('./routes/productSubscriptionRoutes'));
 app.use('/api/reports', reportRoutes);
 app.use('/api/system-logs', systemLogsRoutes);
-app.use('/api/money-loan', moneyLoanRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/payment-history', paymentHistoryRoutes);
+
+// Platform routes (tenant-centric modular architecture)
+app.use('/api/tenants/:tenantId/platforms/moneyloan', moneyloanPlatformRoutes);
 
 // ==================== 404 HANDLER ====================
 
