@@ -146,11 +146,11 @@ interface ConfigModule {
 export class ConfigurationDashboardComponent {
   configModules: ConfigModule[] = [
     {
-      id: 'interest-rates',
-      title: 'Interest Rates',
-      description: 'Configure fixed, variable, and declining interest rates',
-      icon: '📊',
-      route: '/platforms/money-loan/config/interest-rates',
+      id: 'loan-products',
+      title: 'Loan Products',
+      description: 'Manage loan types, interest rates, and terms',
+      icon: '�',
+      route: '/platforms/money-loan/config/loan-products',
       color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
     },
     {

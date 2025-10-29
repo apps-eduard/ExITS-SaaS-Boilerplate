@@ -1,0 +1,944 @@
+import { Component, signal, computed, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { LoanCalculatorService, LoanParams, LoanCalculation } from '../../shared/services/loan-calculator.service';
+import { LoanService } from '../../shared/services/loan.service';
+import { ToastService } from '../../../../../core/services/toast.service';
+import { AuthService } from '../../../../../core/services/auth.service';
+
+@Component({
+  selector: 'app-quick-product',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="p-4 space-y-4">
+      <!-- Compact Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+            @if (editingProductId) {
+              <span>✏️ Edit Product</span>
+            } @else {
+              <span>⚡ Quick Create Product</span>
+            }
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            @if (editingProductId) {
+              <span>Update product details with instant calculation preview</span>
+            } @else {
+              <span>Create loan products with instant calculation preview</span>
+            }
+          </p>
+        </div>
+        @if (editingProductId) {
+          <button
+            (click)="cancelEdit()"
+            class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+          >
+            ❌ Cancel Edit
+          </button>
+        }
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Left: Compact Form -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <span>📝</span> Product Details
+          </h2>
+
+          <form class="space-y-3">
+            <!-- Product Code & Name (2 columns) -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Product Code *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="productCode"
+                  name="productCode"
+                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                  placeholder="LP-001"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="productName"
+                  name="productName"
+                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                  placeholder="Quick Loan"
+                />
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <textarea
+                [(ngModel)]="description"
+                name="description"
+                rows="2"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                placeholder="Short-term loan for quick access to funds"
+              ></textarea>
+            </div>
+
+            <!-- Loan Amount Range -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-blue-700 dark:text-blue-400">💰 Loan Amount Range</p>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum (₱)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="minAmount"
+                    (ngModelChange)="calculatePreview()"
+                    name="minAmount"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="1,000"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Maximum (₱)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="maxAmount"
+                    (ngModelChange)="calculatePreview()"
+                    name="maxAmount"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="100,000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan Terms -->
+            <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-purple-700 dark:text-purple-400">📅 Loan Terms</p>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Min (months)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="minTermMonths"
+                    (ngModelChange)="calculatePreview()"
+                    name="minTermMonths"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max (months)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="maxTermMonths"
+                    (ngModelChange)="calculatePreview()"
+                    name="maxTermMonths"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="6"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Frequency -->
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-400">🔄 Payment Frequency</p>
+              <div class="space-y-1.5">
+                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+                  <input
+                    type="radio"
+                    [(ngModel)]="paymentFrequency"
+                    name="paymentFrequency"
+                    value="daily"
+                    (ngModelChange)="calculatePreview()"
+                    class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span class="text-xs text-gray-700 dark:text-gray-300">📅 Daily (30 payments/month)</span>
+                </label>
+                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+                  <input
+                    type="radio"
+                    [(ngModel)]="paymentFrequency"
+                    name="paymentFrequency"
+                    value="weekly"
+                    (ngModelChange)="calculatePreview()"
+                    class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span class="text-xs text-gray-700 dark:text-gray-300">📆 Weekly (4 payments/month)</span>
+                </label>
+                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+                  <input
+                    type="radio"
+                    [(ngModel)]="paymentFrequency"
+                    name="paymentFrequency"
+                    value="monthly"
+                    (ngModelChange)="calculatePreview()"
+                    class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span class="text-xs text-gray-700 dark:text-gray-300">🗓️ Monthly (1 payment/month)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Interest & Fees (3 columns) -->
+            <div class="bg-green-50 dark:bg-green-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-green-700 dark:text-green-400">💵 Interest & Fees</p>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Interest % *</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="interestRate"
+                    (ngModelChange)="calculatePreview()"
+                    name="interestRate"
+                    step="0.5"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="5.0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Process %</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="processingFeePercent"
+                    (ngModelChange)="calculatePreview()"
+                    name="processingFeePercent"
+                    step="0.1"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="2.0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Platform ₱</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="platformFee"
+                    (ngModelChange)="calculatePreview()"
+                    name="platformFee"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Penalty & Grace (2 columns) -->
+            <div class="bg-amber-50 dark:bg-amber-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">⚠️ Penalties</p>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Late Penalty %/day</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="latePaymentPenaltyPercent"
+                    name="latePaymentPenaltyPercent"
+                    step="0.1"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="1.0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Grace Days</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="gracePeriodDays"
+                    name="gracePeriodDays"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Interest Type & Status (2 columns) -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Interest Type</label>
+                <select
+                  [(ngModel)]="interestType"
+                  (ngModelChange)="calculatePreview()"
+                  name="interestType"
+                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="flat">Flat</option>
+                  <option value="reducing">Reducing</option>
+                  <option value="compound">Compound</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select
+                  [(ngModel)]="isActive"
+                  name="isActive"
+                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                >
+                  <option [value]="true">Active</option>
+                  <option [value]="false">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 pt-2">
+              <button
+                type="button"
+                (click)="saveProduct()"
+                [disabled]="saving()"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-xs font-medium py-1.5 px-3 rounded shadow-sm transition"
+              >
+                @if (saving()) {
+                  <span>⏳ Saving...</span>
+                } @else if (editingProductId) {
+                  <span>💾 Update Product</span>
+                } @else {
+                  <span>💾 Create Product</span>
+                }
+              </button>
+              <button
+                type="button"
+                (click)="resetForm()"
+                class="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+              >
+                🔄
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right: Live Preview -->
+        <div class="space-y-4">
+          <!-- Calculation Preview -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <span>�</span> Live Calculation Preview
+            </h2>
+
+            <!-- Preview Loan Amount Input -->
+            <div class="mb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <label class="block text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1.5">
+                💰 Preview Loan Amount (₱)
+              </label>
+              <input
+                type="number"
+                [(ngModel)]="previewLoanAmount"
+                (ngModelChange)="onPreviewAmountChange()"
+                name="previewLoanAmount"
+                [min]="minAmount"
+                [max]="maxAmount"
+                class="w-full px-3 py-2 text-sm font-semibold border border-blue-300 dark:border-blue-600 rounded focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-800 dark:text-white"
+                placeholder="Enter amount"
+              />
+              <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
+                Range: {{ formatCurrency(minAmount) }} - {{ formatCurrency(maxAmount) }}
+              </p>
+              @if (previewLoanAmount < minAmount || previewLoanAmount > maxAmount) {
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>Amount must be between {{ formatCurrency(minAmount) }} and {{ formatCurrency(maxAmount) }}</span>
+                </p>
+              }
+            </div>
+
+            <!-- Preview Loan Term Input -->
+            <div class="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+              <label class="block text-xs font-semibold text-purple-700 dark:text-purple-400 mb-1.5">
+                📅 Preview Loan Term (Months)
+              </label>
+              <input
+                type="number"
+                [(ngModel)]="previewTermMonths"
+                (ngModelChange)="onPreviewTermChange()"
+                name="previewTermMonths"
+                [min]="minTermMonths"
+                [max]="maxTermMonths"
+                class="w-full px-3 py-2 text-sm font-semibold border border-purple-300 dark:border-purple-600 rounded focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:bg-gray-800 dark:text-white"
+                placeholder="Enter term"
+              />
+              <p class="text-xs text-purple-600 dark:text-purple-400 mt-1.5">
+                Range: {{ minTermMonths }} - {{ maxTermMonths }} month(s)
+              </p>
+              @if (previewTermMonths < minTermMonths || previewTermMonths > maxTermMonths) {
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>Term must be between {{ minTermMonths }} and {{ maxTermMonths }} month(s)</span>
+                </p>
+              }
+            </div>
+
+            @if (preview()) {
+              <!-- Quick Stats Grid -->
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="bg-green-50 dark:bg-green-900/20 rounded p-2">
+                  <p class="text-xs text-green-600 dark:text-green-400">Net Proceeds</p>
+                  <p class="text-sm font-bold text-green-700 dark:text-green-300">{{ formatCurrency(preview()!.netProceeds) }}</p>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                  <p class="text-xs text-blue-600 dark:text-blue-400">Total Repayable</p>
+                  <p class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ formatCurrency(preview()!.totalRepayable) }}</p>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded p-2">
+                  <p class="text-xs text-purple-600 dark:text-purple-400">Per Payment</p>
+                  <p class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ formatCurrency(preview()!.installmentAmount) }}</p>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded p-2">
+                  <p class="text-xs text-amber-600 dark:text-amber-400">Effective APR</p>
+                  <p class="text-sm font-bold text-amber-700 dark:text-amber-300">{{ preview()!.effectiveInterestRate.toFixed(2) }}%</p>
+                </div>
+              </div>
+
+              <!-- Detailed Breakdown -->
+              <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3 space-y-1.5 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Loan Amount</span>
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(preview()!.loanAmount) }}</span>
+                </div>
+                <div class="flex justify-between text-red-600 dark:text-red-400">
+                  <span>- Interest ({{ interestRate }}%)</span>
+                  <span>{{ formatCurrency(preview()!.interestAmount) }}</span>
+                </div>
+                @if (preview()!.processingFeeAmount > 0) {
+                  <div class="flex justify-between text-red-600 dark:text-red-400">
+                    <span>- Processing Fee</span>
+                    <span>{{ formatCurrency(preview()!.processingFeeAmount) }}</span>
+                  </div>
+                }
+                @if (preview()!.platformFee > 0) {
+                  <div class="flex justify-between text-red-600 dark:text-red-400">
+                    <span>- Platform Fee</span>
+                    <span>{{ formatCurrency(preview()!.platformFee) }}</span>
+                  </div>
+                }
+                <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
+                  <div class="flex justify-between font-semibold text-green-700 dark:text-green-400">
+                    <span>Net Proceeds</span>
+                    <span>{{ formatCurrency(preview()!.netProceeds) }}</span>
+                  </div>
+                </div>
+                <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
+                  <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Payments</span>
+                    <span>{{ preview()!.numPayments }} × {{ formatCurrency(preview()!.installmentAmount) }}</span>
+                  </div>
+                  <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Grace Period</span>
+                    <span>{{ preview()!.gracePeriodDays }} day(s)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Penalty Calculator Section -->
+              <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800 mt-3">
+                <p class="text-xs font-semibold text-red-700 dark:text-red-400 mb-2">⚠️ Late Payment Penalty Calculator</p>
+                <div class="space-y-2">
+                  <div>
+                    <label class="block text-xs font-medium text-red-700 dark:text-red-400 mb-1">
+                      Days Overdue
+                    </label>
+                    <input
+                      type="number"
+                      [(ngModel)]="previewDaysOverdue"
+                      (ngModelChange)="calculatePenalty()"
+                      name="previewDaysOverdue"
+                      min="0"
+                      class="w-full px-2 py-1.5 text-xs border border-red-300 dark:border-red-600 rounded focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:bg-gray-800 dark:text-white"
+                      placeholder="Enter days"
+                    />
+                  </div>
+                  <div class="bg-white dark:bg-gray-800 rounded p-2 space-y-1 text-xs">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">Installment Amount</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(preview()!.installmentAmount) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">Penalty Rate</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ latePaymentPenaltyPercent }}% per day</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">Grace Period</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ gracePeriodDays }} day(s)</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">Billable Days</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">
+                        {{ Math.max(0, previewDaysOverdue - gracePeriodDays) }} day(s)
+                      </span>
+                    </div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
+                      <div class="flex justify-between font-semibold text-red-700 dark:text-red-400">
+                        <span>Total Penalty</span>
+                        <span>{{ formatCurrency(penaltyAmount()) }}</span>
+                      </div>
+                    </div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
+                      <div class="flex justify-between font-bold text-lg text-red-800 dark:text-red-300">
+                        <span>Total Due</span>
+                        <span>{{ formatCurrency(preview()!.installmentAmount + penaltyAmount()) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="text-center py-8 text-gray-400">
+                <div class="text-4xl mb-2">📊</div>
+                <p class="text-xs">Enter values to see preview</p>
+              </div>
+            }
+          </div>
+
+          <!-- Info Card -->
+          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div class="flex gap-2">
+              <span class="text-blue-600 dark:text-blue-400">💡</span>
+              <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <p class="font-semibold">Quick Tips:</p>
+                <ul class="list-disc list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
+                  <li>Preview uses mid-range values for calculations</li>
+                  <li>Interest is deducted upfront (flat model)</li>
+                  <li>Effective APR shows true cost to borrower</li>
+                  <li>All fields marked with * are required</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <!-- Table Header -->
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>📦</span> Created Products
+            </h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ products().length }} product(s)</p>
+          </div>
+          <button
+            (click)="loadProducts()"
+            class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            🔄 Refresh
+          </button>
+        </div>
+
+        <!-- Table Content -->
+        <div class="overflow-x-auto">
+          @if (loading()) {
+            <div class="p-8 text-center">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading products...</p>
+            </div>
+          } @else if (products().length === 0) {
+            <div class="p-8 text-center">
+              <div class="text-4xl mb-2">📦</div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">No products created yet</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Create your first product above</p>
+            </div>
+          } @else {
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Code</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Name</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Amount Range</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Term</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Interest</th>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                @for (product of products(); track product.id) {
+                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td class="px-4 py-3">
+                      <span class="text-xs font-mono text-blue-600 dark:text-blue-400">{{ product.productCode }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ product.name }}</p>
+                        @if (product.description) {
+                          <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ product.description }}</p>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
+                      {{ formatCurrency(product.minAmount) }} - {{ formatCurrency(product.maxAmount) }}
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
+                      {{ product.minTermDays / 30 }}-{{ product.maxTermDays / 30 }} months
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="text-xs font-semibold text-green-600 dark:text-green-400">
+                        {{ product.interestRate }}% {{ product.interestType }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                      @if (product.isActive) {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                          <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
+                          Active
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                          <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                          Inactive
+                        </span>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-center gap-1">
+                        <button
+                          (click)="editProduct(product)"
+                          class="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition"
+                          title="Edit"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          (click)="toggleProductStatus(product)"
+                          class="p-1.5 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 rounded transition"
+                          [title]="product.isActive ? 'Deactivate' : 'Activate'"
+                        >
+                          {{ product.isActive ? '⏸️' : '▶️' }}
+                        </button>
+                        <button
+                          (click)="deleteProduct(product)"
+                          class="p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded transition"
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      </div>
+    </div>
+  `,
+  styles: []
+})
+export class QuickProductComponent {
+  private calculatorService = inject(LoanCalculatorService);
+  private loanService = inject(LoanService);
+  private toastService = inject(ToastService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
+  // Form fields
+  productCode = '';
+  productName = '';
+  description = '';
+  minAmount = 1000;
+  maxAmount = 100000;
+  minTermMonths = 1;
+  maxTermMonths = 6;
+  interestRate = 5;
+  interestType: 'flat' | 'reducing' | 'compound' = 'flat';
+  processingFeePercent = 0;
+  platformFee = 50;
+  latePaymentPenaltyPercent = 1;
+  gracePeriodDays = 1;
+  isActive = true;
+  paymentFrequency: 'daily' | 'weekly' | 'monthly' = 'weekly';
+  previewLoanAmount = 50000; // For accurate preview calculation
+  previewTermMonths = 3; // For accurate preview calculation
+  previewDaysOverdue = 5; // For penalty calculation
+  penaltyAmount = signal<number>(0);
+
+  // State
+  saving = signal(false);
+  preview = signal<LoanCalculation | null>(null);
+  products = signal<any[]>([]);
+  loading = signal(false);
+  editingProductId: number | null = null;
+
+  constructor() {
+    this.calculatePreview();
+    this.loadProducts();
+  }
+
+  onPreviewAmountChange(): void {
+    // Enforce min/max constraints
+    if (this.previewLoanAmount < this.minAmount) {
+      this.previewLoanAmount = this.minAmount;
+    } else if (this.previewLoanAmount > this.maxAmount) {
+      this.previewLoanAmount = this.maxAmount;
+    }
+    this.calculatePreview();
+  }
+
+  onPreviewTermChange(): void {
+    // Enforce min/max constraints
+    if (this.previewTermMonths < this.minTermMonths) {
+      this.previewTermMonths = this.minTermMonths;
+    } else if (this.previewTermMonths > this.maxTermMonths) {
+      this.previewTermMonths = this.maxTermMonths;
+    }
+    this.calculatePreview();
+  }
+
+  calculatePenalty(): void {
+    if (!this.preview()) {
+      this.penaltyAmount.set(0);
+      return;
+    }
+
+    // Use the grace period from the form, not from the preview calculation
+    const billableDays = Math.max(0, this.previewDaysOverdue - this.gracePeriodDays);
+    const dailyPenalty = this.preview()!.installmentAmount * (this.latePaymentPenaltyPercent / 100);
+    const totalPenalty = dailyPenalty * billableDays;
+    
+    this.penaltyAmount.set(totalPenalty);
+  }
+
+  calculatePreview(): void {
+    if (this.minAmount <= 0 || this.minTermMonths <= 0) {
+      this.preview.set(null);
+      return;
+    }
+
+    // Ensure preview amount is within range
+    let calculationAmount = this.previewLoanAmount;
+    if (calculationAmount < this.minAmount || calculationAmount > this.maxAmount) {
+      calculationAmount = (this.minAmount + this.maxAmount) / 2;
+      this.previewLoanAmount = calculationAmount;
+    }
+
+    // Ensure preview term is within range
+    let calculationTerm = this.previewTermMonths;
+    if (calculationTerm < this.minTermMonths || calculationTerm > this.maxTermMonths) {
+      calculationTerm = Math.ceil((this.minTermMonths + this.maxTermMonths) / 2);
+      this.previewTermMonths = calculationTerm;
+    }
+
+    const params: LoanParams = {
+      loanAmount: calculationAmount,
+      termMonths: calculationTerm,
+      paymentFrequency: this.paymentFrequency,
+      interestRate: this.interestRate,
+      interestType: this.interestType,
+      processingFeePercentage: this.processingFeePercent,
+      platformFee: this.platformFee,
+      latePenaltyPercentage: this.latePaymentPenaltyPercent
+    };
+
+    const calculation = this.calculatorService.calculate(params);
+    this.preview.set(calculation);
+    this.calculatePenalty(); // Update penalty when preview changes
+  }
+
+  saveProduct(): void {
+    // Validation
+    if (!this.productCode || !this.productName) {
+      this.toastService.error('Please fill in all required fields (Product Code and Name)');
+      return;
+    }
+
+    if (this.minAmount > this.maxAmount) {
+      this.toastService.error('Minimum amount cannot be greater than maximum amount');
+      return;
+    }
+
+    if (this.minTermMonths > this.maxTermMonths) {
+      this.toastService.error('Minimum term cannot be greater than maximum term');
+      return;
+    }
+
+    this.saving.set(true);
+
+    const tenantId = String(this.authService.getTenantId() || '');
+
+    const productData = {
+      productCode: this.productCode,
+      name: this.productName,
+      description: this.description,
+      minAmount: this.minAmount,
+      maxAmount: this.maxAmount,
+      interestRate: this.interestRate,
+      interestType: this.interestType,
+      minTermDays: this.minTermMonths * 30,
+      maxTermDays: this.maxTermMonths * 30,
+      processingFeePercent: this.processingFeePercent,
+      latePaymentPenaltyPercent: this.latePaymentPenaltyPercent,
+      gracePeriodDays: this.gracePeriodDays,
+      paymentFrequency: this.paymentFrequency,
+      isActive: this.isActive
+    };
+
+    if (this.editingProductId) {
+      // Update existing product
+      this.loanService.updateLoanProduct(tenantId, this.editingProductId, productData).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.toastService.success('Product updated successfully! ✅');
+            this.resetForm();
+            this.loadProducts();
+          } else {
+            this.toastService.error(response.message || 'Failed to update product');
+          }
+          this.saving.set(false);
+        },
+        error: (error) => {
+          console.error('Error updating product:', error);
+          this.toastService.error('Failed to update product. Please try again.');
+          this.saving.set(false);
+        }
+      });
+    } else {
+      // Create new product
+      this.loanService.createLoanProduct(tenantId, productData).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.toastService.success('Product created successfully! 🎉');
+            this.resetForm();
+            this.loadProducts();
+          } else {
+            this.toastService.error(response.message || 'Failed to create product');
+          }
+          this.saving.set(false);
+        },
+        error: (error) => {
+          console.error('Error creating product:', error);
+          this.toastService.error('Failed to create product. Please try again.');
+          this.saving.set(false);
+        }
+      });
+    }
+  }
+
+  loadProducts(): void {
+    this.loading.set(true);
+    const tenantId = String(this.authService.getTenantId() || '');
+
+    this.loanService.getLoanProducts(tenantId).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.products.set(response.data);
+        }
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading products:', error);
+        this.toastService.error('Failed to load products');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  editProduct(product: any): void {
+    this.editingProductId = product.id;
+    this.productCode = product.productCode;
+    this.productName = product.name;
+    this.description = product.description || '';
+    this.minAmount = product.minAmount;
+    this.maxAmount = product.maxAmount;
+    this.minTermMonths = product.minTermDays / 30;
+    this.maxTermMonths = product.maxTermDays / 30;
+    this.interestRate = product.interestRate;
+    this.interestType = product.interestType;
+    this.processingFeePercent = product.processingFeePercent || 0;
+    this.platformFee = 50; // Default as it's not stored
+    this.latePaymentPenaltyPercent = product.latePaymentPenaltyPercent;
+    this.gracePeriodDays = product.gracePeriodDays;
+    this.paymentFrequency = product.paymentFrequency || 'weekly';
+    this.isActive = product.isActive;
+    this.calculatePreview();
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.toastService.info('Editing product: ' + product.name);
+  }
+
+  toggleProductStatus(product: any): void {
+    const tenantId = String(this.authService.getTenantId() || '');
+    const updatedData = {
+      ...product,
+      isActive: !product.isActive
+    };
+
+    this.loanService.updateLoanProduct(tenantId, product.id, updatedData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastService.success(
+            updatedData.isActive 
+              ? 'Product activated successfully! ✅' 
+              : 'Product deactivated successfully! ⏸️'
+          );
+          this.loadProducts();
+        } else {
+          this.toastService.error(response.message || 'Failed to update product status');
+        }
+      },
+      error: (error) => {
+        console.error('Error updating product status:', error);
+        this.toastService.error('Failed to update product status');
+      }
+    });
+  }
+
+  deleteProduct(product: any): void {
+    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+      return;
+    }
+
+    const tenantId = String(this.authService.getTenantId() || '');
+
+    this.loanService.deleteLoanProduct(tenantId, product.id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastService.success('Product deleted successfully! 🗑️');
+          this.loadProducts();
+        } else {
+          this.toastService.error(response.message || 'Failed to delete product');
+        }
+      },
+      error: (error) => {
+        console.error('Error deleting product:', error);
+        this.toastService.error('Failed to delete product');
+      }
+    });
+  }
+
+  resetForm(): void {
+    this.editingProductId = null;
+    this.productCode = '';
+    this.productName = '';
+    this.description = '';
+    this.minAmount = 1000;
+    this.maxAmount = 100000;
+    this.minTermMonths = 1;
+    this.maxTermMonths = 6;
+    this.interestRate = 5;
+    this.interestType = 'flat';
+    this.processingFeePercent = 0;
+    this.platformFee = 50;
+    this.latePaymentPenaltyPercent = 1;
+    this.gracePeriodDays = 1;
+    this.isActive = true;
+    this.paymentFrequency = 'weekly';
+    this.previewLoanAmount = 50000;
+    this.previewTermMonths = 3;
+    this.previewDaysOverdue = 5;
+    this.calculatePreview();
+  }
+
+  // Make Math available in template
+  Math = Math;
+
+  cancelEdit(): void {
+    this.resetForm();
+    this.toastService.info('Edit cancelled');
+  }
+
+  formatCurrency(amount: number): string {
+    return this.calculatorService.formatCurrency(amount);
+  }
+}

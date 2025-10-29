@@ -80,6 +80,30 @@ export const routes: Routes = [
       },
       // Interest & Configuration
       {
+        path: 'config/quick-product',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/quick-product.component').then(m => m.QuickProductComponent)
+      },
+      {
+        path: 'config/loan-products',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/loan-products.component').then(m => m.LoanProductsComponent)
+      },
+      {
+        path: 'config/payment-schedules',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/payment-schedules.component').then(m => m.PaymentSchedulesComponent)
+      },
+      {
+        path: 'config/fees',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/fee-structures.component').then(m => m.FeeStructuresComponent)
+      },
+      {
+        path: 'config/approval-rules',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/approval-rules.component').then(m => m.ApprovalRulesComponent)
+      },
+      {
+        path: 'config/modifications',
+        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/loan-modifications.component').then(m => m.LoanModificationsComponent)
+      },
+      {
         path: 'interest/rates',
         loadComponent: () => import('./features/platforms/money-loan/admin/configuration/interest-rates.component').then(m => m.InterestRatesComponent)
       },
@@ -93,7 +117,11 @@ export const routes: Routes = [
       },
       {
         path: 'interest/calculator',
-        loadComponent: () => import('./features/platforms/money-loan/admin/loan-overview.component').then(m => m.LoanOverviewComponent)
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-calculator.component').then(m => m.LoanCalculatorComponent)
+      },
+      {
+        path: 'loans/calculator',
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-calculator.component').then(m => m.LoanCalculatorComponent)
       },
       // Customers
       {

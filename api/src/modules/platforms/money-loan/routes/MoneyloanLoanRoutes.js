@@ -9,6 +9,16 @@ const moneyloanLoanController = require('../controllers/MoneyloanLoanController'
 const router = express.Router({ mergeParams: true });
 
 // ═══════════════════════════════════════════════════════════════
+// LOAN PRODUCTS ROUTES
+// Base: /api/tenants/:tenantId/platforms/moneyloan/loans/products
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/products', moneyloanLoanController.getLoanProducts);
+router.post('/products', moneyloanLoanController.createLoanProduct);
+router.put('/products/:productId', moneyloanLoanController.updateLoanProduct);
+router.delete('/products/:productId', moneyloanLoanController.deleteLoanProduct);
+
+// ═══════════════════════════════════════════════════════════════
 // LOAN APPLICATION ROUTES
 // Base: /api/tenants/:tenantId/platforms/moneyloan/loans/applications
 // ═══════════════════════════════════════════════════════════════

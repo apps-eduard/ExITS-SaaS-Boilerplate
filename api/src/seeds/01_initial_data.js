@@ -408,8 +408,8 @@ exports.seed = async function(knex) {
         email_verified: true
       }).returning('*');
       
-      // Create customer record
-      await knex('customers').insert({
+      // Create customer record (only shared personal info)
+      const [customer] = await knex('customers').insert({
         tenant_id: acmeTenant.id,
         user_id: customerUser.id,
         customer_code: testCustomer.customerCode,
@@ -430,17 +430,24 @@ exports.seed = async function(knex) {
         monthly_income: testCustomer.monthlyIncome,
         source_of_income: 'Salary',
         years_employed: testCustomer.yearsEmployed,
-        credit_score: testCustomer.creditScore,
-        risk_level: testCustomer.riskLevel,
-        kyc_status: 'verified',
-        kyc_verified_at: new Date(),
         status: 'active',
         emergency_contact_name: 'Emergency Contact',
         emergency_contact_relationship: 'Family',
         emergency_contact_phone: testCustomer.phone.replace('9', '8')
+      }).returning('*');
+
+      // Create Money Loan profile with business-specific data
+      await knex('money_loan_customer_profiles').insert({
+        customer_id: customer.id,
+        tenant_id: acmeTenant.id,
+        credit_score: testCustomer.creditScore,
+        risk_level: testCustomer.riskLevel,
+        kyc_status: 'verified',
+        kyc_verified_at: new Date(),
+        status: 'active'
       });
     }
-    console.log(`✅ Created ${testCustomersData.length} test customers`);
+    console.log(`✅ Created ${testCustomersData.length} test customers with Money Loan profiles`);
   }
   
   // Create employees and additional customers for both tenants
@@ -532,7 +539,8 @@ exports.seed = async function(knex) {
         role_id: customerRoleForTenant.id
       });
       
-      await knex('customers').insert({
+      // Create customer record (only shared personal info)
+      const [customer] = await knex('customers').insert({
         tenant_id: tenant.id,
         user_id: customerUser.id, // With login access
         customer_code: customerCode,
@@ -549,23 +557,19 @@ exports.seed = async function(knex) {
         employer_name: i === 1 ? 'ABC Company' : 'XYZ Corporation',
         occupation: i === 1 ? 'Software Engineer' : 'Sales Manager',
         monthly_income: 50000 + (i * 10000),
-        credit_score: 700 + (i * 50),
-        risk_level: 'low',
         status: 'active',
-        kyc_status: 'verified',
         preferred_language: 'en',
         preferred_contact_method: 'sms',
         platform_tags: JSON.stringify(['moneyloan'])
-      });
+      }).returning('*');
       
-      // Create Money Loan customer profile
-      const customerRecord = await knex('customers')
-        .where({ tenant_id: tenant.id, customer_code: customerCode })
-        .first();
-      
+      // Create Money Loan customer profile with business-specific data
       await knex('money_loan_customer_profiles').insert({
-        customer_id: customerRecord.id,
+        customer_id: customer.id,
         tenant_id: tenant.id,
+        credit_score: 700 + (i * 50),
+        risk_level: 'low',
+        kyc_status: 'verified',
         max_loan_amount: 100000,
         current_loan_limit: 100000,
         outstanding_balance: 0,

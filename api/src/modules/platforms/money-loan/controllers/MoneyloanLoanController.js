@@ -6,8 +6,193 @@
 const moneyloanLoanService = require('../services/MoneyloanLoanService');
 const moneyloanValidators = require('../utils/MoneyloanValidators');
 const logger = require('../../../../utils/logger');
+const knex = require('../../../../config/knex');
 
 class MoneyloanLoanController {
+  // ═══════════════════════════════════════════════════════════════
+  // LOAN PRODUCTS ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * GET: Fetch all active loan products for a tenant
+   * Route: GET /api/tenants/:tenantId/platforms/moneyloan/loans/products
+   */
+  async getLoanProducts(req, res) {
+    try {
+      const { tenantId } = req.params;
+
+      const products = await knex('money_loan_products')
+        .where({ tenantId: tenantId })
+        .select(
+          'id',
+          'productCode',
+          'name',
+          'description',
+          'minAmount',
+          'maxAmount',
+          'interestRate',
+          'interestType',
+          'minTermDays',
+          'maxTermDays',
+          'processingFeePercent',
+          'latePaymentPenaltyPercent',
+          'gracePeriodDays',
+          'isActive',
+          'requiredDocuments',
+          'eligibilityCriteria'
+        )
+        .orderBy('name', 'asc');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Loan products fetched successfully',
+        data: products,
+        count: products.length,
+      });
+    } catch (error) {
+      logger.error('❌ Error fetching loan products:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch loan products',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * POST: Create new loan product
+   * Route: POST /api/tenants/:tenantId/platforms/moneyloan/loans/products
+   */
+  async createLoanProduct(req, res) {
+    try {
+      const { tenantId } = req.params;
+      const productData = req.body;
+
+      const [result] = await knex('money_loan_products').insert({
+        tenantId: tenantId,
+        productCode: productData.productCode,
+        name: productData.name,
+        description: productData.description || null,
+        minAmount: productData.minAmount,
+        maxAmount: productData.maxAmount,
+        interestRate: productData.interestRate,
+        interestType: productData.interestType || 'reducing',
+        minTermDays: productData.minTermDays,
+        maxTermDays: productData.maxTermDays,
+        processingFeePercent: productData.processingFeePercent || 0,
+        latePaymentPenaltyPercent: productData.latePaymentPenaltyPercent || 0,
+        gracePeriodDays: productData.gracePeriodDays || 0,
+        isActive: productData.isActive !== undefined ? productData.isActive : true,
+        requiredDocuments: productData.requiredDocuments ? JSON.stringify(productData.requiredDocuments) : null,
+        eligibilityCriteria: productData.eligibilityCriteria ? JSON.stringify(productData.eligibilityCriteria) : null,
+      }, ['id']);
+
+      const created = await knex('money_loan_products').where({ id: result.id }).first();
+
+      logger.info(`✅ Loan product created: ${created.name}`);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Loan product created successfully',
+        data: created,
+      });
+    } catch (error) {
+      logger.error('❌ Error creating loan product:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to create loan product',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * PUT: Update loan product
+   * Route: PUT /api/tenants/:tenantId/platforms/moneyloan/loans/products/:productId
+   */
+  async updateLoanProduct(req, res) {
+    try {
+      const { tenantId, productId } = req.params;
+      const productData = req.body;
+
+      const updates = {
+        name: productData.name,
+        description: productData.description,
+        minAmount: productData.minAmount,
+        maxAmount: productData.maxAmount,
+        interestRate: productData.interestRate,
+        interestType: productData.interestType,
+        minTermDays: productData.minTermDays,
+        maxTermDays: productData.maxTermDays,
+        processingFeePercent: productData.processingFeePercent,
+        latePaymentPenaltyPercent: productData.latePaymentPenaltyPercent,
+        gracePeriodDays: productData.gracePeriodDays,
+        isActive: productData.isActive,
+        requiredDocuments: productData.requiredDocuments ? JSON.stringify(productData.requiredDocuments) : undefined,
+        eligibilityCriteria: productData.eligibilityCriteria ? JSON.stringify(productData.eligibilityCriteria) : undefined,
+      };
+
+      // Remove undefined fields
+      Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+
+      await knex('money_loan_products')
+        .where({ tenantId: tenantId, id: productId })
+        .update(updates);
+
+      const updated = await knex('money_loan_products').where({ id: productId }).first();
+
+      logger.info(`✅ Loan product updated: ${updated.name}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Loan product updated successfully',
+        data: updated,
+      });
+    } catch (error) {
+      logger.error('❌ Error updating loan product:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to update loan product',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * DELETE: Delete loan product
+   * Route: DELETE /api/tenants/:tenantId/platforms/moneyloan/loans/products/:productId
+   */
+  async deleteLoanProduct(req, res) {
+    try {
+      const { tenantId, productId } = req.params;
+
+      const deleted = await knex('money_loan_products')
+        .where({ tenantId: tenantId, id: productId })
+        .delete();
+
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'Loan product not found',
+        });
+      }
+
+      logger.info(`✅ Loan product deleted: ${productId}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Loan product deleted successfully',
+      });
+    } catch (error) {
+      logger.error('❌ Error deleting loan product:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete loan product',
+        error: error.message,
+      });
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // LOAN APPLICATION ENDPOINTS
   // ═══════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 
@@ -10,7 +10,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Sidebar -->
       <aside [class.hidden]="!sidebarOpen()"
-             class="fixed md:relative inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out"
+             class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out overflow-y-auto"
              [class.-translate-x-full]="!sidebarOpen()"
              [class.translate-x-0]="sidebarOpen()">
 
@@ -129,14 +129,35 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 
           <!-- Right: User Info -->
           <div class="flex items-center gap-4">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 relative user-menu-container">
               <div class="text-right hidden sm:block">
                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ customerName() }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ customerEmail() }}</p>
               </div>
-              <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+              <button
+                (click)="toggleUserMenu()"
+                class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center hover:shadow-lg hover:shadow-blue-500/50 transition-all cursor-pointer">
                 <span class="text-white font-semibold">{{ getInitials() }}</span>
-              </div>
+              </button>
+              
+              <!-- User Menu Dropdown -->
+              @if (showUserMenu()) {
+                <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50"
+                     style="top: 100%">
+                  <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ customerName() }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ customerEmail() }}</p>
+                  </div>
+                  <button
+                    (click)="logout()"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Logout
+                  </button>
+                </div>
+              }
             </div>
           </div>
         </header>
@@ -155,19 +176,36 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
     </div>
   `
 })
-export class CustomerLayoutComponent {
+export class CustomerLayoutComponent implements OnInit {
   private router = Router;
 
-  sidebarOpen = signal(false);
+  sidebarOpen = signal(true); // Default to true for desktop
+  showUserMenu = signal(false);
   customerName = signal('Guest');
   customerEmail = signal('');
 
   constructor(private routerService: Router) {
+  }
+
+  ngOnInit() {
     this.loadCustomerInfo();
+    this.initializeSidebar();
+  }
+
+  initializeSidebar() {
+    // Show sidebar by default on desktop (>= 768px), hide on mobile
+    const isDesktop = window.innerWidth >= 768;
+    this.sidebarOpen.set(isDesktop);
+
+    // Listen to window resize
+    window.addEventListener('resize', () => {
+      const isDesktop = window.innerWidth >= 768;
+      this.sidebarOpen.set(isDesktop);
+    });
   }
 
   loadCustomerInfo() {
-    const customerData = localStorage.getItem('customer');
+    const customerData = localStorage.getItem('customerData');
     if (customerData) {
       try {
         const customer = JSON.parse(customerData);
@@ -192,11 +230,25 @@ export class CustomerLayoutComponent {
     this.sidebarOpen.update(v => !v);
   }
 
+  toggleUserMenu() {
+    this.showUserMenu.update(v => !v);
+  }
+
   logout() {
-    if (confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('customer');
-      localStorage.removeItem('customerToken');
-      this.routerService.navigate(['/customer/login']);
+    localStorage.removeItem('customerData');
+    localStorage.removeItem('customerToken');
+    localStorage.removeItem('customerRefreshToken');
+    this.routerService.navigate(['/customer/login']);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const userMenuContainer = target.closest('.user-menu-container');
+    
+    // Close user menu if clicking outside
+    if (!userMenuContainer && this.showUserMenu()) {
+      this.showUserMenu.set(false);
     }
   }
 }

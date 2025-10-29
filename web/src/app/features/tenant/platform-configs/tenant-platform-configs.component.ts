@@ -130,60 +130,9 @@ export class TenantPlatformConfigsComponent implements OnInit {
 
   loadPlatformConfigs() {
     // TODO: Replace with actual API call
+    // Note: Money Loan configuration has been moved to the platform itself
+    // Users can access all Money Loan settings from the Settings menu within the Money Loan platform
     this.platforms.set([
-      {
-        id: 'money-loan',
-        name: 'Money Loan',
-        icon: '💰',
-        description: 'Loan management and lending operations',
-        enabled: true,
-        color: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-        configSections: [
-          {
-            id: 'interest-rates',
-            name: 'Interest Rates',
-            description: 'Configure loan product interest rates',
-            path: '/tenant/modules/money-loan/config/interest-rates',
-            icon: 'percent'
-          },
-          {
-            id: 'payment-schedules',
-            name: 'Payment Schedules',
-            description: 'Set up payment frequencies and penalties',
-            path: '/tenant/modules/money-loan/config/payment-schedules',
-            icon: 'calendar'
-          },
-          {
-            id: 'fees',
-            name: 'Fee Structures',
-            description: 'Manage loan fees and charges',
-            path: '/tenant/modules/money-loan/config/fees',
-            icon: 'dollar'
-          },
-          {
-            id: 'approval-rules',
-            name: 'Approval Rules',
-            description: 'Credit scoring and approval criteria',
-            path: '/tenant/modules/money-loan/config/approval-rules',
-            icon: 'check'
-          },
-          {
-            id: 'modifications',
-            name: 'Loan Modifications',
-            description: 'Restructuring and modification policies',
-            path: '/tenant/modules/money-loan/config/modifications',
-            icon: 'edit'
-          },
-          {
-            id: 'products',
-            name: 'Loan Products',
-            description: 'Manage available loan products',
-            path: '/tenant/modules/money-loan/config',
-            icon: 'package',
-            badge: '3'
-          }
-        ]
-      },
       {
         id: 'bnpl',
         name: 'Buy Now, Pay Later',

@@ -29,9 +29,13 @@ class CustomerAuthController {
           'customers.*',
           'users.email as user_email',
           'users.password_hash',
-          'users.id as user_id'
+          'users.id as user_id',
+          'money_loan_customer_profiles.kyc_status',
+          'money_loan_customer_profiles.credit_score',
+          'money_loan_customer_profiles.risk_level'
         )
         .leftJoin('users', 'customers.user_id', 'users.id')
+        .leftJoin('money_loan_customer_profiles', 'customers.id', 'money_loan_customer_profiles.customer_id')
         .where(function() {
           this.where('customers.email', identifier)
             .orWhere('customers.phone', identifier);
@@ -47,27 +51,15 @@ class CustomerAuthController {
         });
       }
 
-      // Check if customer has Money Loan profile
-      const moneyLoanProfile = await knex('money_loan_customer_profiles')
-        .where('customer_id', customer.id)
-        .first();
-
-      if (!moneyLoanProfile) {
-        return res.status(403).json({
-          success: false,
-          message: 'Your Money Loan account is not activated. Please contact support.'
-        });
-      }
-
-      // Verify password
-      if (!customer.password_hash) {
+      // Verify password exists and is correct
+      if (!customer.passwordHash) {
         return res.status(401).json({
           success: false,
-          message: 'Account setup incomplete. Please contact your loan officer.'
+          message: 'Invalid credentials'
         });
       }
 
-      const isValidPassword = await bcrypt.compare(password, customer.password_hash);
+      const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
@@ -98,21 +90,21 @@ class CustomerAuthController {
         { expiresIn: '90d' }
       );
 
-      // Transform to camelCase for frontend
+      // Transform to camelCase for frontend (Knex already converts, but we need to select specific fields)
       const customerData = {
         id: customer.id,
         customerId: customer.id,
-        userId: customer.user_id,
-        tenantId: customer.tenant_id,
-        customerCode: customer.customer_code,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        middleName: customer.middle_name,
+        userId: customer.userId || customer.user_id,
+        tenantId: customer.tenantId || customer.tenant_id,
+        customerCode: customer.customerCode || customer.customer_code,
+        firstName: customer.firstName || customer.first_name,
+        lastName: customer.lastName || customer.last_name,
+        middleName: customer.middleName || customer.middle_name,
         email: customer.email,
         phone: customer.phone,
-        kycStatus: customer.kyc_status,
-        creditScore: customer.credit_score,
-        riskLevel: customer.risk_level
+        kycStatus: customer.kycStatus || customer.kyc_status,
+        creditScore: customer.creditScore || customer.credit_score,
+        riskLevel: customer.riskLevel || customer.risk_level
       };
 
       return res.json({
@@ -144,7 +136,14 @@ class CustomerAuthController {
       const customerId = req.customer.customerId; // From auth middleware
 
       const customer = await knex('customers')
-        .where('id', customerId)
+        .select(
+          'customers.*',
+          'money_loan_customer_profiles.kyc_status',
+          'money_loan_customer_profiles.credit_score',
+          'money_loan_customer_profiles.risk_level'
+        )
+        .leftJoin('money_loan_customer_profiles', 'customers.id', 'money_loan_customer_profiles.customer_id')
+        .where('customers.id', customerId)
         .first();
 
       if (!customer) {

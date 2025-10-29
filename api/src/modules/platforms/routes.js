@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../../../middleware/auth');
-const rbacMiddleware = require('../../../middleware/rbac');
-const knex = require('../../../config/knex');
+const authMiddleware = require('../../middleware/auth');
+const rbacMiddleware = require('../../middleware/rbac');
+const knex = require('../../config/knex');
 
 /**
  * @route GET /api/money-loan/loans/overview

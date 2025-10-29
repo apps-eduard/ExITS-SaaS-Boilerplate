@@ -21,6 +21,33 @@ exports.up = function(knex) {
       table.integer('tenant_id').unsigned().notNullable()
         .references('id').inTable('tenants').onDelete('CASCADE');
       
+      // Financial/Credit Information (Money Loan specific)
+      table.integer('credit_score').defaultTo(650)
+        .comment('Credit score from 300-850');
+      table.enum('risk_level', ['low', 'medium', 'high']).defaultTo('medium');
+      table.decimal('total_debt', 15, 2).defaultTo(0);
+      table.boolean('has_existing_loans').defaultTo(false);
+      
+      // KYC (Know Your Customer) - Platform specific
+      table.enum('kyc_status', ['pending', 'verified', 'rejected', 'expired']).defaultTo('pending');
+      table.timestamp('kyc_verified_at');
+      table.integer('kyc_verified_by').unsigned()
+        .references('id').inTable('users').onDelete('SET NULL');
+      table.text('kyc_notes');
+      table.date('kyc_expiry_date');
+      
+      // Reference Information - Money Loan specific
+      table.string('reference_name', 200);
+      table.string('reference_phone', 50);
+      table.string('reference_relationship', 50);
+      table.string('reference_address', 500);
+      
+      // Additional Reference (2nd reference)
+      table.string('reference2_name', 200);
+      table.string('reference2_phone', 50);
+      table.string('reference2_relationship', 50);
+      table.string('reference2_address', 500);
+      
       // Money Loan Preferences
       table.integer('preferred_loan_term').comment('Preferred loan term in months');
       table.decimal('max_loan_amount', 15, 2).comment('Maximum approved loan amount');
@@ -62,6 +89,8 @@ exports.up = function(knex) {
       table.unique(['customer_id', 'tenant_id'], 'unique_moneyloan_customer_tenant');
       table.index('tenant_id');
       table.index('status');
+      table.index('kyc_status');
+      table.index('credit_score');
     });
 };
 

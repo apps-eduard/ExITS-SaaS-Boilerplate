@@ -19,29 +19,29 @@ async function resetPasswords() {
     const tenantAdmin1Hash = await bcrypt.hash('REPLACE_TENANT1_PASSWORD', 10);
     const tenantAdmin2Hash = await bcrypt.hash('REPLACE_TENANT2_PASSWORD', 10);
     
-    // Employee passwords (Employee@123)
-    const employeeHash = await bcrypt.hash('Employee@123', 10);
+    // Employee passwords (Admin@123)
+    const employeeHash = await bcrypt.hash('Admin@123', 10);
     
-    // Customer passwords (Customer@123) - for users table customers
-    const customerHash = await bcrypt.hash('Customer@123', 10);
+    // Customer passwords (Admin@123) - for users table customers
+    const customerHash = await bcrypt.hash('Admin@123', 10);
     
     console.log('Updating passwords in database...');
     
     // Update admin accounts
-    await knex('users').where('email', 'admin@exitsaas.com').update({ password_hash: systemAdminHash });
-    await knex('users').where('email', 'admin-1@example.com').update({ password_hash: tenantAdmin1Hash });
-    await knex('users').where('email', 'admin-2@example.com').update({ password_hash: tenantAdmin2Hash });
+    await knex('users').where('email', 'admin@exitsaas.com').update({ passwordHash: systemAdminHash });
+    await knex('users').where('email', 'admin-1@example.com').update({ passwordHash: tenantAdmin1Hash });
+    await knex('users').where('email', 'admin-2@example.com').update({ passwordHash: tenantAdmin2Hash });
     
     // Update employee accounts (if they exist)
     const employee1 = await knex('users').where('email', 'employee1@tenant1.com').first();
     if (employee1) {
-      await knex('users').where('email', 'employee1@tenant1.com').update({ password_hash: employeeHash });
+      await knex('users').where('email', 'employee1@tenant1.com').update({ passwordHash: employeeHash });
       console.log('✓ Updated employee1@tenant1.com password');
     }
     
     const employee2 = await knex('users').where('email', 'employee2@tenant1.com').first();
     if (employee2) {
-      await knex('users').where('email', 'employee2@tenant1.com').update({ password_hash: employeeHash });
+      await knex('users').where('email', 'employee2@tenant1.com').update({ passwordHash: employeeHash });
       console.log('✓ Updated employee2@tenant1.com password');
     }
     
@@ -50,14 +50,16 @@ async function resetPasswords() {
       'juan.delacruz@test.com',
       'maria.santos@test.com', 
       'pedro.gonzales@test.com',
-      'customer1@test.com',
-      'customer2@test.com'
+      'customer1@acme.com',
+      'customer2@acme.com',
+      'customer1@techstart.com',
+      'customer2@techstart.com'
     ];
     
     for (const email of customerEmails) {
       const customer = await knex('users').where('email', email).first();
       if (customer) {
-        await knex('users').where('email', email).update({ password_hash: customerHash });
+        await knex('users').where('email', email).update({ passwordHash: customerHash });
         console.log(`✓ Updated ${email} password`);
       }
     }

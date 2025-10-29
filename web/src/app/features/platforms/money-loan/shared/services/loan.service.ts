@@ -10,6 +10,24 @@ export class LoanService {
   private http = inject(HttpClient);
   private apiUrl = '/api/money-loan';
 
+  // ==================== LOAN PRODUCTS ====================
+
+  getLoanProducts(tenantId: string): Observable<any> {
+    return this.http.get(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products`);
+  }
+
+  createLoanProduct(tenantId: string, productData: any): Observable<any> {
+    return this.http.post(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products`, productData);
+  }
+
+  updateLoanProduct(tenantId: string, productId: number, productData: any): Observable<any> {
+    return this.http.put(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products/${productId}`, productData);
+  }
+
+  deleteLoanProduct(tenantId: string, productId: number): Observable<any> {
+    return this.http.delete(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products/${productId}`);
+  }
+
   // ==================== LOANS ====================
 
   createLoan(loanData: any): Observable<{ success: boolean; message: string; data: Loan }> {

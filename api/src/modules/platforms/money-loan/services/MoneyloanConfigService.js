@@ -25,26 +25,26 @@ class MoneyloanConfigService {
       id: data.id,
       tenant_id: data.tenantId,
       loan_product_id: data.loanProductId,
-      rate_type: data.interestType,
+      rate_type: data.interestType || data.rateType,
       base_rate: data.baseRate,
       min_rate: data.minRate,
       max_rate: data.maxRate,
       market_index: data.marketIndex,
       spread: data.spread,
-      rate_brackets: data.rateBrackets ? JSON.parse(data.rateBrackets) : null,
-      credit_score_rates: data.creditScoreRates ? JSON.parse(data.creditScoreRates) : null,
-      risk_based_rates: data.riskBasedRates ? JSON.parse(data.riskBasedRates) : null,
+      rate_brackets: data.rateBrackets ? (typeof data.rateBrackets === 'string' ? JSON.parse(data.rateBrackets) : data.rateBrackets) : null,
+      credit_score_rates: data.creditScoreRates ? (typeof data.creditScoreRates === 'string' ? JSON.parse(data.creditScoreRates) : data.creditScoreRates) : null,
+      risk_based_rates: data.riskBasedRates ? (typeof data.riskBasedRates === 'string' ? JSON.parse(data.riskBasedRates) : data.riskBasedRates) : null,
       calculation_method: data.calculationMethod,
       recalculation_frequency: data.recalculationFrequency,
       interest_grace_period_days: data.interestGracePeriodDays,
       is_default: data.isDefault,
       is_active: data.isActive,
-      metadata: data.metadata ? JSON.parse(data.metadata) : null,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      // Add any fields frontend might be expecting
-      rate_adjustment_frequency: data.recalculationFrequency,
-      effective_date: data.created_at
+      metadata: data.metadata ? (typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata) : null,
+      created_at: data.createdAt || data.created_at,
+      updated_at: data.updatedAt || data.updated_at,
+      // Frontend expects these specific field names
+      rate_adjustment_frequency: data.recalculationFrequency || data.rateAdjustmentFrequency,
+      effective_date: data.effectiveDate || data.effective_date || data.createdAt || data.created_at
     };
   }
 
@@ -91,11 +91,12 @@ class MoneyloanConfigService {
         creditScoreRates: (configData.creditScoreRates || configData.credit_score_rates) ? JSON.stringify(configData.creditScoreRates || configData.credit_score_rates) : null,
         riskBasedRates: (configData.riskBasedRates || configData.risk_based_rates) ? JSON.stringify(configData.riskBasedRates || configData.risk_based_rates) : null,
         calculationMethod: configData.calculationMethod || configData.calculation_method || 'daily',
-        recalculationFrequency: configData.recalculationFrequency || configData.recalculation_frequency || 'never',
+        recalculationFrequency: configData.recalculationFrequency || configData.recalculation_frequency || configData.rateAdjustmentFrequency || configData.rate_adjustment_frequency || 'never',
         interestGracePeriodDays: configData.interestGracePeriodDays || configData.interest_grace_period_days || 0,
         isDefault: configData.isDefault || configData.is_default || false,
         isActive: configData.isActive !== undefined ? configData.isActive : (configData.is_active !== undefined ? configData.is_active : true),
-        metadata: (configData.metadata) ? JSON.stringify(configData.metadata) : null
+        metadata: (configData.metadata) ? JSON.stringify(configData.metadata) : null,
+        effectiveDate: configData.effectiveDate || configData.effective_date || null
       }, ['id']);
 
       const id = result.id;
@@ -125,11 +126,12 @@ class MoneyloanConfigService {
         creditScoreRates: (updateData.creditScoreRates || updateData.credit_score_rates) ? JSON.stringify(updateData.creditScoreRates || updateData.credit_score_rates) : undefined,
         riskBasedRates: (updateData.riskBasedRates || updateData.risk_based_rates) ? JSON.stringify(updateData.riskBasedRates || updateData.risk_based_rates) : undefined,
         calculationMethod: updateData.calculationMethod || updateData.calculation_method,
-        recalculationFrequency: updateData.recalculationFrequency || updateData.recalculation_frequency,
+        recalculationFrequency: updateData.recalculationFrequency || updateData.recalculation_frequency || updateData.rateAdjustmentFrequency || updateData.rate_adjustment_frequency,
         interestGracePeriodDays: updateData.interestGracePeriodDays || updateData.interest_grace_period_days,
         isDefault: updateData.isDefault !== undefined ? updateData.isDefault : updateData.is_default,
         isActive: updateData.isActive !== undefined ? updateData.isActive : updateData.is_active,
-        metadata: updateData.metadata ? JSON.stringify(updateData.metadata) : undefined
+        metadata: updateData.metadata ? JSON.stringify(updateData.metadata) : undefined,
+        effectiveDate: updateData.effectiveDate || updateData.effective_date
       };
 
       // Remove undefined fields

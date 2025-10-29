@@ -162,47 +162,40 @@ export class TenantMoneyLoanConfigComponent implements OnInit {
   loadConfigSections() {
     this.configSections.set([
       {
-        id: 'interest-rates',
-        name: 'Interest Rates',
-        description: 'Configure loan product interest rates and pricing',
-        path: '/tenant/modules/money-loan/config/interest-rates',
-        icon: 'percent'
+        id: 'products',
+        name: 'Loan Products',
+        description: 'Manage loan types, interest rates, and terms',
+        path: '/platforms/money-loan/dashboard/config/loan-products',
+        icon: 'package',
+        badge: '3'
       },
       {
         id: 'payment-schedules',
         name: 'Payment Schedules',
         description: 'Set up payment frequencies and penalty structures',
-        path: '/tenant/modules/money-loan/config/payment-schedules',
+        path: '/platforms/money-loan/dashboard/config/payment-schedules',
         icon: 'calendar'
       },
       {
         id: 'fees',
         name: 'Fee Structures',
         description: 'Manage loan fees, processing charges, and other costs',
-        path: '/tenant/modules/money-loan/config/fees',
+        path: '/platforms/money-loan/dashboard/config/fees',
         icon: 'dollar'
       },
       {
         id: 'approval-rules',
         name: 'Approval Rules',
         description: 'Configure credit scoring and approval criteria',
-        path: '/tenant/modules/money-loan/config/approval-rules',
+        path: '/platforms/money-loan/dashboard/config/approval-rules',
         icon: 'check'
       },
       {
         id: 'modifications',
         name: 'Loan Modifications',
         description: 'Set up restructuring and modification policies',
-        path: '/tenant/modules/money-loan/config/modifications',
+        path: '/platforms/money-loan/dashboard/config/modifications',
         icon: 'edit'
-      },
-      {
-        id: 'products',
-        name: 'Loan Products',
-        description: 'Manage available loan products and offerings',
-        path: '/tenant/modules/money-loan/config',
-        icon: 'package',
-        badge: '3'
       }
     ]);
   }

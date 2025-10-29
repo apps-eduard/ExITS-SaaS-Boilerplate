@@ -10,12 +10,6 @@ import { LoanService } from '../shared/services/loan.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="p-4 md:p-6 space-y-6">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 class="text-2xl font-bold mb-2">Apply for a Loan</h1>
-        <p class="text-blue-100">Complete the form below to apply for a loan. Get instant approval!</p>
-      </div>
-
       <form (ngSubmit)="submitApplication()" class="space-y-6">
         <!-- Loan Details -->
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -26,7 +20,8 @@ import { LoanService } from '../shared/services/loan.service';
             Loan Information
           </h2>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Row 1 -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Loan Amount <span class="text-red-500">*</span>
@@ -42,6 +37,7 @@ import { LoanService } from '../shared/services/loan.service';
                   min="5000"
                   max="500000"
                   step="1000"
+                  autofocus
                   class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
               </div>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Min: ₱5,000 | Max: ₱500,000</p>
@@ -49,25 +45,60 @@ import { LoanService } from '../shared/services/loan.service';
 
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Loan Term <span class="text-red-500">*</span>
+                Payment Frequency <span class="text-red-500">*</span>
               </label>
               <select
-                [(ngModel)]="formData.termMonths"
+                [(ngModel)]="formData.paymentFrequency"
                 (ngModelChange)="calculateLoan()"
-                name="termMonths"
+                name="paymentFrequency"
                 required
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select Term</option>
-                <option value="6">6 Months</option>
-                <option value="12">12 Months (1 Year)</option>
-                <option value="18">18 Months</option>
-                <option value="24">24 Months (2 Years)</option>
-                <option value="36">36 Months (3 Years)</option>
-                <option value="48">48 Months (4 Years)</option>
-                <option value="60">60 Months (5 Years)</option>
+                <option value="">Select Payment Frequency</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
               </select>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Loan Term <span class="text-red-500">*</span>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  [(ngModel)]="formData.termValue"
+                  (ngModelChange)="calculateLoan()"
+                  name="termValue"
+                  required
+                  min="1"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Number">
+                <select
+                  [(ngModel)]="formData.termUnit"
+                  (ngModelChange)="calculateLoan()"
+                  name="termUnit"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Unit</option>
+                  <option value="days">Days</option>
+                  <option value="weeks">Weeks</option>
+                  <option value="months">Months</option>
+                  <option value="quarters">Quarters</option>
+                  <option value="years">Years</option>
+                </select>
+              </div>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                @if (formData.termValue && formData.termUnit) {
+                  <span>{{ formData.termValue }} {{ formData.termUnit }} ({{ getTermInMonths() }} months)</span>
+                } @else {
+                  <span>e.g., 1 month, 2 weeks, 6 months</span>
+                }
+              </p>
+            </div>
+
+            <!-- Row 2 -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Interest Type <span class="text-red-500">*</span>
@@ -84,7 +115,7 @@ import { LoanService } from '../shared/services/loan.service';
               </select>
             </div>
 
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Purpose of Loan <span class="text-red-500">*</span>
               </label>
@@ -130,14 +161,16 @@ import { LoanService } from '../shared/services/loan.service';
                 <p class="text-xl font-bold text-blue-600 dark:text-blue-400">₱{{ formatCurrency(loanPreview()!.total) }}</p>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
-                <p class="text-xs text-gray-600 dark:text-gray-400">Monthly Payment</p>
-                <p class="text-xl font-bold text-green-600 dark:text-green-400">₱{{ formatCurrency(loanPreview()!.monthly) }}</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">{{ getPaymentLabel() }}</p>
+                <p class="text-xl font-bold text-green-600 dark:text-green-400">₱{{ formatCurrency(loanPreview()!.paymentAmount) }}</p>
               </div>
             </div>
 
             <div class="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded">
               <p class="text-sm text-blue-900 dark:text-blue-300">
-                <strong>Interest Rate:</strong> {{ formData.interestType === 'flat' ? '12%' : '18%' }} per annum ({{ formData.interestType }})
+                <strong>Interest Rate:</strong> {{ formData.interestType === 'flat' ? '12%' : '18%' }} per annum ({{ formData.interestType }}) • 
+                <strong>Term:</strong> {{ loanPreview()!.termDisplay }} • 
+                <strong>Total Payments:</strong> {{ loanPreview()!.totalPeriods }}
               </p>
             </div>
           </div>
@@ -279,10 +312,12 @@ export class ApplyLoanComponent implements OnInit {
 
   formData: any = {
     principalAmount: 50000,
-    termMonths: 12,
+    paymentFrequency: 'monthly',
+    termValue: 1,
+    termUnit: 'months',
     interestType: 'reducing',
-    purpose: '',
-    employmentStatus: '',
+    purpose: 'personal',
+    employmentStatus: 'employed',
     monthlyIncome: null,
     employerName: '',
     yearsEmployed: 0,
@@ -295,36 +330,74 @@ export class ApplyLoanComponent implements OnInit {
   }
 
   calculateLoan() {
-    if (!this.formData.principalAmount || !this.formData.termMonths || !this.formData.interestType) {
+    if (!this.formData.principalAmount || !this.formData.termValue || !this.formData.termUnit || 
+        !this.formData.interestType || !this.formData.paymentFrequency) {
       this.loanPreview.set(null);
       return;
     }
 
     const principal = this.formData.principalAmount;
-    const months = this.formData.termMonths;
+    
+    // Convert term to months for calculation
+    let termInMonths = this.convertToMonths(this.formData.termValue, this.formData.termUnit);
+    
+    // Get payment periods per year based on frequency
+    const periodsPerYear = this.getPeriodsPerYear(this.formData.paymentFrequency);
+    const totalPeriods = this.getTotalPeriods(this.formData.termValue, this.formData.termUnit, this.formData.paymentFrequency);
+    
     const rate = this.formData.interestType === 'flat' ? 0.12 : 0.18; // Annual rate
 
     let interest: number;
-    let monthly: number;
+    let paymentAmount: number;
 
     if (this.formData.interestType === 'flat') {
       // Flat rate: I = P * R * T
-      interest = principal * rate * (months / 12);
-      monthly = (principal + interest) / months;
+      interest = principal * rate * (termInMonths / 12);
+      paymentAmount = (principal + interest) / totalPeriods;
     } else {
       // Reducing balance
-      const monthlyRate = rate / 12;
-      monthly = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / 
-                (Math.pow(1 + monthlyRate, months) - 1);
-      interest = (monthly * months) - principal;
+      const periodRate = rate / periodsPerYear;
+      paymentAmount = principal * (periodRate * Math.pow(1 + periodRate, totalPeriods)) / 
+                      (Math.pow(1 + periodRate, totalPeriods) - 1);
+      interest = (paymentAmount * totalPeriods) - principal;
     }
 
     this.loanPreview.set({
       principal,
       interest,
       total: principal + interest,
-      monthly
+      paymentAmount,
+      paymentFrequency: this.formData.paymentFrequency,
+      totalPeriods,
+      termDisplay: `${this.formData.termValue} ${this.formData.termUnit}`
     });
+  }
+
+  convertToMonths(value: number, unit: string): number {
+    switch(unit) {
+      case 'days': return value / 30;
+      case 'weeks': return value / 4.33;
+      case 'months': return value;
+      case 'quarters': return value * 3;
+      case 'years': return value * 12;
+      default: return value;
+    }
+  }
+
+  getPeriodsPerYear(frequency: string): number {
+    switch(frequency) {
+      case 'daily': return 365;
+      case 'weekly': return 52;
+      case 'monthly': return 12;
+      case 'quarterly': return 4;
+      default: return 12;
+    }
+  }
+
+  getTotalPeriods(termValue: number, termUnit: string, frequency: string): number {
+    const monthsInTerm = this.convertToMonths(termValue, termUnit);
+    const periodsPerYear = this.getPeriodsPerYear(frequency);
+    return Math.ceil((monthsInTerm / 12) * periodsPerYear);
   }
 
   submitApplication() {
@@ -355,6 +428,25 @@ export class ApplyLoanComponent implements OnInit {
 
   formatCurrency(amount: number): string {
     return amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  getPaymentLabel(): string {
+    const frequency = this.formData.paymentFrequency;
+    switch(frequency) {
+      case 'daily': return 'Daily Payment';
+      case 'weekly': return 'Weekly Payment';
+      case 'monthly': return 'Monthly Payment';
+      case 'quarterly': return 'Quarterly Payment';
+      default: return 'Payment Amount';
+    }
+  }
+
+  getTermInMonths(): string {
+    if (!this.formData.termValue || !this.formData.termUnit) {
+      return '0';
+    }
+    const months = this.convertToMonths(this.formData.termValue, this.formData.termUnit);
+    return months.toFixed(1);
   }
 
   cancel() {

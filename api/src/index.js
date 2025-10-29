@@ -39,7 +39,7 @@ const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes');
 const moneyloanPlatformRoutes = require('./modules/platforms/money-loan/routes');
 
 // Product routes (money-loan module)
-const moneyLoanRoutes = require('./modules/products/money-loan/routes');
+const moneyLoanRoutes = require('./modules/platforms/routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

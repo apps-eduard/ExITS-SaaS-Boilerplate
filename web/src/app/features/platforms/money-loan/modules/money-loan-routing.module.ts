@@ -9,7 +9,7 @@ import { PaymentFormComponent } from '../admin/payment-form.component';
 
 // Configuration Management
 import { ConfigurationDashboardComponent } from '../admin/configuration/configuration-dashboard.component';
-import { InterestRatesComponent } from '../admin/configuration/interest-rates.component';
+import { LoanProductsComponent } from '../admin/configuration/loan-products.component';
 import { PaymentSchedulesComponent } from '../admin/configuration/payment-schedules.component';
 import { FeeStructuresComponent } from '../admin/configuration/fee-structures.component';
 import { ApprovalRulesComponent } from '../admin/configuration/approval-rules.component';
@@ -86,9 +86,9 @@ const routes: Routes = [
     data: { title: 'Configuration', permission: 'money_loan:config:view' }
   },
   {
-    path: 'config/interest-rates',
-    component: InterestRatesComponent,
-    data: { title: 'Interest Rates', permission: 'money_loan:config:edit' }
+    path: 'config/loan-products',
+    component: LoanProductsComponent,
+    data: { title: 'Loan Products', permission: 'money_loan:config:edit' }
   },
   {
     path: 'config/payment-schedules',

@@ -9,42 +9,8 @@ import { HttpClient } from '@angular/common/http';
   imports: [CommonModule, RouterModule],
   template: `
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <!-- Header -->
-      <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex justify-between items-center py-4">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span class="text-xl">💰</span>
-              </div>
-              <div>
-                <h1 class="text-xl font-bold text-gray-900 dark:text-white">Customer Portal</h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Money Loan Dashboard</p>
-              </div>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-              <div class="text-right hidden sm:block">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">
-                  {{ customerName() }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ customerCode() }}
-                </p>
-              </div>
-              <button
-                (click)="logout()"
-                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <!-- Main Content -->
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Main Content (header provided by layout) -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-6">
         @if (loading()) {
           <div class="flex items-center justify-center py-12">
             <div class="text-center">

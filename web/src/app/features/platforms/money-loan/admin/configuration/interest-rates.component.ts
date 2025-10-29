@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { ToastService } from '../../../../../core/services/toast.service';
+import { LoanService } from '../../shared/services/loan.service';
 
 interface InterestRateConfig {
   id?: number;
@@ -53,9 +55,9 @@ interface InterestRateConfig {
           class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
         >
           <option value="">Select a product</option>
-          <option value="1">Personal Loan</option>
-          <option value="2">Business Loan</option>
-          <option value="3">Emergency Loan</option>
+          @for (product of loanProducts(); track product.id) {
+            <option [value]="product.id">{{ product.name }}</option>
+          }
         </select>
       </div>
 
@@ -286,12 +288,15 @@ interface InterestRateConfig {
 export class InterestRatesComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
   private authService = inject(AuthService);
+  private toastService = inject(ToastService);
+  private loanService = inject(LoanService);
 
   loading = signal(false);
   saving = signal(false);
   showForm = signal(false);
   editingConfig = signal<InterestRateConfig | null>(null);
   interestRates = signal<InterestRateConfig[]>([]);
+  loanProducts = signal<any[]>([]);
   selectedProductId = '';
   private tenantId: string | number = '';
 
@@ -302,9 +307,25 @@ export class InterestRatesComponent implements OnInit {
     const user = this.authService.currentUser();
     this.tenantId = user?.tenantId || '';
 
-    // Auto-select first product if available
-    this.selectedProductId = '1';
-    this.loadInterestRates();
+    // Load loan products from database
+    this.loadLoanProducts();
+  }
+
+  loadLoanProducts() {
+    this.loanService.getLoanProducts(String(this.tenantId)).subscribe({
+      next: (response) => {
+        this.loanProducts.set(response.data || []);
+        // Auto-select first product if available
+        if (this.loanProducts().length > 0) {
+          this.selectedProductId = String(this.loanProducts()[0].id);
+          this.loadInterestRates();
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load loan products:', error);
+        this.toastService.error('Failed to load loan products');
+      }
+    });
   }
 
   loadInterestRates() {
@@ -322,6 +343,7 @@ export class InterestRatesComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to load interest rates:', error);
+        this.toastService.error('Failed to load interest rates');
         this.loading.set(false);
       }
     });
@@ -347,7 +369,7 @@ export class InterestRatesComponent implements OnInit {
 
   saveConfig() {
     if (!this.selectedProductId) {
-      alert('Please select a product first');
+      this.toastService.warning('Please select a product first');
       return;
     }
 
@@ -362,27 +384,25 @@ export class InterestRatesComponent implements OnInit {
         this.saving.set(false);
         this.cancelForm();
         this.loadInterestRates();
+        this.toastService.success(this.editingConfig() ? 'Interest rate updated successfully' : 'Interest rate created successfully');
       },
       error: (error) => {
         console.error('Failed to save interest rate:', error);
         this.saving.set(false);
-        alert('Failed to save interest rate');
+        this.toastService.error('Failed to save interest rate');
       }
     });
   }
 
   deleteConfig(configId: number) {
-    if (!confirm('Are you sure you want to delete this interest rate configuration?')) {
-      return;
-    }
-
     this.configService.deleteInterestRate(String(this.tenantId), this.selectedProductId, configId).subscribe({
       next: () => {
         this.loadInterestRates();
+        this.toastService.success('Interest rate deleted successfully');
       },
       error: (error) => {
         console.error('Failed to delete interest rate:', error);
-        alert('Failed to delete interest rate');
+        this.toastService.error('Failed to delete interest rate');
       }
     });
   }

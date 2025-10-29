@@ -69,34 +69,14 @@ exports.up = function(knex) {
       table.string('business_registration_number', 100);
       table.decimal('annual_revenue', 15, 2);
       
-      // Financial Information
-      table.integer('credit_score').defaultTo(650)
-        .comment('Credit score from 300-850');
-      table.enum('risk_level', ['low', 'medium', 'high']).defaultTo('medium');
-      table.decimal('total_debt', 15, 2).defaultTo(0);
-      table.boolean('has_existing_loans').defaultTo(false);
-      
-      // KYC (Know Your Customer) Status
-      table.enum('kyc_status', ['pending', 'verified', 'rejected', 'expired']).defaultTo('pending');
-      table.timestamp('kyc_verified_at');
-      table.integer('kyc_verified_by').unsigned()
-        .references('id').inTable('users').onDelete('SET NULL');
-      table.text('kyc_notes');
-      table.date('kyc_expiry_date');
-      
       // Customer Status
       table.enum('status', ['active', 'inactive', 'suspended', 'blacklisted', 'deceased']).defaultTo('active');
       table.text('status_reason');
       
-      // Emergency Contact
+      // Emergency Contact (Personal - shared across all platforms)
       table.string('emergency_contact_name', 200);
       table.string('emergency_contact_relationship', 50);
       table.string('emergency_contact_phone', 50);
-      
-      // Reference Information
-      table.string('reference_name', 200);
-      table.string('reference_phone', 50);
-      table.string('reference_relationship', 50);
       
       // Customer Preferences
       table.string('preferred_language', 10).defaultTo('en');
@@ -120,9 +100,7 @@ exports.up = function(knex) {
       table.unique(['tenant_id', 'customer_code']);
       table.unique(['tenant_id', 'email']);
       table.index(['tenant_id', 'status']);
-      table.index(['tenant_id', 'kyc_status']);
       table.index(['tenant_id', 'phone']);
-      table.index('credit_score');
     });
 };
 
