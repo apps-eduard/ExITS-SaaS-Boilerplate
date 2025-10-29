@@ -173,6 +173,48 @@ class MoneyloanConfigService {
     }
   }
 
+  /**
+   * Transform payment schedule to snake_case for frontend
+   */
+  transformPaymentScheduleToSnakeCase(data) {
+    if (!data) return null;
+    if (Array.isArray(data)) {
+      return data.map(item => this.transformPaymentScheduleToSnakeCase(item));
+    }
+
+    return {
+      id: data.id,
+      tenant_id: data.tenantId,
+      loan_product_id: data.loanProductId,
+      payment_frequency: data.paymentFrequency,
+      schedule_type: data.scheduleType,
+      payment_allocation_order: data.paymentAllocationOrder,
+      day_of_week: data.dayOfWeek,
+      day_of_month: data.dayOfMonth,
+      month_of_quarter: data.monthOfQuarter,
+      holiday_handling: data.holidayHandling,
+      minimum_payment_amount: data.minimumPaymentAmount,
+      minimum_payment_percentage: data.minimumPaymentPercentage,
+      allow_early_payment: data.allowEarlyPayment,
+      allow_skipped_payment: data.allowSkippedPayment,
+      max_skipped_payments_per_year: data.maxSkippedPaymentsPerYear,
+      allowed_payment_methods: data.allowedPaymentMethods ? JSON.parse(data.allowedPaymentMethods) : null,
+      grace_period_days: data.gracePeriodDays,
+      supports_auto_payment: data.supportsAutoPayment,
+      auto_payment_frequency: data.autoPaymentFrequency,
+      max_installments: data.maxInstallments,
+      is_default: data.isDefault,
+      is_active: data.isActive,
+      metadata: data.metadata ? JSON.parse(data.metadata) : null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      // Alias for frontend compatibility
+      day_of_payment: data.dayOfMonth,
+      late_payment_penalty_type: data.metadata ? JSON.parse(data.metadata).late_payment_penalty_type : null,
+      late_payment_penalty_value: data.metadata ? JSON.parse(data.metadata).late_payment_penalty_value : null
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // PAYMENT SCHEDULE CONFIGURATION
   // ═══════════════════════════════════════════════════════════════
@@ -184,13 +226,13 @@ class MoneyloanConfigService {
     try {
       const configs = await knex('loan_product_payment_schedules')
         .where({
-          tenant_id: tenantId,
-          loan_product_id: loanProductId
+          tenantId: tenantId,
+          loanProductId: loanProductId
         })
         .orderBy('created_at', 'asc');
 
       logger.info(`✅ Fetched ${configs.length} payment schedule configs`);
-      return configs;
+      return this.transformPaymentScheduleToSnakeCase(configs);
     } catch (error) {
       logger.error('❌ Error fetching payment schedule configs:', error);
       throw error;
@@ -202,27 +244,42 @@ class MoneyloanConfigService {
    */
   async createPaymentScheduleConfig(tenantId, loanProductId, configData) {
     try {
-      const [id] = await knex('loan_product_payment_schedules').insert({
-        tenant_id: tenantId,
-        loan_product_id: loanProductId,
-        frequency: configData.frequency, // 'daily', 'weekly', 'monthly', 'quarterly', 'custom'
-        schedule_type: configData.scheduleType, // 'fixed', 'flexible'
-        schedule_name: configData.scheduleName,
-        description: configData.description,
-        fixed_day_of_month: configData.fixedDayOfMonth,
-        fixed_day_of_week: configData.fixedDayOfWeek,
-        allow_early_payment: configData.allowEarlyPayment || false,
-        allow_skipped_payment: configData.allowSkippedPayment || false,
-        min_payment_percentage: configData.minPaymentPercentage,
-        payment_allocation_order: JSON.stringify(configData.paymentAllocationOrder || ['fees', 'penalties', 'interest', 'principal']),
-        is_active: configData.isActive !== false,
-        metadata: JSON.stringify(configData.metadata || {}),
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+      // Handle both snake_case (from frontend) and camelCase
+      const metadata = {
+        ...(configData.metadata || {}),
+        late_payment_penalty_type: configData.late_payment_penalty_type || configData.latePaymentPenaltyType,
+        late_payment_penalty_value: configData.late_payment_penalty_value || configData.latePaymentPenaltyValue
+      };
 
+      const [result] = await knex('loan_product_payment_schedules').insert({
+        tenantId: tenantId,
+        loanProductId: loanProductId,
+        paymentFrequency: configData.payment_frequency || configData.paymentFrequency || 'monthly',
+        scheduleType: configData.schedule_type || configData.scheduleType || 'fixed',
+        paymentAllocationOrder: configData.payment_allocation_order || configData.paymentAllocationOrder || 'interest_principal_fees',
+        dayOfWeek: configData.day_of_week || configData.dayOfWeek,
+        dayOfMonth: configData.day_of_month || configData.day_of_payment || configData.dayOfMonth,
+        monthOfQuarter: configData.month_of_quarter || configData.monthOfQuarter,
+        holidayHandling: configData.holiday_handling || configData.holidayHandling || 'skip_to_next_business_day',
+        minimumPaymentAmount: configData.minimum_payment_amount || configData.minimumPaymentAmount,
+        minimumPaymentPercentage: configData.minimum_payment_percentage || configData.minimumPaymentPercentage,
+        allowEarlyPayment: configData.allow_early_payment !== undefined ? configData.allow_early_payment : (configData.allowEarlyPayment !== undefined ? configData.allowEarlyPayment : true),
+        allowSkippedPayment: configData.allow_skipped_payment !== undefined ? configData.allow_skipped_payment : (configData.allowSkippedPayment !== undefined ? configData.allowSkippedPayment : false),
+        maxSkippedPaymentsPerYear: configData.max_skipped_payments_per_year || configData.maxSkippedPaymentsPerYear || 0,
+        allowedPaymentMethods: configData.allowed_payment_methods ? JSON.stringify(configData.allowed_payment_methods) : null,
+        gracePeriodDays: configData.grace_period_days || configData.gracePeriodDays || 0,
+        supportsAutoPayment: configData.supports_auto_payment !== undefined ? configData.supports_auto_payment : (configData.supportsAutoPayment !== undefined ? configData.supportsAutoPayment : true),
+        autoPaymentFrequency: configData.auto_payment_frequency || configData.autoPaymentFrequency || 'never',
+        maxInstallments: configData.max_installments || configData.maxInstallments,
+        isDefault: configData.is_default !== undefined ? configData.is_default : (configData.isDefault !== undefined ? configData.isDefault : false),
+        isActive: configData.is_active !== undefined ? configData.is_active : (configData.isActive !== undefined ? configData.isActive : true),
+        metadata: JSON.stringify(metadata)
+      }, ['id']);
+
+      const id = result.id;
       logger.info(`✅ Payment schedule config created with ID: ${id}`);
-      return knex('loan_product_payment_schedules').where({ id }).first();
+      const created = await knex('loan_product_payment_schedules').where({ id }).first();
+      return this.transformPaymentScheduleToSnakeCase(created);
     } catch (error) {
       logger.error('❌ Error creating payment schedule config:', error);
       throw error;
@@ -234,36 +291,72 @@ class MoneyloanConfigService {
    */
   async updatePaymentScheduleConfig(tenantId, loanProductId, scheduleId, updateData) {
     try {
+      // Handle both snake_case (from frontend) and camelCase
+      const metadata = {
+        ...(updateData.metadata || {}),
+        late_payment_penalty_type: updateData.late_payment_penalty_type || updateData.latePaymentPenaltyType,
+        late_payment_penalty_value: updateData.late_payment_penalty_value || updateData.latePaymentPenaltyValue
+      };
+
       const updates = {
-        frequency: updateData.frequency,
-        schedule_type: updateData.scheduleType,
-        schedule_name: updateData.scheduleName,
-        description: updateData.description,
-        fixed_day_of_month: updateData.fixedDayOfMonth,
-        fixed_day_of_week: updateData.fixedDayOfWeek,
-        allow_early_payment: updateData.allowEarlyPayment,
-        allow_skipped_payment: updateData.allowSkippedPayment,
-        min_payment_percentage: updateData.minPaymentPercentage,
-        payment_allocation_order: updateData.paymentAllocationOrder ? JSON.stringify(updateData.paymentAllocationOrder) : undefined,
-        is_active: updateData.isActive,
-        metadata: updateData.metadata ? JSON.stringify(updateData.metadata) : undefined,
-        updated_at: new Date()
+        paymentFrequency: updateData.payment_frequency || updateData.paymentFrequency,
+        scheduleType: updateData.schedule_type || updateData.scheduleType,
+        paymentAllocationOrder: updateData.payment_allocation_order || updateData.paymentAllocationOrder,
+        dayOfWeek: updateData.day_of_week || updateData.dayOfWeek,
+        dayOfMonth: updateData.day_of_month || updateData.day_of_payment || updateData.dayOfMonth,
+        monthOfQuarter: updateData.month_of_quarter || updateData.monthOfQuarter,
+        holidayHandling: updateData.holiday_handling || updateData.holidayHandling,
+        minimumPaymentAmount: updateData.minimum_payment_amount || updateData.minimumPaymentAmount,
+        minimumPaymentPercentage: updateData.minimum_payment_percentage || updateData.minimumPaymentPercentage,
+        allowEarlyPayment: updateData.allow_early_payment !== undefined ? updateData.allow_early_payment : updateData.allowEarlyPayment,
+        allowSkippedPayment: updateData.allow_skipped_payment !== undefined ? updateData.allow_skipped_payment : updateData.allowSkippedPayment,
+        maxSkippedPaymentsPerYear: updateData.max_skipped_payments_per_year || updateData.maxSkippedPaymentsPerYear,
+        allowedPaymentMethods: (updateData.allowed_payment_methods || updateData.allowedPaymentMethods) ? JSON.stringify(updateData.allowed_payment_methods || updateData.allowedPaymentMethods) : undefined,
+        gracePeriodDays: updateData.grace_period_days !== undefined ? updateData.grace_period_days : updateData.gracePeriodDays,
+        supportsAutoPayment: updateData.supports_auto_payment !== undefined ? updateData.supports_auto_payment : updateData.supportsAutoPayment,
+        autoPaymentFrequency: updateData.auto_payment_frequency || updateData.autoPaymentFrequency,
+        maxInstallments: updateData.max_installments || updateData.maxInstallments,
+        isDefault: updateData.is_default !== undefined ? updateData.is_default : updateData.isDefault,
+        isActive: updateData.is_active !== undefined ? updateData.is_active : updateData.isActive,
+        metadata: JSON.stringify(metadata)
       };
 
       Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
       await knex('loan_product_payment_schedules')
         .where({
-          tenant_id: tenantId,
-          loan_product_id: loanProductId,
+          tenantId: tenantId,
+          loanProductId: loanProductId,
           id: scheduleId
         })
         .update(updates);
 
       logger.info(`✅ Payment schedule config ${scheduleId} updated`);
-      return knex('loan_product_payment_schedules').where({ id: scheduleId }).first();
+      const updated = await knex('loan_product_payment_schedules').where({ id: scheduleId }).first();
+      return this.transformPaymentScheduleToSnakeCase(updated);
     } catch (error) {
       logger.error('❌ Error updating payment schedule config:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete payment schedule configuration
+   */
+  async deletePaymentScheduleConfig(tenantId, loanProductId, scheduleId) {
+    try {
+      const result = await knex('loan_product_payment_schedules')
+        .where({
+          tenantId: tenantId,
+          loanProductId: loanProductId,
+          id: scheduleId
+        })
+        .delete();
+
+      logger.info(`✅ Payment schedule config ${scheduleId} deleted`);
+      return result > 0;
+    } catch (error) {
+      logger.error('❌ Error deleting payment schedule config:', error);
       throw error;
     }
   }
