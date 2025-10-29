@@ -4,7 +4,7 @@
  * module/menu access, and dynamic permission fetching
  */
 
-const db = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class RBACService {
@@ -16,49 +16,58 @@ class RBACService {
     try {
       logger.info(`🔍 Fetching permissions for user: ${userId}`);
       
-      const query = `
-        SELECT DISTINCT
-          m.menu_key,
-          m.display_name,
-          m.icon,
-          m.route_path,
-          m.component_name,
-          m.space,
-          rp.action_key,
-          m.action_keys
-        FROM users u
-        JOIN user_roles ur ON u.id = ur.user_id 
-          AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-        JOIN roles r ON ur.role_id = r.id AND r.status = 'active'
-        JOIN role_permissions rp ON r.id = rp.role_id AND rp.status = 'active'
-        JOIN modules m ON rp.module_id = m.id AND m.status = 'active'
-        WHERE u.id = $1 AND u.status = 'active'
-        ORDER BY m.menu_key, rp.action_key
-      `;
+      const result = await knex('users as u')
+        .join('userRoles as ur', function() {
+          this.on('u.id', '=', 'ur.userId')
+            .andOn(knex.raw('(ur.expiresAt IS NULL OR ur.expiresAt > CURRENT_TIMESTAMP)'));
+        })
+        .join('roles as r', function() {
+          this.on('ur.roleId', '=', 'r.id')
+            .andOnVal('r.status', '=', 'active');
+        })
+        .join('rolePermissions as rp', function() {
+          this.on('r.id', '=', 'rp.roleId')
+            .andOnVal('rp.status', '=', 'active');
+        })
+        .join('modules as m', function() {
+          this.on('rp.moduleId', '=', 'm.id')
+            .andOnVal('m.status', '=', 'active');
+        })
+        .where({ 'u.id': userId, 'u.status': 'active' })
+        .select(
+          'm.menuKey',
+          'm.displayName',
+          'm.icon',
+          'm.routePath',
+          'm.componentName',
+          'm.space',
+          'rp.actionKey',
+          'm.actionKeys'
+        )
+        .distinct()
+        .orderBy(['m.menuKey', 'rp.actionKey']);
       
-      const result = await db.query(query, [userId]);
-      
-      logger.info(`✅ Found ${result.rows.length} permission entries for user ${userId}`);
-      if (result.rows.length > 0) {
-        logger.info(`📋 First 3 permissions:`, result.rows.slice(0, 3));
+      logger.info(`✅ Found ${result.length} permission entries for user ${userId}`);
+      if (result.length > 0) {
+        logger.info('📋 First 3 permissions:', result.slice(0, 3));
       }
       
       // Format permissions by menu key with action keys
       const permissions = {};
-      result.rows.forEach(row => {
-        if (!permissions[row.menu_key]) {
-          permissions[row.menu_key] = {
-            menuKey: row.menu_key,
-            displayName: row.display_name,
+      result.forEach(row => {
+        if (!permissions[row.menuKey]) {
+          permissions[row.menuKey] = {
+            menuKey: row.menuKey,
+            displayName: row.displayName,
             icon: row.icon,
-            routePath: row.route_path,
-            componentName: row.component_name,
+            routePath: row.routePath,
+            componentName: row.componentName,
             space: row.space,
             actionKeys: [],
-            availableActions: row.action_keys || ['view']
+            availableActions: row.actionKeys || ['view'],
           };
         }
-        permissions[row.menu_key].actionKeys.push(row.action_key);
+        permissions[row.menuKey].actionKeys.push(row.actionKey);
       });
       
       logger.info(`📊 Formatted permissions for ${Object.keys(permissions).length} modules`);
@@ -76,20 +85,29 @@ class RBACService {
    */
   static async hasMenuAccess(userId, menuKey) {
     try {
-      const query = `
-        SELECT 1
-        FROM users u
-        JOIN user_roles ur ON u.id = ur.user_id 
-          AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-        JOIN roles r ON ur.role_id = r.id AND r.status = 'active'
-        JOIN role_permissions rp ON r.id = rp.role_id AND rp.status = 'active'
-        JOIN modules m ON rp.module_id = m.id AND m.status = 'active'
-        WHERE u.id = $1 AND u.status = 'active' AND m.menu_key = $2
-        LIMIT 1
-      `;
+      const result = await knex('users as u')
+        .join('userRoles as ur', function() {
+          this.on('u.id', '=', 'ur.userId')
+            .andOn(knex.raw('(ur.expiresAt IS NULL OR ur.expiresAt > CURRENT_TIMESTAMP)'));
+        })
+        .join('roles as r', function() {
+          this.on('ur.roleId', '=', 'r.id')
+            .andOnVal('r.status', '=', 'active');
+        })
+        .join('rolePermissions as rp', function() {
+          this.on('r.id', '=', 'rp.roleId')
+            .andOnVal('rp.status', '=', 'active');
+        })
+        .join('modules as m', function() {
+          this.on('rp.moduleId', '=', 'm.id')
+            .andOnVal('m.status', '=', 'active');
+        })
+        .where({ 'u.id': userId, 'u.status': 'active', 'm.menuKey': menuKey })
+        .select(1)
+        .limit(1)
+        .first();
       
-      const result = await db.query(query, [userId, menuKey]);
-      return result.rows.length > 0;
+      return !!result;
     } catch (error) {
       logger.error('❌ Error checking menu access:', error.message);
       return false;
@@ -101,21 +119,34 @@ class RBACService {
    */
   static async hasAction(userId, menuKey, actionKey) {
     try {
-      const query = `
-        SELECT 1
-        FROM users u
-        JOIN user_roles ur ON u.id = ur.user_id 
-          AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-        JOIN roles r ON ur.role_id = r.id AND r.status = 'active'
-        JOIN role_permissions rp ON r.id = rp.role_id AND rp.status = 'active'
-        JOIN modules m ON rp.module_id = m.id AND m.status = 'active'
-        WHERE u.id = $1 AND u.status = 'active' 
-          AND m.menu_key = $2 AND rp.action_key = $3
-        LIMIT 1
-      `;
+      const result = await knex('users as u')
+        .join('userRoles as ur', function() {
+          this.on('u.id', '=', 'ur.userId')
+            .andOn(knex.raw('(ur.expiresAt IS NULL OR ur.expiresAt > CURRENT_TIMESTAMP)'));
+        })
+        .join('roles as r', function() {
+          this.on('ur.roleId', '=', 'r.id')
+            .andOnVal('r.status', '=', 'active');
+        })
+        .join('rolePermissions as rp', function() {
+          this.on('r.id', '=', 'rp.roleId')
+            .andOnVal('rp.status', '=', 'active');
+        })
+        .join('modules as m', function() {
+          this.on('rp.moduleId', '=', 'm.id')
+            .andOnVal('m.status', '=', 'active');
+        })
+        .where({ 
+          'u.id': userId, 
+          'u.status': 'active',
+          'm.menuKey': menuKey,
+          'rp.actionKey': actionKey,
+        })
+        .select(1)
+        .limit(1)
+        .first();
       
-      const result = await db.query(query, [userId, menuKey, actionKey]);
-      return result.rows.length > 0;
+      return !!result;
     } catch (error) {
       logger.error('❌ Error checking action permission:', error.message);
       return false;
@@ -127,31 +158,16 @@ class RBACService {
    */
   static async getAllModules(space = null) {
     try {
-      let query = `
-        SELECT 
-          id,
-          menu_key,
-          display_name,
-          description,
-          icon,
-          route_path,
-          parent_menu_key,
-          space,
-          menu_order
-        FROM modules
-        WHERE status = 'active'
-      `;
+      const query = knex('modules')
+        .where({ status: 'active' })
+        .select('id', 'menuKey', 'displayName', 'description', 'icon', 'routePath', 'parentMenuKey', 'space', 'menuOrder');
       
-      const params = [];
       if (space) {
-        query += ` AND space = $1`;
-        params.push(space);
+        query.where({ space });
       }
       
-      query += ` ORDER BY menu_order, display_name`;
-      
-      const result = await db.query(query, params);
-      return result.rows;
+      const modules = await query.orderBy(['menuOrder', 'displayName']);
+      return modules;
     } catch (error) {
       logger.error('❌ Error fetching modules:', error.message);
       throw error;
@@ -163,77 +179,28 @@ class RBACService {
    */
   static async getRoleWithPermissions(roleId) {
     try {
-      // console.log(`🔍 [DEBUG] Getting role with permissions for roleId: ${roleId}`);
+      const role = await knex('roles')
+        .select('id', 'name', 'description', 'space', 'status', 'tenantId')
+        .where({ id: roleId })
+        .first();
       
-      const roleQuery = `
-        SELECT id, name, description, space, status, tenant_id
-        FROM roles
-        WHERE id = $1
-      `;
-      
-      const roleResult = await db.query(roleQuery, [roleId]);
-      // console.log(`🔍 [DEBUG] Role query result:`, roleResult.rows);
-      
-      if (roleResult.rows.length === 0) {
-        // console.log(`❌ [DEBUG] Role not found for ID: ${roleId}`);
+      if (!role) {
         throw new Error('Role not found');
       }
       
-      const role = roleResult.rows[0];
-      // console.log(`✅ [DEBUG] Role found:`, role);
-      
       // Get permissions for this role (Standard RBAC)
-      const permQuery = `
-        SELECT 
-          p.id,
-          p.permission_key,
-          p.resource,
-          p.action,
-          p.description,
-          p.space
-        FROM role_permissions rps
-        JOIN permissions p ON rps.permission_id = p.id
-        WHERE rps.role_id = $1
-        ORDER BY p.resource, p.action
-      `;
-      
-      // console.log(`🔍 [DEBUG] Executing permissions query for role ${roleId}`);
-      const permResult = await db.query(permQuery, [roleId]);
-      // console.log(`🔍 [DEBUG] Permissions query returned ${permResult.rows.length} rows`);
-      // console.log(`🔍 [DEBUG] First 5 permissions:`, permResult.rows.slice(0, 5));
-      
-      // Transform permissions to camelCase array format
-      const permissions = permResult.rows.map(row => ({
-        id: row.id,
-        permissionKey: row.permission_key,
-        resource: row.resource,
-        action: row.action,
-        description: row.description,
-        space: row.space
-      }));
-      
-      // console.log(`🔍 [DEBUG] Transformed permissions count: ${permissions.length}`);
-      // console.log(`🔍 [DEBUG] Sample transformed permissions:`, permissions.slice(0, 3));
-      
-      // Transform role to camelCase
-      const transformedRole = {
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        space: role.space,
-        status: role.status,
-        tenantId: role.tenant_id,
-        permissions: permissions,
-      };
+      const permissions = await knex('rolePermissions as rps')
+        .join('permissions as p', 'rps.permissionId', 'p.id')
+        .where({ 'rps.roleId': roleId })
+        .select('p.id', 'p.permissionKey', 'p.resource', 'p.action', 'p.description', 'p.space')
+        .orderBy(['p.resource', 'p.action']);
       
       logger.info(`📋 Role ${roleId} loaded with ${permissions.length} permissions`);
-      // console.log(`✅ [DEBUG] Final role object:`, {
-      //   ...transformedRole,
-      //   permissionCount: permissions.length,
-      //   samplePermissions: permissions.slice(0, 3)
-      // });
       
-      return transformedRole;
+      return {
+        ...role,
+        permissions,
+      };
     } catch (error) {
       logger.error('❌ Error fetching role with permissions:', error.message);
       throw error;
@@ -246,27 +213,33 @@ class RBACService {
   static async assignPermissionToRole(roleId, menuKey, actionKey) {
     try {
       // Try to get module ID (module may not exist yet)
-      const moduleQuery = `SELECT id FROM modules WHERE menu_key = $1`;
-      const moduleResult = await db.query(moduleQuery, [menuKey]);
+      const module = await knex('modules')
+        .select('id')
+        .where({ menuKey })
+        .first();
       
-      const moduleId = moduleResult.rows.length > 0 ? moduleResult.rows[0].id : null;
+      const moduleId = module ? module.id : null;
       
       // Create permission with menu_key (works even if module doesn't exist)
       // Use the columns that match the unique index
-      const permQuery = `
-        INSERT INTO role_permissions (role_id, module_id, menu_key, action_key, status)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (role_id, COALESCE(menu_key, ''), action_key) 
-        DO UPDATE SET 
-          status = EXCLUDED.status, 
-          module_id = EXCLUDED.module_id,
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING id
-      `;
+      const [permission] = await knex('rolePermissions')
+        .insert({
+          roleId,
+          moduleId,
+          menuKey,
+          actionKey,
+          status: 'active',
+        })
+        .onConflict(knex.raw('(role_id, COALESCE(menu_key, \'\'), action_key)'))
+        .merge({
+          status: 'active',
+          moduleId,
+          updatedAt: knex.fn.now(),
+        })
+        .returning('id');
       
-      const result = await db.query(permQuery, [roleId, moduleId, menuKey, actionKey, 'active']);
       logger.info(`✅ Permission assigned: Role ${roleId}, Menu ${menuKey}, Action ${actionKey}`);
-      return result.rows[0];
+      return permission;
     } catch (error) {
       logger.error('❌ Error assigning permission:', error.message);
       logger.error('Stack:', error.stack);
@@ -280,21 +253,20 @@ class RBACService {
   static async revokePermissionFromRole(roleId, menuKey, actionKey) {
     try {
       // Get module ID
-      const moduleQuery = `SELECT id FROM modules WHERE menu_key = $1`;
-      const moduleResult = await db.query(moduleQuery, [menuKey]);
-      if (moduleResult.rows.length === 0) {
+      const module = await knex('modules')
+        .select('id')
+        .where({ menuKey })
+        .first();
+      
+      if (!module) {
         throw new Error('Module not found');
       }
       
-      const moduleId = moduleResult.rows[0].id;
-      
       // Delete permission
-      const permQuery = `
-        DELETE FROM role_permissions
-        WHERE role_id = $1 AND module_id = $2 AND action_key = $3
-      `;
+      await knex('rolePermissions')
+        .where({ roleId, moduleId: module.id, actionKey })
+        .del();
       
-      await db.query(permQuery, [roleId, moduleId, actionKey]);
       logger.info(`✅ Permission revoked: Role ${roleId}, Module ${menuKey}, Action ${actionKey}`);
     } catch (error) {
       logger.error('❌ Error revoking permission:', error.message);
@@ -307,24 +279,17 @@ class RBACService {
    */
   static async getUserRoles(userId) {
     try {
-      const query = `
-        SELECT 
-          r.id,
-          r.name,
-          r.description,
-          r.space,
-          r.status,
-          r.tenant_id,
-          ur.assigned_at
-        FROM user_roles ur
-        JOIN roles r ON ur.role_id = r.id
-        WHERE ur.user_id = $1 
-          AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-        ORDER BY r.name
-      `;
+      const roles = await knex('userRoles as ur')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .where({ 'ur.userId': userId })
+        .andWhere(function() {
+          this.whereNull('ur.expiresAt')
+            .orWhere('ur.expiresAt', '>', knex.fn.now());
+        })
+        .select('r.id', 'r.name', 'r.description', 'r.space', 'r.status', 'r.tenantId', 'ur.assignedAt')
+        .orderBy('r.name');
       
-      const result = await db.query(query, [userId]);
-      return result.rows;
+      return roles;
     } catch (error) {
       logger.error('❌ Error fetching user roles:', error.message);
       throw error;
@@ -336,16 +301,18 @@ class RBACService {
    */
   static async assignRoleToUser(userId, roleId) {
     try {
-      const query = `
-        INSERT INTO user_roles (user_id, role_id, assigned_by)
-        VALUES ($1, $2, CURRENT_USER)
-        ON CONFLICT (user_id, role_id) DO NOTHING
-        RETURNING user_id, role_id
-      `;
+      const [userRole] = await knex('userRoles')
+        .insert({
+          userId,
+          roleId,
+          assignedBy: knex.raw('CURRENT_USER'),
+        })
+        .onConflict(['userId', 'roleId'])
+        .ignore()
+        .returning(['userId', 'roleId']);
       
-      const result = await db.query(query, [userId, roleId]);
       logger.info(`✅ Role ${roleId} assigned to user ${userId}`);
-      return result.rows[0];
+      return userRole;
     } catch (error) {
       logger.error('❌ Error assigning role to user:', error.message);
       throw error;
@@ -357,12 +324,10 @@ class RBACService {
    */
   static async removeRoleFromUser(userId, roleId) {
     try {
-      const query = `
-        DELETE FROM user_roles
-        WHERE user_id = $1 AND role_id = $2
-      `;
+      await knex('userRoles')
+        .where({ userId, roleId })
+        .del();
       
-      await db.query(query, [userId, roleId]);
       logger.info(`✅ Role ${roleId} removed from user ${userId}`);
     } catch (error) {
       logger.error('❌ Error removing role from user:', error.message);
@@ -374,54 +339,50 @@ class RBACService {
    * Get all roles for a tenant or system
    */
   static async getAllRoles(tenantId = null) {
-    let query = '';
     try {
-      query = `
-        SELECT 
-          r.id, 
-          r.name, 
-          r.description, 
-          r.space, 
-          r.status, 
-          r.tenant_id,
-          t.name as tenant_name,
-          COUNT(DISTINCT rps.permission_id) as permission_count,
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'permissionKey', p.permission_key,
-              'resource', p.resource,
-              'action', p.action
-            )
-          ) FILTER (WHERE rps.permission_id IS NOT NULL) as permissions
-        FROM roles r
-        LEFT JOIN role_permissions rps ON r.id = rps.role_id
-        LEFT JOIN permissions p ON rps.permission_id = p.id
-        LEFT JOIN tenants t ON r.tenant_id = t.id
-      `;
-      
-      const params = [];
-      const whereClauses = [];
+      let query = knex('roles as r')
+        .leftJoin('role_permissions as rps', 'r.id', 'rps.role_id')
+        .leftJoin('permissions as p', 'rps.permission_id', 'p.id')
+        .leftJoin('tenants as t', 'r.tenant_id', 't.id')
+        .select(
+          'r.id',
+          'r.name',
+          'r.description',
+          'r.space',
+          'r.status',
+          'r.tenant_id',
+          't.name as tenant_name',
+          knex.raw('COUNT(DISTINCT rps.permission_id) as permission_count'),
+          knex.raw(`
+            json_agg(
+              DISTINCT jsonb_build_object(
+                'permissionKey', p.permission_key,
+                'resource', p.resource,
+                'action', p.action
+              )
+            ) FILTER (WHERE rps.permission_id IS NOT NULL) as permissions
+          `),
+        )
+        .groupBy('r.id', 'r.name', 'r.description', 'r.space', 'r.status', 'r.tenant_id', 't.name')
+        .orderBy([
+          { column: 'r.status', order: 'desc' },
+          { column: 'r.space', order: 'desc' },
+          { column: 'r.name' },
+        ]);
       
       // System admins (tenantId === null) can see all roles
       // Tenant users can only see their tenant roles + system roles
       if (tenantId !== null) {
-        whereClauses.push(`(r.space = 'system' OR r.tenant_id = $1)`);
-        params.push(tenantId);
+        query.where(function() {
+          this.where('r.space', 'system').orWhere('r.tenant_id', tenantId);
+        });
       }
       
-      if (whereClauses.length > 0) {
-        query += ` WHERE ${whereClauses.join(' AND ')}`;
-      }
-      
-      query += ` GROUP BY r.id, r.name, r.description, r.space, r.status, r.tenant_id, t.name`;
-      query += ` ORDER BY r.status DESC, r.space DESC, r.name`;  // Active first, then system roles, then alphabetically
-      
-      const result = await db.query(query, params);
-      return result.rows;
+      const roles = await query;
+      return roles;
     } catch (error) {
       logger.error('❌ Error fetching all roles:', error.message);
       logger.error('❌ Stack trace:', error.stack);
-      logger.error('❌ SQL query:', query);
       throw error;
     }
   }
@@ -431,29 +392,22 @@ class RBACService {
    */
   static async createModule(menuKey, displayName, space, actionKeys = ['view'], data = {}) {
     try {
-      const query = `
-        INSERT INTO modules (
-          menu_key, display_name, space, status, 
-          action_keys, icon, route_path, component_name, description
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING id, menu_key, display_name
-      `;
-      
-      const result = await db.query(query, [
-        menuKey,
-        displayName,
-        space,
-        'active',
-        JSON.stringify(actionKeys),
-        data.icon || null,
-        data.routePath || null,
-        data.componentName || null,
-        data.description || null
-      ]);
+      const [module] = await knex('modules')
+        .insert({
+          menuKey,
+          displayName,
+          space,
+          status: 'active',
+          actionKeys: JSON.stringify(actionKeys),
+          icon: data.icon || null,
+          routePath: data.routePath || null,
+          componentName: data.componentName || null,
+          description: data.description || null,
+        })
+        .returning(['id', 'menuKey', 'displayName']);
       
       logger.info(`✅ Module created: ${menuKey}`);
-      return result.rows[0];
+      return module;
     } catch (error) {
       logger.error('❌ Error creating module:', error.message);
       throw error;

@@ -113,7 +113,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
         <!-- Main Form - 2 columns -->
         <div class="lg:col-span-2">
           <form id="customerForm" (ngSubmit)="onSubmit()" class="space-y-6">
-            
+
             <!-- Basic Information Tab -->
             @if (activeTab() === 'basic') {
               <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -568,7 +568,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
             <!-- Address Information -->
             <div class="space-y-2 mb-3">
               <h4 class="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide mb-2">Address Type</h4>
-              
+
               <div class="flex items-center gap-2">
                 @if (isFieldFilled(formData.region)) {
                   <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
@@ -701,12 +701,12 @@ export class CustomerFormComponent implements OnInit {
   activeTab = signal<'basic' | 'employment' | 'kyc' | 'address'>('basic');
   customerId: number | null = null;
   tenantName = signal<string>('');
-  
+
   // Helper to check if we're in tenant context (public for template)
   isInTenantContext(): boolean {
     return this.router.url.includes('/tenant/customers');
   }
-  
+
   // Get tenant display name (public for template)
   getTenantDisplayName(): string {
     if (this.isInTenantContext()) {
@@ -760,16 +760,16 @@ export class CustomerFormComponent implements OnInit {
         this.loadCurrentUserTenantName();
       }
     }
-    
+
     // Load tenant name if in tenant context
     if (this.isInTenantContext()) {
       this.loadTenantName();
     }
-    
+
     // Log current route to debug
     console.log('🔍 Current route:', this.router.url);
   }
-  
+
   loadCurrentUserTenantName() {
     // Get current user's tenant name for Money Loan platform
     this.http.get<any>('http://localhost:3000/api/tenants/current').subscribe({
@@ -785,7 +785,7 @@ export class CustomerFormComponent implements OnInit {
       }
     });
   }
-  
+
   loadTenantName() {
     // Get tenant info from /api/tenants/current
     this.http.get<any>('http://localhost:3000/api/tenants/current').subscribe({
@@ -811,39 +811,39 @@ export class CustomerFormComponent implements OnInit {
         next: (response: any) => {
           if (response.success && response.data) {
             const customer = response.data;
-            
-            // Map snake_case API response to camelCase form fields
+
+            // Knex returns camelCase, so map directly
             // Use Object.assign to preserve object reference for ngModel binding
             Object.assign(this.formData, {
-              firstName: customer.first_name || '',
-              lastName: customer.last_name || '',
-              dateOfBirth: customer.date_of_birth ? customer.date_of_birth.split('T')[0] : '',
+              firstName: customer.firstName || '',
+              lastName: customer.lastName || '',
+              dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.split('T')[0] : '',
               gender: customer.gender || '',
               email: customer.email || '',
               phone: customer.phone || '',
-              streetAddress: customer.street_address || '',
-              houseNumber: customer.house_number || '',
-              streetName: customer.street_name || '',
+              streetAddress: customer.streetAddress || '',
+              houseNumber: customer.houseNumber || '',
+              streetName: customer.streetName || '',
               subdivision: customer.subdivision || '',
               barangay: customer.barangay || '',
-              cityMunicipality: customer.city_municipality || '',
+              cityMunicipality: customer.cityMunicipality || '',
               province: customer.province || '',
               region: customer.region || '',
-              zipCode: customer.zip_code || '',
+              zipCode: customer.zipCode || '',
               country: customer.country || 'Philippines',
-              addressType: customer.address_type || 'home',
-              isPrimary: customer.is_primary !== undefined ? customer.is_primary : true,
-              employmentStatus: customer.employment_status || '',
-              employerName: customer.employer_name || '',
-              monthlyIncome: customer.monthly_income || null,
-              sourceOfIncome: customer.source_of_income || '',
-              idType: customer.id_type || '',
-              idNumber: customer.id_number || '',
-              kycStatus: customer.kyc_status || 'pending',
-              creditScore: customer.credit_score || 650,
+              addressType: customer.addressType || 'home',
+              isPrimary: customer.isPrimary !== undefined ? customer.isPrimary : true,
+              employmentStatus: customer.employmentStatus || '',
+              employerName: customer.employerName || '',
+              monthlyIncome: customer.monthlyIncome || null,
+              sourceOfIncome: customer.sourceOfIncome || '',
+              idType: customer.idType || '',
+              idNumber: customer.idNumber || '',
+              kycStatus: customer.kycStatus || 'pending',
+              creditScore: customer.creditScore || 650,
               status: customer.status || 'active'
             });
-            
+
             console.log('✅ Tenant customer data loaded:', this.formData);
             this.cdr.detectChanges();
           }
@@ -859,7 +859,7 @@ export class CustomerFormComponent implements OnInit {
           if (response.success && response.data) {
             const customer = response.data;
             Object.assign(this.formData, customer);
-            
+
             // Set tenant name directly from customer data (no need for separate API call)
             if (customer.tenantName) {
               this.tenantName.set(customer.tenantName);
@@ -868,7 +868,7 @@ export class CustomerFormComponent implements OnInit {
               // Fallback: try to load by ID if tenantName not included
               this.loadTenantNameById(customer.tenantId);
             }
-            
+
             console.log('✅ Money Loan customer data loaded:', this.formData);
             this.cdr.detectChanges();
           }
@@ -879,7 +879,7 @@ export class CustomerFormComponent implements OnInit {
       });
     }
   }
-  
+
   loadTenantNameById(tenantId: number) {
     // Get tenant info by ID for Money Loan platform
     this.http.get<any>(`http://localhost:3000/api/tenants/${tenantId}`).subscribe({
@@ -911,11 +911,11 @@ export class CustomerFormComponent implements OnInit {
     if (!this.formData.phone?.trim()) return 'Phone number is required';
     if (!this.formData.dateOfBirth) return 'Date of birth is required';
     if (!this.formData.gender) return 'Gender is required';
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.formData.email)) return 'Invalid email format';
-    
+
     return null; // No errors
   }
 
@@ -926,13 +926,13 @@ export class CustomerFormComponent implements OnInit {
       alert(validationError);
       return;
     }
-    
+
     this.saving.set(true);
-    
+
     // Determine return path based on current route
     const currentUrl = this.router.url;
-    const returnPath = currentUrl.includes('/tenant/customers') 
-      ? '/tenant/customers' 
+    const returnPath = currentUrl.includes('/tenant/customers')
+      ? '/tenant/customers'
       : '/platforms/money-loan/dashboard/customers/all';
 
     if (this.isInTenantContext()) {

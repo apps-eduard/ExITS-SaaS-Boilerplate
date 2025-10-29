@@ -3,7 +3,7 @@
  * Manages tenant subscriptions to individual products (Money Loan, BNPL, Pawnshop)
  */
 
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class ProductSubscriptionService {
@@ -12,38 +12,36 @@ class ProductSubscriptionService {
    */
   static async getTenantProductSubscriptions(tenantId) {
     try {
-      const result = await pool.query(
-        `SELECT 
-          ps.id,
-          ps.tenant_id,
-          ps.platform_type,
-          ps.subscription_plan_id,
-          ps.status,
-          ps.started_at as starts_at,
-          ps.expires_at,
-          ps.price,
-          ps.billing_cycle,
-          ps.metadata,
-          ps.created_at,
-          ps.updated_at,
-          json_build_object(
+      const subscriptions = await knex('platformSubscriptions as ps')
+        .leftJoin('subscriptionPlans as sp', 'ps.subscriptionPlanId', 'sp.id')
+        .select(
+          'ps.id',
+          'ps.tenantId',
+          'ps.platformType',
+          'ps.subscriptionPlanId',
+          'ps.status',
+          'ps.startedAt as startsAt',
+          'ps.expiresAt',
+          'ps.price',
+          'ps.billingCycle',
+          'ps.metadata',
+          'ps.createdAt',
+          'ps.updatedAt',
+          knex.raw(`json_build_object(
             'id', sp.id,
             'name', sp.name,
             'description', sp.description,
             'price', sp.price,
-            'billing_cycle', sp.billing_cycle,
+            'billingCycle', sp.billing_cycle,
             'features', sp.features,
-            'max_users', sp.max_users,
-            'max_storage_gb', sp.max_storage_gb
-          ) as subscription_plan
-         FROM platform_subscriptions ps
-         LEFT JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
-         WHERE ps.tenant_id = $1
-         ORDER BY ps.platform_type`,
-        [tenantId]
-      );
+            'maxUsers', sp.max_users,
+            'maxStorageGb', sp.max_storage_gb
+          ) as subscriptionPlan`),
+        )
+        .where('ps.tenantId', tenantId)
+        .orderBy('ps.platformType');
 
-      return result.rows;
+      return subscriptions;
     } catch (err) {
       logger.error(`Error getting product subscriptions: ${err.message}`);
       throw err;
@@ -55,66 +53,70 @@ class ProductSubscriptionService {
    */
   static async subscribeToProduct(tenantId, productType, subscriptionData) {
     try {
-      const { subscription_plan_id, billing_cycle, starts_at, expires_at } = subscriptionData;
+      const { subscriptionPlanId, billingCycle, startsAt, expiresAt } = subscriptionData;
 
       // Fetch the price from subscription plan
-      const planResult = await pool.query(
-        `SELECT price FROM subscription_plans WHERE id = $1`,
-        [subscription_plan_id]
-      );
+      const plan = await knex('subscriptionPlans')
+        .select('price')
+        .where({ id: subscriptionPlanId })
+        .first();
 
-      if (planResult.rows.length === 0) {
+      if (!plan) {
         throw new Error('Subscription plan not found');
       }
 
-      const price = planResult.rows[0].price;
+      const price = plan.price;
 
       // Calculate expires_at if not provided based on billing cycle
-      let calculatedExpiresAt = expires_at;
-      if (!calculatedExpiresAt) {
-        const startDate = starts_at || 'CURRENT_TIMESTAMP';
-        switch (billing_cycle) {
+      let expiresAtValue = expiresAt;
+      if (!expiresAtValue) {
+        const startDate = startsAt || knex.fn.now();
+        switch (billingCycle) {
           case 'monthly':
-            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 month')`;
+            expiresAtValue = knex.raw("COALESCE(?, CURRENT_TIMESTAMP) + INTERVAL '1 month'", [startsAt]);
             break;
           case 'quarterly':
-            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '3 months')`;
+            expiresAtValue = knex.raw("COALESCE(?, CURRENT_TIMESTAMP) + INTERVAL '3 months'", [startsAt]);
             break;
           case 'yearly':
-            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 year')`;
+            expiresAtValue = knex.raw("COALESCE(?, CURRENT_TIMESTAMP) + INTERVAL '1 year'", [startsAt]);
             break;
           default:
-            calculatedExpiresAt = `(COALESCE($6, CURRENT_TIMESTAMP) + INTERVAL '1 month')`;
+            expiresAtValue = knex.raw("COALESCE(?, CURRENT_TIMESTAMP) + INTERVAL '1 month'", [startsAt]);
         }
       }
 
-      const result = await pool.query(
-        `INSERT INTO platform_subscriptions 
-          (tenant_id, platform_type, subscription_plan_id, price, billing_cycle, started_at, expires_at, status)
-         VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), 
-           COALESCE($7::timestamp, ${calculatedExpiresAt}), 'active')
-         ON CONFLICT (tenant_id, platform_type) 
-         DO UPDATE SET
-           subscription_plan_id = EXCLUDED.subscription_plan_id,
-           price = EXCLUDED.price,
-           billing_cycle = EXCLUDED.billing_cycle,
-           started_at = EXCLUDED.started_at,
-           expires_at = COALESCE(EXCLUDED.expires_at, ${calculatedExpiresAt}),
-           status = 'active',
-           updated_at = CURRENT_TIMESTAMP
-         RETURNING *`,
-        [tenantId, productType, subscription_plan_id, price, billing_cycle, starts_at, expires_at]
-      );
+      const [subscription] = await knex('platformSubscriptions')
+        .insert({
+          tenantId,
+          platformType: productType,
+          subscriptionPlanId,
+          price,
+          billingCycle,
+          startedAt: startsAt || knex.fn.now(),
+          expiresAt: expiresAtValue,
+          status: 'active',
+        })
+        .onConflict(['tenantId', 'platformType'])
+        .merge({
+          subscriptionPlanId,
+          price,
+          billingCycle,
+          startedAt: startsAt || knex.fn.now(),
+          expiresAt: expiresAtValue,
+          status: 'active',
+          updatedAt: knex.fn.now(),
+        })
+        .returning('*');
 
       // Update tenant enabled flag
-      const enabledField = `${productType}_enabled`;
-      await pool.query(
-        `UPDATE tenants SET ${enabledField} = true WHERE id = $1`,
-        [tenantId]
-      );
+      const enabledField = `${productType}Enabled`;
+      await knex('tenants')
+        .where({ id: tenantId })
+        .update({ [enabledField]: true });
 
       logger.info(`Tenant ${tenantId} subscribed to product: ${productType}`);
-      return result.rows[0];
+      return subscription;
     } catch (err) {
       logger.error(`Error subscribing to product: ${err.message}`);
       throw err;
@@ -126,23 +128,21 @@ class ProductSubscriptionService {
    */
   static async unsubscribeFromProduct(tenantId, productType) {
     try {
-      const result = await pool.query(
-        `UPDATE platform_subscriptions 
-         SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
-         WHERE tenant_id = $1 AND platform_type = $2
-         RETURNING *`,
-        [tenantId, productType]
-      );
+      const [subscription] = await knex('platformSubscriptions')
+        .where({ tenantId, platformType: productType })
+        .update({
+          status: 'cancelled',
+          updatedAt: knex.fn.now()
+        })
+        .returning('*');
 
       // Update tenant enabled flag
-      const enabledField = `${productType}_enabled`;
-      await pool.query(
-        `UPDATE tenants SET ${enabledField} = false WHERE id = $1`,
-        [tenantId]
-      );
+      await knex('tenants')
+        .where({ id: tenantId })
+        .update({ [`${productType}Enabled`]: false });
 
       logger.info(`Tenant ${tenantId} unsubscribed from product: ${productType}`);
-      return result.rows[0];
+      return subscription;
     } catch (err) {
       logger.error(`Error unsubscribing from product: ${err.message}`);
       throw err;
@@ -158,68 +158,57 @@ class ProductSubscriptionService {
       
       const { subscription_plan_id, billing_cycle, expires_at, status } = updateData;
       
-      const fieldsToUpdate = [];
-      const values = [tenantId, productType];
-      let paramCount = 3;
+      const fieldsToUpdate = {};
 
       // If subscription_plan_id is being updated, fetch the new price
       if (subscription_plan_id !== undefined) {
-        const planResult = await pool.query(
-          `SELECT price FROM subscription_plans WHERE id = $1`,
-          [subscription_plan_id]
-        );
+        const plan = await knex('subscriptionPlans')
+          .select('price')
+          .where({ id: subscription_plan_id })
+          .first();
 
-        if (planResult.rows.length === 0) {
+        if (!plan) {
           throw new Error('Subscription plan not found');
         }
 
-        const price = planResult.rows[0].price;
-        
-        fieldsToUpdate.push(`subscription_plan_id = $${paramCount++}`);
-        values.push(subscription_plan_id);
-        fieldsToUpdate.push(`price = $${paramCount++}`);
-        values.push(price);
+        fieldsToUpdate.subscriptionPlanId = subscription_plan_id;
+        fieldsToUpdate.price = plan.price;
       }
 
       if (billing_cycle !== undefined) {
-        fieldsToUpdate.push(`billing_cycle = $${paramCount++}`);
-        values.push(billing_cycle);
+        fieldsToUpdate.billingCycle = billing_cycle;
       }
 
       if (expires_at !== undefined) {
-        fieldsToUpdate.push(`expires_at = $${paramCount++}`);
-        values.push(expires_at);
+        fieldsToUpdate.expiresAt = expires_at;
       }
 
       if (status !== undefined) {
-        fieldsToUpdate.push(`status = $${paramCount++}`);
-        values.push(status);
+        fieldsToUpdate.status = status;
       }
 
-      if (fieldsToUpdate.length === 0) {
+      if (Object.keys(fieldsToUpdate).length === 0) {
         throw new Error('No fields to update');
       }
 
-      const query = `
-        UPDATE platform_subscriptions
-        SET ${fieldsToUpdate.join(', ')}, updated_at = CURRENT_TIMESTAMP
-        WHERE tenant_id = $1 AND platform_type = $2
-        RETURNING *
-      `;
+      // Add updatedAt
+      fieldsToUpdate.updatedAt = knex.fn.now();
 
-      console.log('📝 Update query:', query);
-      console.log('📝 Query values:', values);
+      console.log('📝 Fields to update:', fieldsToUpdate);
 
-      const result = await pool.query(query, values);
+      const [subscription] = await knex('platformSubscriptions')
+        .where({ tenantId, platformType: productType })
+        .update(fieldsToUpdate)
+        .returning('*');
 
-      console.log('✅ Update result:', result.rows[0]);
+      console.log('✅ Update result:', subscription);
 
-      if (result.rows.length === 0) {
+      if (!subscription) {
         throw new Error('Product subscription not found');
       }
 
       logger.info(`Product subscription updated: Tenant ${tenantId}, Product ${productType}`);
-      return result.rows[0];
+      return subscription;
     } catch (err) {
       logger.error(`Error updating product subscription: ${err.message}`);
       console.error('❌ Update error:', err);

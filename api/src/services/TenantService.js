@@ -3,7 +3,7 @@
  * Handles tenant management and multi-tenancy operations
  */
 
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class TenantService {
@@ -41,178 +41,169 @@ class TenantService {
   /**
    * Create a new tenant with admin user
    */
-  static async createTenant(tenantData, requestingUserId) {
-    const client = await pool.connect();
-    
+  static async createTenant(tenantData, _requestingUserId) {
     try {
-      await client.query('BEGIN');
+      return await knex.transaction(async (trx) => {
+        // Check if subdomain is already taken
+        const existingTenant = await trx('tenants')
+          .select('id')
+          .where({ subdomain: tenantData.subdomain })
+          .first();
 
-      // Check if subdomain is already taken
-      const existingTenant = await client.query(
-        `SELECT id FROM tenants WHERE subdomain = $1`,
-        [tenantData.subdomain]
-      );
-
-      if (existingTenant.rows.length > 0) {
-        throw new Error('Subdomain already taken');
-      }
-
-      // Check if admin email already exists
-      if (tenantData.adminEmail) {
-        const existingUser = await client.query(
-          `SELECT id FROM users WHERE LOWER(email) = LOWER($1)`,
-          [tenantData.adminEmail]
-        );
-
-        if (existingUser.rows.length > 0) {
-          throw new Error('Admin email already registered');
+        if (existingTenant) {
+          throw new Error('Subdomain already taken');
         }
-      }
 
-      // Validate and get plan name (handle both 'plan' and 'subscriptionPlan' fields)
-      const requestedPlan = tenantData.plan || tenantData.subscriptionPlan || 'starter';
-      
-      // Validate plan exists in database (case-insensitive match)
-      const planCheck = await client.query(
-        `SELECT name FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
-        [requestedPlan]
-      );
+        // Check if admin email already exists
+        if (tenantData.adminEmail) {
+          const existingUser = await trx('users')
+            .select('id')
+            .whereRaw('LOWER(email) = LOWER(?)', [tenantData.adminEmail])
+            .first();
 
-      if (planCheck.rows.length === 0) {
-        throw new Error(`Invalid subscription plan: ${requestedPlan}. Plan does not exist or is inactive.`);
-      }
-
-      // Use the plan name directly from database (should match tenant_plan ENUM)
-      const plan = planCheck.rows[0].name;
-
-      const result = await client.query(
-        `INSERT INTO tenants (name, subdomain, plan, status, max_users, logo_url, primary_color, secondary_color, money_loan_enabled, bnpl_enabled, pawnshop_enabled)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id, name, subdomain, plan, status, max_users, created_at`,
-        [
-          tenantData.name,
-          tenantData.subdomain,
-          plan,
-          tenantData.status || 'active',
-          tenantData.maxUsers || 10,
-          tenantData.logoUrl || null,
-          tenantData.primaryColor || null,
-          tenantData.secondaryColor || null,
-          tenantData.money_loan_enabled || false,
-          tenantData.bnpl_enabled || false,
-          tenantData.pawnshop_enabled || false,
-        ]
-      );
-
-      const tenant = result.rows[0];
-
-      // Create tenant subscription record
-      const planResult = await client.query(
-        `SELECT id, price FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
-        [plan]
-      );
-
-      if (planResult.rows.length > 0) {
-        const planId = planResult.rows[0].id;
-        const monthlyPrice = planResult.rows[0].price;
-        
-        // Calculate expiration date (1 year from now)
-        const startDate = new Date();
-        const expirationDate = new Date(startDate);
-        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-
-        await client.query(
-          `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
-           VALUES ($1, $2, 'active', $3, $4, $5)`,
-          [tenant.id, planId, startDate, expirationDate, monthlyPrice]
-        );
-
-        logger.info(`Tenant subscription created: Tenant ${tenant.id} -> Plan ${planId}`);
-      }
-
-      // Create default tenant roles
-      const defaultRoles = [
-        { name: 'Tenant Admin', description: 'Tenant administrator', space: 'tenant' },
-        { name: 'User Manager', description: 'Manage tenant users', space: 'tenant' },
-        { name: 'Analyst', description: 'Data analyst access', space: 'tenant' },
-        { name: 'Viewer', description: 'Read-only access', space: 'tenant' },
-      ];
-
-      let tenantAdminRoleId = null;
-      for (const role of defaultRoles) {
-        const roleResult = await client.query(
-          `INSERT INTO roles (tenant_id, name, description, space)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id`,
-          [tenant.id, role.name, role.description, role.space]
-        );
-        
-        // Save the Tenant Admin role ID for assigning to the admin user
-        if (role.name === 'Tenant Admin') {
-          tenantAdminRoleId = roleResult.rows[0].id;
-          
-          // Grant all tenant-level permissions to Tenant Admin role
-          const permissionsResult = await client.query(
-            `SELECT id FROM permissions WHERE space IN ('tenant', 'both')`
-          );
-          
-          if (permissionsResult.rows.length > 0) {
-            const permissionValues = permissionsResult.rows
-              .map((p, idx) => `(${tenantAdminRoleId}, ${p.id})`)
-              .join(', ');
-            
-            await client.query(
-              `INSERT INTO role_permissions (role_id, permission_id) 
-               VALUES ${permissionValues}
-               ON CONFLICT (role_id, permission_id) DO NOTHING`
-            );
-            
-            logger.info(`Granted ${permissionsResult.rows.length} permissions to Tenant Admin role`);
+          if (existingUser) {
+            throw new Error('Admin email already registered');
           }
         }
-      }
 
-      // Create admin user if admin details provided
-      if (tenantData.adminEmail && tenantData.adminPassword) {
-        const bcrypt = require('bcrypt');
-        const hashedPassword = await bcrypt.hash(tenantData.adminPassword, 10);
+        // Validate and get plan name (handle both 'plan' and 'subscriptionPlan' fields)
+        const requestedPlan = tenantData.plan || tenantData.subscriptionPlan || 'starter';
+        
+        // Validate plan exists in database (case-insensitive match)
+        const planCheck = await trx('subscriptionPlans')
+          .select('name')
+          .whereRaw('LOWER(name) = LOWER(?)', [requestedPlan])
+          .where({ status: 'active' })
+          .first();
 
-        const userResult = await client.query(
-          `INSERT INTO users (email, password_hash, first_name, last_name, tenant_id, status)
-           VALUES ($1, $2, $3, $4, $5, 'active')
-           RETURNING id, email, first_name, last_name`,
-          [
-            tenantData.adminEmail,
-            hashedPassword,
-            tenantData.adminFirstName || '',
-            tenantData.adminLastName || '',
-            tenant.id
-          ]
-        );
-
-        const adminUser = userResult.rows[0];
-
-        // Assign Tenant Admin role to the admin user
-        if (tenantAdminRoleId) {
-          await client.query(
-            `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`,
-            [adminUser.id, tenantAdminRoleId]
-          );
+        if (!planCheck) {
+          throw new Error(`Invalid subscription plan: ${requestedPlan}. Plan does not exist or is inactive.`);
         }
 
-        logger.info(`Tenant admin user created: ${adminUser.email} for tenant ${tenant.name}`);
-      }
+        // Use the plan name directly from database (should match tenant_plan ENUM)
+        const plan = planCheck.name;
 
-      await client.query('COMMIT');
-      logger.info(`Tenant created: ${tenant.name} (${tenant.id})`);
+        const [tenant] = await trx('tenants')
+          .insert({
+            name: tenantData.name,
+            subdomain: tenantData.subdomain,
+            plan,
+            status: tenantData.status || 'active',
+            maxUsers: tenantData.maxUsers || 10,
+            logoUrl: tenantData.logoUrl || null,
+            primaryColor: tenantData.primaryColor || null,
+            secondaryColor: tenantData.secondaryColor || null,
+            moneyLoanEnabled: tenantData.money_loan_enabled || false,
+            bnplEnabled: tenantData.bnpl_enabled || false,
+            pawnshopEnabled: tenantData.pawnshop_enabled || false,
+          })
+          .returning(['id', 'name', 'subdomain', 'plan', 'status', 'maxUsers', 'createdAt']);
 
-      return tenant;
+        // Create tenant subscription record
+        const planResult = await trx('subscriptionPlans')
+          .select('id', 'price')
+          .whereRaw('LOWER(name) = LOWER(?)', [plan])
+          .where({ status: 'active' })
+          .first();
+
+        if (planResult) {
+          const planId = planResult.id;
+          const monthlyPrice = planResult.price;
+          
+          // Calculate expiration date (1 year from now)
+          const startDate = new Date();
+          const expirationDate = new Date(startDate);
+          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+          await trx('tenantSubscriptions').insert({
+            tenantId: tenant.id,
+            planId,
+            status: 'active',
+            startedAt: startDate,
+            expiresAt: expirationDate,
+            monthlyPrice,
+          });
+
+          logger.info(`Tenant subscription created: Tenant ${tenant.id} -> Plan ${planId}`);
+        }
+
+        // Create default tenant roles
+        const defaultRoles = [
+          { name: 'Tenant Admin', description: 'Tenant administrator', space: 'tenant' },
+          { name: 'User Manager', description: 'Manage tenant users', space: 'tenant' },
+          { name: 'Analyst', description: 'Data analyst access', space: 'tenant' },
+          { name: 'Viewer', description: 'Read-only access', space: 'tenant' },
+        ];
+
+        let tenantAdminRoleId = null;
+        for (const role of defaultRoles) {
+          const [createdRole] = await trx('roles')
+            .insert({
+              tenantId: tenant.id,
+              name: role.name,
+              description: role.description,
+              space: role.space,
+            })
+            .returning(['id']);
+          
+          // Save the Tenant Admin role ID for assigning to the admin user
+          if (role.name === 'Tenant Admin') {
+            tenantAdminRoleId = createdRole.id;
+            
+            // Grant all tenant-level permissions to Tenant Admin role
+            const permissions = await trx('permissions')
+              .select('id')
+              .whereIn('space', ['tenant', 'both']);
+            
+            if (permissions.length > 0) {
+              const permissionInserts = permissions.map(p => ({
+                roleId: tenantAdminRoleId,
+                permissionId: p.id,
+              }));
+              
+              await trx('rolePermissions')
+                .insert(permissionInserts)
+                .onConflict(['roleId', 'permissionId'])
+                .ignore();
+              
+              logger.info(`Granted ${permissions.length} permissions to Tenant Admin role`);
+            }
+          }
+        }
+
+        // Create admin user if admin details provided
+        if (tenantData.adminEmail && tenantData.adminPassword) {
+          const bcrypt = require('bcrypt');
+          const hashedPassword = await bcrypt.hash(tenantData.adminPassword, 10);
+
+          const [adminUser] = await trx('users')
+            .insert({
+              email: tenantData.adminEmail,
+              passwordHash: hashedPassword,
+              firstName: tenantData.adminFirstName || '',
+              lastName: tenantData.adminLastName || '',
+              tenantId: tenant.id,
+              status: 'active',
+            })
+            .returning(['id', 'email', 'firstName', 'lastName']);
+
+          // Assign Tenant Admin role to the admin user
+          if (tenantAdminRoleId) {
+            await trx('userRoles').insert({
+              userId: adminUser.id,
+              roleId: tenantAdminRoleId,
+            });
+          }
+
+          logger.info(`Tenant admin user created: ${adminUser.email} for tenant ${tenant.name}`);
+        }
+
+        logger.info(`Tenant created: ${tenant.name} (${tenant.id})`);
+        return tenant;
+      });
     } catch (err) {
-      await client.query('ROLLBACK');
       logger.error(`Tenant service create error: ${err.message}`);
       throw err;
-    } finally {
-      client.release();
     }
   }
 
@@ -221,52 +212,58 @@ class TenantService {
    */
   static async getTenantById(tenantId) {
     try {
-      const result = await pool.query(
-        `SELECT t.*, 
-                sp.id as plan_id, sp.name as plan_name, sp.description as plan_description,
-                sp.price, sp.billing_cycle, sp.features, sp.max_users as plan_max_users,
-                sp.max_storage_gb
-         FROM tenants t
-         LEFT JOIN subscription_plans sp ON LOWER(sp.name) = LOWER(t.plan::text) AND sp.status = 'active'
-         WHERE t.id = $1`,
-        [tenantId]
-      );
+      const tenant = await knex('tenants as t')
+        .leftJoin('subscriptionPlans as sp', function() {
+          this.on(knex.raw('LOWER(sp.name) = LOWER(t.plan::text)'))
+            .andOn('sp.status', knex.raw('?', ['active']));
+        })
+        .select(
+          't.*',
+          'sp.id as planId',
+          'sp.name as planName',
+          'sp.description as planDescription',
+          'sp.price',
+          'sp.billingCycle',
+          'sp.features',
+          'sp.maxUsers as planMaxUsers',
+          'sp.maxStorageGb'
+        )
+        .where('t.id', tenantId)
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found');
       }
 
-      const tenant = result.rows[0];
-
       // Get tenant stats
-      const usersCountResult = await pool.query(
-        `SELECT COUNT(*) as count FROM users WHERE tenant_id = $1`,
-        [tenantId]
-      );
+      const usersCount = await knex('users')
+        .where({ tenantId })
+        .count('* as count')
+        .first();
 
-      const rolesCountResult = await pool.query(
-        `SELECT COUNT(*) as count FROM roles WHERE tenant_id = $1`,
-        [tenantId]
-      );
+      const rolesCount = await knex('roles')
+        .where({ tenantId })
+        .count('* as count')
+        .first();
 
       // Add counts to tenant object
-      tenant.user_count = parseInt(usersCountResult.rows[0].count);
-      tenant.role_count = parseInt(rolesCountResult.rows[0].count);
+      tenant.userCount = parseInt(usersCount.count);
+      tenant.roleCount = parseInt(rolesCount.count);
 
       // Use transformTenant to get camelCase response
       const transformedTenant = this.transformTenant(tenant);
 
       // Add subscription plan details if available
-      if (tenant.plan_id) {
+      if (tenant.planId) {
         transformedTenant.subscriptionPlan = {
-          id: tenant.plan_id,
-          name: tenant.plan_name,
-          description: tenant.plan_description,
+          id: tenant.planId,
+          name: tenant.planName,
+          description: tenant.planDescription,
           price: parseFloat(tenant.price),
-          billingCycle: tenant.billing_cycle,
+          billingCycle: tenant.billingCycle,
           features: tenant.features,
-          maxUsers: tenant.plan_max_users,
-          maxStorageGb: tenant.max_storage_gb
+          maxUsers: tenant.planMaxUsers,
+          maxStorageGb: tenant.maxStorageGb,
         };
       }
 
@@ -282,18 +279,16 @@ class TenantService {
    */
   static async getTenantBySubdomain(subdomain) {
     try {
-      const result = await pool.query(
-        `SELECT id, name, subdomain, plan, status, max_users, created_at
-         FROM tenants
-         WHERE subdomain = $1 AND status = 'active'`,
-        [subdomain]
-      );
+      const tenant = await knex('tenants')
+        .select('id', 'name', 'subdomain', 'plan', 'status', 'maxUsers', 'createdAt')
+        .where({ subdomain, status: 'active' })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found');
       }
 
-      return result.rows[0];
+      return tenant;
     } catch (err) {
       logger.error(`Tenant service get by subdomain error: ${err.message}`);
       throw err;
@@ -313,80 +308,93 @@ class TenantService {
       // await this.syncProductSubscriptions(tenantId);
 
       // Get tenant enabled products
-      const tenantResult = await pool.query(
-        `SELECT money_loan_enabled, bnpl_enabled, pawnshop_enabled FROM tenants WHERE id = $1`,
-        [tenantId]
-      );
+      const tenant = await knex('tenants')
+        .select('moneyLoanEnabled', 'bnplEnabled', 'pawnshopEnabled')
+        .where({ id: tenantId })
+        .first();
 
       const enabledProducts = [];
-      if (tenantResult.rows.length > 0) {
-        const tenant = tenantResult.rows[0];
-        if (tenant.money_loan_enabled) enabledProducts.push('money_loan');
-        if (tenant.bnpl_enabled) enabledProducts.push('bnpl');
-        if (tenant.pawnshop_enabled) enabledProducts.push('pawnshop');
+      if (tenant) {
+        if (tenant.moneyLoanEnabled) enabledProducts.push('money_loan');
+        if (tenant.bnplEnabled) enabledProducts.push('bnpl');
+        if (tenant.pawnshopEnabled) enabledProducts.push('pawnshop');
       }
 
       const subscriptions = [];
 
       // Get platform subscription from tenant_subscriptions
-      const platformSubResult = await pool.query(
-        `SELECT ts.*, sp.id as plan_id, sp.name, sp.description, 
-                sp.price, sp.billing_cycle, sp.features, sp.platform_type,
-                sp.is_popular, sp.status
-         FROM tenant_subscriptions ts
-         JOIN subscription_plans sp ON ts.plan_id = sp.id
-         WHERE ts.tenant_id = $1 AND ts.status = 'active'
-         ORDER BY ts.created_at DESC
-         LIMIT 1`,
-        [tenantId]
-      );
+      const platformSubs = await knex('tenantSubscriptions as ts')
+        .join('subscriptionPlans as sp', 'ts.planId', 'sp.id')
+        .select(
+          'ts.*',
+          'sp.id as planId',
+          'sp.name',
+          'sp.description',
+          'sp.price',
+          'sp.billingCycle',
+          'sp.features',
+          'sp.platformType',
+          'sp.isPopular',
+          'sp.status'
+        )
+        .where('ts.tenantId', tenantId)
+        .where('ts.status', 'active')
+        .orderBy('ts.createdAt', 'desc')
+        .limit(1);
 
-      logger.info(`📊 Platform subscriptions found: ${platformSubResult.rows.length}`);
+      logger.info(`📊 Platform subscriptions found: ${platformSubs.length}`);
 
-      if (platformSubResult.rows.length > 0) {
-        const sub = platformSubResult.rows[0];
+      if (platformSubs.length > 0) {
+        const sub = platformSubs[0];
         subscriptions.push(SubscriptionPlanService.transformPlan({
-          id: sub.plan_id,
+          id: sub.planId,
           name: sub.name,
           description: sub.description,
           price: sub.price,
-          billing_cycle: sub.billing_cycle,
+          billing_cycle: sub.billingCycle,
           features: sub.features,
-          platform_type: sub.platform_type || 'platform',
-          is_popular: sub.is_popular,
-          status: sub.status
+          platform_type: sub.platformType || 'platform',
+          is_popular: sub.isPopular,
+          status: sub.status,
         }));
       }
 
       // Get product subscriptions from platform_subscriptions
-      const productSubsResult = await pool.query(
-        `SELECT ps.*, sp.id as plan_id, sp.name, sp.description,
-                sp.price, sp.billing_cycle, sp.features, sp.platform_type,
-                sp.is_popular, sp.status
-         FROM platform_subscriptions ps
-         JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
-         WHERE ps.tenant_id = $1 AND ps.status = 'active'
-         ORDER BY ps.created_at`,
-        [tenantId]
-      );
+      const productSubs = await knex('platformSubscriptions as ps')
+        .join('subscriptionPlans as sp', 'ps.subscriptionPlanId', 'sp.id')
+        .select(
+          'ps.*',
+          'sp.id as planId',
+          'sp.name',
+          'sp.description',
+          'sp.price',
+          'sp.billingCycle',
+          'sp.features',
+          'sp.platformType',
+          'sp.isPopular',
+          'sp.status'
+        )
+        .where('ps.tenantId', tenantId)
+        .where('ps.status', 'active')
+        .orderBy('ps.createdAt');
 
-      logger.info(`📊 Product subscriptions found: ${productSubsResult.rows.length}`);
+      logger.info(`📊 Product subscriptions found: ${productSubs.length}`);
 
-      for (const sub of productSubsResult.rows) {
+      for (const sub of productSubs) {
         subscriptions.push({
           ...SubscriptionPlanService.transformPlan({
-            id: sub.plan_id,
+            id: sub.planId,
             name: sub.name,
             description: sub.description,
             price: sub.price,
-            billing_cycle: sub.billing_cycle,
+            billing_cycle: sub.billingCycle,
             features: sub.features,
-            platform_type: sub.platform_type,
-            is_popular: sub.is_popular,
-            status: sub.status
+            platform_type: sub.platformType,
+            is_popular: sub.isPopular,
+            status: sub.status,
           }),
-          startedAt: sub.started_at,
-          expiresAt: sub.expires_at
+          startedAt: sub.startedAt,
+          expiresAt: sub.expiresAt,
         });
       }
 
@@ -395,7 +403,7 @@ class TenantService {
       
       return {
         subscriptions,
-        enabledProducts
+        enabledProducts,
       };
     } catch (err) {
       logger.error(`Tenant service get active subscriptions error: ${err.message}`);
@@ -410,31 +418,29 @@ class TenantService {
   static async syncProductSubscriptions(tenantId) {
     try {
       // Get tenant with their enabled products
-      const tenantResult = await pool.query(
-        `SELECT plan, money_loan_enabled, bnpl_enabled, pawnshop_enabled 
-         FROM tenants WHERE id = $1`,
-        [tenantId]
-      );
+      const tenant = await knex('tenants')
+        .select('plan', 'moneyLoanEnabled', 'bnplEnabled', 'pawnshopEnabled')
+        .where({ id: tenantId })
+        .first();
 
-      if (tenantResult.rows.length === 0) {
+      if (!tenant) {
         return;
       }
 
-      const tenant = tenantResult.rows[0];
       const platformPlan = tenant.plan || 'starter';
 
       // Sync Money Loan
-      if (tenant.money_loan_enabled) {
+      if (tenant.moneyLoanEnabled) {
         await this.ensureProductSubscription(tenantId, 'money_loan', platformPlan);
       }
 
       // Sync BNPL
-      if (tenant.bnpl_enabled) {
+      if (tenant.bnplEnabled) {
         await this.ensureProductSubscription(tenantId, 'bnpl', platformPlan);
       }
 
       // Sync Pawnshop
-      if (tenant.pawnshop_enabled) {
+      if (tenant.pawnshopEnabled) {
         await this.ensureProductSubscription(tenantId, 'pawnshop', platformPlan);
       }
 
@@ -452,52 +458,50 @@ class TenantService {
   static async ensureProductSubscription(tenantId, productType, platformPlanName) {
     try {
       // Check if active subscription exists
-      const existing = await pool.query(
-        `SELECT id FROM platform_subscriptions 
-         WHERE tenant_id = $1 AND platform_type = $2 AND status = 'active'`,
-        [tenantId, productType]
-      );
+      const existing = await knex('platformSubscriptions')
+        .select('id')
+        .where({
+          tenantId,
+          platformType: productType,
+          status: 'active',
+        })
+        .first();
 
-      if (existing.rows.length > 0) {
+      if (existing) {
         return; // Already exists
       }
 
       // Find matching product plan based on platform tier
-      let planResult = await pool.query(
-        `SELECT id, price, billing_cycle FROM subscription_plans 
-         WHERE platform_type = $1 
-         AND name ILIKE $2
-         AND status = 'active'
-         LIMIT 1`,
-        [productType, `%${platformPlanName}%`]
-      );
+      let plan = await knex('subscriptionPlans')
+        .select('id', 'price', 'billingCycle')
+        .where({ platformType: productType, status: 'active' })
+        .whereRaw('name ILIKE ?', [`%${platformPlanName}%`])
+        .first();
 
       // Fallback to starter if no tier match
-      if (planResult.rows.length === 0) {
-        planResult = await pool.query(
-          `SELECT id, price, billing_cycle FROM subscription_plans 
-           WHERE platform_type = $1 
-           AND name ILIKE '%starter%'
-           AND status = 'active'
-           LIMIT 1`,
-          [productType]
-        );
+      if (!plan) {
+        plan = await knex('subscriptionPlans')
+          .select('id', 'price', 'billingCycle')
+          .where({ platformType: productType, status: 'active' })
+          .whereRaw('name ILIKE ?', ['%starter%'])
+          .first();
       }
 
-      if (planResult.rows.length === 0) {
+      if (!plan) {
         logger.warn(`No ${productType} plan found for tenant ${tenantId}`);
         return;
       }
 
-      const plan = planResult.rows[0];
-
       // Create the subscription
-      await pool.query(
-        `INSERT INTO platform_subscriptions 
-         (tenant_id, platform_type, subscription_plan_id, status, started_at, price, billing_cycle)
-         VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
-        [tenantId, productType, plan.id, plan.price, plan.billing_cycle || 'monthly']
-      );
+      await knex('platformSubscriptions').insert({
+        tenantId,
+        platformType: productType,
+        subscriptionPlanId: plan.id,
+        status: 'active',
+        startedAt: knex.fn.now(),
+        price: plan.price,
+        billingCycle: plan.billingCycle || 'monthly',
+      });
 
       logger.info(`✅ Auto-created ${productType} subscription for tenant ${tenantId}`);
     } catch (err) {
@@ -513,16 +517,16 @@ class TenantService {
   static async syncProductSubscriptionsOnUpdate(tenantId, updateData) {
     try {
       // Get current tenant state to know the platform plan
-      const tenantResult = await pool.query(
-        `SELECT plan FROM tenants WHERE id = $1`,
-        [tenantId]
-      );
+      const tenant = await knex('tenants')
+        .select('plan')
+        .where({ id: tenantId })
+        .first();
 
-      if (tenantResult.rows.length === 0) {
+      if (!tenant) {
         return;
       }
 
-      const platformPlan = tenantResult.rows[0].plan || 'starter';
+      const platformPlan = tenant.plan || 'starter';
 
       // Handle Money Loan
       if (updateData.money_loan_enabled !== undefined) {
@@ -569,15 +573,19 @@ class TenantService {
    */
   static async cancelProductSubscription(tenantId, productType) {
     try {
-      const result = await pool.query(
-        `UPDATE platform_subscriptions 
-         SET status = 'cancelled', updated_at = NOW()
-         WHERE tenant_id = $1 AND platform_type = $2 AND status = 'active'
-         RETURNING id`,
-        [tenantId, productType]
-      );
+      const cancelled = await knex('platformSubscriptions')
+        .where({
+          tenantId,
+          platformType: productType,
+          status: 'active',
+        })
+        .update({
+          status: 'cancelled',
+          updatedAt: knex.fn.now(),
+        })
+        .returning(['id']);
 
-      if (result.rows.length > 0) {
+      if (cancelled.length > 0) {
         logger.info(`✅ Cancelled ${productType} subscription for tenant ${tenantId}`);
       } else {
         logger.info(`ℹ️  No active ${productType} subscription to cancel for tenant ${tenantId}`);
@@ -595,29 +603,27 @@ class TenantService {
     try {
       const offset = (page - 1) * limit;
 
-      let whereConditions = [];
-      let params = [];
-      let paramCount = 1;
+      // Build count query
+      let countQuery = knex('tenants').count('* as total');
+      if (status) countQuery = countQuery.where({ status });
+      if (plan) countQuery = countQuery.where({ plan });
 
-      if (status) {
-        whereConditions.push(`status = $${paramCount++}`);
-        params.push(status);
-      }
-
-      if (plan) {
-        whereConditions.push(`plan = $${paramCount++}`);
-        params.push(plan);
-      }
-
-      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-      const countQuery = `SELECT COUNT(*) as total FROM tenants ${whereClause}`;
-      const dataQuery = `
-        SELECT t.id, t.name, t.subdomain, t.plan, t.status, t.max_users, t.created_at,
-               t.money_loan_enabled, t.bnpl_enabled, t.pawnshop_enabled,
-               (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as user_count,
-               (SELECT COUNT(*) FROM roles WHERE tenant_id = t.id) as role_count,
-               (SELECT json_agg(json_build_object(
+      // Build data query with subqueries
+      let dataQuery = knex('tenants as t')
+        .select(
+          't.id',
+          't.name',
+          't.subdomain',
+          't.plan',
+          't.status',
+          't.maxUsers',
+          't.createdAt',
+          't.moneyLoanEnabled',
+          't.bnplEnabled',
+          't.pawnshopEnabled',
+          knex.raw('(SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as user_count'),
+          knex.raw('(SELECT COUNT(*) FROM roles WHERE tenant_id = t.id) as role_count'),
+          knex.raw(`(SELECT json_agg(json_build_object(
                   'productType', ps.platform_type,
                   'planName', sp.name,
                   'status', ps.status,
@@ -629,44 +635,29 @@ class TenantService {
                 FROM platform_subscriptions ps
                 JOIN subscription_plans sp ON ps.subscription_plan_id = sp.id
                 WHERE ps.tenant_id = t.id AND ps.status = 'active'
-               ) as subscriptions
-        FROM tenants t
-        ${whereClause}
-        ORDER BY t.created_at DESC
-        LIMIT $${paramCount} OFFSET $${paramCount + 1}
-      `;
+               ) as subscriptions`)
+        )
+        .orderBy('t.createdAt', 'desc')
+        .limit(limit)
+        .offset(offset);
 
-      params.push(limit, offset);
+      if (status) dataQuery = dataQuery.where('t.status', status);
+      if (plan) dataQuery = dataQuery.where('t.plan', plan);
 
-      const [countResult, dataResult] = await Promise.all([
-        pool.query(countQuery, params.slice(0, params.length - 2)),
-        pool.query(dataQuery, params),
+      const [countResult, tenants] = await Promise.all([
+        countQuery,
+        dataQuery,
       ]);
 
-      // Transform tenant data to camelCase
-      const transformedTenants = dataResult.rows.map(tenant => ({
-        id: tenant.id,
-        name: tenant.name,
-        subdomain: tenant.subdomain,
-        plan: tenant.plan,
-        status: tenant.status,
-        maxUsers: tenant.max_users,
-        createdAt: tenant.created_at,
-        moneyLoanEnabled: tenant.money_loan_enabled,
-        bnplEnabled: tenant.bnpl_enabled,
-        pawnshopEnabled: tenant.pawnshop_enabled,
-        user_count: tenant.user_count,
-        role_count: tenant.role_count,
-        subscriptions: tenant.subscriptions || []
-      }));
+      const total = parseInt(countResult[0].total);
 
       return {
-        tenants: transformedTenants,
+        tenants,
         pagination: {
           page,
           limit,
-          total: parseInt(countResult.rows[0].total),
-          pages: Math.ceil(parseInt(countResult.rows[0].total) / limit),
+          total,
+          pages: Math.ceil(total / limit),
         },
       };
     } catch (err) {
@@ -678,134 +669,102 @@ class TenantService {
   /**
    * Update tenant
    */
-  static async updateTenant(tenantId, updateData, requestingUserId) {
+  static async updateTenant(tenantId, updateData, _requestingUserId) {
     try {
       logger.info('Update tenant data received:', JSON.stringify(updateData));
       
-      const fieldsToUpdate = [];
-      const values = [];
-      let paramCount = 1;
+      const fieldsToUpdate = {};
 
-      if (updateData.name !== undefined) {
-        fieldsToUpdate.push(`name = $${paramCount++}`);
-        values.push(updateData.name);
-      }
-
-      if (updateData.plan !== undefined) {
-        fieldsToUpdate.push(`plan = $${paramCount++}`);
-        values.push(updateData.plan);
-      }
-
-      if (updateData.status !== undefined) {
-        fieldsToUpdate.push(`status = $${paramCount++}`);
-        values.push(updateData.status);
-      }
-
-      if (updateData.max_users !== undefined) {
-        fieldsToUpdate.push(`max_users = $${paramCount++}`);
-        values.push(updateData.max_users);
-      }
+      if (updateData.name !== undefined) fieldsToUpdate.name = updateData.name;
+      if (updateData.plan !== undefined) fieldsToUpdate.plan = updateData.plan;
+      if (updateData.status !== undefined) fieldsToUpdate.status = updateData.status;
+      if (updateData.max_users !== undefined) fieldsToUpdate.maxUsers = updateData.max_users;
 
       // Handle colors object or direct primaryColor/secondaryColor
       if (updateData.colors?.primary !== undefined || updateData.primaryColor !== undefined) {
-        fieldsToUpdate.push(`primary_color = $${paramCount++}`);
-        values.push(updateData.colors?.primary || updateData.primaryColor);
+        fieldsToUpdate.primaryColor = updateData.colors?.primary || updateData.primaryColor;
       }
-
       if (updateData.colors?.secondary !== undefined || updateData.secondaryColor !== undefined) {
-        fieldsToUpdate.push(`secondary_color = $${paramCount++}`);
-        values.push(updateData.colors?.secondary || updateData.secondaryColor);
+        fieldsToUpdate.secondaryColor = updateData.colors?.secondary || updateData.secondaryColor;
       }
 
-      if (updateData.logo_url !== undefined) {
-        fieldsToUpdate.push(`logo_url = $${paramCount++}`);
-        values.push(updateData.logo_url);
-      }
-
-      if (updateData.contact_person !== undefined) {
-        fieldsToUpdate.push(`contact_person = $${paramCount++}`);
-        values.push(updateData.contact_person);
-      }
-
-      if (updateData.contact_email !== undefined) {
-        fieldsToUpdate.push(`contact_email = $${paramCount++}`);
-        values.push(updateData.contact_email);
-      }
-
-      if (updateData.contact_phone !== undefined) {
-        fieldsToUpdate.push(`contact_phone = $${paramCount++}`);
-        values.push(updateData.contact_phone);
-      }
+      if (updateData.logo_url !== undefined) fieldsToUpdate.logoUrl = updateData.logo_url;
+      if (updateData.contact_person !== undefined) fieldsToUpdate.contactPerson = updateData.contact_person;
+      if (updateData.contact_email !== undefined) fieldsToUpdate.contactEmail = updateData.contact_email;
+      if (updateData.contact_phone !== undefined) fieldsToUpdate.contactPhone = updateData.contact_phone;
 
       // Accept both camelCase and snake_case for product flags
       if (updateData.money_loan_enabled !== undefined || updateData.moneyLoanEnabled !== undefined) {
-        fieldsToUpdate.push(`money_loan_enabled = $${paramCount++}`);
-        values.push(updateData.money_loan_enabled !== undefined ? updateData.money_loan_enabled : updateData.moneyLoanEnabled);
+        fieldsToUpdate.moneyLoanEnabled = updateData.money_loan_enabled !== undefined ? updateData.money_loan_enabled : updateData.moneyLoanEnabled;
       }
-
       if (updateData.bnpl_enabled !== undefined || updateData.bnplEnabled !== undefined) {
-        fieldsToUpdate.push(`bnpl_enabled = $${paramCount++}`);
-        values.push(updateData.bnpl_enabled !== undefined ? updateData.bnpl_enabled : updateData.bnplEnabled);
+        fieldsToUpdate.bnplEnabled = updateData.bnpl_enabled !== undefined ? updateData.bnpl_enabled : updateData.bnplEnabled;
       }
-
       if (updateData.pawnshop_enabled !== undefined || updateData.pawnshopEnabled !== undefined) {
-        fieldsToUpdate.push(`pawnshop_enabled = $${paramCount++}`);
-        values.push(updateData.pawnshop_enabled !== undefined ? updateData.pawnshop_enabled : updateData.pawnshopEnabled);
+        fieldsToUpdate.pawnshopEnabled = updateData.pawnshop_enabled !== undefined ? updateData.pawnshop_enabled : updateData.pawnshopEnabled;
       }
 
-      if (fieldsToUpdate.length === 0) {
+      if (Object.keys(fieldsToUpdate).length === 0) {
         throw new Error('No fields to update');
       }
 
-      values.push(tenantId);
+      fieldsToUpdate.updatedAt = knex.fn.now();
 
-      const query = `
-        UPDATE tenants
-        SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
-        WHERE id = $${paramCount}
-        RETURNING id, name, subdomain, plan, status, max_users, logo_url, 
-                  contact_person, contact_email, contact_phone,
-                  money_loan_enabled, bnpl_enabled, pawnshop_enabled
-      `;
+      const [tenant] = await knex('tenants')
+        .where({ id: tenantId })
+        .update(fieldsToUpdate)
+        .returning([
+          'id',
+          'name',
+          'subdomain',
+          'plan',
+          'status',
+          'maxUsers',
+          'logoUrl',
+          'contactPerson',
+          'contactEmail',
+          'contactPhone',
+          'moneyLoanEnabled',
+          'bnplEnabled',
+          'pawnshopEnabled',
+        ]);
 
-      const result = await pool.query(query, values);
-
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found');
       }
 
       // If plan was updated, also update tenant_subscriptions
       if (updateData.plan !== undefined) {
-        const planResult = await pool.query(
-          `SELECT id, price FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
-          [updateData.plan]
-        );
+        const plan = await knex('subscriptionPlans')
+          .select('id', 'price')
+          .whereRaw('LOWER(name) = LOWER(?)', [updateData.plan])
+          .where({ status: 'active' })
+          .first();
 
-        if (planResult.rows.length > 0) {
-          const planId = planResult.rows[0].id;
-          const monthlyPrice = planResult.rows[0].price;
+        if (plan) {
+          const planId = plan.id;
+          const monthlyPrice = plan.price;
 
           // Check if tenant has an existing active subscription
-          const existingSub = await pool.query(
-            `SELECT id, plan_id FROM tenant_subscriptions WHERE tenant_id = $1 AND status = 'active'`,
-            [tenantId]
-          );
+          const existingSub = await knex('tenantSubscriptions')
+            .select('id', 'planId')
+            .where({ tenantId, status: 'active' })
+            .first();
 
-          if (existingSub.rows.length > 0) {
-            const existingPlanId = existingSub.rows[0].plan_id;
+          if (existingSub) {
+            const existingPlanId = existingSub.planId;
             
             // If plan changed, cancel old subscription and create new one (preserve history)
             if (existingPlanId !== planId) {
               // Cancel existing subscription
-              await pool.query(
-                `UPDATE tenant_subscriptions 
-                 SET status = 'cancelled', 
-                     cancelled_at = CURRENT_TIMESTAMP,
-                     cancellation_reason = 'Plan changed',
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE tenant_id = $1 AND status = 'active'`,
-                [tenantId]
-              );
+              await knex('tenantSubscriptions')
+                .where({ tenantId, status: 'active' })
+                .update({
+                  status: 'cancelled',
+                  cancelledAt: knex.fn.now(),
+                  cancellationReason: 'Plan changed',
+                  updatedAt: knex.fn.now(),
+                });
               logger.info(`Cancelled old subscription for tenant ${tenantId} (plan changed)`);
 
               // Create new subscription
@@ -813,20 +772,23 @@ class TenantService {
               const expirationDate = new Date(startDate);
               expirationDate.setFullYear(expirationDate.getFullYear() + 1);
 
-              await pool.query(
-                `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
-                 VALUES ($1, $2, 'active', $3, $4, $5)`,
-                [tenantId, planId, startDate, expirationDate, monthlyPrice]
-              );
+              await knex('tenantSubscriptions').insert({
+                tenantId,
+                planId,
+                status: 'active',
+                startedAt: startDate,
+                expiresAt: expirationDate,
+                monthlyPrice,
+              });
               logger.info(`Created new subscription for tenant ${tenantId} -> Plan ${planId}`);
             } else {
               // Same plan, just update the price if needed
-              await pool.query(
-                `UPDATE tenant_subscriptions 
-                 SET monthly_price = $1, updated_at = CURRENT_TIMESTAMP
-                 WHERE tenant_id = $2 AND status = 'active'`,
-                [monthlyPrice, tenantId]
-              );
+              await knex('tenantSubscriptions')
+                .where({ tenantId, status: 'active' })
+                .update({
+                  monthlyPrice,
+                  updatedAt: knex.fn.now(),
+                });
               logger.info(`Updated subscription price for tenant ${tenantId}`);
             }
           } else {
@@ -835,18 +797,21 @@ class TenantService {
             const expirationDate = new Date(startDate);
             expirationDate.setFullYear(expirationDate.getFullYear() + 1);
 
-            await pool.query(
-              `INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, started_at, expires_at, monthly_price)
-               VALUES ($1, $2, 'active', $3, $4, $5)`,
-              [tenantId, planId, startDate, expirationDate, monthlyPrice]
-            );
+            await knex('tenantSubscriptions').insert({
+              tenantId,
+              planId,
+              status: 'active',
+              startedAt: startDate,
+              expiresAt: expirationDate,
+              monthlyPrice,
+            });
             logger.info(`Created new subscription for tenant ${tenantId} -> Plan ${planId}`);
           }
         }
       }
 
       logger.info(`Tenant updated: ${tenantId}`);
-      return result.rows[0];
+      return tenant;
     } catch (err) {
       logger.error(`Tenant service update error: ${err.message}`);
       throw err;
@@ -856,20 +821,22 @@ class TenantService {
   /**
    * Suspend tenant
    */
-  static async suspendTenant(tenantId, reason, requestingUserId) {
+  static async suspendTenant(tenantId, reason, _requestingUserId) {
     try {
-      const result = await pool.query(
-        `UPDATE tenants SET status = 'suspended', updated_at = NOW() WHERE id = $1
-         RETURNING id, name, status`,
-        [tenantId]
-      );
+      const [tenant] = await knex('tenants')
+        .where({ id: tenantId })
+        .update({
+          status: 'suspended',
+          updatedAt: knex.fn.now(),
+        })
+        .returning(['id', 'name', 'status']);
 
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found');
       }
 
       logger.info(`Tenant suspended: ${tenantId} - Reason: ${reason}`);
-      return result.rows[0];
+      return tenant;
     } catch (err) {
       logger.error(`Tenant service suspend error: ${err.message}`);
       throw err;
@@ -879,20 +846,22 @@ class TenantService {
   /**
    * Activate tenant
    */
-  static async activateTenant(tenantId, requestingUserId) {
+  static async activateTenant(tenantId, _requestingUserId) {
     try {
-      const result = await pool.query(
-        `UPDATE tenants SET status = 'active', updated_at = NOW() WHERE id = $1
-         RETURNING id, name, status`,
-        [tenantId]
-      );
+      const [tenant] = await knex('tenants')
+        .where({ id: tenantId })
+        .update({
+          status: 'active',
+          updatedAt: knex.fn.now(),
+        })
+        .returning(['id', 'name', 'status']);
 
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found');
       }
 
       logger.info(`Tenant activated: ${tenantId}`);
-      return result.rows[0];
+      return tenant;
     } catch (err) {
       logger.error(`Tenant service activate error: ${err.message}`);
       throw err;
@@ -902,14 +871,17 @@ class TenantService {
   /**
    * Delete tenant (soft delete)
    */
-  static async deleteTenant(tenantId, requestingUserId) {
+  static async deleteTenant(tenantId, _requestingUserId) {
     try {
-      const result = await pool.query(
-        `UPDATE tenants SET status = 'deleted', updated_at = NOW() WHERE id = $1 RETURNING id`,
-        [tenantId]
-      );
+      const deleted = await knex('tenants')
+        .where({ id: tenantId })
+        .update({
+          status: 'deleted',
+          updatedAt: knex.fn.now(),
+        })
+        .returning(['id']);
 
-      if (result.rows.length === 0) {
+      if (!deleted.length) {
         throw new Error('Tenant not found');
       }
 
@@ -924,21 +896,24 @@ class TenantService {
   /**
    * Restore tenant (from soft delete)
    */
-  static async restoreTenant(tenantId, requestingUserId) {
+  static async restoreTenant(tenantId, _requestingUserId) {
     try {
-      const result = await pool.query(
-        `UPDATE tenants SET status = 'active', updated_at = NOW() WHERE id = $1 AND status = 'deleted' RETURNING *`,
-        [tenantId]
-      );
+      const [tenant] = await knex('tenants')
+        .where({ id: tenantId, status: 'deleted' })
+        .update({
+          status: 'active',
+          updatedAt: knex.fn.now(),
+        })
+        .returning('*');
 
-      if (result.rows.length === 0) {
+      if (!tenant) {
         throw new Error('Tenant not found or not deleted');
       }
 
-      const tenant = this.transformTenant(result.rows[0]);
+      const transformedTenant = this.transformTenant(tenant);
 
       logger.info(`Tenant restored: ${tenantId}`);
-      return tenant;
+      return transformedTenant;
     } catch (err) {
       logger.error(`Tenant service restore error: ${err.message}`);
       throw err;
@@ -951,25 +926,24 @@ class TenantService {
   static async getTenantStats(tenantId) {
     try {
       const stats = await Promise.all([
-        pool.query(`SELECT COUNT(*) as count FROM users WHERE tenant_id = $1`, [tenantId]),
-        pool.query(`SELECT COUNT(*) as count FROM roles WHERE tenant_id = $1`, [tenantId]),
-        pool.query(`SELECT COUNT(*) as count FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE r.tenant_id = $1`, [tenantId]),
-        pool.query(`SELECT COUNT(*) as count FROM audit_logs WHERE tenant_id = $1`, [tenantId]),
-        pool.query(
-          `SELECT COUNT(*) as count 
-           FROM user_sessions us 
-           JOIN users u ON us.user_id = u.id 
-           WHERE u.tenant_id = $1 AND us.status = 'active'`,
-          [tenantId]
-        ),
+        knex('users').where({ tenantId }).count('* as count').first(),
+        knex('roles').where({ tenantId}).count('* as count').first(),
+        knex('userRoles as ur').join('roles as r', 'ur.roleId', 'r.id').where('r.tenantId', tenantId).count('* as count').first(),
+        knex('auditLogs').where({ tenantId }).count('* as count').first(),
+        knex('userSessions as us')
+          .join('users as u', 'us.userId', 'u.id')
+          .where('u.tenantId', tenantId)
+          .where('us.status', 'active')
+          .count('* as count')
+          .first(),
       ]);
 
       return {
-        totalUsers: parseInt(stats[0].rows[0].count),
-        totalRoles: parseInt(stats[1].rows[0].count),
-        totalAssignments: parseInt(stats[2].rows[0].count),
-        totalAuditLogs: parseInt(stats[3].rows[0].count),
-        activeSessions: parseInt(stats[4].rows[0].count),
+        totalUsers: parseInt(stats[0].count),
+        totalRoles: parseInt(stats[1].count),
+        totalAssignments: parseInt(stats[2].count),
+        totalAuditLogs: parseInt(stats[3].count),
+        activeSessions: parseInt(stats[4].count),
       };
     } catch (err) {
       logger.error(`Tenant service get stats error: ${err.message}`);
@@ -982,26 +956,26 @@ class TenantService {
    */
   static async validateUserLimit(tenantId) {
     try {
-      const result = await pool.query(
-        `SELECT t.max_users, COUNT(u.id) as user_count
-         FROM tenants t
-         LEFT JOIN users u ON t.id = u.tenant_id
-         WHERE t.id = $1
-         GROUP BY t.id, t.max_users`,
-        [tenantId]
-      );
+      const result = await knex('tenants as t')
+        .leftJoin('users as u', 't.id', 'u.tenantId')
+        .select('t.maxUsers')
+        .count('u.id as userCount')
+        .where('t.id', tenantId)
+        .groupBy('t.id', 't.maxUsers')
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!result) {
         throw new Error('Tenant not found');
       }
 
-      const { max_users, user_count } = result.rows[0];
+      const maxUsers = result.maxUsers;
+      const userCount = parseInt(result.userCount);
 
       return {
-        allowed: user_count < max_users,
-        currentCount: parseInt(user_count),
-        maxCount: max_users,
-        remaining: max_users - parseInt(user_count),
+        allowed: userCount < maxUsers,
+        currentCount: userCount,
+        maxCount: maxUsers,
+        remaining: maxUsers - userCount,
       };
     } catch (err) {
       logger.error(`Tenant service validate user limit error: ${err.message}`);
@@ -1015,113 +989,121 @@ class TenantService {
   static async createOrUpdateSubscription(tenantId, userId, planId, billingCycle, paymentMethod) {
     try {
       // Get plan details
-      const planResult = await pool.query(
-        `SELECT * FROM subscription_plans WHERE id = $1 AND status = 'active'`,
-        [planId]
-      );
+      const plan = await knex('subscriptionPlans')
+        .where({ id: planId, status: 'active' })
+        .first();
 
-      if (planResult.rows.length === 0) {
+      if (!plan) {
         throw new Error('Invalid plan selected');
       }
 
-      const plan = planResult.rows[0];
-      const isProductPlan = plan.platform_type && plan.platform_type !== 'platform';
+      const isProductPlan = plan.platformType && plan.platformType !== 'platform';
       let transactionType = 'subscription';
 
       if (isProductPlan) {
         // Create/update product subscription
-        // Check for ANY existing subscription (active or inactive) to avoid unique constraint violation
-        const existingProductSub = await pool.query(
-          `SELECT id, status FROM platform_subscriptions 
-           WHERE tenant_id = $1 AND platform_type = $2`,
-          [tenantId, plan.platform_type]
-        );
+        const existingProductSub = await knex('platformSubscriptions')
+          .select('id', 'status')
+          .where({
+            tenantId,
+            platformType: plan.platformType,
+          })
+          .first();
 
-        if (existingProductSub.rows.length > 0) {
-          // Update existing subscription (reactivate if needed)
-          transactionType = existingProductSub.rows[0].status === 'active' ? 'upgrade' : 'subscription';
-          await pool.query(
-            `UPDATE platform_subscriptions 
-             SET subscription_plan_id = $1, price = $2, billing_cycle = $3, 
-                 status = 'active', started_at = NOW(), updated_at = NOW()
-             WHERE id = $4`,
-            [planId, plan.price, billingCycle, existingProductSub.rows[0].id]
-          );
+        if (existingProductSub) {
+          // Update existing subscription
+          transactionType = existingProductSub.status === 'active' ? 'upgrade' : 'subscription';
+          await knex('platformSubscriptions')
+            .where({ id: existingProductSub.id })
+            .update({
+              subscriptionPlanId: planId,
+              price: plan.price,
+              billingCycle,
+              status: 'active',
+              startedAt: knex.fn.now(),
+              updatedAt: knex.fn.now(),
+            });
         } else {
           // Create new product subscription
-          await pool.query(
-            `INSERT INTO platform_subscriptions 
-             (tenant_id, platform_type, subscription_plan_id, status, started_at, price, billing_cycle)
-             VALUES ($1, $2, $3, 'active', NOW(), $4, $5)`,
-            [tenantId, plan.platform_type, planId, plan.price, billingCycle]
-          );
+          await knex('platformSubscriptions').insert({
+            tenantId,
+            platformType: plan.platformType,
+            subscriptionPlanId: planId,
+            status: 'active',
+            startedAt: knex.fn.now(),
+            price: plan.price,
+            billingCycle,
+          });
         }
 
-        logger.info(`✅ Created/Updated ${plan.platform_type} subscription for tenant ${tenantId}`);
+        logger.info(`✅ Created/Updated ${plan.platformType} subscription for tenant ${tenantId}`);
       } else {
         // Create/update platform subscription
-        // Check for ANY existing subscription (active or inactive)
-        const existingPlatformSub = await pool.query(
-          `SELECT id, status FROM tenant_subscriptions WHERE tenant_id = $1`,
-          [tenantId]
-        );
+        const existingPlatformSub = await knex('tenantSubscriptions')
+          .select('id', 'status')
+          .where({ tenantId })
+          .first();
 
-        if (existingPlatformSub.rows.length > 0) {
-          // Update existing subscription (reactivate if needed)
-          transactionType = existingPlatformSub.rows[0].status === 'active' ? 'upgrade' : 'subscription';
-          await pool.query(
-            `UPDATE tenant_subscriptions 
-             SET plan_id = $1, price = $2, billing_cycle = $3, 
-                 status = 'active', started_at = NOW(), updated_at = NOW()
-             WHERE id = $4`,
-            [planId, plan.price, billingCycle, existingPlatformSub.rows[0].id]
-          );
+        if (existingPlatformSub) {
+          // Update existing subscription
+          transactionType = existingPlatformSub.status === 'active' ? 'upgrade' : 'subscription';
+          await knex('tenantSubscriptions')
+            .where({ id: existingPlatformSub.id })
+            .update({
+              planId,
+              price: plan.price,
+              billingCycle,
+              status: 'active',
+              startedAt: knex.fn.now(),
+              updatedAt: knex.fn.now(),
+            });
         } else {
           // Create new platform subscription
-          await pool.query(
-            `INSERT INTO tenant_subscriptions 
-             (tenant_id, plan_id, status, started_at, price, billing_cycle)
-             VALUES ($1, $2, 'active', NOW(), $3, $4)`,
-            [tenantId, planId, plan.price, billingCycle]
-          );
+          await knex('tenantSubscriptions').insert({
+            tenantId,
+            planId,
+            status: 'active',
+            startedAt: knex.fn.now(),
+            price: plan.price,
+            billingCycle,
+          });
         }
 
         // Update tenant plan
-        await pool.query(
-          `UPDATE tenants SET plan = $1, updated_at = NOW() WHERE id = $2`,
-          [plan.name.toLowerCase(), tenantId]
-        );
+        await knex('tenants')
+          .where({ id: tenantId })
+          .update({
+            plan: plan.name.toLowerCase(),
+            updatedAt: knex.fn.now(),
+          });
 
         logger.info(`✅ Created/Updated platform subscription for tenant ${tenantId}`);
         
-        // When platform subscription is active, reactivate all enabled product subscriptions
-        // This ensures product subscriptions don't show as "cancelled" when platform plan is active
-        const enabledProductsResult = await pool.query(
-          `SELECT money_loan_enabled, bnpl_enabled, pawnshop_enabled FROM tenants WHERE id = $1`,
-          [tenantId]
-        );
+        // Reactivate enabled product subscriptions
+        const tenant = await knex('tenants')
+          .select('moneyLoanEnabled', 'bnplEnabled', 'pawnshopEnabled')
+          .where({ id: tenantId })
+          .first();
         
-        if (enabledProductsResult.rows.length > 0) {
-          const tenant = enabledProductsResult.rows[0];
+        if (tenant) {
           const enabledProducts = [];
-          if (tenant.money_loan_enabled) enabledProducts.push('moneyloan');
-          if (tenant.bnpl_enabled) enabledProducts.push('bnpl');
-          if (tenant.pawnshop_enabled) enabledProducts.push('pawnshop');
+          if (tenant.moneyLoanEnabled) enabledProducts.push('moneyloan');
+          if (tenant.bnplEnabled) enabledProducts.push('bnpl');
+          if (tenant.pawnshopEnabled) enabledProducts.push('pawnshop');
           
           logger.info(`🔄 Reactivating product subscriptions for: ${enabledProducts.join(', ')}`);
           
-          // Update any existing product subscriptions to active
           for (const productType of enabledProducts) {
-            const updateResult = await pool.query(
-              `UPDATE platform_subscriptions 
-               SET status = 'active', updated_at = NOW()
-               WHERE tenant_id = $1 AND platform_type = $2
-               RETURNING id, platform_type, status`,
-              [tenantId, productType]
-            );
+            const updated = await knex('platformSubscriptions')
+              .where({ tenantId, platformType: productType })
+              .update({
+                status: 'active',
+                updatedAt: knex.fn.now(),
+              })
+              .returning(['id', 'platformType', 'status']);
             
-            if (updateResult.rows.length > 0) {
-              logger.info(`✅ Reactivated ${productType} subscription (ID: ${updateResult.rows[0].id}) to status: ${updateResult.rows[0].status}`);
+            if (updated.length > 0) {
+              logger.info(`✅ Reactivated ${productType} subscription (ID: ${updated[0].id})`);
             } else {
               logger.info(`⚠️  No existing ${productType} subscription found to reactivate`);
             }
@@ -1131,41 +1113,36 @@ class TenantService {
         }
       }
 
-      // Generate invoice ID (format: INV-YYYYMMDD-XXX)
+      // Generate invoice ID
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
       const invoiceId = `INV-${today}-${randomSuffix}`;
 
       // Save payment history record
-      await pool.query(
-        `INSERT INTO payment_history 
-         (tenant_id, user_id, subscription_plan_id, transaction_id, amount, currency, 
-          status, provider, transaction_type, plan_name, platform_type, description, processed_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
-        [
-          tenantId,
-          userId,
-          planId,
-          invoiceId,
-          plan.price,
-          'PHP',
-          'completed', // payment_status enum value
-          paymentMethod || 'credit_card',
-          transactionType,
-          plan.name,
-          plan.platform_type || 'platform',
-          `${transactionType === 'upgrade' ? 'Upgraded to' : 'Subscribed to'} ${plan.name} - ${billingCycle} billing`
-        ]
-      );
+      await knex('paymentHistory').insert({
+        tenantId,
+        userId,
+        subscriptionPlanId: planId,
+        transactionId: invoiceId,
+        amount: plan.price,
+        currency: 'PHP',
+        status: 'completed',
+        provider: paymentMethod || 'credit_card',
+        transactionType,
+        planName: plan.name,
+        platformType: plan.platformType || 'platform',
+        description: `${transactionType === 'upgrade' ? 'Upgraded to' : 'Subscribed to'} ${plan.name} - ${billingCycle} billing`,
+        processedAt: knex.fn.now(),
+      });
 
       logger.info(`💳 Payment history recorded: ${invoiceId} for tenant ${tenantId}`);
 
       return {
         success: true,
         plan: plan.name,
-        productType: plan.platform_type,
+        productType: plan.platformType,
         billingCycle,
-        paymentMethod
+        paymentMethod,
       };
     } catch (err) {
       logger.error(`Tenant service create subscription error: ${err.message}`);
@@ -1183,12 +1160,10 @@ class TenantService {
         transactionType = 'all', 
         status = 'all',
         page = 1,
-        limit = 20
+        limit = 20,
       } = filters;
 
-      let whereClauses = ['tenant_id = $1'];
-      let params = [tenantId];
-      let paramCounter = 2;
+      let query = knex('paymentHistory').where({ tenantId });
 
       // Date range filter
       if (dateRange !== 'all') {
@@ -1200,61 +1175,52 @@ class TenantService {
           default: daysAgo = null;
         }
         if (daysAgo) {
-          whereClauses.push(`processed_at >= NOW() - INTERVAL '${daysAgo} days'`);
+          query = query.where('processedAt', '>=', knex.raw(`NOW() - INTERVAL '${daysAgo} days'`));
         }
       }
 
       // Transaction type filter
       if (transactionType !== 'all') {
-        whereClauses.push(`transaction_type = $${paramCounter}`);
-        params.push(transactionType);
-        paramCounter++;
+        query = query.where({ transactionType });
       }
 
       // Status filter
       if (status !== 'all') {
-        whereClauses.push(`status = $${paramCounter}`);
-        params.push(status);
-        paramCounter++;
+        query = query.where({ status });
       }
 
-      const whereClause = whereClauses.join(' AND ');
       const offset = (page - 1) * limit;
 
       // Get total count
-      const countResult = await pool.query(
-        `SELECT COUNT(*) FROM payment_history WHERE ${whereClause}`,
-        params
-      );
+      const countResult = await query.clone().count('* as count').first();
+      const total = parseInt(countResult.count);
 
       // Get paginated records
-      const historyResult = await pool.query(
-        `SELECT 
-          id,
-          transaction_id as "invoiceId",
-          transaction_type as "transactionType",
-          amount,
-          currency,
-          status,
-          provider as "paymentMethod",
-          plan_name as "planName",
-          platform_type as "productType",
-          description,
-          processed_at as "date",
-          created_at as "createdAt"
-         FROM payment_history 
-         WHERE ${whereClause}
-         ORDER BY processed_at DESC
-         LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`,
-        [...params, limit, offset]
-      );
+      const transactions = await query
+        .select(
+          'id',
+          'transactionId as invoiceId',
+          'transactionType',
+          'amount',
+          'currency',
+          'status',
+          'provider as paymentMethod',
+          'planName',
+          'platformType as productType',
+          'description',
+          'processedAt as date',
+          'createdAt'
+        )
+        .orderBy('processedAt', 'desc')
+        .limit(limit)
+        .offset(offset);
 
       return {
-        transactions: historyResult.rows,
-        total: parseInt(countResult.rows[0].count),
+        transactions,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(countResult.rows[0].count / limit)
+        totalPages: Math.ceil(total / limit),
       };
     } catch (err) {
       logger.error(`Get payment history error: ${err.message}`);

@@ -1,32 +1,37 @@
 /**
  * User Service
  * Handles user management operations (CRUD, search, role assignment)
+ * NOTE: Fully converted to Knex with automatic camelCase/snake_case conversion
  */
 
 const bcrypt = require('bcryptjs');
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class UserService {
   /**
    * Transform database user object to camelCase
+   * NOTE: This method is now deprecated - Knex handles conversion automatically
+   * Keeping for backwards compatibility during migration
    */
   static transformUser(dbUser) {
     if (!dbUser) return null;
     
+    // With Knex, data is already in camelCase, so just return it
+    // If data comes from old pool.query, it will still work
     const user = {
       id: dbUser.id,
       email: dbUser.email,
-      firstName: dbUser.first_name,
-      lastName: dbUser.last_name,
-      fullName: `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim(),
-      tenantId: dbUser.tenant_id,
+      firstName: dbUser.firstName || dbUser.first_name,
+      lastName: dbUser.lastName || dbUser.last_name,
+      fullName: `${dbUser.firstName || dbUser.first_name || ''} ${dbUser.lastName || dbUser.last_name || ''}`.trim(),
+      tenantId: dbUser.tenantId || dbUser.tenant_id,
       status: dbUser.status,
-      emailVerified: dbUser.email_verified,
-      mfaEnabled: dbUser.mfa_enabled || false,
-      lastLogin: dbUser.last_login,
-      createdAt: dbUser.created_at,
-      updatedAt: dbUser.updated_at,
+      emailVerified: dbUser.emailVerified || dbUser.email_verified,
+      mfaEnabled: dbUser.mfaEnabled || dbUser.mfa_enabled || false,
+      lastLogin: dbUser.lastLogin || dbUser.last_login,
+      createdAt: dbUser.createdAt || dbUser.created_at,
+      updatedAt: dbUser.updatedAt || dbUser.updated_at,
     };
 
     // Add tenant information if available (from JOIN query)
@@ -56,48 +61,49 @@ class UserService {
   static async createUser(userData, requestingUserId, tenantId) {
     try {
       // Check if user already exists
-      const existingUser = await pool.query(
-        `SELECT id FROM users WHERE email = $1`,
-        [userData.email]
-      );
+      const existingUser = await knex('users')
+        .where({ email: userData.email })
+        .first();
 
-      if (existingUser.rows.length > 0) {
+      if (existingUser) {
         throw new Error('User with this email already exists');
       }
 
       // Hash password
       const passwordHash = await bcrypt.hash(userData.password, 10);
 
-      // Handle both camelCase and snake_case field names
+      // Handle both camelCase and snake_case field names (during migration)
       const firstName = userData.firstName || userData.first_name || '';
       const lastName = userData.lastName || userData.last_name || '';
       const userTenantId = userData.tenantId !== undefined ? userData.tenantId : (userData.tenant_id !== undefined ? userData.tenant_id : tenantId);
 
-      const result = await pool.query(
-        `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, status, email_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, created_at, updated_at`,
-        [userTenantId, userData.email, passwordHash, firstName, lastName, userData.status || 'active', false]
-      );
-
-      const dbUser = result.rows[0];
-      const user = this.transformUser(dbUser);
+      // Insert user using Knex (automatic camelCase → snake_case conversion)
+      const [user] = await knex('users')
+        .insert({
+          tenantId: userTenantId,
+          email: userData.email,
+          passwordHash,
+          firstName,
+          lastName,
+          status: userData.status || 'active',
+          emailVerified: false
+        })
+        .returning(['id', 'email', 'firstName', 'lastName', 'tenantId', 'status', 'emailVerified', 'createdAt', 'updatedAt']);
 
       // Assign role if provided (handle both camelCase and snake_case)
       const roleId = userData.roleId || userData.role_id;
       if (roleId) {
-        await pool.query(
-          `INSERT INTO user_roles (user_id, role_id)
-           VALUES ($1, $2)`,
-          [user.id, roleId]
-        );
+        await knex('userRoles').insert({
+          userId: user.id,
+          roleId
+        });
       }
 
       // Audit log
       await this.auditLog(requestingUserId, userTenantId, 'create', 'user', user.id, userData);
 
       logger.info(`User created: ${user.email}`);
-      return user;
+      return user;  // Already in camelCase from Knex
     } catch (err) {
       logger.error(`User service create error: ${err.message}`);
       throw err;
@@ -110,67 +116,53 @@ class UserService {
   static async getUserById(userId, tenantId) {
     try {
       // System admins (tenantId = null) can view any user, tenant admins can only view their own tenant users
-      const query = tenantId 
-        ? `SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.mfa_enabled, u.last_login, u.created_at, u.updated_at,
-                  t.name as tenant_name, t.subdomain as tenant_subdomain
-           FROM users u
-           LEFT JOIN tenants t ON u.tenant_id = t.id
-           WHERE u.id = $1 AND (u.tenant_id = $2 OR u.tenant_id IS NULL)`
-        : `SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.mfa_enabled, u.last_login, u.created_at, u.updated_at,
-                  t.name as tenant_name, t.subdomain as tenant_subdomain
-           FROM users u
-           LEFT JOIN tenants t ON u.tenant_id = t.id
-           WHERE u.id = $1`;
+      let query = knex('users as u')
+        .select(
+          'u.id',
+          'u.email',
+          'u.firstName',
+          'u.lastName',
+          'u.tenantId',
+          'u.status',
+          'u.emailVerified',
+          'u.mfaEnabled',
+          'u.lastLogin',
+          'u.createdAt',
+          'u.updatedAt',
+          't.name as tenantName',
+          't.subdomain as tenantSubdomain'
+        )
+        .leftJoin('tenants as t', 'u.tenantId', 't.id')
+        .where('u.id', userId);
 
-      const params = tenantId ? [userId, tenantId] : [userId];
-      const userResult = await pool.query(query, params);
+      if (tenantId) {
+        query = query.andWhere(function() {
+          this.where('u.tenantId', tenantId).orWhereNull('u.tenantId');
+        });
+      }
 
-      if (userResult.rows.length === 0) {
+      const user = await query.first();
+
+      if (!user) {
         throw new Error('User not found');
       }
 
-      const userData = userResult.rows[0];
-      const user = this.transformUser(userData);
-
-      console.log('🔍 UserService.getUserById - Raw userData:', {
-        tenant_id: userData.tenant_id,
-        tenant_name: userData.tenant_name,
-        tenant_subdomain: userData.tenant_subdomain
-      });
-
-      // Add tenant info if available
-      if (userData.tenant_id && userData.tenant_name) {
-        user.tenant = {
-          id: userData.tenant_id,
-          name: userData.tenant_name,
-          subdomain: userData.tenant_subdomain
-        };
-        console.log('✅ UserService.getUserById - Tenant info added:', user.tenant);
-      } else {
-        console.log('⚠️ UserService.getUserById - No tenant info found');
-      }
-
-      // Get user roles
-      const rolesResult = await pool.query(
-        `SELECT r.id, r.name, r.space
-         FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.id
-         WHERE ur.user_id = $1`,
-        [userId]
-      );
+      // Get user roles using Knex
+      const roles = await knex('userRoles as ur')
+        .select('r.id', 'r.name', 'r.space')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .where('ur.userId', userId);
 
       // Get user permissions using the new standard RBAC system
-      const permissionsResult = await pool.query(
-        `SELECT DISTINCT p.resource, p.action, p.permission_key
-         FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rps ON r.id = rps.role_id
-         JOIN permissions p ON rps.permission_id = p.id
-         WHERE ur.user_id = $1`,
-        [userId]
-      );
+      const permissionsData = await knex('userRoles as ur')
+        .select('p.resource', 'p.action', 'p.permissionKey')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .join('rolePermissions as rps', 'r.id', 'rps.roleId')
+        .join('permissions as p', 'rps.permissionId', 'p.id')
+        .where('ur.userId', userId)
+        .distinct();
 
-      const permissions = permissionsResult.rows.reduce((acc, row) => {
+      const permissions = permissionsData.reduce((acc, row) => {
         if (!acc[row.resource]) acc[row.resource] = [];
         acc[row.resource].push(row.action);
         return acc;
@@ -178,7 +170,7 @@ class UserService {
 
       return {
         ...user,
-        roles: rolesResult.rows,
+        roles,
         permissions,
       };
     } catch (err) {
@@ -193,19 +185,18 @@ class UserService {
    */
   static async emailExists(email, tenantId = null) {
     try {
-      let query;
-      let params;
+      let query = knex('users')
+        .where(knex.raw('LOWER(email) = LOWER(?)', [email]));
+
       if (tenantId) {
         // For tenant-scoped check, allow system users and tenant users with same tenant
-        query = `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) AND (tenant_id = $2 OR tenant_id IS NULL) LIMIT 1`;
-        params = [email, tenantId];
-      } else {
-        query = `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`;
-        params = [email];
+        query = query.andWhere(function() {
+          this.where('tenantId', tenantId).orWhereNull('tenantId');
+        });
       }
 
-      const result = await pool.query(query, params);
-      return result.rows.length > 0;
+      const result = await query.first();
+      return !!result;
     } catch (err) {
       logger.error(`User service emailExists error: ${err.message}`);
       throw err;
@@ -219,76 +210,93 @@ class UserService {
     try {
       const offset = (page - 1) * limit;
 
-      // Search condition
-      const searchCondition = search
-        ? "AND (u.email ILIKE $3 OR u.first_name ILIKE $3 OR u.last_name ILIKE $3)"
-        : '';
+      // Build base query with Knex
+      let query = knex('users as u')
+        .select(
+          'u.id',
+          'u.email',
+          'u.firstName',
+          'u.lastName',
+          'u.tenantId',
+          'u.status',
+          'u.emailVerified',
+          'u.lastLogin',
+          'u.createdAt',
+          't.name as tenantName',
+          't.subdomain as tenantSubdomain',
+          'ep.position',
+          'ep.department',
+          'ep.employmentType',
+          'ep.employmentStatus',
+          'ep.hireDate'
+        )
+        .leftJoin('tenants as t', 'u.tenantId', 't.id')
+        .leftJoin('employeeProfiles as ep', 'u.id', 'ep.userId');
 
-      // Tenant filter - if includeAllTenants is true, don't filter by tenant
-      const tenantFilter = includeAllTenants ? '' : 'WHERE (u.tenant_id = $1 OR (u.tenant_id IS NULL AND $1 IS NULL))';
+      // Apply tenant filter
+      if (!includeAllTenants) {
+        query = query.where(function() {
+          if (tenantId !== null && tenantId !== undefined) {
+            // Specific tenant: show users of that tenant OR system users
+            this.where('u.tenantId', tenantId).orWhereNull('u.tenantId');
+          } else {
+            // No tenant (system context): show only system users (tenantId is null)
+            this.whereNull('u.tenantId');
+          }
+        });
+      }
 
-      const baseQuery = `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.tenant_id, u.status, u.email_verified, u.last_login, u.created_at,
-               t.name as tenant_name, t.subdomain as tenant_subdomain,
-               ep.position, ep.department, ep.employment_type, ep.employment_status, ep.hire_date
-        FROM users u
-        LEFT JOIN tenants t ON u.tenant_id = t.id
-        LEFT JOIN employee_profiles ep ON u.id = ep.user_id
-        ${tenantFilter}
-        ${searchCondition}
-      `;
+      // Apply search filter
+      if (search) {
+        const searchPattern = `%${search}%`;
+        query = query.andWhere(function() {
+          this.where('u.email', 'ilike', searchPattern)
+            .orWhere('u.firstName', 'ilike', searchPattern)
+            .orWhere('u.lastName', 'ilike', searchPattern);
+        });
+      }
 
-      const countQuery = `SELECT COUNT(*) as total FROM (${baseQuery}) as t`;
-      const dataQuery = `${baseQuery} ORDER BY u.created_at DESC LIMIT ${includeAllTenants ? '$1' : '$2'} OFFSET ${includeAllTenants ? '$2' : '$3'}`;
+      // Get total count
+      const countQuery = query.clone().clearSelect().clearOrder().count('* as total');
+      const [{ total }] = await countQuery;
 
-      const countParams = includeAllTenants 
-        ? (search ? [`%${search}%`] : [])
-        : (search ? [tenantId, `%${search}%`] : [tenantId]);
-      
-      const dataParams = includeAllTenants
-        ? (search ? [limit, offset, `%${search}%`] : [limit, offset])
-        : (search ? [tenantId, limit, offset, `%${search}%`] : [tenantId, limit, offset]);
+      // Get paginated data
+      const users = await query
+        .orderBy('u.createdAt', 'desc')
+        .limit(limit)
+        .offset(offset);
 
-      const [countResult, dataResult] = await Promise.all([
-        pool.query(countQuery, countParams),
-        pool.query(dataQuery, dataParams),
-      ]);
-
-      // Transform snake_case to camelCase and fetch roles for each user
-      const users = await Promise.all(
-        dataResult.rows.map(async (row) => {
-          const user = this.transformUser(row);
-          
+      // Fetch roles and platforms for each user
+      const usersWithDetails = await Promise.all(
+        users.map(async (user) => {
           // Fetch roles for this user
-          const rolesQuery = `
-            SELECT r.id, r.name, r.description, r.space
-            FROM roles r
-            INNER JOIN user_roles ur ON ur.role_id = r.id
-            WHERE ur.user_id = $1
-          `;
-          const rolesResult = await pool.query(rolesQuery, [row.id]);
-          user.roles = rolesResult.rows;
+          const roles = await knex('roles as r')
+            .select('r.id', 'r.name', 'r.description', 'r.space')
+            .innerJoin('userRoles as ur', 'ur.roleId', 'r.id')
+            .where('ur.userId', user.id);
           
           // Fetch platform access for this user
-          const platformsQuery = `
-            SELECT DISTINCT product_type
-            FROM employee_product_access
-            WHERE user_id = $1 AND status = 'active'
-          `;
-          const platformsResult = await pool.query(platformsQuery, [row.id]);
-          user.platforms = platformsResult.rows.map(p => p.product_type);
+          const platformsResult = await knex('employee_product_access')
+            .select('product_type')
+            .where({ user_id: user.id, status: 'active' });
           
-          return user;
+          const platforms = platformsResult.map(p => p.product_type || p.productType);
+          
+          return {
+            ...user,
+            roles,
+            platforms,
+          };
         })
       );
 
       return {
-        users,
+        users: usersWithDetails,
         pagination: {
           page,
           limit,
-          total: parseInt(countResult.rows[0].total),
-          pages: Math.ceil(parseInt(countResult.rows[0].total) / limit),
+          total: parseInt(total),
+          pages: Math.ceil(parseInt(total) / limit),
         },
       };
     } catch (err) {
@@ -302,68 +310,56 @@ class UserService {
    */
   static async updateUser(userId, updateData, requestingUserId, tenantId) {
     try {
-      const fieldsToUpdate = [];
-      const values = [];
-      let paramCount = 1;
+      // Handle both camelCase and snake_case (during migration)
+      const updateFields = {};
 
-      // Handle both camelCase and snake_case
-      const firstName = updateData.firstName || updateData.first_name;
-      const lastName = updateData.lastName || updateData.last_name;
-      const status = updateData.status;
-
-      if (firstName !== undefined) {
-        fieldsToUpdate.push(`first_name = $${paramCount++}`);
-        values.push(firstName);
+      if (updateData.firstName !== undefined || updateData.first_name !== undefined) {
+        updateFields.firstName = updateData.firstName || updateData.first_name;
       }
 
-      if (lastName !== undefined) {
-        fieldsToUpdate.push(`last_name = $${paramCount++}`);
-        values.push(lastName);
+      if (updateData.lastName !== undefined || updateData.last_name !== undefined) {
+        updateFields.lastName = updateData.lastName || updateData.last_name;
       }
 
-      if (status !== undefined) {
-        fieldsToUpdate.push(`status = $${paramCount++}`);
-        values.push(status);
+      if (updateData.status !== undefined) {
+        updateFields.status = updateData.status;
       }
-
-      // Note: mfa_enabled column doesn't exist in database, removed
 
       // Check if there are fields to update
-      if (fieldsToUpdate.length === 0) {
+      if (Object.keys(updateFields).length === 0) {
         throw new Error('No fields to update');
       }
 
-      // Always update updated_at
-      fieldsToUpdate.push('updated_at = NOW()');
+      // Always update updatedAt
+      updateFields.updatedAt = knex.fn.now();
 
-      values.push(userId);
+      // Build query with tenant restriction
+      let query = knex('users')
+        .update(updateFields)
+        .where('id', userId);
 
-      // System admins (tenantId = null) can update any user, tenant admins can only update their own tenant users
-      let query;
       if (tenantId) {
-        values.push(tenantId);
-        query = `
-          UPDATE users
-          SET ${fieldsToUpdate.join(', ')}
-          WHERE id = $${paramCount} AND (tenant_id = $${paramCount + 1} OR tenant_id IS NULL)
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at
-        `;
-      } else {
-        query = `
-          UPDATE users
-          SET ${fieldsToUpdate.join(', ')}
-          WHERE id = $${paramCount}
-          RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at
-        `;
+        query = query.andWhere(function() {
+          this.where('tenantId', tenantId).orWhereNull('tenantId');
+        });
       }
 
-      const result = await pool.query(query, values);
+      const [user] = await query.returning([
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'tenantId',
+        'status',
+        'emailVerified',
+        'mfaEnabled',
+        'createdAt',
+        'updatedAt',
+      ]);
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found');
       }
-
-      const user = this.transformUser(result.rows[0]);
 
       await this.auditLog(requestingUserId, tenantId, 'update', 'user', userId, updateData);
 
@@ -380,12 +376,15 @@ class UserService {
    */
   static async deleteUser(userId, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `UPDATE users SET status = 'deleted', deleted_at = NOW() WHERE id = $1 RETURNING id`,
-        [userId]
-      );
+      const [user] = await knex('users')
+        .update({
+          status: 'deleted',
+          deletedAt: knex.fn.now(),
+        })
+        .where('id', userId)
+        .returning('id');
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found');
       }
 
@@ -404,16 +403,28 @@ class UserService {
    */
   static async restoreUser(userId, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `UPDATE users SET status = 'active', deleted_at = NULL WHERE id = $1 AND status = 'deleted' RETURNING id, email, first_name, last_name, tenant_id, status, email_verified, mfa_enabled, created_at, updated_at`,
-        [userId]
-      );
+      const [user] = await knex('users')
+        .update({
+          status: 'active',
+          deletedAt: null,
+        })
+        .where({ id: userId, status: 'deleted' })
+        .returning([
+          'id',
+          'email',
+          'firstName',
+          'lastName',
+          'tenantId',
+          'status',
+          'emailVerified',
+          'mfaEnabled',
+          'createdAt',
+          'updatedAt',
+        ]);
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found or not deleted');
       }
-
-      const user = this.transformUser(result.rows[0]);
 
       await this.auditLog(requestingUserId, tenantId, 'restore', 'user', userId, {});
 
@@ -430,16 +441,14 @@ class UserService {
    */
   static async assignRole(userId, roleId, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)
-         ON CONFLICT (user_id, role_id) DO NOTHING
-         RETURNING user_id, role_id`,
-        [userId, roleId]
-      );
+      await knex('userRoles')
+        .insert({ userId, roleId })
+        .onConflict(['userId', 'roleId'])
+        .ignore();
 
-      await this.auditLog(requestingUserId, tenantId, 'assign_role', 'user', userId, { role_id: roleId });
+      await this.auditLog(requestingUserId, tenantId, 'assign_role', 'user', userId, { roleId });
 
-      return result.rows[0] || { message: 'Role already assigned' };
+      return { message: 'Role assigned successfully' };
     } catch (err) {
       logger.error(`User service assign role error: ${err.message}`);
       throw err;
@@ -451,17 +460,15 @@ class UserService {
    */
   static async removeRole(userId, roleId, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2
-         RETURNING user_id, role_id`,
-        [userId, roleId]
-      );
+      const deleted = await knex('userRoles')
+        .where({ userId, roleId })
+        .del();
 
-      if (result.rows.length === 0) {
+      if (!deleted) {
         throw new Error('Role assignment not found');
       }
 
-      await this.auditLog(requestingUserId, tenantId, 'remove_role', 'user', userId, { role_id: roleId });
+      await this.auditLog(requestingUserId, tenantId, 'remove_role', 'user', userId, { roleId });
 
       return { message: 'Role removed successfully' };
     } catch (err) {
@@ -475,19 +482,17 @@ class UserService {
    */
   static async getUserPermissions(userId) {
     try {
-      const result = await pool.query(
-        `SELECT DISTINCT m.menu_key, rp.action_key
-         FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rp ON r.id = rp.role_id
-         JOIN modules m ON rp.module_id = m.id
-         WHERE ur.user_id = $1 AND rp.status = 'active'`,
-        [userId]
-      );
+      const permissions = await knex('userRoles as ur')
+        .select('m.menuKey', 'rp.actionKey')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .join('rolePermissions as rp', 'r.id', 'rp.roleId')
+        .join('modules as m', 'rp.moduleId', 'm.id')
+        .where({ 'ur.userId': userId, 'rp.status': 'active' })
+        .distinct();
 
-      return result.rows.reduce((acc, row) => {
-        if (!acc[row.menu_key]) acc[row.menu_key] = [];
-        acc[row.menu_key].push(row.action_key);
+      return permissions.reduce((acc, row) => {
+        if (!acc[row.menuKey]) acc[row.menuKey] = [];
+        acc[row.menuKey].push(row.actionKey);
         return acc;
       }, {});
     } catch (err) {
@@ -501,11 +506,15 @@ class UserService {
    */
   static async auditLog(userId, tenantId, action, resourceType, resourceId, changes) {
     try {
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [userId, tenantId, action, resourceType, resourceId, JSON.stringify(changes), 'success']
-      );
+      await knex('auditLogs').insert({
+        userId,
+        tenantId,
+        action,
+        resourceType,
+        resourceId,
+        newValues: JSON.stringify(changes),
+        status: 'success',
+      });
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);
     }
@@ -516,84 +525,73 @@ class UserService {
    */
   static async assignProductAccess(userId, products, requestingUserId, tenantId) {
     try {
-      // First, get the user to get their tenant_id
-      const userResult = await pool.query(
-        `SELECT id, tenant_id FROM users WHERE id = $1`,
-        [userId]
-      );
+      // First, get the user to get their tenantId
+      const user = await knex('users')
+        .select('id', 'tenantId')
+        .where({ id: userId })
+        .first();
 
-      if (userResult.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found');
       }
 
-      const user = userResult.rows[0];
-      const userTenantId = user.tenant_id || tenantId;
+      const userTenantId = user.tenantId || tenantId;
 
       if (!userTenantId) {
         throw new Error('Cannot assign product access to system users');
       }
 
       // Get or create employee_profile for this user
-      let employeeResult = await pool.query(
-        `SELECT id FROM employee_profiles WHERE user_id = $1`,
-        [userId]
-      );
+      const employee = await knex('employee_profiles')
+        .select('id')
+        .where({ user_id: userId })
+        .first();
 
       let employeeId;
-      if (employeeResult.rows.length === 0) {
+      if (!employee) {
         // Create employee profile
-        const createEmployeeResult = await pool.query(
-          `INSERT INTO employee_profiles (tenant_id, user_id, employee_code, hire_date, employment_status, department, position)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING id`,
-          [
-            userTenantId,
-            userId,
-            `EMP-${userId}`,
-            new Date(),
-            'active',
-            'General',
-            'Employee'
-          ]
-        );
-        employeeId = createEmployeeResult.rows[0].id;
+        const [newEmployee] = await knex('employee_profiles')
+          .insert({
+            tenant_id: userTenantId,
+            user_id: userId,
+            employee_code: `EMP-${userId}`,
+            hire_date: new Date(),
+            employment_status: 'active',
+            department: 'General',
+            position: 'Employee',
+          })
+          .returning('id');
+        employeeId = newEmployee.id;
         logger.info(`Created employee profile for user ${userId}`);
       } else {
-        employeeId = employeeResult.rows[0].id;
+        employeeId = employee.id;
       }
 
       // Delete existing product access for this employee
-      await pool.query(
-        `DELETE FROM employee_product_access WHERE employee_id = $1`,
-        [employeeId]
-      );
+      await knex('employee_product_access')
+        .where({ employee_id: employeeId })
+        .del();
 
       // Insert new product access records
       const insertedProducts = [];
       for (const product of products) {
-        const result = await pool.query(
-          `INSERT INTO employee_product_access (
-            tenant_id, employee_id, user_id, product_type, access_level, is_primary,
-            can_approve_loans, max_approval_amount, can_disburse_funds, can_view_reports,
-            assigned_by, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-          RETURNING id, product_type, access_level, is_primary`,
-          [
-            userTenantId,
-            employeeId,
-            userId,
-            product.productType,
-            product.accessLevel || 'view',
-            product.isPrimary || false,
-            product.canApproveLoans || false,
-            product.maxApprovalAmount || null,
-            product.canDisburseFunds || false,
-            product.canViewReports || false,
-            requestingUserId,
-            'active'
-          ]
-        );
-        insertedProducts.push(result.rows[0]);
+        const [newAccess] = await knex('employee_product_access')
+          .insert({
+            tenant_id: userTenantId,
+            employee_id: employeeId,
+            user_id: userId,
+            product_type: product.productType,
+            access_level: product.accessLevel || 'view',
+            is_primary: product.isPrimary || false,
+            can_approve_loans: product.canApproveLoans || false,
+            max_approval_amount: product.maxApprovalAmount || null,
+            can_disburse_funds: product.canDisburseFunds || false,
+            can_view_reports: product.canViewReports || false,
+            assigned_by: requestingUserId,
+            status: 'active',
+          })
+          .returning(['id', 'product_type', 'access_level', 'is_primary']);
+        insertedProducts.push(newAccess);
       }
 
       await this.auditLog(requestingUserId, userTenantId, 'assign_product_access', 'user', userId, { products });
@@ -611,50 +609,38 @@ class UserService {
    */
   static async getUserProducts(userId, tenantId) {
     try {
-      const result = await pool.query(
-        `SELECT 
-          epa.id,
-          epa.product_type,
-          epa.access_level,
-          epa.is_primary,
-          epa.can_approve_loans,
-          epa.max_approval_amount,
-          epa.can_disburse_funds,
-          epa.can_view_reports,
-          epa.can_modify_interest,
-          epa.can_waive_penalties,
-          epa.daily_transaction_limit,
-          epa.monthly_transaction_limit,
-          epa.max_daily_transactions,
-          epa.status,
-          epa.assigned_date,
-          epa.created_at
-         FROM employee_product_access epa
-         JOIN employee_profiles ep ON epa.employee_id = ep.id
-         WHERE epa.user_id = $1 AND epa.status = 'active'
-         ${tenantId ? 'AND epa.tenant_id = $2' : ''}
-         ORDER BY epa.is_primary DESC, epa.created_at ASC`,
-        tenantId ? [userId, tenantId] : [userId]
-      );
+      let query = knex('employee_product_access as epa')
+        .select(
+          'epa.id',
+          'epa.product_type',
+          'epa.access_level',
+          'epa.is_primary',
+          'epa.can_approve_loans',
+          'epa.max_approval_amount',
+          'epa.can_disburse_funds',
+          'epa.can_view_reports',
+          'epa.can_modify_interest',
+          'epa.can_waive_penalties',
+          'epa.daily_transaction_limit',
+          'epa.monthly_transaction_limit',
+          'epa.max_daily_transactions',
+          'epa.status',
+          'epa.assigned_date',
+          'epa.created_at'
+        )
+        .join('employee_profiles as ep', 'epa.employee_id', 'ep.id')
+        .where({ 'epa.user_id': userId, 'epa.status': 'active' });
 
-      return result.rows.map(row => ({
-        id: row.id,
-        productType: row.product_type,
-        accessLevel: row.access_level,
-        isPrimary: row.is_primary,
-        canApproveLoans: row.can_approve_loans,
-        maxApprovalAmount: row.max_approval_amount,
-        canDisburseFunds: row.can_disburse_funds,
-        canViewReports: row.can_view_reports,
-        canModifyInterest: row.can_modify_interest,
-        canWaivePenalties: row.can_waive_penalties,
-        dailyTransactionLimit: row.daily_transaction_limit,
-        monthlyTransactionLimit: row.monthly_transaction_limit,
-        maxDailyTransactions: row.max_daily_transactions,
-        status: row.status,
-        assignedDate: row.assigned_date,
-        createdAt: row.created_at
-      }));
+      if (tenantId) {
+        query = query.andWhere('epa.tenant_id', tenantId);
+      }
+
+      const products = await query.orderBy([
+        { column: 'epa.is_primary', order: 'desc' },
+        { column: 'epa.created_at', order: 'asc' },
+      ]);
+
+      return products;
     } catch (err) {
       logger.error(`User service get products error: ${err.message}`);
       throw err;
@@ -681,10 +667,12 @@ class UserService {
       const passwordHash = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      await pool.query(
-        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3',
-        [passwordHash, userId, tenantId]
-      );
+      await knex('users')
+        .update({
+          passwordHash,
+          updatedAt: knex.fn.now(),
+        })
+        .where({ id: userId, tenantId });
 
       // Audit log
       await this.auditLog(
@@ -693,7 +681,7 @@ class UserService {
         'password_reset',
         'user',
         userId,
-        { action: 'Password reset by admin' }
+        { action: 'Password reset by admin' },
       );
 
       logger.info(`Password reset for user ${userId} by user ${requestingUserId}`);

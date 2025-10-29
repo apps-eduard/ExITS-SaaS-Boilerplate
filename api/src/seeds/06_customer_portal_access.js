@@ -27,9 +27,9 @@ exports.seed = async function(knex) {
     .whereNotNull('user_id');
 
   for (const customer of customers) {
-    // Reset password for user account
+    // Reset password for user account (Knex returns camelCase)
     await knex('users')
-      .where('id', customer.user_id)
+      .where('id', customer.userId)  // camelCase from Knex
       .update({
         password_hash: passwordHash,
         status: 'active',
@@ -44,7 +44,7 @@ exports.seed = async function(knex) {
   console.log(`   Login URL: http://localhost:4200/customer/login\n`);
   console.log('Customer Accounts:');
   customers.forEach((customer, index) => {
-    console.log(`   ${index + 1}. ${customer.email} - ${customer.first_name} ${customer.last_name}`);
+    console.log(`   ${index + 1}. ${customer.email} - ${customer.firstName} ${customer.lastName}`);  // camelCase
   });
   console.log('');
 };

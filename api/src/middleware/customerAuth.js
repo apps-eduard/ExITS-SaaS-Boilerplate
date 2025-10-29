@@ -34,9 +34,11 @@ module.exports = (req, res, next) => {
     }
 
     // Attach customer info to request
-    req.customerId = decoded.customerId;
-    req.userId = decoded.userId;
-    req.tenantId = decoded.tenantId;
+    req.customer = {
+      customerId: decoded.customerId,
+      userId: decoded.userId,
+      tenantId: decoded.tenantId
+    };
 
     next();
   } catch (error) {

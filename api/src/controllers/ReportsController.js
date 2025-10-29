@@ -29,11 +29,11 @@ class ReportsController {
           ph.created_at,
           ph.updated_at,
           ph.plan_name,
-          ph.product_type,
+          ph.platform_type,  -- Fixed: was product_type
           CASE 
             WHEN ph.description IS NOT NULL AND ph.description != '' THEN ph.description
             WHEN ph.plan_name IS NOT NULL THEN 
-              'Subscribed to ' || COALESCE(ph.product_type, 'Product') || ' - ' || ph.plan_name || 
+              'Subscribed to ' || COALESCE(ph.platform_type, 'Product') || ' - ' || ph.plan_name ||  -- Fixed: was product_type
               CASE 
                 WHEN ph.description LIKE '%monthly%' THEN ' - monthly billing'
                 WHEN ph.description LIKE '%yearly%' THEN ' - yearly billing'

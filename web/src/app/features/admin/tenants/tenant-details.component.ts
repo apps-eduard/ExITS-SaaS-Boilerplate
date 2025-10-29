@@ -2,7 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
+import { ProductSubscriptionService, PlatformSubscription } from '../../../core/services/product-subscription.service';
 
 interface Tenant {
   id: number;
@@ -192,9 +192,9 @@ interface TenantStats {
               </h2>
             </div>
             <div class="p-4">
-                
+
                 <!-- No products enabled -->
-                <div *ngIf="!tenant()?.moneyLoanEnabled && !tenant()?.bnplEnabled && !tenant()?.pawnshopEnabled" 
+                <div *ngIf="!tenant()?.moneyLoanEnabled && !tenant()?.bnplEnabled && !tenant()?.pawnshopEnabled"
                      class="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <p class="text-sm text-gray-500 dark:text-gray-400">No products enabled for this tenant</p>
                 </div>
@@ -213,19 +213,19 @@ interface TenantStats {
                           <p class="text-xs text-gray-600 dark:text-gray-400">Quick cash loans</p>
                         </div>
                       </div>
-                      <span *ngIf="getProductSubscription('money_loan')" 
+                      <span *ngIf="getProductSubscription('money_loan')"
                             class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
                             [ngClass]="getStatusBadgeClass(getProductSubscription('money_loan')?.status || '')">
                         {{ getProductSubscription('money_loan')?.status?.toUpperCase() }}
                       </span>
                     </div>
-                    
+
                     <div *ngIf="getProductSubscription('money_loan'); else noSubscription">
                       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
                           <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('money_loan')?.subscription_plan?.name }}
+                            {{ getProductSubscription('money_loan')?.subscriptionPlan?.name }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
@@ -237,13 +237,13 @@ interface TenantStats {
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('money_loan')?.billing_cycle }}
+                            {{ getProductSubscription('money_loan')?.billingCycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white">
-                            {{ formatDate(getProductSubscription('money_loan')?.starts_at || '') }}
+                            {{ formatDate(getProductSubscription('money_loan')?.startsAt || '') }}
                           </p>
                         </div>
                       </div>
@@ -262,19 +262,19 @@ interface TenantStats {
                           <p class="text-xs text-gray-600 dark:text-gray-400">Buy Now Pay Later</p>
                         </div>
                       </div>
-                      <span *ngIf="getProductSubscription('bnpl')" 
+                      <span *ngIf="getProductSubscription('bnpl')"
                             class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
                             [ngClass]="getStatusBadgeClass(getProductSubscription('bnpl')?.status || '')">
                         {{ getProductSubscription('bnpl')?.status?.toUpperCase() }}
                       </span>
                     </div>
-                    
+
                     <div *ngIf="getProductSubscription('bnpl'); else noSubscription">
                       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
                           <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('bnpl')?.subscription_plan?.name }}
+                            {{ getProductSubscription('bnpl')?.subscriptionPlan?.name }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
@@ -286,13 +286,13 @@ interface TenantStats {
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('bnpl')?.billing_cycle }}
+                            {{ getProductSubscription('bnpl')?.billingCycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white">
-                            {{ formatDate(getProductSubscription('bnpl')?.starts_at || '') }}
+                            {{ formatDate(getProductSubscription('bnpl')?.startsAt || '') }}
                           </p>
                         </div>
                       </div>
@@ -311,19 +311,19 @@ interface TenantStats {
                           <p class="text-xs text-gray-600 dark:text-gray-400">Collateral loans</p>
                         </div>
                       </div>
-                      <span *ngIf="getProductSubscription('pawnshop')" 
+                      <span *ngIf="getProductSubscription('pawnshop')"
                             class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full"
                             [ngClass]="getStatusBadgeClass(getProductSubscription('pawnshop')?.status || '')">
                         {{ getProductSubscription('pawnshop')?.status?.toUpperCase() }}
                       </span>
                     </div>
-                    
+
                     <div *ngIf="getProductSubscription('pawnshop'); else noSubscription">
                       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Plan</p>
                           <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('pawnshop')?.subscription_plan?.name }}
+                            {{ getProductSubscription('pawnshop')?.subscriptionPlan?.name }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
@@ -335,13 +335,13 @@ interface TenantStats {
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white capitalize">
-                            {{ getProductSubscription('pawnshop')?.billing_cycle }}
+                            {{ getProductSubscription('pawnshop')?.billingCycle }}
                           </p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Started</p>
                           <p class="text-xs font-bold text-gray-900 dark:text-white">
-                            {{ formatDate(getProductSubscription('pawnshop')?.starts_at || '') }}
+                            {{ formatDate(getProductSubscription('pawnshop')?.startsAt || '') }}
                           </p>
                         </div>
                       </div>
@@ -421,7 +421,7 @@ export class TenantDetailsComponent implements OnInit {
 
   tenant = signal<Tenant | null>(null);
   stats = signal<TenantStats | null>(null);
-  productSubscriptions = signal<ProductSubscription[]>([]);
+  productSubscriptions = signal<PlatformSubscription[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
 
@@ -447,8 +447,8 @@ export class TenantDetailsComponent implements OnInit {
     });
   }
 
-  getProductSubscription(productType: string): ProductSubscription | undefined {
-    return this.productSubscriptions().find(sub => sub.product_type === productType);
+  getProductSubscription(productType: string): PlatformSubscription | undefined {
+    return this.productSubscriptions().find(sub => sub.platformType === productType);
   }
 
   getProductIcon(productType: string): string {

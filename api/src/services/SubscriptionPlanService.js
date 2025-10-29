@@ -3,7 +3,7 @@
  * Handles subscription plan management
  */
 
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class SubscriptionPlanService {
@@ -66,19 +66,18 @@ class SubscriptionPlanService {
    * Get all active subscription plans
    */
   static async getAllPlans() {
-    const client = await pool.connect();
     try {
       // Only return platform subscription plans (platform_type IS NULL)
       // Platform-specific plans are handled separately
-      const result = await client.query(
-        `SELECT * FROM subscription_plans 
-         WHERE status = 'active' AND platform_type IS NULL 
-         ORDER BY price ASC`
-      );
+      const plans = await knex('subscriptionPlans')
+        .whereNull('platformType')
+        .where({ status: 'active' })
+        .orderBy('price', 'asc');
 
-      return result.rows.map(this.transformPlan);
-    } finally {
-      client.release();
+      return plans.map(this.transformPlan);
+    } catch (err) {
+      logger.error(`Error getting all plans: ${err.message}`);
+      throw err;
     }
   }
 
@@ -87,24 +86,23 @@ class SubscriptionPlanService {
    * Used for admin panel when configuring tenant products
    */
   static async getAllPlansIncludingProducts() {
-    const client = await pool.connect();
     try {
       // Return ALL active plans (both platform and platform-specific)
-      const result = await client.query(
-        `SELECT * FROM subscription_plans 
-         WHERE status = 'active' 
-         ORDER BY 
-           CASE 
-             WHEN platform_type IS NULL THEN 0 
-             ELSE 1 
-           END,
-           platform_type,
-           price ASC`
-      );
+      const plans = await knex('subscriptionPlans')
+        .where({ status: 'active' })
+        .orderByRaw(`
+          CASE 
+            WHEN platform_type IS NULL THEN 0 
+            ELSE 1 
+          END,
+          platform_type,
+          price ASC
+        `);
 
-      return result.rows.map(this.transformPlan);
-    } finally {
-      client.release();
+      return plans.map(this.transformPlan);
+    } catch (err) {
+      logger.error(`Error getting all plans including products: ${err.message}`);
+      throw err;
     }
   }
 
@@ -112,20 +110,20 @@ class SubscriptionPlanService {
    * Get a single plan by name
    */
   static async getPlanByName(planName) {
-    const client = await pool.connect();
     try {
-      const result = await client.query(
-        `SELECT * FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND status = 'active'`,
-        [planName]
-      );
+      const plan = await knex('subscriptionPlans')
+        .whereRaw('LOWER(name) = LOWER(?)', [planName])
+        .where({ status: 'active' })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!plan) {
         return null;
       }
 
-      return this.transformPlan(result.rows[0]);
-    } finally {
-      client.release();
+      return this.transformPlan(plan);
+    } catch (err) {
+      logger.error(`Error getting plan by name: ${err.message}`);
+      throw err;
     }
   }
 
@@ -133,20 +131,19 @@ class SubscriptionPlanService {
    * Get a single plan by ID
    */
   static async getPlanById(planId) {
-    const client = await pool.connect();
     try {
-      const result = await client.query(
-        `SELECT * FROM subscription_plans WHERE id = $1`,
-        [planId]
-      );
+      const plan = await knex('subscriptionPlans')
+        .where({ id: planId })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!plan) {
         return null;
       }
 
-      return this.transformPlan(result.rows[0]);
-    } finally {
-      client.release();
+      return this.transformPlan(plan);
+    } catch (err) {
+      logger.error(`Error getting plan by ID: ${err.message}`);
+      throw err;
     }
   }
 }

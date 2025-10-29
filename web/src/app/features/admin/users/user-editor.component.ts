@@ -8,7 +8,7 @@ import { UserService, User, UserCreatePayload, UserUpdatePayload } from '../../.
 import { RoleService, Role } from '../../../core/services/role.service';
 import { AddressService, AddressCreatePayload } from '../../../core/services/address.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
+import { ProductSubscriptionService, PlatformSubscription } from '../../../core/services/product-subscription.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -1109,7 +1109,7 @@ export class UserEditorComponent implements OnInit {
 
   // Tenant data and platform subscriptions
   currentTenantData = signal<any>(null);
-  tenantPlatformSubscriptions = signal<ProductSubscription[]>([]);
+  tenantPlatformSubscriptions = signal<PlatformSubscription[]>([]);
 
   // Computed property to determine which platforms are available
   // Uses tenant's enabled flags (same logic as Platform Catalog)
@@ -1132,6 +1132,7 @@ export class UserEditorComponent implements OnInit {
   // Address fields
   includeAddress = false;
   activeAddressTab = signal<string>('location'); // 'location', 'contact', 'additional'
+  userAddressId: string | null = null; // Track existing address ID for updates
   addressData: any = {
     addressType: 'home',
     street: '',
@@ -1189,7 +1190,9 @@ export class UserEditorComponent implements OnInit {
     this.isEditMode.set(this.userId !== null && this.userId !== 'new');
 
     // Load roles and tenants
+    console.log('📋 Loading roles...');
     await this.roleService.loadRoles();
+    console.log('✅ Roles loaded:', this.roleService.rolesSignal());
     if (!isTenantCtx) {
       // Only load tenants dropdown for system admin context
       this.loadTenants();
@@ -1244,6 +1247,9 @@ export class UserEditorComponent implements OnInit {
             await this.loadUserProducts(this.userId);
           }
 
+          // Load user's address
+          await this.loadUserAddress(this.userId);
+
           // Force change detection
           setTimeout(() => {
             this.cdr.detectChanges();
@@ -1285,20 +1291,11 @@ export class UserEditorComponent implements OnInit {
   }
 
   loadTenantPlatformSubscriptions(tenantId: number) {
-    console.log('🔍 Loading tenant data and platform subscriptions for tenant:', tenantId);
-
     // First, load the tenant data to get enabled platform flags
     this.http.get<any>(`/api/tenants/${tenantId}`).subscribe({
       next: (response) => {
         if (response && response.data) {
           this.currentTenantData.set(response.data);
-          console.log('✅ Loaded tenant data:', {
-            id: response.data.id,
-            name: response.data.name,
-            moneyLoanEnabled: response.data.moneyLoanEnabled,
-            bnplEnabled: response.data.bnplEnabled,
-            pawnshopEnabled: response.data.pawnshopEnabled
-          });
         }
       },
       error: (error) => {
@@ -1312,7 +1309,6 @@ export class UserEditorComponent implements OnInit {
       next: (response) => {
         if (response.success && response.data) {
           this.tenantPlatformSubscriptions.set(response.data);
-          console.log('✅ Loaded platform subscriptions:', response.data);
         }
       },
       error: (error) => {
@@ -1331,35 +1327,39 @@ export class UserEditorComponent implements OnInit {
     }
 
     // Tenant users can only have tenant roles that belong to their tenant
-    if (!this.formData.tenantId) return [];
-    const tenantRoles = roles.filter(r => r.space === 'tenant' && r.tenantId === this.formData.tenantId);
+    if (!this.formData.tenantId) {
+      return [];
+    }
+
+    const tenantRoles = roles.filter(r => {
+      return r.space === 'tenant' && r.tenantId == this.formData.tenantId; // Use == for loose comparison
+    });
+
     return tenantRoles;
   }
 
   getTenantName(): string {
-    console.log('🔍 getTenantName - formData.tenantId:', this.formData.tenantId);
-    console.log('🔍 getTenantName - loadedUser:', this.loadedUser);
-    console.log('🔍 getTenantName - loadedUser.tenant:', this.loadedUser?.tenant);
-    console.log('🔍 getTenantName - tenants list:', this.tenants());
-    
     if (!this.formData.tenantId) {
       return 'No tenant assigned';
     }
 
-    // First check if we have tenant info from loaded user
+    // First check if we have tenant info from currentTenantData (loaded for platforms)
+    const currentTenant = this.currentTenantData();
+    if (currentTenant && currentTenant.id === this.formData.tenantId) {
+      return `${currentTenant.name} (${currentTenant.subdomain})`;
+    }
+
+    // Then check if we have tenant info from loaded user
     if (this.loadedUser && this.loadedUser.tenant) {
-      console.log('✅ Found tenant from loadedUser:', this.loadedUser.tenant);
       return `${this.loadedUser.tenant.name} (${this.loadedUser.tenant.subdomain})`;
     }
 
-    // Otherwise check tenants list
+    // Otherwise check tenants list (for system admin context)
     const tenant = this.tenants().find(t => t.id === this.formData.tenantId);
     if (tenant) {
-      console.log('✅ Found tenant from list:', tenant);
       return `${tenant.name} (${tenant.subdomain})`;
     }
-    
-    console.log('⚠️ Tenant not found, returning Loading...');
+
     return 'Loading...';
   }
 
@@ -1507,6 +1507,45 @@ export class UserEditorComponent implements OnInit {
   }
 
   /**
+   * Load user address from API
+   */
+  async loadUserAddress(userId: string): Promise<void> {
+    try {
+      const addresses = await this.addressService.getAddressesByUserId(userId);
+
+      if (addresses && addresses.length > 0) {
+        // Get the primary address or first address
+        const address = addresses.find((a: any) => a.isPrimary) || addresses[0];
+
+        // Populate address form
+        this.addressData.addressType = address.addressType || 'home';
+        this.addressData.street = address.street || '';
+        this.addressData.barangay = address.barangay || '';
+        this.addressData.cityMunicipality = address.cityMunicipality || '';
+        this.addressData.province = address.province || '';
+        this.addressData.region = address.region || '';
+        this.addressData.zipCode = address.zipCode || '';
+        this.addressData.landmark = address.landmark || '';
+        this.addressData.isPrimary = address.isPrimary || false;
+        this.addressData.contactPhone = address.contactPhone || '';
+        this.addressData.contactName = address.contactName || '';
+        this.addressData.notes = address.notes || '';
+
+        // Store address ID for updates
+        this.userAddressId = address.id?.toString() || null;
+
+        // Enable address section if address exists
+        this.includeAddress = true;
+
+        console.log('📍 Loaded user address:', address.id);
+      } else {
+        console.log('📍 No address found for user');
+      }
+    } catch (error) {
+      console.error('❌ Error loading user address:', error);
+      // Don't throw - just log the error
+    }
+  }  /**
    * Reset product access to default state
    */
   resetProductAccess(): void {
@@ -1700,30 +1739,55 @@ export class UserEditorComponent implements OnInit {
           }
         }
 
-        // Create address if included
+        // Create or update address if included
         if (this.includeAddress && this.isAddressValid()) {
           try {
-            const addressPayload: AddressCreatePayload = {
-              userId: user.id,
-              addressType: this.addressData.addressType,
-              street: this.addressData.street,
-              barangay: this.addressData.barangay,
-              cityMunicipality: this.addressData.cityMunicipality,
-              province: this.addressData.province,
-              region: this.addressData.region,
-              zipCode: this.addressData.zipCode || undefined,
-              country: 'Philippines',
-              landmark: this.addressData.landmark || undefined,
-              isPrimary: this.addressData.isPrimary,
-              contactPhone: this.addressData.contactPhone || undefined,
-              contactName: this.addressData.contactName || undefined,
-              notes: this.addressData.notes || undefined
-            };
-            await this.addressService.createAddress(addressPayload);
-            console.log('✅ Address created successfully');
+            if (this.userAddressId) {
+              // Update existing address
+              const updatePayload = {
+                addressType: this.addressData.addressType,
+                street: this.addressData.street,
+                barangay: this.addressData.barangay,
+                cityMunicipality: this.addressData.cityMunicipality,
+                province: this.addressData.province,
+                region: this.addressData.region,
+                zipCode: this.addressData.zipCode || undefined,
+                country: 'Philippines',
+                landmark: this.addressData.landmark || undefined,
+                isPrimary: this.addressData.isPrimary,
+                contactPhone: this.addressData.contactPhone || undefined,
+                contactName: this.addressData.contactName || undefined,
+                notes: this.addressData.notes || undefined
+              };
+              await this.addressService.updateAddress(this.userAddressId, updatePayload);
+              console.log('✅ Address updated successfully');
+            } else {
+              // Create new address
+              const addressPayload: AddressCreatePayload = {
+                userId: user.id,
+                addressType: this.addressData.addressType,
+                street: this.addressData.street,
+                barangay: this.addressData.barangay,
+                cityMunicipality: this.addressData.cityMunicipality,
+                province: this.addressData.province,
+                region: this.addressData.region,
+                zipCode: this.addressData.zipCode || undefined,
+                country: 'Philippines',
+                landmark: this.addressData.landmark || undefined,
+                isPrimary: this.addressData.isPrimary,
+                contactPhone: this.addressData.contactPhone || undefined,
+                contactName: this.addressData.contactName || undefined,
+                notes: this.addressData.notes || undefined
+              };
+              const newAddress = await this.addressService.createAddress(addressPayload);
+              if (newAddress) {
+                this.userAddressId = newAddress.id.toString();
+              }
+              console.log('✅ Address created successfully');
+            }
           } catch (addressError) {
-            console.error('⚠️ User created but address failed:', addressError);
-            // Don't fail the whole operation if address creation fails
+            console.error('⚠️ Address save failed:', addressError);
+            // Don't fail the whole operation if address creation/update fails
           }
         }
 

@@ -8,18 +8,18 @@ import { ThemeService } from '../../../core/services/theme.service';
 
 interface Customer {
   id: number;
-  tenant_id: number;
-  customer_code: string;
+  tenantId: number;  // camelCase from Knex
+  customerCode: string;  // camelCase from Knex
   email: string;
   phone: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
+  firstName: string;  // camelCase from Knex
+  lastName: string;  // camelCase from Knex
+  dateOfBirth: string;  // camelCase from Knex
   status: string;
-  kyc_status: string;
-  credit_score: number;
-  created_at: string;
-  updated_at: string;
+  kycStatus: string;  // camelCase from Knex
+  creditScore: number;  // camelCase from Knex
+  createdAt: string;  // camelCase from Knex
+  updatedAt: string;  // camelCase from Knex
 }
 
 @Component({
@@ -244,23 +244,23 @@ interface Customer {
                         <div class="flex-shrink-0 h-8 w-8">
                           <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                             <span class="text-white font-medium text-xs">
-                              {{ getInitials(customer.first_name, customer.last_name) }}
+                              {{ getInitials(customer.firstName, customer.lastName) }}
                             </span>
                           </div>
                         </div>
                         <div class="ml-2">
                           <div class="text-xs font-medium text-gray-900 dark:text-white">
-                            {{ customer.first_name }} {{ customer.last_name }}
+                            {{ customer.firstName }} {{ customer.lastName }}
                           </div>
                           <div class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ formatDate(customer.created_at) }}
+                            {{ formatDate(customer.createdAt) }}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
                       <span class="text-xs font-mono text-gray-900 dark:text-white font-medium">
-                        {{ customer.customer_code }}
+                        {{ customer.customerCode }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
@@ -268,13 +268,13 @@ interface Customer {
                       <div class="text-xs text-gray-500 dark:text-gray-400">{{ customer.phone }}</div>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getCreditScoreClass(customer.credit_score)" class="px-2 py-0.5 text-xs font-semibold rounded">
-                        {{ customer.credit_score || 'N/A' }}
+                      <span [class]="getCreditScoreClass(customer.creditScore)" class="px-2 py-0.5 text-xs font-semibold rounded">
+                        {{ customer.creditScore || 'N/A' }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getKycStatusClass(customer.kyc_status)">
-                        {{ customer.kyc_status }}
+                      <span [class]="getKycStatusClass(customer.kycStatus)">
+                        {{ customer.kycStatus }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
@@ -463,48 +463,48 @@ export class CustomersListComponent implements OnInit {
     const mockCustomers: Customer[] = [
       {
         id: 1,
-        tenant_id: 2,
-        customer_code: 'CUST-2025-001',
+        tenantId: 2,
+        customerCode: 'CUST-2025-001',
         email: 'juan.delacruz@test.com',
         phone: '+63 917 123 4567',
-        first_name: 'Juan',
-        last_name: 'Dela Cruz',
-        date_of_birth: '1990-05-15',
+        firstName: 'Juan',
+        lastName: 'Dela Cruz',
+        dateOfBirth: '1990-05-15',
         status: 'active',
-        kyc_status: 'verified',
-        credit_score: 720,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        kycStatus: 'verified',
+        creditScore: 720,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       },
       {
         id: 2,
-        tenant_id: 2,
-        customer_code: 'CUST-2025-002',
+        tenantId: 2,
+        customerCode: 'CUST-2025-002',
         email: 'maria.santos@test.com',
         phone: '+63 918 123 4567',
-        first_name: 'Maria',
-        last_name: 'Santos',
-        date_of_birth: '1985-08-22',
+        firstName: 'Maria',
+        lastName: 'Santos',
+        dateOfBirth: '1985-08-22',
         status: 'active',
-        kyc_status: 'verified',
-        credit_score: 680,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        kycStatus: 'verified',
+        creditScore: 680,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       },
       {
         id: 3,
-        tenant_id: 2,
-        customer_code: 'CUST-2025-003',
+        tenantId: 2,
+        customerCode: 'CUST-2025-003',
         email: 'pedro.gonzales@test.com',
         phone: '+63 919 123 4567',
-        first_name: 'Pedro',
-        last_name: 'Gonzales',
-        date_of_birth: '1995-03-10',
+        firstName: 'Pedro',
+        lastName: 'Gonzales',
+        dateOfBirth: '1995-03-10',
         status: 'active',
-        kyc_status: 'pending',
-        credit_score: 620,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        kycStatus: 'pending',
+        creditScore: 620,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
     ];
 
@@ -528,10 +528,10 @@ export class CustomersListComponent implements OnInit {
     if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(c =>
-        c.first_name?.toLowerCase().includes(query) ||
-        c.last_name?.toLowerCase().includes(query) ||
+        c.firstName?.toLowerCase().includes(query) ||
+        c.lastName?.toLowerCase().includes(query) ||
         c.email?.toLowerCase().includes(query) ||
-        c.customer_code?.toLowerCase().includes(query)
+        c.customerCode?.toLowerCase().includes(query)
       );
     }
 
@@ -542,7 +542,7 @@ export class CustomersListComponent implements OnInit {
 
     // KYC filter
     if (this.kycFilter) {
-      filtered = filtered.filter(c => c.kyc_status === this.kycFilter);
+      filtered = filtered.filter(c => c.kycStatus === this.kycFilter);
     }
 
     this.filteredCustomers.set(filtered);
@@ -760,16 +760,16 @@ export class CustomersListComponent implements OnInit {
     const csvRows = [
       headers.join(','),
       ...data.map(customer => [
-        customer.customer_code,
-        customer.first_name,
-        customer.last_name,
+        customer.customerCode,
+        customer.firstName,
+        customer.lastName,
         customer.email,
         customer.phone || '',
-        customer.date_of_birth || '',
+        customer.dateOfBirth || '',
         customer.status,
-        customer.kyc_status,
-        customer.credit_score || '',
-        this.formatDate(customer.created_at)
+        customer.kycStatus,
+        customer.creditScore || '',
+        this.formatDate(customer.createdAt)
       ].map(field => `"${field}"`).join(','))
     ];
 

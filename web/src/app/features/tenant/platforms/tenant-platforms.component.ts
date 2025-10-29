@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RBACService } from '../../../core/services/rbac.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TenantService, Tenant } from '../../../core/services/tenant.service';
-import { ProductSubscriptionService, ProductSubscription } from '../../../core/services/product-subscription.service';
+import { ProductSubscriptionService, PlatformSubscription } from '../../../core/services/product-subscription.service';
 
 interface Platform {
   id: string;
@@ -16,7 +16,7 @@ interface Platform {
   status: 'active' | 'inactive';
   features: string[];
   lastUpdated?: string;
-  subscription?: ProductSubscription;
+  subscription?: PlatformSubscription;
   platformType: 'money_loan' | 'bnpl' | 'pawnshop';
 }
 
@@ -203,25 +203,25 @@ interface Platform {
               <div class="flex justify-between">
                 <span>Plan:</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  {{ platform.subscription.subscription_plan?.name || 'N/A' }}
+                  {{ platform.subscription.subscriptionPlan?.name || 'N/A' }}
                 </span>
               </div>
               <div class="flex justify-between">
                 <span>Price:</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  {{ '$' + platform.subscription.price + ' / ' + platform.subscription.billing_cycle }}
+                  {{ '$' + platform.subscription.price + ' / ' + platform.subscription.billingCycle }}
                 </span>
               </div>
               <div class="flex justify-between">
                 <span>Started:</span>
                 <span class="font-medium">
-                  {{ formatDate(platform.subscription.starts_at) }}
+                  {{ formatDate(platform.subscription.startsAt) }}
                 </span>
               </div>
-              <div *ngIf="platform.subscription.expires_at" class="flex justify-between">
+              <div *ngIf="platform.subscription.expiresAt" class="flex justify-between">
                 <span>Expires:</span>
                 <span class="font-medium">
-                  {{ formatDate(platform.subscription.expires_at) }}
+                  {{ formatDate(platform.subscription.expiresAt) }}
                 </span>
               </div>
             </div>
@@ -307,7 +307,7 @@ export class TenantPlatformsComponent implements OnInit {
 
   loading = signal(false);
   tenant = signal<Tenant | null>(null);
-  platformSubscriptions = signal<ProductSubscription[]>([]);
+  platformSubscriptions = signal<PlatformSubscription[]>([]);
   showInactive = signal<boolean>(false); // Toggle for showing/hiding inactive platforms
 
   // Build platforms list based on tenant settings
@@ -317,9 +317,9 @@ export class TenantPlatformsComponent implements OnInit {
     if (!tenantData) return [];
 
     // Create a map of subscriptions by platform type
-    const subscriptionMap = new Map<string, ProductSubscription>();
+    const subscriptionMap = new Map<string, PlatformSubscription>();
     subscriptions.forEach(sub => {
-      subscriptionMap.set(sub.product_type, sub);
+      subscriptionMap.set(sub.platformType, sub);
     });
 
     const allPlatforms: Platform[] = [

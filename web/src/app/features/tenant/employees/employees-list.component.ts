@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,18 +8,18 @@ import { ThemeService } from '../../../core/services/theme.service';
 
 interface Employee {
   id: number;
-  user_id?: number;
-  tenant_id: number;
+  userId?: number;  // camelCase from Knex
+  tenantId: number;  // camelCase from Knex
   email: string;
-  first_name: string;
-  last_name: string;
+  firstName: string;  // camelCase from Knex
+  lastName: string;  // camelCase from Knex
   department?: string;
   position?: string;
-  employment_type?: string;
-  employment_status?: string;
-  hire_date?: string;
-  created_at: string;
-  updated_at?: string;
+  employmentType?: string;  // camelCase from Knex
+  employmentStatus?: string;  // camelCase from Knex
+  hireDate?: string;  // camelCase from Knex
+  createdAt: string;  // camelCase from Knex
+  updatedAt?: string;  // camelCase from Knex
   status: string;
   roles?: Array<{ id: number; name: string; space: string; description?: string }>;
   platforms?: string[]; // Array of platform types: ['money_loan', 'bnpl', 'pawnshop']
@@ -261,16 +261,16 @@ interface Employee {
                         <div class="flex-shrink-0 h-8 w-8">
                           <div class="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
                             <span class="text-white font-medium text-xs">
-                              {{ getInitials(employee.first_name, employee.last_name) }}
+                              {{ getInitials(employee.firstName, employee.lastName) }}
                             </span>
                           </div>
                         </div>
                         <div class="ml-2">
                           <div class="text-xs font-medium text-gray-900 dark:text-white">
-                            {{ employee.first_name }} {{ employee.last_name }}
+                            {{ employee.firstName }} {{ employee.lastName }}
                           </div>
                           <div class="text-xs text-gray-500 dark:text-gray-400">
-                            Hired: {{ employee.hire_date ? formatDate(employee.hire_date) : 'N/A' }}
+                            Hired: {{ employee.hireDate ? formatDate(employee.hireDate) : 'N/A' }}
                           </div>
                         </div>
                       </div>
@@ -315,13 +315,13 @@ interface Employee {
                       </div>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getEmploymentTypeClass(employee.employment_type || '')">
-                        {{ employee.employment_type || 'N/A' }}
+                      <span [class]="getEmploymentTypeClass(employee.employmentType || '')">
+                        {{ employee.employmentType || 'N/A' }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
-                      <span [class]="getStatusClass(employee.employment_status || '')">
-                        {{ employee.employment_status || 'N/A' }}
+                      <span [class]="getStatusClass(employee.employmentStatus || '')">
+                        {{ employee.employmentStatus || 'N/A' }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
@@ -441,6 +441,7 @@ export class EmployeesListComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
   themeService = inject(ThemeService);
 
   employees = signal<Employee[]>([]);
@@ -498,10 +499,13 @@ export class EmployeesListComponent implements OnInit {
           console.log('Total users:', users.length);
           console.log('Filtered employees:', tenantEmployees.length);
           console.log('Employees:', tenantEmployees);
+          console.log('First employee platforms:', tenantEmployees[0]?.platforms);
+          console.log('Sample employee data:', JSON.stringify(tenantEmployees[0], null, 2));
 
           this.employees.set(tenantEmployees);
           this.filteredEmployees.set(tenantEmployees);
           this.updatePagination();
+          this.cdr.detectChanges(); // Force change detection
         } else {
           this.toastService.error('Failed to load employees');
           this.loadMockEmployees();
@@ -522,36 +526,36 @@ export class EmployeesListComponent implements OnInit {
     const mockEmployees: Employee[] = [
       {
         id: 1,
-        user_id: 10,
-        tenant_id: 2,
+        userId: 10,
+        tenantId: 2,
         email: 'employee1@tenant1.com',
-        first_name: 'John',
-        last_name: 'Smith',
+        firstName: 'John',
+        lastName: 'Smith',
         department: 'IT',
         position: 'Software Engineer',
-        employment_type: 'full_time',
-        employment_status: 'active',
-        hire_date: '2024-01-15',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        employmentType: 'full_time',
+        employmentStatus: 'active',
+        hireDate: '2024-01-15',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         status: 'active',
         roles: [{ id: 1, name: 'Employee', space: 'tenant' }],
         platforms: ['money_loan', 'bnpl']
       },
       {
         id: 2,
-        user_id: 11,
-        tenant_id: 2,
+        userId: 11,
+        tenantId: 2,
         email: 'employee2@tenant1.com',
-        first_name: 'Jane',
-        last_name: 'Doe',
+        firstName: 'Jane',
+        lastName: 'Doe',
         department: 'Finance',
         position: 'Financial Analyst',
-        employment_type: 'full_time',
-        employment_status: 'active',
-        hire_date: '2024-02-20',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        employmentType: 'full_time',
+        employmentStatus: 'active',
+        hireDate: '2024-02-20',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         status: 'active',
         roles: [{ id: 2, name: 'Tenant Admin', space: 'tenant' }],
         platforms: ['money_loan']
@@ -577,8 +581,8 @@ export class EmployeesListComponent implements OnInit {
     if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(emp =>
-        emp.first_name?.toLowerCase().includes(query) ||
-        emp.last_name?.toLowerCase().includes(query) ||
+        emp.firstName?.toLowerCase().includes(query) ||
+        emp.lastName?.toLowerCase().includes(query) ||
         emp.email?.toLowerCase().includes(query) ||
         emp.department?.toLowerCase().includes(query) ||
         emp.position?.toLowerCase().includes(query)
@@ -590,12 +594,13 @@ export class EmployeesListComponent implements OnInit {
     }
 
     if (this.statusFilter) {
-      filtered = filtered.filter(emp => emp.employment_status === this.statusFilter);
+      filtered = filtered.filter(emp => emp.employmentStatus === this.statusFilter);
     }
 
     this.filteredEmployees.set(filtered);
     this.currentPage = 1;
     this.updatePagination();
+    this.cdr.detectChanges(); // Force change detection
   }
 
   clearFilters() {
@@ -605,6 +610,7 @@ export class EmployeesListComponent implements OnInit {
     this.filteredEmployees.set(this.employees());
     this.currentPage = 1;
     this.updatePagination();
+    this.cdr.detectChanges(); // Force change detection
   }
 
   onPageSizeChange() {
@@ -620,6 +626,7 @@ export class EmployeesListComponent implements OnInit {
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
     this.paginatedEmployees.set(filtered.slice(startIndex, endIndex));
+    this.cdr.detectChanges(); // Force change detection after pagination update
   }
 
   previousPage() {
@@ -695,7 +702,7 @@ export class EmployeesListComponent implements OnInit {
       return;
     }
 
-    this.http.patch(`http://localhost:3000/api/employees/${id}`, { employment_status: 'on_leave' }).subscribe({
+    this.http.patch(`http://localhost:3000/api/employees/${id}`, { employmentStatus: 'on_leave' }).subscribe({
       next: (response: any) => {
         if (response.success) {
           this.toastService.success('Employee suspended successfully');
@@ -808,15 +815,15 @@ export class EmployeesListComponent implements OnInit {
     const csvRows = [
       headers.join(','),
       ...data.map(employee => [
-        employee.first_name,
-        employee.last_name,
+        employee.firstName,
+        employee.lastName,
         employee.email,
         employee.department || '',
         employee.position || '',
-        employee.employment_type,
-        employee.employment_status,
-        employee.hire_date || '',
-        this.formatDate(employee.created_at)
+        employee.employmentType,
+        employee.employmentStatus,
+        employee.hireDate || '',
+        this.formatDate(employee.createdAt)
       ].map(field => `"${field}"`).join(','))
     ];
 

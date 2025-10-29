@@ -1,7 +1,7 @@
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 const ENCRYPTION_KEY = process.env.MFA_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
@@ -122,22 +122,21 @@ class MFAService {
       const backupCodes = this.generateBackupCodes();
 
       // Update user record
-      await pool.query(
-        `UPDATE users 
-         SET mfa_enabled = true, 
-             mfa_secret = $1, 
-             mfa_backup_codes = $2,
-             mfa_enabled_at = NOW(),
-             updated_at = NOW()
-         WHERE id = $3`,
-        [encryptedSecret, JSON.stringify(backupCodes.hashed), userId]
-      );
+      await knex('users')
+        .where({ id: userId })
+        .update({
+          mfaEnabled: true,
+          mfaSecret: encryptedSecret,
+          mfaBackupCodes: JSON.stringify(backupCodes.hashed),
+          mfaEnabledAt: knex.fn.now(),
+          updatedAt: knex.fn.now(),
+        });
 
       logger.info(`MFA enabled for user ${userId}`);
 
       return {
         success: true,
-        backupCodes: backupCodes.plain
+        backupCodes: backupCodes.plain,
       };
     } catch (err) {
       logger.error(`Error enabling MFA: ${err.message}`);
@@ -151,24 +150,24 @@ class MFAService {
   static async verifyMFAToken(userId, token) {
     try {
       // Get user's MFA secret
-      const result = await pool.query(
-        'SELECT mfa_secret, mfa_backup_codes FROM users WHERE id = $1 AND mfa_enabled = true',
-        [userId]
-      );
+      const user = await knex('users')
+        .select('mfaSecret', 'mfaBackupCodes')
+        .where({ id: userId, mfaEnabled: true })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('MFA not enabled for this user');
       }
 
-      const { mfa_secret, mfa_backup_codes } = result.rows[0];
+      const { mfaSecret, mfaBackupCodes } = user;
 
       // Try TOTP verification first
-      const decryptedSecret = this.decrypt(mfa_secret);
+      const decryptedSecret = this.decrypt(mfaSecret);
       const isValidTOTP = speakeasy.totp.verify({
         secret: decryptedSecret,
         encoding: 'base32',
         token: token,
-        window: 2
+        window: 2,
       });
 
       if (isValidTOTP) {
@@ -177,12 +176,12 @@ class MFAService {
       }
 
       // If TOTP fails, try backup codes
-      if (mfa_backup_codes) {
-        const backupCodes = JSON.parse(mfa_backup_codes);
+      if (mfaBackupCodes) {
+        const backupCodes = JSON.parse(mfaBackupCodes);
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         
         const codeIndex = backupCodes.findIndex(
-          bc => bc.hash === tokenHash && !bc.used
+          (bc) => bc.hash === tokenHash && !bc.used,
         );
 
         if (codeIndex !== -1) {
@@ -190,13 +189,15 @@ class MFAService {
           backupCodes[codeIndex].used = true;
           backupCodes[codeIndex].usedAt = new Date().toISOString();
 
-          await pool.query(
-            'UPDATE users SET mfa_backup_codes = $1, updated_at = NOW() WHERE id = $2',
-            [JSON.stringify(backupCodes), userId]
-          );
+          await knex('users')
+            .where({ id: userId })
+            .update({
+              mfaBackupCodes: JSON.stringify(backupCodes),
+              updatedAt: knex.fn.now(),
+            });
 
           logger.info(`Backup code used for user ${userId}`);
-          return { valid: true, method: 'backup', remainingCodes: backupCodes.filter(bc => !bc.used).length };
+          return { valid: true, method: 'backup', remainingCodes: backupCodes.filter((bc) => !bc.used).length };
         }
       }
 
@@ -214,32 +215,31 @@ class MFAService {
   static async disableMFA(userId, password) {
     try {
       // Verify password before disabling
-      const result = await pool.query(
-        'SELECT password_hash FROM users WHERE id = $1',
-        [userId]
-      );
+      const user = await knex('users')
+        .select('passwordHash')
+        .where({ id: userId })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found');
       }
 
       const bcrypt = require('bcryptjs');
-      const isValidPassword = await bcrypt.compare(password, result.rows[0].password_hash);
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
       if (!isValidPassword) {
         throw new Error('Invalid password');
       }
 
       // Disable MFA
-      await pool.query(
-        `UPDATE users 
-         SET mfa_enabled = false, 
-             mfa_secret = NULL, 
-             mfa_backup_codes = NULL,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [userId]
-      );
+      await knex('users')
+        .where({ id: userId })
+        .update({
+          mfaEnabled: false,
+          mfaSecret: null,
+          mfaBackupCodes: null,
+          updatedAt: knex.fn.now(),
+        });
 
       logger.info(`MFA disabled for user ${userId}`);
       return { success: true };
@@ -256,16 +256,18 @@ class MFAService {
     try {
       const backupCodes = this.generateBackupCodes();
 
-      await pool.query(
-        'UPDATE users SET mfa_backup_codes = $1, updated_at = NOW() WHERE id = $2 AND mfa_enabled = true',
-        [JSON.stringify(backupCodes.hashed), userId]
-      );
+      await knex('users')
+        .where({ id: userId, mfaEnabled: true })
+        .update({
+          mfaBackupCodes: JSON.stringify(backupCodes.hashed),
+          updatedAt: knex.fn.now(),
+        });
 
       logger.info(`Backup codes regenerated for user ${userId}`);
       
       return {
         success: true,
-        backupCodes: backupCodes.plain
+        backupCodes: backupCodes.plain,
       };
     } catch (err) {
       logger.error(`Error regenerating backup codes: ${err.message}`);
@@ -278,12 +280,12 @@ class MFAService {
    */
   static async isMFAEnabled(userId) {
     try {
-      const result = await pool.query(
-        'SELECT mfa_enabled FROM users WHERE id = $1',
-        [userId]
-      );
+      const user = await knex('users')
+        .select('mfaEnabled')
+        .where({ id: userId })
+        .first();
 
-      return result.rows.length > 0 && result.rows[0].mfa_enabled === true;
+      return user && user.mfaEnabled === true;
     } catch (err) {
       logger.error(`Error checking MFA status: ${err.message}`);
       throw err;
@@ -295,27 +297,27 @@ class MFAService {
    */
   static async getMFAStatus(userId) {
     try {
-      const result = await pool.query(
-        'SELECT mfa_enabled, mfa_enabled_at, mfa_backup_codes FROM users WHERE id = $1',
-        [userId]
-      );
+      const user = await knex('users')
+        .select('mfaEnabled', 'mfaEnabledAt', 'mfaBackupCodes')
+        .where({ id: userId })
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!user) {
         throw new Error('User not found');
       }
 
-      const { mfa_enabled, mfa_enabled_at, mfa_backup_codes } = result.rows[0];
+      const { mfaEnabled, mfaEnabledAt, mfaBackupCodes } = user;
 
       let backupCodesRemaining = 0;
-      if (mfa_backup_codes) {
-        const codes = JSON.parse(mfa_backup_codes);
-        backupCodesRemaining = codes.filter(bc => !bc.used).length;
+      if (mfaBackupCodes) {
+        const codes = JSON.parse(mfaBackupCodes);
+        backupCodesRemaining = codes.filter((bc) => !bc.used).length;
       }
 
       return {
-        enabled: mfa_enabled,
-        enabledAt: mfa_enabled_at,
-        backupCodesRemaining
+        enabled: mfaEnabled,
+        enabledAt: mfaEnabledAt,
+        backupCodesRemaining,
       };
     } catch (err) {
       logger.error(`Error getting MFA status: ${err.message}`);

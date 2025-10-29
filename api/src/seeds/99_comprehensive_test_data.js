@@ -40,9 +40,9 @@ exports.seed = async function(knex) {
     
     // Get all permissions including Money Loan
     const allPermissions = await knex('permissions').select('*');
-    const dashboardPerm = allPermissions.find(p => p.permission_key === 'tenant-dashboard:view');
+    const dashboardPerm = allPermissions.find(p => p.permissionKey === 'tenant-dashboard:view');
     const customerPerms = allPermissions.filter(p => p.resource === 'tenant-customers');
-    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permission_key.startsWith('money-loan:'));
+    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permissionKey.startsWith('money-loan:'));
     
     // Update Employee roles with Money Loan permissions
     const employeeRoles = await knex('roles').where({ name: 'Employee', space: 'tenant' });

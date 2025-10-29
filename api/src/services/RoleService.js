@@ -1,38 +1,43 @@
 /**
  * Role Service - Standard RBAC Implementation
  * Uses resource:action permission format
+ * NOTE: Fully converted to Knex with automatic camelCase/snake_case conversion
  */
 
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class RoleService {
   /**
    * Transform database role object to camelCase
+   * NOTE: This method is now deprecated - Knex handles conversion automatically
+   * Kept for backwards compatibility during migration
    */
   static transformRole(dbRole) {
     if (!dbRole) return null;
     return {
       id: dbRole.id,
-      tenantId: dbRole.tenant_id,
+      tenantId: dbRole.tenantId || dbRole.tenant_id,
       name: dbRole.name,
       description: dbRole.description,
       space: dbRole.space,
       status: dbRole.status,
-      createdAt: dbRole.created_at,
-      updatedAt: dbRole.updated_at,
+      createdAt: dbRole.createdAt || dbRole.created_at,
+      updatedAt: dbRole.updatedAt || dbRole.updated_at,
       permissions: dbRole.permissions || [],
     };
   }
 
   /**
    * Transform permission object to camelCase
+   * NOTE: This method is now deprecated - Knex handles conversion automatically
+   * Kept for backwards compatibility during migration
    */
   static transformPermission(dbPerm) {
     if (!dbPerm) return null;
     return {
       id: dbPerm.id,
-      permissionKey: dbPerm.permission_key || dbPerm.permissionkey,
+      permissionKey: dbPerm.permissionKey || dbPerm.permission_key || dbPerm.permissionkey,
       resource: dbPerm.resource,
       action: dbPerm.action,
       description: dbPerm.description,
@@ -45,19 +50,14 @@ class RoleService {
    */
   static async createRole(roleData, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `INSERT INTO roles (tenant_id, name, description, space)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, tenant_id, name, description, space, status, created_at, updated_at`,
-        [
-          roleData.space === 'system' ? null : tenantId,
-          roleData.name,
-          roleData.description || null,
-          roleData.space,
-        ]
-      );
-
-      const role = this.transformRole(result.rows[0]);
+      const [role] = await knex('roles')
+        .insert({
+          tenantId: roleData.space === 'system' ? null : tenantId,
+          name: roleData.name,
+          description: roleData.description || null,
+          space: roleData.space || 'tenant',
+        })
+        .returning(['id', 'tenantId', 'name', 'description', 'space', 'status', 'createdAt', 'updatedAt']);
 
       // Audit log
       await this.auditLog(requestingUserId, tenantId, 'create', 'role', role.id, { name: role.name });
@@ -79,33 +79,43 @@ class RoleService {
     try {
       const isSuperAdmin = tenantId === null;
 
-      const roleResult = await pool.query(
-        `SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.status,
-                r.created_at, r.updated_at,
-                json_agg(
-                  json_build_object(
-                    'id', p.id,
-                    'permissionKey', p.permission_key,
-                    'resource', p.resource,
-                    'action', p.action,
-                    'description', p.description,
-                    'space', p.space
-                  )
-                ) FILTER (WHERE p.id IS NOT NULL) as permissions
-         FROM roles r
-         LEFT JOIN role_permissions rps ON r.id = rps.role_id
-         LEFT JOIN permissions p ON rps.permission_id = p.id
-         WHERE r.id = $1 
-         ${isSuperAdmin ? '' : 'AND (r.tenant_id = $2 OR r.tenant_id IS NULL)'}
-         GROUP BY r.id`,
-        isSuperAdmin ? [roleId] : [roleId, tenantId]
-      );
+      let query = knex('roles as r')
+        .select(
+          'r.id',
+          'r.tenantId',
+          'r.name',
+          'r.description',
+          'r.space',
+          'r.status',
+          'r.createdAt',
+          'r.updatedAt',
+          knex.raw(`json_agg(
+            json_build_object(
+              'id', p.id,
+              'permissionKey', p.permission_key,
+              'resource', p.resource,
+              'action', p.action,
+              'description', p.description,
+              'space', p.space
+            )
+          ) FILTER (WHERE p.id IS NOT NULL) as permissions`)
+        )
+        .leftJoin('rolePermissions as rps', 'r.id', 'rps.roleId')
+        .leftJoin('permissions as p', 'rps.permissionId', 'p.id')
+        .where('r.id', roleId)
+        .groupBy('r.id');
 
-      if (roleResult.rows.length === 0) {
-        throw new Error('Role not found');
+      if (!isSuperAdmin) {
+        query = query.andWhere(function() {
+          this.where('r.tenantId', tenantId).orWhereNull('r.tenantId');
+        });
       }
 
-      const role = this.transformRole(roleResult.rows[0]);
+      const role = await query.first();
+
+      if (!role) {
+        throw new Error('Role not found');
+      }
       
       logger.info(`📋 Role ${roleId} loaded with ${role.permissions?.length || 0} permissions`);
       
@@ -128,44 +138,56 @@ class RoleService {
       // Super Admin (tenantId === null) sees ALL roles across all tenants
       const isSuperAdmin = tenantId === null;
 
-      let query = `
-        SELECT r.id, r.tenant_id, r.name, r.description, r.space, r.status,
-               r.created_at, r.updated_at,
-               COUNT(rps.permission_id) as permission_count
-        FROM roles r
-        LEFT JOIN role_permissions rps ON r.id = rps.role_id
-        ${isSuperAdmin ? 'WHERE 1=1' : 'WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)'}
-      `;
-      
-      const params = isSuperAdmin ? [] : [tenantId];
-      let paramIndex = isSuperAdmin ? 1 : 2;
-      
-      if (space) {
-        query += ` AND r.space = $${paramIndex}`;
-        params.push(space);
-        paramIndex++;
+      // Build query
+      let query = knex('roles as r')
+        .select(
+          'r.id',
+          'r.tenantId',
+          'r.name',
+          'r.description',
+          'r.space',
+          'r.status',
+          'r.createdAt',
+          'r.updatedAt',
+          knex.raw('COUNT(rps.permission_id) as permission_count')
+        )
+        .leftJoin('rolePermissions as rps', 'r.id', 'rps.roleId')
+        .groupBy('r.id')
+        .orderBy('r.createdAt', 'desc')
+        .limit(limit)
+        .offset(offset);
+
+      // Apply tenant filter (Super Admin sees all)
+      if (!isSuperAdmin) {
+        query = query.where(function() {
+          this.where('r.tenantId', tenantId).orWhereNull('r.tenantId');
+        });
       }
-      
-      query += ` GROUP BY r.id ORDER BY r.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-      params.push(limit, offset);
 
-      const countQuery = `
-        SELECT COUNT(*) as total FROM roles r
-        ${isSuperAdmin ? 'WHERE 1=1' : 'WHERE (r.tenant_id = $1 OR r.tenant_id IS NULL)'}
-        ${space ? `AND r.space = $${isSuperAdmin ? 1 : 2}` : ''}
-      `;
-      const countParams = isSuperAdmin 
-        ? (space ? [space] : [])
-        : (space ? [tenantId, space] : [tenantId]);
+      // Apply space filter if provided
+      if (space) {
+        query = query.andWhere('r.space', space);
+      }
 
-      const [countResult, dataResult] = await Promise.all([
-        pool.query(countQuery, countParams),
-        pool.query(query, params),
+      // Count query
+      let countQuery = knex('roles as r').count('* as total');
+      if (!isSuperAdmin) {
+        countQuery = countQuery.where(function() {
+          this.where('r.tenantId', tenantId).orWhereNull('r.tenantId');
+        });
+      }
+      if (space) {
+        countQuery = countQuery.andWhere('r.space', space);
+      }
+
+      const [{ total }, roles] = await Promise.all([
+        countQuery.first(),
+        query,
       ]);
 
-      const transformedRoles = dataResult.rows.map(row => ({
-        ...this.transformRole(row),
-        permissionCount: parseInt(row.permission_count) || 0
+      const transformedRoles = roles.map(row => ({
+        ...row,
+        permissionCount: parseInt(row.permissionCount) || 0,
       }));
 
       return {
@@ -173,8 +195,8 @@ class RoleService {
         pagination: {
           page,
           limit,
-          total: parseInt(countResult.rows[0].total),
-          pages: Math.ceil(parseInt(countResult.rows[0].total) / limit),
+          total: parseInt(total),
+          pages: Math.ceil(parseInt(total) / limit),
         },
       };
     } catch (err) {
@@ -190,75 +212,64 @@ class RoleService {
   static async updateRole(roleId, updateData, requestingUserId, tenantId) {
     try {
       // Get the role to check ownership and space
-      const roleCheck = await pool.query(
-        'SELECT id, tenant_id, space, name FROM roles WHERE id = $1',
-        [roleId]
-      );
+      const existingRole = await knex('roles')
+        .select('id', 'tenantId', 'space', 'name')
+        .where({ id: roleId })
+        .first();
 
-      if (roleCheck.rows.length === 0) {
+      if (!existingRole) {
         throw new Error('Role not found');
       }
 
-      const existingRole = roleCheck.rows[0];
       const isSuperAdmin = tenantId === null;
 
       // SECURITY CHECK: Super Admin cannot modify tenant roles
       if (isSuperAdmin && existingRole.space === 'tenant') {
         throw new Error(
-          `🚫 PERMISSION DENIED: System administrators cannot modify tenant-space roles. ` +
-          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`
+          '🚫 PERMISSION DENIED: System administrators cannot modify tenant-space roles. ' +
+          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users cannot modify system roles
       if (!isSuperAdmin && existingRole.space === 'system') {
         throw new Error(
-          `🚫 PERMISSION DENIED: Tenant users cannot modify system-space roles. ` +
-          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`
+          '🚫 PERMISSION DENIED: Tenant users cannot modify system-space roles. ' +
+          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users can only modify roles in their own tenant
-      if (!isSuperAdmin && existingRole.tenant_id !== tenantId) {
+      if (!isSuperAdmin && existingRole.tenantId !== tenantId) {
         throw new Error(
-          `🚫 PERMISSION DENIED: You can only modify roles within your own tenant.`
+          '🚫 PERMISSION DENIED: You can only modify roles within your own tenant.',
         );
       }
 
-      const fieldsToUpdate = [];
-      const values = [];
-      let paramCount = 1;
+      const updateFields = {};
 
       if (updateData.name !== undefined) {
-        fieldsToUpdate.push(`name = $${paramCount++}`);
-        values.push(updateData.name);
+        updateFields.name = updateData.name;
       }
 
       if (updateData.description !== undefined) {
-        fieldsToUpdate.push(`description = $${paramCount++}`);
-        values.push(updateData.description);
+        updateFields.description = updateData.description;
       }
 
-      if (fieldsToUpdate.length === 0) {
+      if (Object.keys(updateFields).length === 0) {
         throw new Error('No fields to update');
       }
 
-      fieldsToUpdate.push(`updated_at = NOW()`);
-      values.push(roleId);
+      updateFields.updatedAt = knex.fn.now();
 
-      const result = await pool.query(
-        `UPDATE roles
-         SET ${fieldsToUpdate.join(', ')}
-         WHERE id = $${paramCount}
-         RETURNING id, tenant_id, name, description, space, status, created_at, updated_at`,
-        values
-      );
+      const [role] = await knex('roles')
+        .update(updateFields)
+        .where({ id: roleId })
+        .returning(['id', 'tenantId', 'name', 'description', 'space', 'status', 'createdAt', 'updatedAt']);
 
-      if (result.rows.length === 0) {
+      if (!role) {
         throw new Error('Role not found or update failed');
       }
-
-      const role = this.transformRole(result.rows[0]);
 
       await this.auditLog(requestingUserId, tenantId, 'update', 'role', roleId, updateData);
 
@@ -277,53 +288,52 @@ class RoleService {
   static async deleteRole(roleId, requestingUserId, tenantId) {
     try {
       // Get the role to check ownership and space
-      const roleCheck = await pool.query(
-        'SELECT id, tenant_id, space, name FROM roles WHERE id = $1',
-        [roleId]
-      );
+      const existingRole = await knex('roles')
+        .select('id', 'tenantId', 'space', 'name')
+        .where({ id: roleId })
+        .first();
 
-      if (roleCheck.rows.length === 0) {
+      if (!existingRole) {
         throw new Error('Role not found');
       }
 
-      const existingRole = roleCheck.rows[0];
       const isSuperAdmin = tenantId === null;
 
       // SECURITY CHECK: Super Admin cannot delete tenant roles
       if (isSuperAdmin && existingRole.space === 'tenant') {
         throw new Error(
-          `🚫 PERMISSION DENIED: System administrators cannot delete tenant-space roles. ` +
-          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`
+          '🚫 PERMISSION DENIED: System administrators cannot delete tenant-space roles. ' +
+          `Role "${existingRole.name}" belongs to a tenant and must be managed by that tenant's administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users cannot delete system roles
       if (!isSuperAdmin && existingRole.space === 'system') {
         throw new Error(
-          `🚫 PERMISSION DENIED: Tenant users cannot delete system-space roles. ` +
-          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`
+          '🚫 PERMISSION DENIED: Tenant users cannot delete system-space roles. ' +
+          `Role "${existingRole.name}" is a system role and can only be managed by system administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users can only delete roles in their own tenant
-      if (!isSuperAdmin && existingRole.tenant_id !== tenantId) {
+      if (!isSuperAdmin && existingRole.tenantId !== tenantId) {
         throw new Error(
-          `🚫 PERMISSION DENIED: You can only delete roles within your own tenant.`
+          '🚫 PERMISSION DENIED: You can only delete roles within your own tenant.',
         );
       }
 
-      const result = await pool.query(
-        `DELETE FROM roles WHERE id = $1 RETURNING id, name`,
-        [roleId]
-      );
+      const [role] = await knex('roles')
+        .where({ id: roleId })
+        .del()
+        .returning(['id', 'name']);
 
-      if (result.rows.length === 0) {
+      if (!role) {
         throw new Error('Role not found or delete failed');
       }
 
-      await this.auditLog(requestingUserId, tenantId, 'delete', 'role', roleId, { name: result.rows[0].name });
+      await this.auditLog(requestingUserId, tenantId, 'delete', 'role', roleId, { name: role.name });
 
-      logger.info(`Role deleted: ${result.rows[0].name} (ID: ${roleId})`);
+      logger.info(`Role deleted: ${role.name} (ID: ${roleId})`);
       return { success: true, message: 'Role deleted successfully' };
     } catch (err) {
       logger.error(`Role service delete error: ${err.message}`);
@@ -337,147 +347,115 @@ class RoleService {
    * SECURITY: Super Admin can only assign permissions to system roles
    */
   static async bulkAssignPermissions(roleId, permissions, requestingUserId, tenantId) {
-    const client = await pool.connect();
-    
     try {
-      await client.query('BEGIN');
+      return await knex.transaction(async (trx) => {
+        logger.info(`🔄 Bulk assigning permissions to role ${roleId}...`);
 
-      logger.info(`🔄 Bulk assigning permissions to role ${roleId}...`);
-      console.log(`🔍 [DEBUG] Role ID: ${roleId}`);
-      console.log(`🔍 [DEBUG] Requesting User ID: ${requestingUserId}`);
-      console.log(`🔍 [DEBUG] Tenant ID: ${tenantId}`);
-      console.log(`🔍 [DEBUG] Received ${permissions.length} permissions:`, JSON.stringify(permissions, null, 2));
+        // CRITICAL: Get role space to validate permission assignments
+        const role = await trx('roles')
+          .select('id', 'space', 'tenantId', 'name')
+          .where({ id: roleId })
+          .first();
 
-      // CRITICAL: Get role space to validate permission assignments
-      const roleResult = await client.query(
-        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
-        [roleId]
-      );
+        if (!role) {
+          throw new Error(`Role not found: ${roleId}`);
+        }
 
-      if (roleResult.rows.length === 0) {
-        throw new Error(`Role not found: ${roleId}`);
-      }
+        const { space: roleSpace, tenantId: roleTenantId, name: roleName } = role;
+        const isSuperAdmin = tenantId === null;
 
-      const roleSpace = roleResult.rows[0].space;
-      const roleTenantId = roleResult.rows[0].tenant_id;
-      const roleName = roleResult.rows[0].name;
-      const isSuperAdmin = tenantId === null;
+        // SECURITY CHECK: Super Admin cannot assign permissions to tenant roles
+        if (isSuperAdmin && roleSpace === 'tenant') {
+          throw new Error(
+            '🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ' +
+            `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`,
+          );
+        }
 
-      console.log(`🔍 [DEBUG] Role space: ${roleSpace}, Role tenant_id: ${roleTenantId}, Role name: ${roleName}`);
+        // SECURITY CHECK: Tenant users cannot assign permissions to system roles
+        if (!isSuperAdmin && roleSpace === 'system') {
+          throw new Error(
+            '🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ' +
+            `Role "${roleName}" is a system role and can only be managed by system administrators.`,
+          );
+        }
 
-      // SECURITY CHECK: Super Admin cannot assign permissions to tenant roles
-      if (isSuperAdmin && roleSpace === 'tenant') {
-        throw new Error(
-          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
-          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
-        );
-      }
+        // SECURITY CHECK: Tenant users can only assign permissions to roles in their own tenant
+        if (!isSuperAdmin && roleTenantId !== tenantId) {
+          throw new Error(
+            '🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.',
+          );
+        }
 
-      // SECURITY CHECK: Tenant users cannot assign permissions to system roles
-      if (!isSuperAdmin && roleSpace === 'system') {
-        throw new Error(
-          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
-          `Role "${roleName}" is a system role and can only be managed by system administrators.`
-        );
-      }
+        // Delete all existing permissions for this role
+        await trx('rolePermissions')
+          .where({ roleId })
+          .del();
 
-      // SECURITY CHECK: Tenant users can only assign permissions to roles in their own tenant
-      if (!isSuperAdmin && roleTenantId !== tenantId) {
-        throw new Error(
-          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
-        );
-      }
-
-      // Delete all existing permissions for this role
-      const deleteResult = await client.query(
-        'DELETE FROM role_permissions WHERE role_id = $1',
-        [roleId]
-      );
-      console.log(`🔍 [DEBUG] Deleted ${deleteResult.rowCount} existing permissions`);
-
-      let insertedCount = 0;
-      let notFoundCount = 0;
-      const notFoundPermissions = [];
-      
-      for (const perm of permissions) {
-        const { permissionKey } = perm;
+        let insertedCount = 0;
+        let notFoundCount = 0;
+        const notFoundPermissions = [];
         
-        if (!permissionKey) {
-          logger.warn(`⚠️ Skipping invalid permission (missing permissionKey): ${JSON.stringify(perm)}`);
-          continue;
+        for (const perm of permissions) {
+          const { permissionKey } = perm;
+          
+          if (!permissionKey) {
+            logger.warn(`⚠️ Skipping invalid permission (missing permissionKey): ${JSON.stringify(perm)}`);
+            continue;
+          }
+
+          // Get the permission ID and space from permissions table
+          const permission = await trx('permissions')
+            .select('id', 'space')
+            .where({ permissionKey })
+            .first();
+
+          if (!permission) {
+            logger.warn(`⚠️ Permission not found in database: ${permissionKey}`);
+            notFoundPermissions.push(permissionKey);
+            notFoundCount++;
+            continue;
+          }
+
+          const { id: permissionId, space: permissionSpace } = permission;
+
+          // CRITICAL SECURITY CHECK: Validate permission space matches role space
+          if (roleSpace !== permissionSpace) {
+            const errorMsg = 
+              `🚫 SECURITY VIOLATION: Cannot assign ${permissionSpace}-space permission "${permissionKey}" to ${roleSpace}-space role "${roleName}". ` +
+              `For security reasons, ${roleSpace === 'system' ? 'system roles can only have system permissions' : 'tenant roles can only have tenant permissions'}.`;
+            logger.error(errorMsg);
+            throw new Error(errorMsg);
+          }
+
+          // Insert the role-permission mapping
+          await trx('rolePermissions')
+            .insert({ roleId, permissionId })
+            .onConflict(['roleId', 'permissionId'])
+            .ignore();
+
+          insertedCount++;
         }
 
-        console.log(`🔍 [DEBUG] Processing permission: ${permissionKey}`);
+        await this.auditLog(requestingUserId, tenantId, 'bulk_assign_permissions', 'role', roleId, {
+          permissionsCount: insertedCount,
+          notFoundCount,
+          notFoundPermissions,
+        });
 
-        // Get the permission ID and space from permissions table
-        const permResult = await client.query(
-          'SELECT id, space FROM permissions WHERE permission_key = $1',
-          [permissionKey]
-        );
+        logger.info(`✅ Bulk assigned ${insertedCount} permissions to role ${roleId}`);
 
-        if (permResult.rows.length === 0) {
-          logger.warn(`⚠️ Permission not found in database: ${permissionKey}`);
-          notFoundPermissions.push(permissionKey);
-          notFoundCount++;
-          continue;
-        }
-
-        const permissionId = permResult.rows[0].id;
-        const permissionSpace = permResult.rows[0].space;
-        console.log(`✅ [DEBUG] Found permission ${permissionKey} with ID: ${permissionId}, Space: ${permissionSpace}`);
-
-        // CRITICAL SECURITY CHECK: Validate permission space matches role space
-        if (roleSpace !== permissionSpace) {
-          const errorMsg = 
-            `🚫 SECURITY VIOLATION: Cannot assign ${permissionSpace}-space permission "${permissionKey}" to ${roleSpace}-space role "${roleName}". ` +
-            `For security reasons, ${roleSpace === 'system' ? 'system roles can only have system permissions' : 'tenant roles can only have tenant permissions'}.`;
-          logger.error(errorMsg);
-          throw new Error(errorMsg);
-        }
-
-        // Insert the role-permission mapping
-        const insertResult = await client.query(
-          `INSERT INTO role_permissions (role_id, permission_id)
-           VALUES ($1, $2)
-           ON CONFLICT (role_id, permission_id) DO NOTHING`,
-          [roleId, permissionId]
-        );
-
-        console.log(`✅ [DEBUG] Inserted permission ${permissionKey} for role ${roleId}, rows affected: ${insertResult.rowCount}`);
-        insertedCount++;
-      }
-
-      await client.query('COMMIT');
-
-      console.log(`🔍 [DEBUG] Final summary:`);
-      console.log(`🔍 [DEBUG] - Permissions requested: ${permissions.length}`);
-      console.log(`🔍 [DEBUG] - Permissions inserted: ${insertedCount}`);
-      console.log(`🔍 [DEBUG] - Permissions not found: ${notFoundCount}`);
-      if (notFoundPermissions.length > 0) {
-        console.log(`🔍 [DEBUG] - Not found list:`, notFoundPermissions);
-      }
-
-      await this.auditLog(requestingUserId, tenantId, 'bulk_assign_permissions', 'role', roleId, {
-        permissionsCount: insertedCount,
-        notFoundCount: notFoundCount,
-        notFoundPermissions: notFoundPermissions
+        return {
+          count: insertedCount,
+          notFoundCount,
+          notFoundPermissions,
+          message: `${insertedCount} permissions assigned successfully${notFoundCount > 0 ? `, ${notFoundCount} not found` : ''}`,
+        };
       });
-
-      logger.info(`✅ Bulk assigned ${insertedCount} permissions to role ${roleId}`);
-
-      return {
-        count: insertedCount,
-        notFoundCount: notFoundCount,
-        notFoundPermissions: notFoundPermissions,
-        message: `${insertedCount} permissions assigned successfully${notFoundCount > 0 ? `, ${notFoundCount} not found` : ''}`,
-      };
     } catch (err) {
-      await client.query('ROLLBACK');
       logger.error(`❌ Bulk assign permissions error: ${err.message}`);
       logger.error(err.stack);
       throw err;
-    } finally {
-      client.release();
     }
   }
 
@@ -488,55 +466,52 @@ class RoleService {
   static async grantPermission(roleId, permissionKey, requestingUserId, tenantId) {
     try {
       // CRITICAL: Get role space to validate permission assignment
-      const roleResult = await pool.query(
-        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
-        [roleId]
-      );
+      const role = await knex('roles')
+        .select('id', 'space', 'tenantId', 'name')
+        .where({ id: roleId })
+        .first();
 
-      if (roleResult.rows.length === 0) {
+      if (!role) {
         throw new Error(`Role not found: ${roleId}`);
       }
 
-      const roleSpace = roleResult.rows[0].space;
-      const roleTenantId = roleResult.rows[0].tenant_id;
-      const roleName = roleResult.rows[0].name;
+      const { space: roleSpace, tenantId: roleTenantId, name: roleName } = role;
       const isSuperAdmin = tenantId === null;
 
       // SECURITY CHECK: Super Admin cannot grant permissions to tenant roles
       if (isSuperAdmin && roleSpace === 'tenant') {
         throw new Error(
-          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
-          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
+          '🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ' +
+          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users cannot grant permissions to system roles
       if (!isSuperAdmin && roleSpace === 'system') {
         throw new Error(
-          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
-          `Role "${roleName}" is a system role and can only be managed by system administrators.`
+          '🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ' +
+          `Role "${roleName}" is a system role and can only be managed by system administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users can only grant permissions to roles in their own tenant
       if (!isSuperAdmin && roleTenantId !== tenantId) {
         throw new Error(
-          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
+          '🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.',
         );
       }
 
       // Get permission ID and space
-      const permResult = await pool.query(
-        'SELECT id, space FROM permissions WHERE permission_key = $1',
-        [permissionKey]
-      );
+      const permission = await knex('permissions')
+        .select('id', 'space')
+        .where({ permissionKey })
+        .first();
 
-      if (permResult.rows.length === 0) {
+      if (!permission) {
         throw new Error(`Permission not found: ${permissionKey}`);
       }
 
-      const permissionId = permResult.rows[0].id;
-      const permissionSpace = permResult.rows[0].space;
+      const { id: permissionId, space: permissionSpace } = permission;
 
       // CRITICAL SECURITY CHECK: Validate permission space matches role space
       if (roleSpace !== permissionSpace) {
@@ -548,16 +523,13 @@ class RoleService {
       }
 
       // Insert role-permission mapping
-      const result = await pool.query(
-        `INSERT INTO role_permissions (role_id, permission_id)
-         VALUES ($1, $2)
-         ON CONFLICT (role_id, permission_id) DO NOTHING
-         RETURNING *`,
-        [roleId, permissionId]
-      );
+      await knex('rolePermissions')
+        .insert({ roleId, permissionId })
+        .onConflict(['roleId', 'permissionId'])
+        .ignore();
 
       await this.auditLog(requestingUserId, tenantId, 'grant_permission', 'role', roleId, {
-        permissionKey: permissionKey,
+        permissionKey,
       });
 
       logger.info(`Permission granted: ${permissionKey} to role ${roleId}`);
@@ -575,65 +547,58 @@ class RoleService {
   static async revokePermission(roleId, permissionKey, requestingUserId, tenantId) {
     try {
       // Get the role to check ownership and space
-      const roleResult = await pool.query(
-        'SELECT id, space, tenant_id, name FROM roles WHERE id = $1',
-        [roleId]
-      );
+      const role = await knex('roles')
+        .select('id', 'space', 'tenantId', 'name')
+        .where({ id: roleId })
+        .first();
 
-      if (roleResult.rows.length === 0) {
+      if (!role) {
         throw new Error(`Role not found: ${roleId}`);
       }
 
-      const roleSpace = roleResult.rows[0].space;
-      const roleTenantId = roleResult.rows[0].tenant_id;
-      const roleName = roleResult.rows[0].name;
+      const { space: roleSpace, tenantId: roleTenantId, name: roleName } = role;
       const isSuperAdmin = tenantId === null;
 
       // SECURITY CHECK: Super Admin cannot revoke permissions from tenant roles
       if (isSuperAdmin && roleSpace === 'tenant') {
         throw new Error(
-          `🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ` +
-          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`
+          '🚫 PERMISSION DENIED: System administrators cannot modify permissions for tenant-space roles. ' +
+          `Role "${roleName}" belongs to a tenant and must be managed by that tenant's administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users cannot revoke permissions from system roles
       if (!isSuperAdmin && roleSpace === 'system') {
         throw new Error(
-          `🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ` +
-          `Role "${roleName}" is a system role and can only be managed by system administrators.`
+          '🚫 PERMISSION DENIED: Tenant users cannot modify permissions for system-space roles. ' +
+          `Role "${roleName}" is a system role and can only be managed by system administrators.`,
         );
       }
 
       // SECURITY CHECK: Tenant users can only revoke permissions from roles in their own tenant
       if (!isSuperAdmin && roleTenantId !== tenantId) {
         throw new Error(
-          `🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.`
+          '🚫 PERMISSION DENIED: You can only modify permissions for roles within your own tenant.',
         );
       }
 
       // Get permission ID
-      const permResult = await pool.query(
-        'SELECT id FROM permissions WHERE permission_key = $1',
-        [permissionKey]
-      );
+      const permission = await knex('permissions')
+        .select('id')
+        .where({ permissionKey })
+        .first();
 
-      if (permResult.rows.length === 0) {
+      if (!permission) {
         throw new Error(`Permission not found: ${permissionKey}`);
       }
 
-      const permissionId = permResult.rows[0].id;
-
       // Delete role-permission mapping
-      const result = await pool.query(
-        `DELETE FROM role_permissions
-         WHERE role_id = $1 AND permission_id = $2
-         RETURNING *`,
-        [roleId, permissionId]
-      );
+      await knex('rolePermissions')
+        .where({ roleId, permissionId: permission.id })
+        .del();
 
       await this.auditLog(requestingUserId, tenantId, 'revoke_permission', 'role', roleId, {
-        permissionKey: permissionKey,
+        permissionKey,
       });
 
       logger.info(`Permission revoked: ${permissionKey} from role ${roleId}`);
@@ -649,19 +614,19 @@ class RoleService {
    */
   static async getAllPermissions(space = null) {
     try {
-      let query = 'SELECT * FROM permissions';
-      const params = [];
+      let query = knex('permissions')
+        .select('*')
+        .orderBy(['resource', 'action']);
       
       if (space) {
-        query += ' WHERE space = $1 OR space = $2';
-        params.push(space, 'both');
+        query = query.where(function() {
+          this.where('space', space).orWhere('space', 'both');
+        });
       }
       
-      query += ' ORDER BY resource, action';
+      const permissions = await query;
       
-      const result = await pool.query(query, params);
-      
-      return result.rows.map(p => this.transformPermission(p));
+      return permissions;
     } catch (err) {
       logger.error(`Get all permissions error: ${err.message}`);
       throw err;
@@ -673,11 +638,15 @@ class RoleService {
    */
   static async auditLog(userId, tenantId, action, resourceType, resourceId, details) {
     try {
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'success')`,
-        [userId, tenantId, action, resourceType, resourceId, JSON.stringify(details)]
-      );
+      await knex('auditLogs').insert({
+        userId,
+        tenantId,
+        action,
+        resourceType,
+        resourceId,
+        newValues: JSON.stringify(details),
+        status: 'success',
+      });
     } catch (err) {
       logger.error(`Audit log error: ${err.message}`);
     }

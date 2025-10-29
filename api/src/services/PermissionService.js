@@ -3,7 +3,7 @@
  * Handles permission checks and permission delegation
  */
 
-const pool = require('../config/database');
+const knex = require('../config/knex');
 const logger = require('../utils/logger');
 
 class PermissionService {
@@ -18,21 +18,17 @@ class PermissionService {
     try {
       const permissionKey = `${resource}:${action}`;
       
-      const result = await pool.query(
-        `SELECT COUNT(*) as count FROM (
-          SELECT DISTINCT rps.role_id
-          FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.id
-          JOIN role_permissions rps ON r.id = rps.role_id
-          JOIN permissions p ON rps.permission_id = p.id
-          WHERE ur.user_id = $1 
-            AND p.permission_key = $2
-            AND r.status = 'active'
-        ) AS perms`,
-        [userId, permissionKey]
-      );
+      const result = await knex('userRoles as ur')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .join('rolePermissions as rps', 'r.id', 'rps.roleId')
+        .join('permissions as p', 'rps.permissionId', 'p.id')
+        .where('ur.userId', userId)
+        .where('p.permissionKey', permissionKey)
+        .where('r.status', 'active')
+        .countDistinct('rps.roleId as count')
+        .first();
 
-      const hasAccess = result.rows[0].count > 0;
+      const hasAccess = result.count > 0;
       
       // Don't log warning here - let RBAC middleware log if ALL checks fail
       // This prevents misleading logs when checking multiple permission variants
@@ -50,18 +46,17 @@ class PermissionService {
    */
   static async getUserPermissions(userId) {
     try {
-      const result = await pool.query(
-        `SELECT DISTINCT rp.menu_key, rp.action_key
-         FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rp ON r.id = rp.role_id
-         WHERE ur.user_id = $1 AND rp.status = 'active'`,
-        [userId]
-      );
+      const permissions = await knex('userRoles as ur')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .join('rolePermissions as rp', 'r.id', 'rp.roleId')
+        .select('rp.menuKey', 'rp.actionKey')
+        .where('ur.userId', userId)
+        .where('rp.status', 'active')
+        .distinct();
 
-      return result.rows.reduce((acc, row) => {
-        if (!acc[row.menu_key]) acc[row.menu_key] = [];
-        acc[row.menu_key].push(row.action_key);
+      return permissions.reduce((acc, row) => {
+        if (!acc[row.menuKey]) acc[row.menuKey] = [];
+        acc[row.menuKey].push(row.actionKey);
         return acc;
       }, {});
     } catch (err) {
@@ -75,29 +70,30 @@ class PermissionService {
    */
   static async delegatePermission(delegatedByUserId, delegatedToUserId, roleId, tenantId, expiresAt, reason) {
     try {
-      const result = await pool.query(
-        `INSERT INTO permissions_delegation (tenant_id, delegated_by, delegated_to, role_id, expires_at, reason, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, delegated_to, role_id, expires_at, reason`,
-        [tenantId, delegatedByUserId, delegatedToUserId, roleId, expiresAt, reason, 'active']
-      );
-
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          delegatedByUserId,
+      const [delegation] = await knex('permissionsDelegation')
+        .insert({
           tenantId,
-          'delegate_permission',
-          'permission_delegation',
-          result.rows[0].id,
-          JSON.stringify({ delegated_to: delegatedToUserId, role_id: roleId }),
-          'success',
-        ]
-      );
+          delegatedBy: delegatedByUserId,
+          delegatedTo: delegatedToUserId,
+          roleId,
+          expiresAt,
+          reason,
+          status: 'active',
+        })
+        .returning(['id', 'delegatedTo', 'roleId', 'expiresAt', 'reason']);
+
+      await knex('auditLogs').insert({
+        userId: delegatedByUserId,
+        tenantId,
+        action: 'delegate_permission',
+        resourceType: 'permission_delegation',
+        resourceId: delegation.id,
+        newValues: JSON.stringify({ delegated_to: delegatedToUserId, role_id: roleId }),
+        status: 'success',
+      });
 
       logger.info(`Permission delegated from ${delegatedByUserId} to ${delegatedToUserId}`);
-      return result.rows[0];
+      return delegation;
     } catch (err) {
       logger.error(`Permission service delegate error: ${err.message}`);
       throw err;
@@ -109,21 +105,24 @@ class PermissionService {
    */
   static async revokeDelegation(delegationId, requestingUserId, tenantId) {
     try {
-      const result = await pool.query(
-        `UPDATE permissions_delegation SET status = 'revoked' WHERE id = $1
-         RETURNING id, delegated_to, role_id`,
-        [delegationId]
-      );
+      const [delegation] = await knex('permissionsDelegation')
+        .where({ id: delegationId })
+        .update({ status: 'revoked' })
+        .returning(['id', 'delegatedTo', 'roleId']);
 
-      if (result.rows.length === 0) {
+      if (!delegation) {
         throw new Error('Delegation not found');
       }
 
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, tenant_id, action, resource_type, resource_id, new_values, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [requestingUserId, tenantId, 'revoke_delegation', 'permission_delegation', delegationId, JSON.stringify({}), 'success']
-      );
+      await knex('auditLogs').insert({
+        userId: requestingUserId,
+        tenantId,
+        action: 'revoke_delegation',
+        resourceType: 'permission_delegation',
+        resourceId: delegationId,
+        newValues: JSON.stringify({}),
+        status: 'success',
+      });
 
       return { message: 'Delegation revoked successfully' };
     } catch (err) {
@@ -137,16 +136,22 @@ class PermissionService {
    */
   static async getUserDelegatedPermissions(userId, tenantId) {
     try {
-      const result = await pool.query(
-        `SELECT pd.id, pd.delegated_by, pd.role_id, pd.expires_at, pd.reason, r.name as role_name
-         FROM permissions_delegation pd
-         JOIN roles r ON pd.role_id = r.id
-         WHERE pd.delegated_to = $1 AND pd.tenant_id = $2 AND pd.status = 'active'
-         AND pd.expires_at > NOW()`,
-        [userId, tenantId]
-      );
+      const delegations = await knex('permissionsDelegation as pd')
+        .join('roles as r', 'pd.roleId', 'r.id')
+        .select(
+          'pd.id',
+          'pd.delegatedBy',
+          'pd.roleId',
+          'pd.expiresAt',
+          'pd.reason',
+          'r.name as roleName'
+        )
+        .where('pd.delegatedTo', userId)
+        .where('pd.tenantId', tenantId)
+        .where('pd.status', 'active')
+        .where('pd.expiresAt', '>', knex.fn.now());
 
-      return result.rows;
+      return delegations;
     } catch (err) {
       logger.error(`Permission service get delegated error: ${err.message}`);
       throw err;
@@ -159,21 +164,21 @@ class PermissionService {
    */
   static async checkPermissionWithConstraints(userId, moduleKey, actionKey, context = {}) {
     try {
-      const result = await pool.query(
-        `SELECT rp.constraints
-         FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.id
-         JOIN role_permissions rp ON r.id = rp.role_id
-         WHERE ur.user_id = $1 AND rp.menu_key = $2 AND rp.action_key = $3 AND rp.status = 'active'
-         LIMIT 1`,
-        [userId, moduleKey, actionKey]
-      );
+      const permission = await knex('userRoles as ur')
+        .join('roles as r', 'ur.roleId', 'r.id')
+        .join('rolePermissions as rp', 'r.id', 'rp.roleId')
+        .select('rp.constraints')
+        .where('ur.userId', userId)
+        .where('rp.menuKey', moduleKey)
+        .where('rp.actionKey', actionKey)
+        .where('rp.status', 'active')
+        .first();
 
-      if (result.rows.length === 0) {
+      if (!permission) {
         return { allowed: false, reason: 'Permission not found' };
       }
 
-      const constraints = result.rows[0].constraints;
+      const constraints = permission.constraints;
 
       // Check constraints if any
       if (constraints) {
@@ -206,35 +211,29 @@ class PermissionService {
   /**
    * Get permission matrix for role
    */
-  static async getRolePermissionMatrix(roleId, tenantId) {
+  static async getRolePermissionMatrix(roleId, _tenantId) {
     try {
-      const modulesResult = await pool.query(
-        `SELECT id, menu_key, display_name FROM modules WHERE space IN ('both', 'tenant') ORDER BY menu_key`
-      );
+      const modules = await knex('modules')
+        .select('id', 'menuKey', 'displayName')
+        .whereIn('space', ['both', 'tenant'])
+        .orderBy('menuKey');
 
-      const modules = modulesResult.rows;
-
-      const permissionsResult = await pool.query(
-        `SELECT rp.id, rp.module_id, rp.action_key, rp.status
-         FROM role_permissions rp
-         WHERE rp.role_id = $1`,
-        [roleId]
-      );
-
-      const permissions = permissionsResult.rows;
+      const permissions = await knex('rolePermissions as rp')
+        .select('rp.id', 'rp.moduleId', 'rp.actionKey', 'rp.status')
+        .where('rp.roleId', roleId);
 
       const matrix = modules.map(module => {
         const actions = ['view', 'create', 'edit', 'delete', 'approve', 'export'];
         const modulePerms = {};
 
         actions.forEach(action => {
-          const perm = permissions.find(p => p.module_id === module.id && p.action_key === action);
+          const perm = permissions.find(p => p.moduleId === module.id && p.actionKey === action);
           modulePerms[action] = perm ? perm.status === 'active' : false;
         });
 
         return {
-          module: module.menu_key,
-          displayName: module.display_name,
+          module: module.menuKey,
+          displayName: module.displayName,
           ...modulePerms,
         };
       });

@@ -67,7 +67,8 @@ exports.seed = async function(knex) {
   
   // First check if permissions already exist from migrations
   const existingPermissions = await knex('permissions').select('permission_key');
-  const existingKeys = existingPermissions.map(p => p.permission_key);
+  const existingKeys = existingPermissions.map(p => p.permissionKey); // Knex returns camelCase
+  console.log(`Found ${existingKeys.length} existing permissions in database`);
   
   const permissionsToAdd = [
     // System permissions
@@ -239,7 +240,7 @@ exports.seed = async function(knex) {
   ];
   
   // Filter out permissions that already exist from migrations
-  const newPermissions = permissionsToAdd.filter(p => !existingKeys.includes(p.permission_key));
+  const newPermissions = permissionsToAdd.filter(p => !existingKeys.includes(p.permission_key));  // permission_key is correct here (it's from permissionsToAdd, not from DB)
   
   let permissions = [];
   if (newPermissions.length > 0) {
@@ -456,8 +457,9 @@ exports.seed = async function(knex) {
     
     if (!tenantSubdomain) continue; // Skip if subdomain not found
     
-    const employeeRoleForTenant = employeeRoles.find(r => r.tenant_id === tenant.id);
-    const customerRoleForTenant = customerRoles.find(r => r.tenant_id === tenant.id);
+    // Use tenantId (camelCase) because Knex converts it
+    const employeeRoleForTenant = employeeRoles.find(r => r.tenantId === tenant.id);
+    const customerRoleForTenant = customerRoles.find(r => r.tenantId === tenant.id);
     
     // Create 2 employees
     for (let i = 1; i <= 2; i++) {
@@ -648,13 +650,13 @@ exports.seed = async function(knex) {
   console.log(`\n7b. Assigning employee permissions to Employee roles...`);
   for (const employeeRole of employeeRoles) {
     // Get dashboard permission
-    const dashboardPerm = allPermissions.find(p => p.permission_key === 'tenant-dashboard:view');
+    const dashboardPerm = allPermissions.find(p => p.permissionKey === 'tenant-dashboard:view');
     
     // Get customer permissions
     const customerPerms = allPermissions.filter(p => p.resource === 'tenant-customers');
     
     // Get all money-loan permissions
-    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permission_key.startsWith('money-loan:'));
+    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permissionKey.startsWith('money-loan:'));
     
     const employeePermissions = [];
     if (dashboardPerm) employeePermissions.push(dashboardPerm);
@@ -675,7 +677,7 @@ exports.seed = async function(knex) {
   }
   
   // Grant customer permissions to Customer roles
-  const customerPermissions = allPermissions.filter(p => p.permission_key.startsWith('customer-'));
+  const customerPermissions = allPermissions.filter(p => p.permissionKey.startsWith('customer-'));
   console.log(`\n7c. Assigning customer permissions to Customer roles...`);
   for (const customerRole of customerRoles) {
     if (customerPermissions.length > 0) {
@@ -703,10 +705,10 @@ exports.seed = async function(knex) {
   console.log('\n🔐 Permission Assignments:');
   console.log(`   • Super Admin: ${systemPermissions.length} system permissions (100%)`);
   console.log(`   • Tenant Admin(s): ${tenantPermissions.length} tenant permissions each (100%)`);
-  console.log(`   • Customer(s): ${allPermissions.filter(p => p.permission_key.startsWith('customer-')).length} customer permissions each (100%)`);
+  console.log(`   • Customer(s): ${allPermissions.filter(p => p.permissionKey.startsWith('customer-')).length} customer permissions each (100%)`);
   console.log(`   • Total System Permissions: ${systemPermissions.length}`);
   console.log(`   • Total Tenant Permissions: ${tenantPermissions.length}`);
-  console.log(`   • Total Customer Permissions: ${allPermissions.filter(p => p.permission_key.startsWith('customer-')).length}`);
+  console.log(`   • Total Customer Permissions: ${allPermissions.filter(p => p.permissionKey.startsWith('customer-')).length}`);
   
   console.log('\n📦 Permission Breakdown:');
   console.log('   • User Management, Roles & Permissions');

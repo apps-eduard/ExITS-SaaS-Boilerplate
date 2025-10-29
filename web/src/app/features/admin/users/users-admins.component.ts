@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -207,7 +207,7 @@ export class UsersAdminsComponent implements OnInit {
   userService = inject(UserService);
   private authService = inject(AuthService);
   searchQuery = '';
-  
+
   // Pagination
   currentPage = 1;
   pageSize = 10;
@@ -230,10 +230,18 @@ export class UsersAdminsComponent implements OnInit {
   canUpdateUsers = computed(() => this.authService.hasPermission('users:update'));
   canDeleteUsers = computed(() => this.authService.hasPermission('users:delete'));
 
-  constructor() {}
+  constructor() {
+    // Watch for changes in userService.usersSignal and update admin users automatically
+    effect(() => {
+      const allUsers = this.userService.usersSignal();
+      if (allUsers.length > 0) {
+        this.updateAdminUsers();
+      }
+    });
+  }
 
-  ngOnInit(): void {
-    this.userService.loadUsers();
+  async ngOnInit(): Promise<void> {
+    await this.userService.loadUsers();
     // Filter to show only system admin users (tenant_id is null)
     this.updateAdminUsers();
   }

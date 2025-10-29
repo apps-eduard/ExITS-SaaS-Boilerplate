@@ -140,7 +140,7 @@ class CustomerAuthController {
    */
   async getProfile(req, res) {
     try {
-      const customerId = req.customerId; // From auth middleware
+      const customerId = req.customer.customerId; // From auth middleware
 
       const customer = await knex('customers')
         .where('id', customerId)
