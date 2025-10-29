@@ -1115,18 +1115,22 @@ export class UserEditorComponent implements OnInit {
   // Uses tenant's enabled flags (same logic as Platform Catalog)
   availablePlatforms = computed(() => {
     const tenant = this.currentTenantData();
+    console.log('🔍 availablePlatforms computed called, tenant:', tenant);
     if (!tenant) {
+      console.log('⚠️  No tenant data, returning all false');
       return {
         moneyLoan: false,
         bnpl: false,
         pawnshop: false
       };
     }
-    return {
+    const platforms = {
       moneyLoan: tenant.moneyLoanEnabled || false,
       bnpl: tenant.bnplEnabled || false,
       pawnshop: tenant.pawnshopEnabled || false
     };
+    console.log('✅ Platform flags returned:', platforms);
+    return platforms;
   });
 
   // Address fields
@@ -1250,11 +1254,9 @@ export class UserEditorComponent implements OnInit {
           // Load user's address
           await this.loadUserAddress(this.userId);
 
-          // Force change detection
-          setTimeout(() => {
-            this.cdr.detectChanges();
-            console.log('🔄 Change detection triggered');
-          }, 100);
+          // Mark for check instead of detectChanges to avoid ExpressionChangedAfterItHasBeenCheckedError
+          this.cdr.markForCheck();
+          console.log('🔄 Marked for check');
         } else {
           console.error('❌ No user data returned from API');
           this.errorMessage.set('Failed to load user data');
@@ -1295,7 +1297,13 @@ export class UserEditorComponent implements OnInit {
     this.http.get<any>(`/api/tenants/${tenantId}`).subscribe({
       next: (response) => {
         if (response && response.data) {
+          console.log('🏢 Tenant data loaded:', response.data);
           this.currentTenantData.set(response.data);
+          console.log('📊 Available platforms:', {
+            moneyLoan: response.data.moneyLoanEnabled,
+            bnpl: response.data.bnplEnabled,
+            pawnshop: response.data.pawnshopEnabled
+          });
         }
       },
       error: (error) => {
@@ -1308,6 +1316,7 @@ export class UserEditorComponent implements OnInit {
     this.productSubscriptionService.getTenantProductSubscriptions(tenantId).subscribe({
       next: (response) => {
         if (response.success && response.data) {
+          console.log('📋 Platform subscriptions loaded:', response.data);
           this.tenantPlatformSubscriptions.set(response.data);
         }
       },
@@ -1320,21 +1329,49 @@ export class UserEditorComponent implements OnInit {
 
   availableRoles() {
     const roles = this.roleService.rolesSignal() || [];
+    const tenantId = this.formData.tenantId || this.loadedUser?.tenantId;
+
+    console.log('🔍 availableRoles() called -', {
+      userType: this.userType,
+      formDataTenantId: this.formData.tenantId,
+      loadedUserTenantId: this.loadedUser?.tenantId,
+      effectiveTenantId: tenantId,
+      totalRolesInSystem: roles.length
+    });
+
+    console.log('📋 All roles from API:', roles.map(r => ({
+      id: r.id,
+      name: r.name,
+      space: r.space,
+      tenantId: r.tenantId,
+      status: r.status
+    })));
 
     // System users can only have system roles
     if (this.userType === 'system') {
-      return roles.filter(r => r.space === 'system');
+      const systemRoles = roles.filter(r => r.space === 'system');
+      console.log('👤 System roles found:', systemRoles.length, systemRoles.map(r => r.name));
+      return systemRoles;
     }
 
-    // Tenant users can only have tenant roles that belong to their tenant
-    if (!this.formData.tenantId) {
-      return [];
+    // Tenant users: if no tenant ID, return all tenant roles (for flexibility)
+    if (!tenantId) {
+      console.warn('⚠️ No tenant ID found for tenant user, returning all tenant roles');
+      const tenantRoles = roles.filter(r => r.space === 'tenant');
+      console.log('🏢 All tenant roles found:', tenantRoles.length, tenantRoles.map(r => `${r.name} (tenant_id: ${r.tenantId})`));
+      return tenantRoles;
     }
 
+    // Filter by specific tenant ID
     const tenantRoles = roles.filter(r => {
-      return r.space === 'tenant' && r.tenantId == this.formData.tenantId; // Use == for loose comparison
+      const matches = r.space === 'tenant' && (r.tenantId == tenantId || Number(r.tenantId) === Number(tenantId));
+      if (!matches) {
+        console.log(`  ❌ Role ${r.name}: space=${r.space}, tenantId=${r.tenantId}, matches=${matches}`);
+      }
+      return matches;
     });
 
+    console.log('🏢 Tenant roles found for tenantId:', tenantId, '-', tenantRoles.length, tenantRoles.map(r => r.name));
     return tenantRoles;
   }
 

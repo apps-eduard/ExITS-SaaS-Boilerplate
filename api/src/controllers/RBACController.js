@@ -61,21 +61,21 @@ class RBACController {
    */
   static async getRoles(req, res) {
     try {
-      const tenantId = req.user.tenant_id;
+      const tenantId = req.tenantId;
       logger.info(`📋 Fetching roles for tenant: ${tenantId}`);
       const roles = await RBACService.getAllRoles(tenantId);
       logger.info(`✅ Fetched ${roles.length} roles`);
       
-      // Transform snake_case to camelCase for frontend
+      // Knex auto-converts snake_case to camelCase, so use camelCase properties
       const transformedRoles = roles.map(role => ({
         id: role.id,
         name: role.name,
         description: role.description,
         space: role.space,
         status: role.status,
-        tenantId: role.tenant_id,
-        tenantName: role.tenant_name,
-        permissionCount: role.permission_count,
+        tenantId: role.tenantId,  // Knex converts tenant_id to tenantId
+        tenantName: role.tenantName,  // Knex converts tenant_name to tenantName
+        permissionCount: role.permissionCount,  // Knex converts permission_count to permissionCount
         permissions: role.permissions
       }));
       

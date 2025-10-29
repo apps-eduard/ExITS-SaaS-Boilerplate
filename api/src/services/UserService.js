@@ -168,8 +168,15 @@ class UserService {
         return acc;
       }, {});
 
+      // Transform tenant data to object format
+      const tenant = user.tenantName ? {
+        name: user.tenantName,
+        subdomain: user.tenantSubdomain
+      } : null;
+
       return {
         ...user,
+        tenant,
         roles,
         permissions,
       };

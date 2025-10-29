@@ -190,6 +190,11 @@ class RoleService {
         permissionCount: parseInt(row.permissionCount) || 0,
       }));
 
+      logger.info(`📋 listRoles - tenantId: ${tenantId}, isSuperAdmin: ${isSuperAdmin}, space: ${space}, total: ${total}, returned: ${transformedRoles.length}`);
+      if (transformedRoles.length > 0) {
+        logger.info(`📊 Sample roles: ${JSON.stringify(transformedRoles.slice(0, 2))}`);
+      }
+
       return {
         roles: transformedRoles,
         pagination: {
