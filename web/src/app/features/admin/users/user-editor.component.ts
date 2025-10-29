@@ -336,6 +336,12 @@ interface Tenant {
             </div>
 
           <div class="space-y-3">
+            <!-- Debug Info -->
+            <div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-300">
+              <p><strong>Debug:</strong> availablePlatforms() = {{ availablePlatforms() | json }}</p>
+              <p><strong>currentTenantData:</strong> {{ (currentTenantData() || {}) | json }}</p>
+            </div>
+
             <!-- Money Loan Product -->
             <div *ngIf="availablePlatforms().moneyLoan" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <label class="flex items-center gap-2 cursor-pointer mb-2">
@@ -412,6 +418,13 @@ interface Tenant {
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
                 </label>
               </div>
+            </div>
+
+            <!-- No Platforms Available -->
+            <div *ngIf="!availablePlatforms().moneyLoan && !availablePlatforms().bnpl && !availablePlatforms().pawnshop" class="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 text-center">
+                ℹ️ No platforms available for this tenant. Contact your administrator to enable platforms.
+              </p>
             </div>
 
             <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
@@ -1293,9 +1306,20 @@ export class UserEditorComponent implements OnInit {
   }
 
   loadTenantPlatformSubscriptions(tenantId: number) {
+    console.log('📞 loadTenantPlatformSubscriptions called with tenantId:', tenantId);
+
+    if (!tenantId) {
+      console.warn('⚠️ No tenantId provided, skipping platform subscription load');
+      return;
+    }
+
     // First, load the tenant data to get enabled platform flags
-    this.http.get<any>(`/api/tenants/${tenantId}`).subscribe({
+    const tenantUrl = `/api/tenants/${tenantId}`;
+    console.log('📡 Fetching from:', tenantUrl);
+
+    this.http.get<any>(tenantUrl).subscribe({
       next: (response) => {
+        console.log('✅ HTTP Response received:', response);
         if (response && response.data) {
           console.log('🏢 Tenant data loaded:', response.data);
           this.currentTenantData.set(response.data);
@@ -1304,10 +1328,18 @@ export class UserEditorComponent implements OnInit {
             bnpl: response.data.bnplEnabled,
             pawnshop: response.data.pawnshopEnabled
           });
+        } else {
+          console.warn('⚠️ Response received but no data field:', response);
         }
       },
       error: (error) => {
         console.error('❌ Error loading tenant data:', error);
+        console.error('Error details:', {
+          status: error?.status,
+          statusText: error?.statusText,
+          message: error?.message,
+          error: error?.error
+        });
         this.currentTenantData.set(null);
       }
     });

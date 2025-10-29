@@ -218,7 +218,23 @@ class TenantService {
             .andOn('sp.status', knex.raw('?', ['active']));
         })
         .select(
-          't.*',
+          't.id',
+          't.name',
+          't.subdomain',
+          't.plan',
+          't.status',
+          't.max_users',
+          't.logo_url',
+          't.primary_color',
+          't.secondary_color',
+          't.contact_person',
+          't.contact_email',
+          't.contact_phone',
+          't.money_loan_enabled',
+          't.bnpl_enabled',
+          't.pawnshop_enabled',
+          't.created_at',
+          't.updated_at',
           'sp.id as planId',
           'sp.name as planName',
           'sp.description as planDescription',
@@ -263,7 +279,7 @@ class TenantService {
           billingCycle: tenant.billingCycle,
           features: tenant.features,
           maxUsers: tenant.planMaxUsers,
-          maxStorageGb: tenant.maxStorageGb,
+          maxStorageGb: tenant.maxStorageGb
         };
       }
 
