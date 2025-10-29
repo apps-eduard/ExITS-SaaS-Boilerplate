@@ -435,9 +435,6 @@ exports.seed = async function(knex) {
         kyc_status: 'verified',
         kyc_verified_at: new Date(),
         status: 'active',
-        money_loan_approved: true,
-        bnpl_approved: false,
-        pawnshop_approved: false,
         emergency_contact_name: 'Emergency Contact',
         emergency_contact_relationship: 'Family',
         emergency_contact_phone: testCustomer.phone.replace('9', '8')
@@ -556,9 +553,6 @@ exports.seed = async function(knex) {
         risk_level: 'low',
         status: 'active',
         kyc_status: 'verified',
-        money_loan_approved: true,
-        bnpl_approved: false,
-        pawnshop_approved: false,
         preferred_language: 'en',
         preferred_contact_method: 'sms',
         platform_tags: JSON.stringify(['moneyloan'])
@@ -569,7 +563,7 @@ exports.seed = async function(knex) {
         .where({ tenant_id: tenant.id, customer_code: customerCode })
         .first();
       
-      await knex('moneyloan_customer_profiles').insert({
+      await knex('money_loan_customer_profiles').insert({
         customer_id: customerRecord.id,
         tenant_id: tenant.id,
         max_loan_amount: 100000,

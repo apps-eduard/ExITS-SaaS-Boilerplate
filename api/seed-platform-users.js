@@ -205,10 +205,7 @@ async function seedPlatformUsers() {
         risk_level: 'low',
         kyc_status: 'verified',
         kyc_verified_at: new Date(),
-        status: 'active',
-        money_loan_approved: true,
-        bnpl_approved: false,
-        pawnshop_approved: false
+        status: 'active'
       }).returning('id');
 
       console.log(`✓ Created Customer 1: customer1@test.com (CUST-001)\n`);
@@ -243,10 +240,7 @@ async function seedPlatformUsers() {
         risk_level: 'medium',
         kyc_status: 'verified',
         kyc_verified_at: new Date(),
-        status: 'active',
-        money_loan_approved: false,
-        bnpl_approved: true,
-        pawnshop_approved: false
+        status: 'active'
       }).returning('id');
 
       console.log(`✓ Created Customer 2: customer2@test.com (CUST-002)\n`);

@@ -47,8 +47,12 @@ class CustomerAuthController {
         });
       }
 
-      // Check if customer has Money Loan access
-      if (!customer.money_loan_approved) {
+      // Check if customer has Money Loan profile
+      const moneyLoanProfile = await knex('money_loan_customer_profiles')
+        .where('customer_id', customer.id)
+        .first();
+
+      if (!moneyLoanProfile) {
         return res.status(403).json({
           success: false,
           message: 'Your Money Loan account is not activated. Please contact support.'
@@ -108,10 +112,7 @@ class CustomerAuthController {
         phone: customer.phone,
         kycStatus: customer.kyc_status,
         creditScore: customer.credit_score,
-        riskLevel: customer.risk_level,
-        moneyLoanApproved: customer.money_loan_approved,
-        bnplApproved: customer.bnpl_approved,
-        pawnshopApproved: customer.pawnshop_approved
+        riskLevel: customer.risk_level
       };
 
       return res.json({

@@ -50,10 +50,10 @@ router.get('/customers', authMiddleware, rbacMiddleware(['money-loan'], ['custom
     const { tenantId } = req.user;
     const { page = 1, limit = 10, search = '' } = req.query;
 
-    // Build query for customers from database
+    // Build query for customers with Money Loan profiles (approved)
     let query = knex('customers')
-      .where('tenant_id', tenantId)
-      .where('money_loan_approved', true); // Only show customers approved for Money Loan product
+      .where('customers.tenant_id', tenantId)
+      .innerJoin('money_loan_customer_profiles', 'customers.id', 'money_loan_customer_profiles.customer_id');
 
     // Apply search filter if provided
     if (search) {
@@ -189,8 +189,7 @@ router.post('/customers', authMiddleware, rbacMiddleware(['money-loan'], ['custo
       kyc_status: req.body.kycStatus || 'pending',
       credit_score: req.body.creditScore || 650,
       risk_level: req.body.riskLevel || 'medium',
-      status: req.body.status || 'active',
-      money_loan_approved: true // Auto-approve for Money Loan product
+      status: req.body.status || 'active'
     };
 
     // Insert customer
@@ -285,8 +284,7 @@ router.get('/customers/:id', authMiddleware, rbacMiddleware(['money-loan'], ['cu
       )
       .where({ 
         'customers.id': parseInt(id), 
-        'customers.tenant_id': tenantId,
-        'customers.money_loan_approved': true 
+        'customers.tenant_id': tenantId
       })
       .first();
 
@@ -371,8 +369,7 @@ router.put('/customers/:id', authMiddleware, rbacMiddleware(['money-loan'], ['cu
     const existingCustomer = await knex('customers')
       .where({ 
         id: parseInt(id), 
-        tenant_id: tenantId,
-        money_loan_approved: true 
+        tenant_id: tenantId
       })
       .first();
 
