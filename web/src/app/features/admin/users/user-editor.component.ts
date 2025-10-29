@@ -336,12 +336,6 @@ interface Tenant {
             </div>
 
           <div class="space-y-3">
-            <!-- Debug Info -->
-            <div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-300">
-              <p><strong>Debug:</strong> availablePlatforms() = {{ availablePlatforms() | json }}</p>
-              <p><strong>currentTenantData:</strong> {{ (currentTenantData() || {}) | json }}</p>
-            </div>
-
             <!-- Money Loan Product -->
             <div *ngIf="availablePlatforms().moneyLoan" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <label class="flex items-center gap-2 cursor-pointer mb-2">

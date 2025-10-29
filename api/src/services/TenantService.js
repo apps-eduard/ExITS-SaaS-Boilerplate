@@ -18,23 +18,23 @@ class TenantService {
       subdomain: dbTenant.subdomain,
       plan: dbTenant.plan,
       status: dbTenant.status,
-      maxUsers: dbTenant.max_users,
-      logoUrl: dbTenant.logo_url,
-      primaryColor: dbTenant.primary_color,
-      secondaryColor: dbTenant.secondary_color,
+      maxUsers: dbTenant.maxUsers,  // Already camelCase from Knex postProcessResponse
+      logoUrl: dbTenant.logoUrl,
+      primaryColor: dbTenant.primaryColor,
+      secondaryColor: dbTenant.secondaryColor,
       // Contact information
-      contactPerson: dbTenant.contact_person,
-      contactEmail: dbTenant.contact_email,
-      contactPhone: dbTenant.contact_phone,
-      // Product enablement
-      moneyLoanEnabled: dbTenant.money_loan_enabled,
-      bnplEnabled: dbTenant.bnpl_enabled,
-      pawnshopEnabled: dbTenant.pawnshop_enabled,
-      createdAt: dbTenant.created_at,
-      updatedAt: dbTenant.updated_at,
+      contactPerson: dbTenant.contactPerson,
+      contactEmail: dbTenant.contactEmail,
+      contactPhone: dbTenant.contactPhone,
+      // Product enablement - Knex already converted these to camelCase
+      moneyLoanEnabled: dbTenant.moneyLoanEnabled,
+      bnplEnabled: dbTenant.bnplEnabled,
+      pawnshopEnabled: dbTenant.pawnshopEnabled,
+      createdAt: dbTenant.createdAt,
+      updatedAt: dbTenant.updatedAt,
       // Include counts if present
-      userCount: dbTenant.user_count,
-      roleCount: dbTenant.role_count,
+      userCount: dbTenant.userCount,
+      roleCount: dbTenant.roleCount,
     };
   }
 
