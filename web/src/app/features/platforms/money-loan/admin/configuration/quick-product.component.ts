@@ -117,30 +117,66 @@ import { AuthService } from '../../../../../core/services/auth.service';
             <!-- Loan Terms -->
             <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded space-y-2">
               <p class="text-xs font-semibold text-purple-700 dark:text-purple-400">📅 Loan Terms</p>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Min (months)</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="minTermMonths"
-                    (ngModelChange)="calculatePreview()"
-                    name="minTermMonths"
-                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
-                    placeholder="1"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max (months)</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="maxTermMonths"
-                    (ngModelChange)="calculatePreview()"
-                    name="maxTermMonths"
-                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
-                    placeholder="6"
-                  />
-                </div>
+              
+              <!-- Term Type Selector -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term Type</label>
+                <select
+                  [(ngModel)]="loanTermType"
+                  (ngModelChange)="onTermTypeChange()"
+                  name="loanTermType"
+                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="fixed">Fixed Term</option>
+                  <option value="flexible">Flexible Range</option>
+                </select>
               </div>
+
+              <!-- Fixed Term -->
+              @if (loanTermType === 'fixed') {
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fixed Term (Months)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="fixedTermMonths"
+                    (ngModelChange)="calculatePreview()"
+                    name="fixedTermMonths"
+                    min="1"
+                    class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                    placeholder="3"
+                  />
+                </div>
+              }
+
+              <!-- Flexible Range -->
+              @if (loanTermType === 'flexible') {
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Min (months)</label>
+                    <input
+                      type="number"
+                      [(ngModel)]="minTermMonths"
+                      (ngModelChange)="calculatePreview()"
+                      name="minTermMonths"
+                      min="1"
+                      class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                      placeholder="1"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max (months)</label>
+                    <input
+                      type="number"
+                      [(ngModel)]="maxTermMonths"
+                      (ngModelChange)="calculatePreview()"
+                      name="maxTermMonths"
+                      min="1"
+                      class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                      placeholder="6"
+                    />
+                  </div>
+                </div>
+              }
             </div>
 
             <!-- Payment Frequency -->
@@ -347,24 +383,38 @@ import { AuthService } from '../../../../../core/services/auth.service';
               <label class="block text-xs font-semibold text-purple-700 dark:text-purple-400 mb-1.5">
                 📅 Preview Loan Term (Months)
               </label>
-              <input
-                type="number"
-                [(ngModel)]="previewTermMonths"
-                (ngModelChange)="onPreviewTermChange()"
-                name="previewTermMonths"
-                [min]="minTermMonths"
-                [max]="maxTermMonths"
-                class="w-full px-3 py-2 text-sm font-semibold border border-purple-300 dark:border-purple-600 rounded focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:bg-gray-800 dark:text-white"
-                placeholder="Enter term"
-              />
-              <p class="text-xs text-purple-600 dark:text-purple-400 mt-1.5">
-                Range: {{ minTermMonths }} - {{ maxTermMonths }} month(s)
-              </p>
-              @if (previewTermMonths < minTermMonths || previewTermMonths > maxTermMonths) {
-                <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>Term must be between {{ minTermMonths }} and {{ maxTermMonths }} month(s)</span>
+              
+              @if (loanTermType === 'fixed') {
+                <!-- Fixed Term - Display Only -->
+                <div class="bg-white dark:bg-gray-800 rounded p-2 border border-purple-300 dark:border-purple-600">
+                  <p class="text-sm font-bold text-purple-700 dark:text-purple-300 text-center">
+                    {{ fixedTermMonths }} month(s) (Fixed)
+                  </p>
+                </div>
+                <p class="text-xs text-purple-600 dark:text-purple-400 mt-1.5">
+                  🔒 This product has a fixed term of {{ fixedTermMonths }} month(s)
                 </p>
+              } @else {
+                <!-- Flexible Term - User Input -->
+                <input
+                  type="number"
+                  [(ngModel)]="previewTermMonths"
+                  (ngModelChange)="onPreviewTermChange()"
+                  name="previewTermMonths"
+                  [min]="minTermMonths"
+                  [max]="maxTermMonths"
+                  class="w-full px-3 py-2 text-sm font-semibold border border-purple-300 dark:border-purple-600 rounded focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:bg-gray-800 dark:text-white"
+                  placeholder="Enter term"
+                />
+                <p class="text-xs text-purple-600 dark:text-purple-400 mt-1.5">
+                  Range: {{ minTermMonths }} - {{ maxTermMonths }} month(s)
+                </p>
+                @if (previewTermMonths < minTermMonths || previewTermMonths > maxTermMonths) {
+                  <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Term must be between {{ minTermMonths }} and {{ maxTermMonths }} month(s)</span>
+                  </p>
+                }
               }
             </div>
 
@@ -638,6 +688,8 @@ export class QuickProductComponent {
   description = '';
   minAmount = 1000;
   maxAmount = 100000;
+  loanTermType: 'fixed' | 'flexible' = 'flexible';
+  fixedTermMonths = 3;
   minTermMonths = 1;
   maxTermMonths = 6;
   interestRate = 5;
@@ -675,12 +727,27 @@ export class QuickProductComponent {
     this.calculatePreview();
   }
 
+  onTermTypeChange(): void {
+    // When switching to fixed, use the current preview term or default
+    if (this.loanTermType === 'fixed') {
+      this.fixedTermMonths = this.previewTermMonths || 3;
+    } else {
+      // When switching to flexible, ensure preview is within range
+      if (this.previewTermMonths < this.minTermMonths || this.previewTermMonths > this.maxTermMonths) {
+        this.previewTermMonths = Math.ceil((this.minTermMonths + this.maxTermMonths) / 2);
+      }
+    }
+    this.calculatePreview();
+  }
+
   onPreviewTermChange(): void {
-    // Enforce min/max constraints
-    if (this.previewTermMonths < this.minTermMonths) {
-      this.previewTermMonths = this.minTermMonths;
-    } else if (this.previewTermMonths > this.maxTermMonths) {
-      this.previewTermMonths = this.maxTermMonths;
+    // Enforce min/max constraints for flexible terms
+    if (this.loanTermType === 'flexible') {
+      if (this.previewTermMonths < this.minTermMonths) {
+        this.previewTermMonths = this.minTermMonths;
+      } else if (this.previewTermMonths > this.maxTermMonths) {
+        this.previewTermMonths = this.maxTermMonths;
+      }
     }
     this.calculatePreview();
   }
@@ -700,7 +767,7 @@ export class QuickProductComponent {
   }
 
   calculatePreview(): void {
-    if (this.minAmount <= 0 || this.minTermMonths <= 0) {
+    if (this.minAmount <= 0) {
       this.preview.set(null);
       return;
     }
@@ -712,11 +779,18 @@ export class QuickProductComponent {
       this.previewLoanAmount = calculationAmount;
     }
 
-    // Ensure preview term is within range
-    let calculationTerm = this.previewTermMonths;
-    if (calculationTerm < this.minTermMonths || calculationTerm > this.maxTermMonths) {
-      calculationTerm = Math.ceil((this.minTermMonths + this.maxTermMonths) / 2);
-      this.previewTermMonths = calculationTerm;
+    // Determine the term to use based on term type
+    let calculationTerm: number;
+    if (this.loanTermType === 'fixed') {
+      calculationTerm = this.fixedTermMonths;
+      this.previewTermMonths = this.fixedTermMonths; // Sync preview with fixed term
+    } else {
+      // For flexible terms, ensure preview term is within range
+      calculationTerm = this.previewTermMonths;
+      if (calculationTerm < this.minTermMonths || calculationTerm > this.maxTermMonths) {
+        calculationTerm = Math.ceil((this.minTermMonths + this.maxTermMonths) / 2);
+        this.previewTermMonths = calculationTerm;
+      }
     }
 
     const params: LoanParams = {
@@ -764,8 +838,10 @@ export class QuickProductComponent {
       maxAmount: this.maxAmount,
       interestRate: this.interestRate,
       interestType: this.interestType,
-      minTermDays: this.minTermMonths * 30,
-      maxTermDays: this.maxTermMonths * 30,
+      loanTermType: this.loanTermType,
+      fixedTermDays: this.loanTermType === 'fixed' ? this.fixedTermMonths * 30 : null,
+      minTermDays: this.loanTermType === 'flexible' ? this.minTermMonths * 30 : null,
+      maxTermDays: this.loanTermType === 'flexible' ? this.maxTermMonths * 30 : null,
       processingFeePercent: this.processingFeePercent,
       latePaymentPenaltyPercent: this.latePaymentPenaltyPercent,
       gracePeriodDays: this.gracePeriodDays,
@@ -914,6 +990,8 @@ export class QuickProductComponent {
     this.description = '';
     this.minAmount = 1000;
     this.maxAmount = 100000;
+    this.loanTermType = 'flexible';
+    this.fixedTermMonths = 3;
     this.minTermMonths = 1;
     this.maxTermMonths = 6;
     this.interestRate = 5;
