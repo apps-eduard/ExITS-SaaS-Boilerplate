@@ -160,7 +160,7 @@ interface KYCCustomer {
                     </td>
                     <td class="px-4 py-3">
                       <div class="text-sm">
-                        <p class="text-gray-900 dark:text-white font-medium">{{ customer.idType?.toUpperCase() || 'N/A' }}</p>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ customer.idType.toUpperCase() || 'N/A' }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ customer.idNumber || 'Not provided' }}</p>
                       </div>
                     </td>

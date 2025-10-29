@@ -492,10 +492,13 @@ export class RolesListComponent implements OnInit {
   filteredRoles = computed(() => {
     let roles = this.roleService.rolesSignal();
 
-    // In tenant context, only show tenant roles for the current tenant
+    // In tenant context, show tenant and customer roles for the current tenant
     if (this.isTenantContext()) {
       const currentUser = this.authService.currentUser();
-      roles = roles.filter(r => r.space === 'tenant' && r.tenantId === currentUser?.tenantId);
+      roles = roles.filter(r => 
+        (r.space === 'tenant' || r.space === 'customer') && 
+        r.tenantId === currentUser?.tenantId
+      );
     }
 
     // Filter by space (only in system admin context)

@@ -175,7 +175,9 @@ export class TenantSidebarComponent implements OnInit {
       children: [
         { label: 'My Platform Catalog', icon: '📦', route: '/tenant/platforms', menuKey: 'tenant-platforms' },
         { label: 'Platform Settings / Features', icon: '⚙️', route: '/tenant/platforms/settings', menuKey: 'tenant-platforms' },
-        { label: 'All Platform Configurations', icon: '🔧', route: '/tenant/platforms/config', menuKey: 'tenant-platforms' },
+        { label: 'Money Loan Settings', icon: '💰', route: '/tenant/platforms/config/money-loan', menuKey: 'tenant-platforms' },
+        { label: 'BNPL Settings', icon: '🛒', route: '/tenant/platforms/config/bnpl', menuKey: 'tenant-platforms' },
+        { label: 'Pawnshop Settings', icon: '💎', route: '/tenant/platforms/config/pawnshop', menuKey: 'tenant-platforms' },
       ]
     },
     {
@@ -198,6 +200,16 @@ export class TenantSidebarComponent implements OnInit {
         { label: 'User Activity', icon: '🧍‍♂️', route: '/tenant/reports/user-activity', menuKey: 'tenant-reports' },
         { label: 'Billing / Payment Summary', icon: '💰', route: '/tenant/reports/billing-summary', menuKey: 'tenant-reports' },
         { label: 'Transaction History', icon: '🧾', route: '/tenant/reports/transactions', menuKey: 'tenant-reports' },
+      ]
+    },
+    {
+      label: 'System Settings',
+      icon: '⚙️',
+      menuKey: 'tenant-settings',
+      children: [
+        { label: 'Branding & Customization', icon: '🎨', route: '/tenant/settings/branding', menuKey: 'tenant-settings' },
+        { label: 'Product Settings', icon: '📦', route: '/tenant/settings/products', menuKey: 'tenant-settings' },
+        { label: 'SMS/Email Templates', icon: '📧', route: '/tenant/settings/templates', menuKey: 'tenant-settings' },
       ]
     },
     {

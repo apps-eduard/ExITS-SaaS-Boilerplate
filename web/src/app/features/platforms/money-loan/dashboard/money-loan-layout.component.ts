@@ -302,44 +302,6 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
             }
           </div>
 
-          <!-- Settings -->
-          <div class="space-y-1">
-            <button (click)="toggleSection('settings')"
-                    class="w-full flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <div class="flex items-center gap-3">
-                <span class="text-xl">⚙️</span>
-                <span class="font-medium">Settings</span>
-              </div>
-              <svg class="w-4 h-4 transition-transform" [class.rotate-180]="expandedSections().settings" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-            @if (expandedSections().settings) {
-              <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/settings/roles-permissions" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  🔑 Roles & Permissions
-                </a>
-                <a routerLink="/platforms/money-loan/dashboard/settings/loan-products" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  🏷️ Loan Product Settings
-                </a>
-                <a routerLink="/platforms/money-loan/dashboard/settings/templates" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  📨 SMS/Email Templates
-                </a>
-                <a routerLink="/platforms/money-loan/dashboard/settings/branding" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  🎨 Company Branding
-                </a>
-                <a routerLink="/platforms/money-loan/dashboard/settings/api-keys" routerLinkActive="text-blue-600 dark:text-blue-400"
-                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  🔑 API Keys
-                </a>
-              </div>
-            }
-          </div>
-
           <!-- Audit Log -->
           <a routerLink="/platforms/money-loan/dashboard/audit-log"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
@@ -487,8 +449,7 @@ export class MoneyLoanLayoutComponent {
     interest: false,
     collections: false,
     kyc: false,
-    reports: false,
-    settings: false
+    reports: false
   });
 
   constructor(private router: Router) {

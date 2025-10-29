@@ -16,7 +16,7 @@ export interface Role {
   id: string;
   name: string;
   description?: string;
-  space: 'system' | 'tenant';
+  space: 'system' | 'tenant' | 'customer';
   status?: 'active' | 'inactive';
   parentRoleId?: string;
   tenantId?: number | null;
@@ -29,7 +29,7 @@ export interface Role {
 export interface RoleCreatePayload {
   name: string;
   description?: string;
-  space: 'system' | 'tenant';
+  space: 'system' | 'tenant' | 'customer';
   parentRoleId?: string;
 }
 

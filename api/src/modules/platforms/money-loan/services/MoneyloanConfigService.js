@@ -4,10 +4,50 @@
  * Including: interest rates, fees, payment schedules, approval rules
  */
 
-const knex = require('../../../../config/database');
+const knex = require('../../../../config/knex');
 const logger = require('../../../../utils/logger');
 
 class MoneyloanConfigService {
+  // ═══════════════════════════════════════════════════════════════
+  // HELPER METHODS
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Transform camelCase database result to snake_case for frontend
+   */
+  transformToSnakeCase(data) {
+    if (!data) return null;
+    if (Array.isArray(data)) {
+      return data.map(item => this.transformToSnakeCase(item));
+    }
+
+    return {
+      id: data.id,
+      tenant_id: data.tenantId,
+      loan_product_id: data.loanProductId,
+      rate_type: data.interestType,
+      base_rate: data.baseRate,
+      min_rate: data.minRate,
+      max_rate: data.maxRate,
+      market_index: data.marketIndex,
+      spread: data.spread,
+      rate_brackets: data.rateBrackets ? JSON.parse(data.rateBrackets) : null,
+      credit_score_rates: data.creditScoreRates ? JSON.parse(data.creditScoreRates) : null,
+      risk_based_rates: data.riskBasedRates ? JSON.parse(data.riskBasedRates) : null,
+      calculation_method: data.calculationMethod,
+      recalculation_frequency: data.recalculationFrequency,
+      interest_grace_period_days: data.interestGracePeriodDays,
+      is_default: data.isDefault,
+      is_active: data.isActive,
+      metadata: data.metadata ? JSON.parse(data.metadata) : null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      // Add any fields frontend might be expecting
+      rate_adjustment_frequency: data.recalculationFrequency,
+      effective_date: data.created_at
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // INTEREST RATE CONFIGURATION
   // ═══════════════════════════════════════════════════════════════
@@ -19,13 +59,13 @@ class MoneyloanConfigService {
     try {
       const configs = await knex('loan_product_interest_rates')
         .where({
-          tenant_id: tenantId,
-          loan_product_id: loanProductId
+          tenantId: tenantId,
+          loanProductId: loanProductId
         })
         .orderBy('created_at', 'asc');
 
       logger.info(`✅ Fetched ${configs.length} interest rate configs`);
-      return configs;
+      return this.transformToSnakeCase(configs);
     } catch (error) {
       logger.error('❌ Error fetching interest rate configs:', error);
       throw error;
@@ -37,25 +77,31 @@ class MoneyloanConfigService {
    */
   async createInterestRateConfig(tenantId, loanProductId, configData) {
     try {
-      const [id] = await knex('loan_product_interest_rates').insert({
-        tenant_id: tenantId,
-        loan_product_id: loanProductId,
-        rate_type: configData.rateType, // 'fixed', 'variable', 'declining', 'flat', 'compound'
-        base_rate: configData.baseRate,
-        min_rate: configData.minRate,
-        max_rate: configData.maxRate,
-        rate_name: configData.rateName,
-        description: configData.description,
-        calculation_method: configData.calculationMethod,
-        tier_based_rates: JSON.stringify(configData.tierBasedRates || {}),
-        is_active: configData.isActive !== false,
-        metadata: JSON.stringify(configData.metadata || {}),
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+      // Handle both snake_case (from frontend) and camelCase
+      const [result] = await knex('loan_product_interest_rates').insert({
+        tenantId: tenantId,
+        loanProductId: loanProductId,
+        interestType: configData.rateType || configData.rate_type || 'fixed',
+        baseRate: configData.baseRate || configData.base_rate,
+        minRate: configData.minRate || configData.min_rate,
+        maxRate: configData.maxRate || configData.max_rate,
+        marketIndex: configData.marketIndex || configData.market_index,
+        spread: configData.spread,
+        rateBrackets: (configData.rateBrackets || configData.rate_brackets) ? JSON.stringify(configData.rateBrackets || configData.rate_brackets) : null,
+        creditScoreRates: (configData.creditScoreRates || configData.credit_score_rates) ? JSON.stringify(configData.creditScoreRates || configData.credit_score_rates) : null,
+        riskBasedRates: (configData.riskBasedRates || configData.risk_based_rates) ? JSON.stringify(configData.riskBasedRates || configData.risk_based_rates) : null,
+        calculationMethod: configData.calculationMethod || configData.calculation_method || 'daily',
+        recalculationFrequency: configData.recalculationFrequency || configData.recalculation_frequency || 'never',
+        interestGracePeriodDays: configData.interestGracePeriodDays || configData.interest_grace_period_days || 0,
+        isDefault: configData.isDefault || configData.is_default || false,
+        isActive: configData.isActive !== undefined ? configData.isActive : (configData.is_active !== undefined ? configData.is_active : true),
+        metadata: (configData.metadata) ? JSON.stringify(configData.metadata) : null
+      }, ['id']);
 
+      const id = result.id;
       logger.info(`✅ Interest rate config created with ID: ${id}`);
-      return knex('loan_product_interest_rates').where({ id }).first();
+      const created = await knex('loan_product_interest_rates').where({ id }).first();
+      return this.transformToSnakeCase(created);
     } catch (error) {
       logger.error('❌ Error creating interest rate config:', error);
       throw error;
@@ -67,18 +113,23 @@ class MoneyloanConfigService {
    */
   async updateInterestRateConfig(tenantId, loanProductId, rateId, updateData) {
     try {
+      // Handle both snake_case (from frontend) and camelCase
       const updates = {
-        rate_type: updateData.rateType,
-        base_rate: updateData.baseRate,
-        min_rate: updateData.minRate,
-        max_rate: updateData.maxRate,
-        rate_name: updateData.rateName,
-        description: updateData.description,
-        calculation_method: updateData.calculationMethod,
-        tier_based_rates: updateData.tierBasedRates ? JSON.stringify(updateData.tierBasedRates) : undefined,
-        is_active: updateData.isActive,
-        metadata: updateData.metadata ? JSON.stringify(updateData.metadata) : undefined,
-        updated_at: new Date()
+        interestType: updateData.rateType || updateData.rate_type,
+        baseRate: updateData.baseRate || updateData.base_rate,
+        minRate: updateData.minRate || updateData.min_rate,
+        maxRate: updateData.maxRate || updateData.max_rate,
+        marketIndex: updateData.marketIndex || updateData.market_index,
+        spread: updateData.spread,
+        rateBrackets: (updateData.rateBrackets || updateData.rate_brackets) ? JSON.stringify(updateData.rateBrackets || updateData.rate_brackets) : undefined,
+        creditScoreRates: (updateData.creditScoreRates || updateData.credit_score_rates) ? JSON.stringify(updateData.creditScoreRates || updateData.credit_score_rates) : undefined,
+        riskBasedRates: (updateData.riskBasedRates || updateData.risk_based_rates) ? JSON.stringify(updateData.riskBasedRates || updateData.risk_based_rates) : undefined,
+        calculationMethod: updateData.calculationMethod || updateData.calculation_method,
+        recalculationFrequency: updateData.recalculationFrequency || updateData.recalculation_frequency,
+        interestGracePeriodDays: updateData.interestGracePeriodDays || updateData.interest_grace_period_days,
+        isDefault: updateData.isDefault !== undefined ? updateData.isDefault : updateData.is_default,
+        isActive: updateData.isActive !== undefined ? updateData.isActive : updateData.is_active,
+        metadata: updateData.metadata ? JSON.stringify(updateData.metadata) : undefined
       };
 
       // Remove undefined fields
@@ -86,14 +137,15 @@ class MoneyloanConfigService {
 
       await knex('loan_product_interest_rates')
         .where({
-          tenant_id: tenantId,
-          loan_product_id: loanProductId,
+          tenantId: tenantId,
+          loanProductId: loanProductId,
           id: rateId
         })
         .update(updates);
 
       logger.info(`✅ Interest rate config ${rateId} updated`);
-      return knex('loan_product_interest_rates').where({ id: rateId }).first();
+      const updated = await knex('loan_product_interest_rates').where({ id: rateId }).first();
+      return this.transformToSnakeCase(updated);
     } catch (error) {
       logger.error('❌ Error updating interest rate config:', error);
       throw error;
@@ -107,8 +159,8 @@ class MoneyloanConfigService {
     try {
       const result = await knex('loan_product_interest_rates')
         .where({
-          tenant_id: tenantId,
-          loan_product_id: loanProductId,
+          tenantId: tenantId,
+          loanProductId: loanProductId,
           id: rateId
         })
         .delete();

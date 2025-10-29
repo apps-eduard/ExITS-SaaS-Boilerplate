@@ -233,7 +233,7 @@ export class RoleEditorComponent implements OnInit {
   roleId: string | null = null;
   roleName = '';
   roleDescription = '';
-  roleSpace: 'system' | 'tenant' = 'tenant';
+  roleSpace: 'system' | 'tenant' | 'customer' = 'tenant';
 
   // Resource groups with available permissions
   resourceGroups: ResourceGroup[] = [

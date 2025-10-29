@@ -521,7 +521,7 @@ export class RoleEditorComponent implements OnInit {
   roleId: string | null = null;
   roleName = '';
   roleDescription = '';
-  roleSpace: 'system' | 'tenant' = 'system';
+  roleSpace: 'system' | 'tenant' | 'customer' = 'system';
   selectedTenantId: number | null = null; // Used for editing (single tenant)
   selectedTenantIds = signal<number[]>([]); // Used for creating (multiple tenants)
   tenants = signal<any[]>([]);

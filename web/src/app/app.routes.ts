@@ -203,31 +203,6 @@ export const routes: Routes = [
         path: 'reports/profit-loss',
         loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
       },
-      // Settings
-      {
-        path: 'settings/roles-permissions',
-        loadComponent: () => import('./features/admin/roles/roles-list.component').then(m => m.RolesListComponent)
-      },
-      {
-        path: 'settings/loan-products',
-        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
-      },
-      {
-        path: 'settings/templates',
-        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
-      },
-      {
-        path: 'settings/branding',
-        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
-      },
-      {
-        path: 'settings/api-keys',
-        loadComponent: () => import('./features/platforms/money-loan/admin/configuration/configuration-dashboard.component').then(m => m.ConfigurationDashboardComponent)
-      },
-      {
-        path: 'settings/audit-log',
-        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
-      },
       // Audit
       {
         path: 'audit/data-changes',
@@ -590,6 +565,18 @@ export const routes: Routes = [
           {
             path: 'config',
             loadComponent: () => import('./features/tenant/platform-configs/tenant-platform-configs.component').then(m => m.TenantPlatformConfigsComponent)
+          },
+          {
+            path: 'config/money-loan',
+            loadComponent: () => import('./features/tenant/platform-configs/tenant-money-loan-config.component').then(m => m.TenantMoneyLoanConfigComponent)
+          },
+          {
+            path: 'config/bnpl',
+            loadComponent: () => import('./features/tenant/platform-configs/tenant-bnpl-config.component').then(m => m.TenantBnplConfigComponent)
+          },
+          {
+            path: 'config/pawnshop',
+            loadComponent: () => import('./features/tenant/platform-configs/tenant-pawnshop-config.component').then(m => m.TenantPawnshopConfigComponent)
           }
         ]
       },
