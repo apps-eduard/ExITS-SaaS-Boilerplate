@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface ApprovalRule {
   id?: number;
@@ -328,6 +329,7 @@ interface ApprovalRule {
 })
 export class ApprovalRulesComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   saving = signal(false);
@@ -335,10 +337,14 @@ export class ApprovalRulesComponent implements OnInit {
   editingRule = signal<ApprovalRule | null>(null);
   rules = signal<ApprovalRule[]>([]);
   selectedProductId = '';
+  private tenantId: string | number = '';
 
   formData: ApprovalRule = this.getEmptyForm();
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.selectedProductId = '1';
     this.loadRules();
   }
@@ -350,9 +356,8 @@ export class ApprovalRulesComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
-    this.configService.getApprovalRules(tenantId, this.selectedProductId).subscribe({
+    this.configService.getApprovalRules(String(this.tenantId), this.selectedProductId).subscribe({
       next: (response) => {
         this.rules.set(response.data || []);
         this.loading.set(false);
@@ -386,11 +391,10 @@ export class ApprovalRulesComponent implements OnInit {
     if (!this.selectedProductId) return;
 
     this.saving.set(true);
-    const tenantId = '1';
 
     const observable = this.editingRule()
-      ? this.configService.updateApprovalRule(tenantId, this.selectedProductId, this.formData.id!, this.formData)
-      : this.configService.createApprovalRule(tenantId, this.selectedProductId, this.formData);
+      ? this.configService.updateApprovalRule(String(this.tenantId), this.selectedProductId, this.formData.id!, this.formData)
+      : this.configService.createApprovalRule(String(this.tenantId), this.selectedProductId, this.formData);
 
     observable.subscribe({
       next: () => {

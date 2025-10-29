@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface PaymentScheduleConfig {
   id?: number;
@@ -281,6 +282,7 @@ interface PaymentScheduleConfig {
 })
 export class PaymentSchedulesComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   saving = signal(false);
@@ -288,10 +290,14 @@ export class PaymentSchedulesComponent implements OnInit {
   editingConfig = signal<PaymentScheduleConfig | null>(null);
   schedules = signal<PaymentScheduleConfig[]>([]);
   selectedProductId = '';
+  private tenantId: string | number = '';
 
   formData: PaymentScheduleConfig = this.getEmptyForm();
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.selectedProductId = '1';
     this.loadSchedules();
   }
@@ -303,9 +309,8 @@ export class PaymentSchedulesComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
-    this.configService.getPaymentSchedules(tenantId, this.selectedProductId).subscribe({
+    this.configService.getPaymentSchedules(String(this.tenantId), this.selectedProductId).subscribe({
       next: (response) => {
         this.schedules.set(response.data || []);
         this.loading.set(false);
@@ -339,11 +344,10 @@ export class PaymentSchedulesComponent implements OnInit {
     if (!this.selectedProductId) return;
 
     this.saving.set(true);
-    const tenantId = '1';
 
     const observable = this.editingConfig()
-      ? this.configService.updatePaymentSchedule(tenantId, this.selectedProductId, this.formData.id!, this.formData)
-      : this.configService.createPaymentSchedule(tenantId, this.selectedProductId, this.formData);
+      ? this.configService.updatePaymentSchedule(String(this.tenantId), this.selectedProductId, this.formData.id!, this.formData)
+      : this.configService.createPaymentSchedule(String(this.tenantId), this.selectedProductId, this.formData);
 
     observable.subscribe({
       next: () => {

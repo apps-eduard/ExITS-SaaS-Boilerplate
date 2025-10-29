@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface ModificationRule {
   id?: number;
@@ -314,6 +315,7 @@ interface ModificationRule {
 })
 export class LoanModificationsComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   saving = signal(false);
@@ -321,10 +323,14 @@ export class LoanModificationsComponent implements OnInit {
   editingRule = signal<ModificationRule | null>(null);
   rules = signal<ModificationRule[]>([]);
   selectedProductId = '';
+  private tenantId: string | number = '';
 
   formData: ModificationRule = this.getEmptyForm();
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.selectedProductId = '1';
     this.loadRules();
   }
@@ -336,9 +342,8 @@ export class LoanModificationsComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
-    this.configService.getLoanModifications(tenantId, this.selectedProductId).subscribe({
+    this.configService.getLoanModifications(String(this.tenantId), this.selectedProductId).subscribe({
       next: (response: any) => {
         this.rules.set(response.data || []);
         this.loading.set(false);
@@ -372,11 +377,10 @@ export class LoanModificationsComponent implements OnInit {
     if (!this.selectedProductId) return;
 
     this.saving.set(true);
-    const tenantId = '1';
 
     const observable = this.editingRule()
-      ? this.configService.updateLoanModification(tenantId, this.selectedProductId, this.formData.id!, this.formData)
-      : this.configService.createLoanModification(tenantId, this.selectedProductId, this.formData);
+      ? this.configService.updateLoanModification(String(this.tenantId), this.selectedProductId, this.formData.id!, this.formData)
+      : this.configService.createLoanModification(String(this.tenantId), this.selectedProductId, this.formData);
 
     observable.subscribe({
       next: () => {

@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface InterestRateConfig {
   id?: number;
@@ -284,6 +285,7 @@ interface InterestRateConfig {
 })
 export class InterestRatesComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   saving = signal(false);
@@ -291,10 +293,15 @@ export class InterestRatesComponent implements OnInit {
   editingConfig = signal<InterestRateConfig | null>(null);
   interestRates = signal<InterestRateConfig[]>([]);
   selectedProductId = '';
+  private tenantId: string | number = '';
 
   formData: InterestRateConfig = this.getEmptyForm();
 
   ngOnInit() {
+    // Get current tenant ID from auth service
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     // Auto-select first product if available
     this.selectedProductId = '1';
     this.loadInterestRates();
@@ -307,9 +314,8 @@ export class InterestRatesComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
-    this.configService.getInterestRates(tenantId, this.selectedProductId).subscribe({
+    this.configService.getInterestRates(String(this.tenantId), this.selectedProductId).subscribe({
       next: (response) => {
         this.interestRates.set(response.data || []);
         this.loading.set(false);
@@ -346,11 +352,10 @@ export class InterestRatesComponent implements OnInit {
     }
 
     this.saving.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
     const observable = this.editingConfig()
-      ? this.configService.updateInterestRate(tenantId, this.selectedProductId, this.formData.id!, this.formData)
-      : this.configService.createInterestRate(tenantId, this.selectedProductId, this.formData);
+      ? this.configService.updateInterestRate(String(this.tenantId), this.selectedProductId, this.formData.id!, this.formData)
+      : this.configService.createInterestRate(String(this.tenantId), this.selectedProductId, this.formData);
 
     observable.subscribe({
       next: () => {
@@ -371,9 +376,7 @@ export class InterestRatesComponent implements OnInit {
       return;
     }
 
-    const tenantId = '1'; // TODO: Get from auth service
-
-    this.configService.deleteInterestRate(tenantId, this.selectedProductId, configId).subscribe({
+    this.configService.deleteInterestRate(String(this.tenantId), this.selectedProductId, configId).subscribe({
       next: () => {
         this.loadInterestRates();
       },

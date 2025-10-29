@@ -13,7 +13,7 @@ exports.up = function(knex) {
     })
     
     // Create Money Loan customer profiles (platform-specific data)
-    .createTable('moneyloan_customer_profiles', (table) => {
+    .createTable('money_loan_customer_profiles', (table) => {
       table.increments('id').primary();
       table.integer('customer_id').unsigned().notNullable()
         .references('id').inTable('customers').onDelete('CASCADE')
@@ -67,7 +67,7 @@ exports.up = function(knex) {
 
 exports.down = function(knex) {
   return knex.schema
-    .dropTableIfExists('moneyloan_customer_profiles')
+    .dropTableIfExists('money_loan_customer_profiles')
     .table('customers', (table) => {
       table.dropColumn('platform_tags');
     });

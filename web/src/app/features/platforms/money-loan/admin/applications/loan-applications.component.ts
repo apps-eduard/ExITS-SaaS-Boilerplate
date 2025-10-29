@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanApplicationService } from '../../shared/services/moneyloan-application.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface LoanApplication {
   id?: number;
@@ -331,6 +332,7 @@ interface LoanApplication {
 })
 export class LoanApplicationsComponent implements OnInit {
   private applicationService = inject(MoneyloanApplicationService);
+  private authService = inject(AuthService);
 
   Math = Math;
   loading = signal(false);
@@ -338,6 +340,7 @@ export class LoanApplicationsComponent implements OnInit {
   stats = signal({ pending: 0, under_review: 0, approved: 0, rejected: 0 });
   showApprovalModal = signal(false);
   selectedApplication = signal<LoanApplication | null>(null);
+  private tenantId: string | number = '';
 
   filters = {
     status: '',
@@ -358,14 +361,16 @@ export class LoanApplicationsComponent implements OnInit {
   totalPages = signal(1);
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.loadApplications();
   }
 
   loadApplications() {
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth
 
-    this.applicationService.getApplications(tenantId, {
+    this.applicationService.getApplications(String(this.tenantId), {
       ...this.filters,
       page: this.currentPage,
       limit: this.pageSize
@@ -419,9 +424,7 @@ export class LoanApplicationsComponent implements OnInit {
     const app = this.selectedApplication();
     if (!app?.id) return;
 
-    const tenantId = '1'; // TODO: Get from auth
-
-    this.applicationService.approveApplication(tenantId, app.id, this.approvalData).subscribe({
+    this.applicationService.approveApplication(String(this.tenantId), app.id, this.approvalData).subscribe({
       next: () => {
         this.showApprovalModal.set(false);
         this.loadApplications();
@@ -437,9 +440,7 @@ export class LoanApplicationsComponent implements OnInit {
     const reason = prompt('Enter rejection reason:');
     if (!reason) return;
 
-    const tenantId = '1'; // TODO: Get from auth
-
-    this.applicationService.rejectApplication(tenantId, app.id!, {
+    this.applicationService.rejectApplication(String(this.tenantId), app.id!, {
       rejection_reason: reason,
       rejection_notes: ''
     }).subscribe({

@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanConfigService } from '../../shared/services/moneyloan-config.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 interface FeeStructure {
   id?: number;
@@ -340,6 +341,7 @@ interface FeeStructure {
 })
 export class FeeStructuresComponent implements OnInit {
   private configService = inject(MoneyloanConfigService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   saving = signal(false);
@@ -347,10 +349,14 @@ export class FeeStructuresComponent implements OnInit {
   editingFee = signal<FeeStructure | null>(null);
   fees = signal<FeeStructure[]>([]);
   selectedProductId = '';
+  private tenantId: string | number = '';
 
   formData: FeeStructure = this.getEmptyForm();
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.selectedProductId = '1';
     this.loadFees();
   }
@@ -362,14 +368,13 @@ export class FeeStructuresComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth service
 
-    this.configService.getFeeStructures(tenantId, this.selectedProductId).subscribe({
-      next: (response) => {
+    this.configService.getFeeStructures(String(this.tenantId), this.selectedProductId).subscribe({
+      next: (response: any) => {
         this.fees.set(response.data || []);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Failed to load fee structures:', error);
         this.loading.set(false);
       }
@@ -398,11 +403,10 @@ export class FeeStructuresComponent implements OnInit {
     if (!this.selectedProductId) return;
 
     this.saving.set(true);
-    const tenantId = '1';
 
     const observable = this.editingFee()
-      ? this.configService.updateFeeStructure(tenantId, this.selectedProductId, this.formData.id!, this.formData)
-      : this.configService.createFeeStructure(tenantId, this.selectedProductId, this.formData);
+      ? this.configService.updateFeeStructure(String(this.tenantId), this.selectedProductId, this.formData.id!, this.formData)
+      : this.configService.createFeeStructure(String(this.tenantId), this.selectedProductId, this.formData);
 
     observable.subscribe({
       next: () => {

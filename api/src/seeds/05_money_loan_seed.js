@@ -25,17 +25,17 @@ exports.seed = async function(knex) {
   const adminUserId = superAdmin.id;
 
   // Clear existing Money Loan data (in reverse order of dependencies)
-  await knex('collection_activities').where('tenant_id', tenantId).del();
-  await knex('loan_documents').where('tenant_id', tenantId).del();
-  await knex('loan_payments').where('tenant_id', tenantId).del();
-  await knex('repayment_schedules').where('tenant_id', tenantId).del();
-  await knex('loans').where('tenant_id', tenantId).del();
-  await knex('loan_applications').where('tenant_id', tenantId).del();
+  await knex('money_loan_collection_activities').where('tenant_id', tenantId).del();
+  await knex('money_loan_documents').where('tenant_id', tenantId).del();
+  await knex('money_loan_payments').where('tenant_id', tenantId).del();
+  await knex('money_loan_repayment_schedules').where('tenant_id', tenantId).del();
+  await knex('money_loan_loans').where('tenant_id', tenantId).del();
+  await knex('money_loan_applications').where('tenant_id', tenantId).del();
   // Don't delete customers - they're created in initial seed
-  await knex('loan_products').where('tenant_id', tenantId).del();
+  await knex('money_loan_products').where('tenant_id', tenantId).del();
 
   // 1. Insert Loan Products
-  const loanProducts = await knex('loan_products').insert([
+  const loanProducts = await knex('money_loan_products').insert([
     {
       tenant_id: tenantId,
       product_code: 'PERSONAL-001',
@@ -120,7 +120,7 @@ exports.seed = async function(knex) {
   console.log(`✅ Using ${customers.length} existing customers from initial seed`);
 
   // 3. Create a sample loan application and active loan for first customer
-  const loanApplication = await knex('loan_applications').insert({
+  const loanApplication = await knex('money_loan_applications').insert({
     tenant_id: tenantId,
     application_number: 'APP-2025-0001',
     customer_id: customers[0].id,
@@ -140,7 +140,7 @@ exports.seed = async function(knex) {
   console.log(`✅ Created sample loan application`);
 
   // 4. Create active loan
-  const activeLoan = await knex('loans').insert({
+  const activeLoan = await knex('money_loan_loans').insert({
     tenant_id: tenantId,
     loan_number: 'LOAN-2025-0001',
     customer_id: customers[0].id,
@@ -188,11 +188,11 @@ exports.seed = async function(knex) {
     });
   }
 
-  await knex('repayment_schedules').insert(scheduleItems);
+  await knex('money_loan_repayment_schedules').insert(scheduleItems);
   console.log(`✅ Created ${scheduleItems.length} repayment schedule items`);
 
   // 6. Create payment records for paid installments
-  await knex('loan_payments').insert([
+  await knex('money_loan_payments').insert([
     {
       tenant_id: tenantId,
       payment_reference: 'PAY-2025-0001',

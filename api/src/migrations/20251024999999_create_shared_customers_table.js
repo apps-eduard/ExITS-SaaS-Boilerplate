@@ -88,14 +88,6 @@ exports.up = function(knex) {
       table.enum('status', ['active', 'inactive', 'suspended', 'blacklisted', 'deceased']).defaultTo('active');
       table.text('status_reason');
       
-      // Product Access Flags
-      table.boolean('money_loan_approved').defaultTo(false)
-        .comment('Approved to use Money Loan product');
-      table.boolean('bnpl_approved').defaultTo(false)
-        .comment('Approved to use BNPL product');
-      table.boolean('pawnshop_approved').defaultTo(false)
-        .comment('Approved to use Pawnshop product');
-      
       // Emergency Contact
       table.string('emergency_contact_name', 200);
       table.string('emergency_contact_relationship', 50);

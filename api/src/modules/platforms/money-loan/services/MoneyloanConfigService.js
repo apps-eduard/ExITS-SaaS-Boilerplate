@@ -57,7 +57,7 @@ class MoneyloanConfigService {
    */
   async getInterestRateConfigs(tenantId, loanProductId) {
     try {
-      const configs = await knex('loan_product_interest_rates')
+      const configs = await knex('money_loan_interest_rates')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId
@@ -78,7 +78,7 @@ class MoneyloanConfigService {
   async createInterestRateConfig(tenantId, loanProductId, configData) {
     try {
       // Handle both snake_case (from frontend) and camelCase
-      const [result] = await knex('loan_product_interest_rates').insert({
+      const [result] = await knex('money_loan_interest_rates').insert({
         tenantId: tenantId,
         loanProductId: loanProductId,
         interestType: configData.rateType || configData.rate_type || 'fixed',
@@ -100,7 +100,7 @@ class MoneyloanConfigService {
 
       const id = result.id;
       logger.info(`✅ Interest rate config created with ID: ${id}`);
-      const created = await knex('loan_product_interest_rates').where({ id }).first();
+      const created = await knex('money_loan_interest_rates').where({ id }).first();
       return this.transformToSnakeCase(created);
     } catch (error) {
       logger.error('❌ Error creating interest rate config:', error);
@@ -135,7 +135,7 @@ class MoneyloanConfigService {
       // Remove undefined fields
       Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-      await knex('loan_product_interest_rates')
+      await knex('money_loan_interest_rates')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId,
@@ -144,7 +144,7 @@ class MoneyloanConfigService {
         .update(updates);
 
       logger.info(`✅ Interest rate config ${rateId} updated`);
-      const updated = await knex('loan_product_interest_rates').where({ id: rateId }).first();
+      const updated = await knex('money_loan_interest_rates').where({ id: rateId }).first();
       return this.transformToSnakeCase(updated);
     } catch (error) {
       logger.error('❌ Error updating interest rate config:', error);
@@ -157,7 +157,7 @@ class MoneyloanConfigService {
    */
   async deleteInterestRateConfig(tenantId, loanProductId, rateId) {
     try {
-      const result = await knex('loan_product_interest_rates')
+      const result = await knex('money_loan_interest_rates')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId,
@@ -224,7 +224,7 @@ class MoneyloanConfigService {
    */
   async getPaymentScheduleConfigs(tenantId, loanProductId) {
     try {
-      const configs = await knex('loan_product_payment_schedules')
+      const configs = await knex('money_loan_payment_schedules')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId
@@ -251,7 +251,7 @@ class MoneyloanConfigService {
         late_payment_penalty_value: configData.late_payment_penalty_value || configData.latePaymentPenaltyValue
       };
 
-      const [result] = await knex('loan_product_payment_schedules').insert({
+      const [result] = await knex('money_loan_payment_schedules').insert({
         tenantId: tenantId,
         loanProductId: loanProductId,
         paymentFrequency: configData.payment_frequency || configData.paymentFrequency || 'monthly',
@@ -278,7 +278,7 @@ class MoneyloanConfigService {
 
       const id = result.id;
       logger.info(`✅ Payment schedule config created with ID: ${id}`);
-      const created = await knex('loan_product_payment_schedules').where({ id }).first();
+      const created = await knex('money_loan_payment_schedules').where({ id }).first();
       return this.transformPaymentScheduleToSnakeCase(created);
     } catch (error) {
       logger.error('❌ Error creating payment schedule config:', error);
@@ -323,7 +323,7 @@ class MoneyloanConfigService {
 
       Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-      await knex('loan_product_payment_schedules')
+      await knex('money_loan_payment_schedules')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId,
@@ -332,7 +332,7 @@ class MoneyloanConfigService {
         .update(updates);
 
       logger.info(`✅ Payment schedule config ${scheduleId} updated`);
-      const updated = await knex('loan_product_payment_schedules').where({ id: scheduleId }).first();
+      const updated = await knex('money_loan_payment_schedules').where({ id: scheduleId }).first();
       return this.transformPaymentScheduleToSnakeCase(updated);
     } catch (error) {
       logger.error('❌ Error updating payment schedule config:', error);
@@ -345,7 +345,7 @@ class MoneyloanConfigService {
    */
   async deletePaymentScheduleConfig(tenantId, loanProductId, scheduleId) {
     try {
-      const result = await knex('loan_product_payment_schedules')
+      const result = await knex('money_loan_payment_schedules')
         .where({
           tenantId: tenantId,
           loanProductId: loanProductId,
@@ -370,7 +370,7 @@ class MoneyloanConfigService {
    */
   async getFeeConfigs(tenantId, loanProductId) {
     try {
-      const configs = await knex('loan_product_fees')
+      const configs = await knex('money_loan_fees')
         .where({
           tenant_id: tenantId,
           loan_product_id: loanProductId
@@ -390,7 +390,7 @@ class MoneyloanConfigService {
    */
   async createFeeConfig(tenantId, loanProductId, configData) {
     try {
-      const [id] = await knex('loan_product_fees').insert({
+      const [id] = await knex('money_loan_fees').insert({
         tenant_id: tenantId,
         loan_product_id: loanProductId,
         fee_type: configData.feeType, // 'origination', 'processing', 'late_payment', 'early_settlement', 'modification'
@@ -409,7 +409,7 @@ class MoneyloanConfigService {
       });
 
       logger.info(`✅ Fee config created with ID: ${id}`);
-      return knex('loan_product_fees').where({ id }).first();
+      return knex('money_loan_fees').where({ id }).first();
     } catch (error) {
       logger.error('❌ Error creating fee config:', error);
       throw error;
@@ -438,7 +438,7 @@ class MoneyloanConfigService {
 
       Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-      await knex('loan_product_fees')
+      await knex('money_loan_fees')
         .where({
           tenant_id: tenantId,
           loan_product_id: loanProductId,
@@ -447,7 +447,7 @@ class MoneyloanConfigService {
         .update(updates);
 
       logger.info(`✅ Fee config ${feeId} updated`);
-      return knex('loan_product_fees').where({ id: feeId }).first();
+      return knex('money_loan_fees').where({ id: feeId }).first();
     } catch (error) {
       logger.error('❌ Error updating fee config:', error);
       throw error;
@@ -463,7 +463,7 @@ class MoneyloanConfigService {
    */
   async getApprovalRuleConfigs(tenantId, loanProductId) {
     try {
-      const configs = await knex('loan_product_approval_rules')
+      const configs = await knex('money_loan_approval_rules')
         .where({
           tenant_id: tenantId,
           loan_product_id: loanProductId
@@ -483,7 +483,7 @@ class MoneyloanConfigService {
    */
   async createApprovalRuleConfig(tenantId, loanProductId, configData) {
     try {
-      const [id] = await knex('loan_product_approval_rules').insert({
+      const [id] = await knex('money_loan_approval_rules').insert({
         tenant_id: tenantId,
         loan_product_id: loanProductId,
         approval_level: configData.approvalLevel,
@@ -506,7 +506,7 @@ class MoneyloanConfigService {
       });
 
       logger.info(`✅ Approval rule config created with ID: ${id}`);
-      return knex('loan_product_approval_rules').where({ id }).first();
+      return knex('money_loan_approval_rules').where({ id }).first();
     } catch (error) {
       logger.error('❌ Error creating approval rule config:', error);
       throw error;
@@ -539,7 +539,7 @@ class MoneyloanConfigService {
 
       Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-      await knex('loan_product_approval_rules')
+      await knex('money_loan_approval_rules')
         .where({
           tenant_id: tenantId,
           loan_product_id: loanProductId,
@@ -548,7 +548,7 @@ class MoneyloanConfigService {
         .update(updates);
 
       logger.info(`✅ Approval rule config ${ruleId} updated`);
-      return knex('loan_product_approval_rules').where({ id: ruleId }).first();
+      return knex('money_loan_approval_rules').where({ id: ruleId }).first();
     } catch (error) {
       logger.error('❌ Error updating approval rule config:', error);
       throw error;

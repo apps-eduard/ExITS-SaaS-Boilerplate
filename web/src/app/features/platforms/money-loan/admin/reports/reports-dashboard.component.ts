@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanReportService } from '../../shared/services/moneyloan-report.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-reports-dashboard',
@@ -268,6 +269,7 @@ import { MoneyloanReportService } from '../../shared/services/moneyloan-report.s
 })
 export class ReportsDashboardComponent implements OnInit {
   private reportService = inject(MoneyloanReportService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   portfolioReport = signal<any>(null);
@@ -275,6 +277,7 @@ export class ReportsDashboardComponent implements OnInit {
   collectionsReport = signal<any>(null);
   arrearsReport = signal<any>(null);
   revenueReport = signal<any>(null);
+  private tenantId: string | number = '';
 
   dateRange = {
     start_date: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -282,20 +285,22 @@ export class ReportsDashboardComponent implements OnInit {
   };
 
   ngOnInit() {
+    const user = this.authService.currentUser();
+    this.tenantId = user?.tenantId || '';
+
     this.loadAllReports();
   }
 
   loadAllReports() {
     this.loading.set(true);
-    const tenantId = '1'; // TODO: Get from auth
 
     // Load all reports in parallel
     Promise.all([
-      this.reportService.getPortfolioReport(tenantId, this.dateRange).toPromise(),
-      this.reportService.getPerformanceReport(tenantId, this.dateRange).toPromise(),
-      this.reportService.getCollectionsReport(tenantId, this.dateRange).toPromise(),
-      this.reportService.getArrearsReport(tenantId).toPromise(),
-      this.reportService.getRevenueReport(tenantId, this.dateRange).toPromise()
+      this.reportService.getPortfolioReport(String(this.tenantId), this.dateRange).toPromise(),
+      this.reportService.getPerformanceReport(String(this.tenantId), this.dateRange).toPromise(),
+      this.reportService.getCollectionsReport(String(this.tenantId), this.dateRange).toPromise(),
+      this.reportService.getArrearsReport(String(this.tenantId)).toPromise(),
+      this.reportService.getRevenueReport(String(this.tenantId), this.dateRange).toPromise()
     ]).then(([portfolio, performance, collections, arrears, revenue]) => {
       this.portfolioReport.set(portfolio?.data || {});
       this.performanceReport.set(performance?.data || {});
@@ -333,9 +338,7 @@ export class ReportsDashboardComponent implements OnInit {
   }
 
   exportReport() {
-    const tenantId = '1'; // TODO: Get from auth
-
-    this.reportService.exportReport(tenantId, {
+    this.reportService.exportReport(String(this.tenantId), {
       report_type: 'portfolio',
       ...this.dateRange,
       format: 'csv'
