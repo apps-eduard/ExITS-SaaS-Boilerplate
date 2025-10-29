@@ -77,23 +77,23 @@ router.get('/customers', authMiddleware, rbacMiddleware(['money-loan'], ['custom
       .limit(parseInt(limit))
       .offset((parseInt(page) - 1) * parseInt(limit));
 
-    // Transform snake_case to camelCase for frontend
+    // Knex already converts snake_case to camelCase via postProcessResponse
     const transformedCustomers = customers.map(customer => ({
       id: customer.id,
-      customerCode: customer.customer_code,
-      firstName: customer.first_name,
-      lastName: customer.last_name,
-      fullName: `${customer.first_name} ${customer.last_name}`,
+      customerCode: customer.customerCode,  // Already camelCase from Knex
+      firstName: customer.firstName,  // Already camelCase from Knex
+      lastName: customer.lastName,  // Already camelCase from Knex
+      fullName: `${customer.firstName} ${customer.lastName}`,
       email: customer.email,
       phone: customer.phone,
       status: customer.status,
-      kycStatus: customer.kyc_status,
-      creditScore: customer.credit_score,
+      kycStatus: customer.kycStatus,  // Already camelCase from Knex
+      creditScore: customer.creditScore,  // Already camelCase from Knex
       activeLoans: 0, // TODO: Calculate from loans table
-      monthlyIncome: customer.monthly_income,
-      riskLevel: customer.risk_level,
-      createdAt: customer.created_at,
-      updatedAt: customer.updated_at
+      monthlyIncome: customer.monthlyIncome,  // Already camelCase from Knex
+      riskLevel: customer.riskLevel,  // Already camelCase from Knex
+      createdAt: customer.createdAt,  // Already camelCase from Knex
+      updatedAt: customer.updatedAt  // Already camelCase from Knex
     }));
 
     res.json({
@@ -208,42 +208,42 @@ router.post('/customers', authMiddleware, rbacMiddleware(['money-loan'], ['custo
       .where('customers.id', newCustomer.id)
       .first();
 
-    // Transform to camelCase
+    // Knex already converts to camelCase via postProcessResponse
     const transformedCustomer = {
       id: customerWithTenant.id,
-      tenantId: customerWithTenant.tenant_id,
-      tenantName: customerWithTenant.tenant_name,
-      customerCode: customerWithTenant.customer_code,
-      firstName: customerWithTenant.first_name,
-      middleName: customerWithTenant.middle_name,
-      lastName: customerWithTenant.last_name,
-      fullName: `${customerWithTenant.first_name} ${customerWithTenant.last_name}`,
+      tenantId: customerWithTenant.tenantId,  // Already camelCase
+      tenantName: customerWithTenant.tenantName,  // Already camelCase
+      customerCode: customerWithTenant.customerCode,  // Already camelCase
+      firstName: customerWithTenant.firstName,  // Already camelCase
+      middleName: customerWithTenant.middleName,  // Already camelCase
+      lastName: customerWithTenant.lastName,  // Already camelCase
+      fullName: `${customerWithTenant.firstName} ${customerWithTenant.lastName}`,
       email: customerWithTenant.email,
       phone: customerWithTenant.phone,
-      alternatePhone: customerWithTenant.alternate_phone,
-      dateOfBirth: customerWithTenant.date_of_birth,
+      alternatePhone: customerWithTenant.alternatePhone,  // Already camelCase
+      dateOfBirth: customerWithTenant.dateOfBirth,  // Already camelCase
       gender: customerWithTenant.gender,
       nationality: customerWithTenant.nationality,
-      civilStatus: customerWithTenant.civil_status,
+      civilStatus: customerWithTenant.civilStatus,  // Already camelCase
       status: customerWithTenant.status,
-      kycStatus: customerWithTenant.kyc_status,
-      creditScore: customerWithTenant.credit_score,
-      monthlyIncome: customerWithTenant.monthly_income,
-      riskLevel: customerWithTenant.risk_level,
-      employmentStatus: customerWithTenant.employment_status,
-      employerName: customerWithTenant.employer_name,
-      employerAddress: customerWithTenant.employer_address,
-      employerPhone: customerWithTenant.employer_phone,
+      kycStatus: customerWithTenant.kycStatus,  // Already camelCase
+      creditScore: customerWithTenant.creditScore,  // Already camelCase
+      monthlyIncome: customerWithTenant.monthlyIncome,  // Already camelCase
+      riskLevel: customerWithTenant.riskLevel,  // Already camelCase
+      employmentStatus: customerWithTenant.employmentStatus,  // Already camelCase
+      employerName: customerWithTenant.employerName,  // Already camelCase
+      employerAddress: customerWithTenant.employerAddress,  // Already camelCase
+      employerPhone: customerWithTenant.employerPhone,  // Already camelCase
       occupation: customerWithTenant.occupation,
-      sourceOfIncome: customerWithTenant.source_of_income,
-      yearsEmployed: customerWithTenant.years_employed,
-      idType: customerWithTenant.id_type,
-      idNumber: customerWithTenant.id_number,
-      idExpiryDate: customerWithTenant.id_expiry_date,
-      tinNumber: customerWithTenant.tin_number,
-      sssNumber: customerWithTenant.sss_number,
-      createdAt: customerWithTenant.created_at,
-      updatedAt: customerWithTenant.updated_at
+      sourceOfIncome: customerWithTenant.sourceOfIncome,  // Already camelCase
+      yearsEmployed: customerWithTenant.yearsEmployed,  // Already camelCase
+      idType: customerWithTenant.idType,  // Already camelCase
+      idNumber: customerWithTenant.idNumber,  // Already camelCase
+      idExpiryDate: customerWithTenant.idExpiryDate,  // Already camelCase
+      tinNumber: customerWithTenant.tinNumber,  // Already camelCase
+      sssNumber: customerWithTenant.sssNumber,  // Already camelCase
+      createdAt: customerWithTenant.createdAt,  // Already camelCase
+      updatedAt: customerWithTenant.updatedAt  // Already camelCase
     };
 
     console.log('✅ Customer created:', transformedCustomer.customerCode);
@@ -298,48 +298,48 @@ router.get('/customers/:id', authMiddleware, rbacMiddleware(['money-loan'], ['cu
       });
     }
 
-    console.log('🔍 Customer found:', customer.customer_code);
+    console.log('🔍 Customer found:', customer.customerCode);
 
-    // Transform snake_case to camelCase for frontend
+    // Knex already converts snake_case to camelCase via postProcessResponse
     const transformedCustomer = {
       id: customer.id,
-      tenantId: customer.tenant_id,
-      tenantName: customer.tenant_name, // Include tenant name
-      customerCode: customer.customer_code,
-      firstName: customer.first_name,
-      middleName: customer.middle_name,
-      lastName: customer.last_name,
-      fullName: `${customer.first_name} ${customer.last_name}`,
+      tenantId: customer.tenantId,  // Already camelCase
+      tenantName: customer.tenantName,  // Already camelCase
+      customerCode: customer.customerCode,  // Already camelCase
+      firstName: customer.firstName,  // Already camelCase
+      middleName: customer.middleName,  // Already camelCase
+      lastName: customer.lastName,  // Already camelCase
+      fullName: `${customer.firstName} ${customer.lastName}`,
       email: customer.email,
       phone: customer.phone,
-      alternatePhone: customer.alternate_phone,
-      dateOfBirth: customer.date_of_birth,
+      alternatePhone: customer.alternatePhone,  // Already camelCase
+      dateOfBirth: customer.dateOfBirth,  // Already camelCase
       gender: customer.gender,
       nationality: customer.nationality,
-      civilStatus: customer.civil_status,
+      civilStatus: customer.civilStatus,  // Already camelCase
       status: customer.status,
-      kycStatus: customer.kyc_status,
-      creditScore: customer.credit_score,
+      kycStatus: customer.kycStatus,  // Already camelCase
+      creditScore: customer.creditScore,  // Already camelCase
       activeLoans: 0, // TODO: Calculate from loans table
-      monthlyIncome: customer.monthly_income,
-      riskLevel: customer.risk_level,
+      monthlyIncome: customer.monthlyIncome,  // Already camelCase
+      riskLevel: customer.riskLevel,  // Already camelCase
       // Employment
-      employmentStatus: customer.employment_status,
-      employerName: customer.employer_name,
-      employerAddress: customer.employer_address,
-      employerPhone: customer.employer_phone,
+      employmentStatus: customer.employmentStatus,  // Already camelCase
+      employerName: customer.employerName,  // Already camelCase
+      employerAddress: customer.employerAddress,  // Already camelCase
+      employerPhone: customer.employerPhone,  // Already camelCase
       occupation: customer.occupation,
-      sourceOfIncome: customer.source_of_income,
-      yearsEmployed: customer.years_employed,
+      sourceOfIncome: customer.sourceOfIncome,  // Already camelCase
+      yearsEmployed: customer.yearsEmployed,  // Already camelCase
       // KYC
-      idType: customer.id_type,
-      idNumber: customer.id_number,
-      idExpiryDate: customer.id_expiry_date,
-      tinNumber: customer.tin_number,
-      sssNumber: customer.sss_number,
+      idType: customer.idType,  // Already camelCase
+      idNumber: customer.idNumber,  // Already camelCase
+      idExpiryDate: customer.idExpiryDate,  // Already camelCase
+      tinNumber: customer.tinNumber,  // Already camelCase
+      sssNumber: customer.sssNumber,  // Already camelCase
       // Note: Address data should be fetched from addresses table with polymorphic relationship
-      createdAt: customer.created_at,
-      updatedAt: customer.updated_at
+      createdAt: customer.createdAt,  // Already camelCase
+      updatedAt: customer.updatedAt  // Already camelCase
     };
 
     res.json({

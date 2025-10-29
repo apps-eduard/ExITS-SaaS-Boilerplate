@@ -50,15 +50,15 @@ class SubscriptionPlanService {
       description: dbPlan.description,
       icon: icon,
       price: parseFloat(dbPlan.price),
-      billingCycle: dbPlan.billing_cycle,
-      maxUsers: dbPlan.max_users,
-      maxStorageGb: dbPlan.max_storage_gb,
+      billingCycle: dbPlan.billingCycle,  // Already camelCase from Knex
+      maxUsers: dbPlan.maxUsers,  // Already camelCase from Knex
+      maxStorageGb: dbPlan.maxStorageGb,  // Already camelCase from Knex
       features: features,
-      productType: dbPlan.platform_type, // Add platform_type
+      productType: dbPlan.platformType,  // Already camelCase from Knex
       isActive: dbPlan.status === 'active',
       isRecommended: dbPlan.name.toLowerCase() === 'pro' || dbPlan.name.toLowerCase() === 'professional', // Pro is recommended,
-      createdAt: dbPlan.created_at,
-      updatedAt: dbPlan.updated_at
+      createdAt: dbPlan.createdAt,  // Already camelCase from Knex
+      updatedAt: dbPlan.updatedAt  // Already camelCase from Knex
     };
   }
 
