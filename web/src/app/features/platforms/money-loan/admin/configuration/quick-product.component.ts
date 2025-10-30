@@ -12,36 +12,89 @@ import { AuthService } from '../../../../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="p-4 space-y-4">
-      <!-- Compact Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-            @if (editingProductId) {
-              <span>✏️ Edit Product</span>
-            } @else {
-              <span>⚡ Quick Create Product</span>
-            }
-          </h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            @if (editingProductId) {
-              <span>Update product details with instant calculation preview</span>
-            } @else {
-              <span>Create loan products with instant calculation preview</span>
-            }
-          </p>
+    <div class="flex h-full">
+      <!-- Sidebar Navigation -->
+      <div class="w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div class="p-4">
+          <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">📦 Product Management</h2>
+          
+          <nav class="space-y-1">
+            <button
+              (click)="activeView = 'create'"
+              [class]="activeView === 'create' 
+                ? 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                : 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition'"
+            >
+              <span>⚡</span>
+              <span>Create New Product</span>
+            </button>
+            
+            <button
+              (click)="activeView = 'products'"
+              [class]="activeView === 'products'
+                ? 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                : 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition'"
+            >
+              <span>📋</span>
+              <span>All Products ({{ products().length }})</span>
+            </button>
+          </nav>
+
+          <!-- Quick Stats -->
+          <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📊 Quick Stats</p>
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-600 dark:text-gray-400">Total Products</span>
+                <span class="font-semibold text-gray-900 dark:text-white">{{ products().length }}</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-600 dark:text-gray-400">Active</span>
+                <span class="font-semibold text-green-600 dark:text-green-400">{{ getActiveProductsCount() }}</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-600 dark:text-gray-400">Inactive</span>
+                <span class="font-semibold text-gray-600 dark:text-gray-400">{{ getInactiveProductsCount() }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        @if (editingProductId) {
-          <button
-            (click)="cancelEdit()"
-            class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
-          >
-            ❌ Cancel Edit
-          </button>
-        }
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Main Content Area -->
+      <div class="flex-1 overflow-auto">
+        <div class="p-4">
+          <!-- Create New Product View -->
+          @if (activeView === 'create') {
+            <!-- Compact Header -->
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                  @if (editingProductId) {
+                    <span>✏️ Edit Product</span>
+                  } @else {
+                    <span>⚡ Quick Create Product</span>
+                  }
+                </h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  @if (editingProductId) {
+                    <span>Update product details with instant calculation preview</span>
+                  } @else {
+                    <span>Create loan products with instant calculation preview</span>
+                  }
+                </p>
+              </div>
+              @if (editingProductId) {
+                <button
+                  (click)="cancelEdit()"
+                  class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+                >
+                  ❌ Cancel Edit
+                </button>
+              }
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Left: Compact Form -->
         <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
           <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
@@ -556,118 +609,194 @@ import { AuthService } from '../../../../../core/services/auth.service';
           </div>
         </div>
       </div>
-
-      <!-- Products Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <!-- Table Header -->
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <span>📦</span> Created Products
-            </h2>
-            <p class="text-xs text-gray-500 dark:text-gray-400">{{ products().length }} product(s)</p>
-          </div>
-          <button
-            (click)="loadProducts()"
-            class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            🔄 Refresh
-          </button>
-        </div>
-
-        <!-- Table Content -->
-        <div class="overflow-x-auto">
-          @if (loading()) {
-            <div class="p-8 text-center">
-              <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading products...</p>
+    }
+          
+    <!-- All Products View -->
+          @if (activeView === 'products') {
+            <!-- Products Header -->
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">📋 All Products</h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Manage and configure all loan products
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  (click)="loadProducts()"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+                >
+                  🔄 Refresh
+                </button>
+                <button
+                  (click)="activeView = 'create'"
+                  class="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm transition"
+                >
+                  ➕ Create New
+                </button>
+              </div>
             </div>
-          } @else if (products().length === 0) {
-            <div class="p-8 text-center">
-              <div class="text-4xl mb-2">📦</div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">No products created yet</p>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Create your first product above</p>
-            </div>
-          } @else {
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Code</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Name</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Amount Range</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Term</th>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Interest</th>
-                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
-                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @for (product of products(); track product.id) {
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td class="px-4 py-3">
-                      <span class="text-xs font-mono text-blue-600 dark:text-blue-400">{{ product.productCode }}</span>
-                    </td>
-                    <td class="px-4 py-3">
-                      <div>
-                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ product.name }}</p>
-                        @if (product.description) {
-                          <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ product.description }}</p>
-                        }
-                      </div>
-                    </td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
-                      {{ formatCurrency(product.minAmount) }} - {{ formatCurrency(product.maxAmount) }}
-                    </td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
-                      {{ product.minTermDays / 30 }}-{{ product.maxTermDays / 30 }} months
-                    </td>
-                    <td class="px-4 py-3">
-                      <span class="text-xs font-semibold text-green-600 dark:text-green-400">
-                        {{ product.interestRate }}% {{ product.interestType }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                      @if (product.isActive) {
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                          <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                          Active
-                        </span>
-                      } @else {
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                          <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
-                          Inactive
-                        </span>
+
+            <!-- Products Table -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <!-- Table Header -->
+              <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
+                <div class="flex items-center gap-3">
+                  <div>
+                    <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ products().length }} Products</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ getActiveProductsCount() }} active, {{ getInactiveProductsCount() }} inactive
+                    </p>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    [(ngModel)]="searchQuery"
+                    (ngModelChange)="filterProducts()"
+                    name="searchQuery"
+                    placeholder="Search products..."
+                    class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <!-- Table Content -->
+              <div class="overflow-x-auto">
+                @if (loading()) {
+                  <div class="p-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading products...</p>
+                  </div>
+                } @else if (filteredProducts().length === 0) {
+                  <div class="p-8 text-center">
+                    <div class="text-4xl mb-2">📦</div>
+                    @if (searchQuery) {
+                      <p class="text-sm text-gray-500 dark:text-gray-400">No products found matching "{{ searchQuery }}"</p>
+                      <button
+                        (click)="clearSearch()"
+                        class="mt-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                      >
+                        Clear search
+                      </button>
+                    } @else {
+                      <p class="text-sm text-gray-500 dark:text-gray-400">No products created yet</p>
+                      <button
+                        (click)="activeView = 'create'"
+                        class="mt-2 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded"
+                      >
+                        Create your first product
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <table class="w-full text-xs">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Code</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Product</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Amount Range</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Term Type</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Interest</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Frequency</th>
+                        <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                      @for (product of filteredProducts(); track product.id) {
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                          <td class="px-3 py-2">
+                            <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">{{ product.productCode }}</span>
+                          </td>
+                          <td class="px-3 py-2">
+                            <div>
+                              <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ product.name }}</p>
+                              @if (product.description) {
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ product.description }}</p>
+                              }
+                            </div>
+                          </td>
+                          <td class="px-3 py-2">
+                            <div class="text-xs text-gray-700 dark:text-gray-300">
+                              <p class="font-medium">{{ formatCurrency(product.minAmount) }}</p>
+                              <p class="text-gray-500 dark:text-gray-400">to {{ formatCurrency(product.maxAmount) }}</p>
+                            </div>
+                          </td>
+                          <td class="px-3 py-2">
+                            @if (product.loanTermType === 'fixed') {
+                              <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                                <span class="text-xs">🔒</span>
+                                <span class="text-xs font-medium">{{ (product.fixedTermDays || 90) / 30 }}mo Fixed</span>
+                              </div>
+                            } @else {
+                              <div class="text-xs text-gray-700 dark:text-gray-300">
+                                <p class="font-medium">{{ product.minTermDays / 30 }}-{{ product.maxTermDays / 30 }}mo</p>
+                                <p class="text-gray-500 dark:text-gray-400">Flexible</p>
+                              </div>
+                            }
+                          </td>
+                          <td class="px-3 py-2">
+                            <div class="text-xs">
+                              <p class="font-semibold text-green-600 dark:text-green-400">{{ product.interestRate }}%</p>
+                              <p class="text-gray-500 dark:text-gray-400 capitalize">{{ product.interestType }}</p>
+                            </div>
+                          </td>
+                          <td class="px-3 py-2">
+                            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                              <span class="text-xs">
+                                @if (product.paymentFrequency === 'daily') { 📅 }
+                                @if (product.paymentFrequency === 'weekly') { 📆 }
+                                @if (product.paymentFrequency === 'monthly') { 🗓️ }
+                              </span>
+                              <span class="text-xs font-medium capitalize">{{ product.paymentFrequency || 'weekly' }}</span>
+                            </div>
+                          </td>
+                          <td class="px-3 py-2 text-center">
+                            @if (product.isActive) {
+                              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
+                                Active
+                              </span>
+                            } @else {
+                              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+                                Inactive
+                              </span>
+                            }
+                          </td>
+                          <td class="px-3 py-2">
+                            <div class="flex items-center justify-center gap-1">
+                              <button
+                                (click)="editProductAndSwitch(product)"
+                                class="p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition"
+                                title="Edit"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                (click)="toggleProductStatus(product)"
+                                class="p-1 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 rounded transition"
+                                [title]="product.isActive ? 'Deactivate' : 'Activate'"
+                              >
+                                {{ product.isActive ? '⏸️' : '▶️' }}
+                              </button>
+                              <button
+                                (click)="deleteProduct(product)"
+                                class="p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded transition"
+                                title="Delete"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       }
-                    </td>
-                    <td class="px-4 py-3">
-                      <div class="flex items-center justify-center gap-1">
-                        <button
-                          (click)="editProduct(product)"
-                          class="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition"
-                          title="Edit"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          (click)="toggleProductStatus(product)"
-                          class="p-1.5 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 rounded transition"
-                          [title]="product.isActive ? 'Deactivate' : 'Activate'"
-                        >
-                          {{ product.isActive ? '⏸️' : '▶️' }}
-                        </button>
-                        <button
-                          (click)="deleteProduct(product)"
-                          class="p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded transition"
-                          title="Delete"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    </tbody>
+                  </table>
                 }
-              </tbody>
-            </table>
+              </div>
+            </div>
           }
         </div>
       </div>
@@ -711,10 +840,46 @@ export class QuickProductComponent {
   products = signal<any[]>([]);
   loading = signal(false);
   editingProductId: number | null = null;
+  activeView: 'create' | 'products' = 'create'; // Sidebar navigation
+  searchQuery = '';
+  filteredProducts = signal<any[]>([]);
 
   constructor() {
     this.calculatePreview();
     this.loadProducts();
+  }
+
+  getActiveProductsCount(): number {
+    return this.products().filter(p => p.isActive).length;
+  }
+
+  getInactiveProductsCount(): number {
+    return this.products().filter(p => !p.isActive).length;
+  }
+
+  filterProducts(): void {
+    if (!this.searchQuery.trim()) {
+      this.filteredProducts.set(this.products());
+      return;
+    }
+
+    const query = this.searchQuery.toLowerCase();
+    const filtered = this.products().filter(product => 
+      product.name?.toLowerCase().includes(query) ||
+      product.productCode?.toLowerCase().includes(query) ||
+      product.description?.toLowerCase().includes(query)
+    );
+    this.filteredProducts.set(filtered);
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.filterProducts();
+  }
+
+  editProductAndSwitch(product: any): void {
+    this.editProduct(product);
+    this.activeView = 'create';
   }
 
   onPreviewAmountChange(): void {
@@ -838,10 +1003,12 @@ export class QuickProductComponent {
       maxAmount: this.maxAmount,
       interestRate: this.interestRate,
       interestType: this.interestType,
-      loanTermType: this.loanTermType,
-      fixedTermDays: this.loanTermType === 'fixed' ? this.fixedTermMonths * 30 : null,
-      minTermDays: this.loanTermType === 'flexible' ? this.minTermMonths * 30 : null,
-      maxTermDays: this.loanTermType === 'flexible' ? this.maxTermMonths * 30 : null,
+  loanTermType: this.loanTermType,
+  // Only include the relevant term fields. Use undefined (not null) so the backend
+  // will drop the key instead of writing NULL to a NOT NULL column during update.
+  fixedTermDays: this.loanTermType === 'fixed' ? this.fixedTermMonths * 30 : undefined,
+  minTermDays: this.loanTermType === 'flexible' ? this.minTermMonths * 30 : undefined,
+  maxTermDays: this.loanTermType === 'flexible' ? this.maxTermMonths * 30 : undefined,
       processingFeePercent: this.processingFeePercent,
       latePaymentPenaltyPercent: this.latePaymentPenaltyPercent,
       gracePeriodDays: this.gracePeriodDays,
@@ -898,6 +1065,7 @@ export class QuickProductComponent {
       next: (response) => {
         if (response.success && response.data) {
           this.products.set(response.data);
+          this.filterProducts(); // Update filtered list
         }
         this.loading.set(false);
       },
@@ -916,8 +1084,19 @@ export class QuickProductComponent {
     this.description = product.description || '';
     this.minAmount = product.minAmount;
     this.maxAmount = product.maxAmount;
-    this.minTermMonths = product.minTermDays / 30;
-    this.maxTermMonths = product.maxTermDays / 30;
+    
+    // Handle term type
+    this.loanTermType = product.loanTermType || 'flexible';
+    if (this.loanTermType === 'fixed') {
+      this.fixedTermMonths = product.fixedTermDays ? product.fixedTermDays / 30 : 3;
+      this.minTermMonths = 1;
+      this.maxTermMonths = 6;
+    } else {
+      this.minTermMonths = product.minTermDays ? product.minTermDays / 30 : 1;
+      this.maxTermMonths = product.maxTermDays ? product.maxTermDays / 30 : 6;
+      this.fixedTermMonths = 3;
+    }
+    
     this.interestRate = product.interestRate;
     this.interestType = product.interestType;
     this.processingFeePercent = product.processingFeePercent || 0;

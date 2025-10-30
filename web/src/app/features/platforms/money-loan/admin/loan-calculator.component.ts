@@ -290,10 +290,10 @@ import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, Penal
                     <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(result()!.installmentAmount) }}</span>
                   </div>
 
-                  @if (result()!.monthlyEquivalent && result()!.paymentFrequency !== 'monthly') {
+                  @if (result()?.monthlyEquivalent && result()?.paymentFrequency !== 'monthly') {
                     <div class="flex justify-between items-center text-sm">
                       <span class="text-gray-600 dark:text-gray-400">Monthly Equivalent</span>
-                      <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(result()!.monthlyEquivalent) }}</span>
+                      <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(result()!.monthlyEquivalent!) }}</span>
                     </div>
                   }
 
