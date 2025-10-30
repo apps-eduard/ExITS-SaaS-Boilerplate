@@ -10,12 +10,6 @@ import { Loan } from '../shared/models/loan.models';
   imports: [CommonModule],
   template: `
     <div class="p-4 md:p-6 space-y-4">
-      <!-- Welcome Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 class="text-2xl font-bold mb-2">Welcome back, {{ customerName() }}!</h1>
-        <p class="text-blue-100">Manage your loans and payments all in one place</p>
-      </div>
-
       <!-- Quick Stats -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

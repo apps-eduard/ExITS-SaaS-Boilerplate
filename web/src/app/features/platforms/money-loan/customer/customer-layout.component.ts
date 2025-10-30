@@ -14,13 +14,16 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
              [class.-translate-x-full]="!sidebarOpen()"
              [class.translate-x-0]="sidebarOpen()">
 
-        <!-- Logo -->
+        <!-- Logo / Tenant Info -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">ML</span>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+              <span class="text-white font-bold text-sm">{{ getTenantInitials() }}</span>
             </div>
-            <span class="text-lg font-bold text-gray-900 dark:text-white">Money Loan</span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ tenantName() }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Customer Portal</p>
+            </div>
           </div>
           <button (click)="toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,9 +39,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              [routerLinkActiveOptions]="{exact: true}"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-            </svg>
+            <span class="text-xl">📊</span>
             <span class="font-medium">Dashboard</span>
           </a>
 
@@ -46,9 +47,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           <a routerLink="/platforms/money-loan/customer/loans"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
+            <span class="text-xl">📝</span>
             <span class="font-medium">My Loans</span>
           </a>
 
@@ -56,19 +55,23 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           <a routerLink="/platforms/money-loan/customer/apply"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
+            <span class="text-xl">➕</span>
             <span class="font-medium">Apply for Loan</span>
+          </a>
+
+          <!-- Products -->
+          <a routerLink="/platforms/money-loan/customer/products"
+             routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+             class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <span class="text-xl">💼</span>
+            <span class="font-medium">Loan Products</span>
           </a>
 
           <!-- Make Payment -->
           <a routerLink="/platforms/money-loan/customer/payment"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
+            <span class="text-xl">💳</span>
             <span class="font-medium">Make Payment</span>
           </a>
 
@@ -79,27 +82,23 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
           <a routerLink="/platforms/money-loan/customer/account"
              routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
              class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-            </svg>
+            <span class="text-xl">👤</span>
             <span class="font-medium">My Account</span>
           </a>
 
           <!-- Logout -->
           <button (click)="logout()"
                   class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
+            <span class="text-xl">🚪</span>
             <span class="font-medium">Logout</span>
           </button>
         </nav>
 
-        <!-- User Info -->
+        <!-- User Info - Customer Name -->
         <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-              <span class="text-white font-semibold">{{ getInitials() }}</span>
+            <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+              <span class="text-white font-semibold">{{ getCustomerInitials() }}</span>
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ customerName() }}</p>
@@ -115,7 +114,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
         [style.margin-left]="sidebarOpen() ? '16rem' : '0'">
         <!-- Top Navigation Bar -->
         <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
-          <!-- Left: Menu Toggle -->
+          <!-- Left: Menu Toggle & Platform Name -->
           <div class="flex items-center gap-4">
             <button
               (click)="toggleSidebar()"
@@ -124,7 +123,12 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
-            <span class="text-lg font-bold text-gray-900 dark:text-white md:hidden">Money Loan</span>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span class="text-white font-bold text-sm">💰</span>
+              </div>
+              <span class="text-lg font-bold text-gray-900 dark:text-white">{{ platformName() }}</span>
+            </div>
           </div>
 
           <!-- Right: User Info -->
@@ -136,8 +140,8 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
               </div>
               <button
                 (click)="toggleUserMenu()"
-                class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center hover:shadow-lg hover:shadow-blue-500/50 transition-all cursor-pointer">
-                <span class="text-white font-semibold">{{ getInitials() }}</span>
+                class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center hover:shadow-lg hover:shadow-green-500/50 transition-all cursor-pointer">
+                <span class="text-white font-semibold">{{ getCustomerInitials() }}</span>
               </button>
               
               <!-- User Menu Dropdown -->
@@ -183,6 +187,8 @@ export class CustomerLayoutComponent implements OnInit {
   showUserMenu = signal(false);
   customerName = signal('Guest');
   customerEmail = signal('');
+  tenantName = signal('');
+  platformName = signal('Money Loan');
 
   constructor(private routerService: Router) {
   }
@@ -211,13 +217,23 @@ export class CustomerLayoutComponent implements OnInit {
         const customer = JSON.parse(customerData);
         this.customerName.set(`${customer.firstName} ${customer.lastName}`);
         this.customerEmail.set(customer.email || '');
+        this.tenantName.set(customer.tenantName || 'Company Name');
       } catch (e) {
         console.error('Error parsing customer data:', e);
       }
     }
   }
 
-  getInitials(): string {
+  getTenantInitials(): string {
+    const name = this.tenantName();
+    const words = name.split(' ');
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  getCustomerInitials(): string {
     const name = this.customerName();
     const parts = name.split(' ');
     if (parts.length >= 2) {
