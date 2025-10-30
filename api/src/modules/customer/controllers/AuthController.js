@@ -32,10 +32,13 @@ class CustomerAuthController {
           'users.id as user_id',
           'money_loan_customer_profiles.kyc_status',
           'money_loan_customer_profiles.credit_score',
-          'money_loan_customer_profiles.risk_level'
+          'money_loan_customer_profiles.risk_level',
+          'tenants.name as tenant_name',
+          'tenants.subdomain as tenant_subdomain'
         )
         .leftJoin('users', 'customers.user_id', 'users.id')
         .leftJoin('money_loan_customer_profiles', 'customers.id', 'money_loan_customer_profiles.customer_id')
+        .leftJoin('tenants', 'customers.tenant_id', 'tenants.id')
         .where(function() {
           this.where('customers.email', identifier)
             .orWhere('customers.phone', identifier);
@@ -96,6 +99,8 @@ class CustomerAuthController {
         customerId: customer.id,
         userId: customer.userId || customer.user_id,
         tenantId: customer.tenantId || customer.tenant_id,
+        tenantName: customer.tenantName || customer.tenant_name || 'Company Name',
+        tenantSubdomain: customer.tenantSubdomain || customer.tenant_subdomain,
         customerCode: customer.customerCode || customer.customer_code,
         firstName: customer.firstName || customer.first_name,
         lastName: customer.lastName || customer.last_name,

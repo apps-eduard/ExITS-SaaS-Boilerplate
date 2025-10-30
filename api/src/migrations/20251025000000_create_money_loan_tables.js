@@ -20,6 +20,7 @@ exports.up = function(knex) {
       table.integer('min_term_days').notNullable();
       table.integer('max_term_days').notNullable();
       table.decimal('processing_fee_percent', 5, 2).defaultTo(0);
+      table.decimal('platform_fee', 15, 2).defaultTo(50);
       table.decimal('late_payment_penalty_percent', 5, 2).defaultTo(0);
       table.integer('grace_period_days').defaultTo(0);
       table.boolean('is_active').defaultTo(true);

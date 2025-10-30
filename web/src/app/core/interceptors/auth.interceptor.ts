@@ -6,7 +6,7 @@ import { catchError, throwError } from 'rxjs';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   console.log('🔵 AUTH INTERCEPTOR CALLED for:', req.url, req.method);
   const authService = inject(AuthService);
-  
+
   // Public routes that don't need authentication
   // Use exact matching or specific patterns to avoid false positives
   const isPublicRoute = (
@@ -14,6 +14,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     (req.url.includes('/api/auth/refresh') && req.method === 'POST') ||
     (req.url.includes('/api/auth/forgot-password')) ||
     (req.url.includes('/api/auth/check-email')) ||
+    (req.url.includes('/api/customer/auth/login') && req.method === 'POST') ||
+    (req.url.includes('/api/customer/auth/refresh') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/create') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/by-subdomain') && req.method === 'GET') ||
     (req.url.match(/\/api\/subscriptions\/plans$/) && req.method === 'GET') || // Only GET all plans is public
@@ -24,7 +26,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Only add token for non-public routes
   if (!isPublicRoute) {
-    const token = authService.getAccessToken();
+    // Check for customer token first (for customer portal routes)
+    let token = localStorage.getItem('customerToken');
+
+    // If no customer token, try admin token
+    if (!token) {
+      token = authService.getAccessToken();
+    }
 
     if (token) {
       req = req.clone({
@@ -47,7 +55,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         url: req.url,
         message: error.message
       });
-      
+
       // Only attempt logout if we're authenticated and got 401
       if (error.status === 401 && authService.isAuthenticated()) {
         console.log('⚠️ 401 Unauthorized - logging out');

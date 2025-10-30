@@ -17,18 +17,18 @@ import { AuthService } from '../../../../../core/services/auth.service';
       <div class="w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div class="p-4">
           <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">📦 Product Management</h2>
-          
+
           <nav class="space-y-1">
             <button
               (click)="activeView = 'create'"
-              [class]="activeView === 'create' 
+              [class]="activeView === 'create'
                 ? 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                 : 'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition'"
             >
               <span>⚡</span>
               <span>Create New Product</span>
             </button>
-            
+
             <button
               (click)="activeView = 'products'"
               [class]="activeView === 'products'
@@ -170,7 +170,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
             <!-- Loan Terms -->
             <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded space-y-2">
               <p class="text-xs font-semibold text-purple-700 dark:text-purple-400">📅 Loan Terms</p>
-              
+
               <!-- Term Type Selector -->
               <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term Type</label>
@@ -436,7 +436,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
               <label class="block text-xs font-semibold text-purple-700 dark:text-purple-400 mb-1.5">
                 📅 Preview Loan Term (Months)
               </label>
-              
+
               @if (loanTermType === 'fixed') {
                 <!-- Fixed Term - Display Only -->
                 <div class="bg-white dark:bg-gray-800 rounded p-2 border border-purple-300 dark:border-purple-600">
@@ -610,7 +610,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
         </div>
       </div>
     }
-          
+
     <!-- All Products View -->
           @if (activeView === 'products') {
             <!-- Products Header -->
@@ -864,7 +864,7 @@ export class QuickProductComponent {
     }
 
     const query = this.searchQuery.toLowerCase();
-    const filtered = this.products().filter(product => 
+    const filtered = this.products().filter(product =>
       product.name?.toLowerCase().includes(query) ||
       product.productCode?.toLowerCase().includes(query) ||
       product.description?.toLowerCase().includes(query)
@@ -927,7 +927,7 @@ export class QuickProductComponent {
     const billableDays = Math.max(0, this.previewDaysOverdue - this.gracePeriodDays);
     const dailyPenalty = this.preview()!.installmentAmount * (this.latePaymentPenaltyPercent / 100);
     const totalPenalty = dailyPenalty * billableDays;
-    
+
     this.penaltyAmount.set(totalPenalty);
   }
 
@@ -981,12 +981,20 @@ export class QuickProductComponent {
       return;
     }
 
-    if (this.minAmount > this.maxAmount) {
+    // Ensure numeric comparison
+    const minAmt = Number(this.minAmount);
+    const maxAmt = Number(this.maxAmount);
+
+    if (minAmt > maxAmt) {
       this.toastService.error('Minimum amount cannot be greater than maximum amount');
       return;
     }
 
-    if (this.minTermMonths > this.maxTermMonths) {
+    // Ensure integer comparison for terms
+    const minTerm = Math.round(Number(this.minTermMonths));
+    const maxTerm = Math.round(Number(this.maxTermMonths));
+
+    if (minTerm > maxTerm) {
       this.toastService.error('Minimum term cannot be greater than maximum term');
       return;
     }
@@ -1010,6 +1018,7 @@ export class QuickProductComponent {
   minTermDays: this.loanTermType === 'flexible' ? this.minTermMonths * 30 : undefined,
   maxTermDays: this.loanTermType === 'flexible' ? this.maxTermMonths * 30 : undefined,
       processingFeePercent: this.processingFeePercent,
+      platformFee: this.platformFee,
       latePaymentPenaltyPercent: this.latePaymentPenaltyPercent,
       gracePeriodDays: this.gracePeriodDays,
       paymentFrequency: this.paymentFrequency,
@@ -1082,27 +1091,27 @@ export class QuickProductComponent {
     this.productCode = product.productCode;
     this.productName = product.name;
     this.description = product.description || '';
-    this.minAmount = product.minAmount;
-    this.maxAmount = product.maxAmount;
-    
+    this.minAmount = Number(product.minAmount) || 0;
+    this.maxAmount = Number(product.maxAmount) || 0;
+
     // Handle term type
     this.loanTermType = product.loanTermType || 'flexible';
     if (this.loanTermType === 'fixed') {
-      this.fixedTermMonths = product.fixedTermDays ? product.fixedTermDays / 30 : 3;
+      this.fixedTermMonths = Math.round((product.fixedTermDays || 90) / 30);
       this.minTermMonths = 1;
       this.maxTermMonths = 6;
     } else {
-      this.minTermMonths = product.minTermDays ? product.minTermDays / 30 : 1;
-      this.maxTermMonths = product.maxTermDays ? product.maxTermDays / 30 : 6;
+      this.minTermMonths = Math.round((product.minTermDays || 30) / 30);
+      this.maxTermMonths = Math.round((product.maxTermDays || 180) / 30);
       this.fixedTermMonths = 3;
     }
-    
-    this.interestRate = product.interestRate;
+
+    this.interestRate = Number(product.interestRate) || 0;
     this.interestType = product.interestType;
-    this.processingFeePercent = product.processingFeePercent || 0;
-    this.platformFee = 50; // Default as it's not stored
-    this.latePaymentPenaltyPercent = product.latePaymentPenaltyPercent;
-    this.gracePeriodDays = product.gracePeriodDays;
+    this.processingFeePercent = Number(product.processingFeePercent) || 0;
+    this.platformFee = Number(product.platformFee) || 50;
+    this.latePaymentPenaltyPercent = Number(product.latePaymentPenaltyPercent) || 0;
+    this.gracePeriodDays = Number(product.gracePeriodDays) || 0;
     this.paymentFrequency = product.paymentFrequency || 'weekly';
     this.isActive = product.isActive;
     this.calculatePreview();
@@ -1123,8 +1132,8 @@ export class QuickProductComponent {
       next: (response) => {
         if (response.success) {
           this.toastService.success(
-            updatedData.isActive 
-              ? 'Product activated successfully! ✅' 
+            updatedData.isActive
+              ? 'Product activated successfully! ✅'
               : 'Product deactivated successfully! ⏸️'
           );
           this.loadProducts();

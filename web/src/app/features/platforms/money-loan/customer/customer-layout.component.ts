@@ -143,7 +143,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
                 class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center hover:shadow-lg hover:shadow-green-500/50 transition-all cursor-pointer">
                 <span class="text-white font-semibold">{{ getCustomerInitials() }}</span>
               </button>
-              
+
               <!-- User Menu Dropdown -->
               @if (showUserMenu()) {
                 <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50"
@@ -187,7 +187,7 @@ export class CustomerLayoutComponent implements OnInit {
   showUserMenu = signal(false);
   customerName = signal('Guest');
   customerEmail = signal('');
-  tenantName = signal('');
+  tenantName = signal('Company Name');
   platformName = signal('Money Loan');
 
   constructor(private routerService: Router) {
@@ -215,9 +215,11 @@ export class CustomerLayoutComponent implements OnInit {
     if (customerData) {
       try {
         const customer = JSON.parse(customerData);
+        console.log('🔍 Customer Data from localStorage:', customer);
         this.customerName.set(`${customer.firstName} ${customer.lastName}`);
         this.customerEmail.set(customer.email || '');
         this.tenantName.set(customer.tenantName || 'Company Name');
+        console.log('📝 Tenant Name set to:', customer.tenantName || 'Company Name');
       } catch (e) {
         console.error('Error parsing customer data:', e);
       }
@@ -261,7 +263,7 @@ export class CustomerLayoutComponent implements OnInit {
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     const userMenuContainer = target.closest('.user-menu-container');
-    
+
     // Close user menu if clicking outside
     if (!userMenuContainer && this.showUserMenu()) {
       this.showUserMenu.set(false);
