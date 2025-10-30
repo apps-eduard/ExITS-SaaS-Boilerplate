@@ -23,6 +23,7 @@ router.delete('/products/:productId', moneyloanLoanController.deleteLoanProduct)
 // Base: /api/tenants/:tenantId/platforms/moneyloan/loans/applications
 // ═══════════════════════════════════════════════════════════════
 
+router.get('/applications', moneyloanLoanController.getAllApplications);
 router.post('/applications', moneyloanLoanController.createLoanApplication);
 router.get('/applications/:applicationId', moneyloanLoanController.getLoanApplication);
 router.put('/applications/:applicationId', moneyloanLoanController.updateLoanApplication);
@@ -46,6 +47,7 @@ router.post('/:loanId/resume', moneyloanLoanController.resumeLoan);
 // CUSTOMER & PRODUCT LOAN ROUTES
 // ═══════════════════════════════════════════════════════════════
 
+router.get('/customers/:customerId/applications', moneyloanLoanController.getCustomerApplications);
 router.get('/customers/:customerId/loans', moneyloanLoanController.getCustomerLoans);
 router.get('/products/:productId/loans', moneyloanLoanController.getProductLoans);
 

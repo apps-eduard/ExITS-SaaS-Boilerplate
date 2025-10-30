@@ -147,8 +147,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                   <input
                     type="number"
                     [(ngModel)]="minAmount"
-                    (ngModelChange)="calculatePreview()"
+                    (input)="validateMinAmount()"
+                    (blur)="validateMinAmount()"
                     name="minAmount"
+                    min="0"
+                    step="1000"
                     class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
                     placeholder="1,000"
                   />
@@ -158,8 +161,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                   <input
                     type="number"
                     [(ngModel)]="maxAmount"
-                    (ngModelChange)="calculatePreview()"
+                    (input)="validateMaxAmount()"
+                    (blur)="validateMaxAmount()"
                     name="maxAmount"
+                    min="0"
+                    step="1000"
                     class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
                     placeholder="100,000"
                   />
@@ -192,9 +198,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                   <input
                     type="number"
                     [(ngModel)]="fixedTermMonths"
-                    (ngModelChange)="calculatePreview()"
+                    (input)="validateFixedTermMonths()"
+                    (blur)="validateFixedTermMonths()"
                     name="fixedTermMonths"
                     min="1"
+                    step="1"
                     class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
                     placeholder="3"
                   />
@@ -209,9 +217,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                     <input
                       type="number"
                       [(ngModel)]="minTermMonths"
-                      (ngModelChange)="calculatePreview()"
+                      (input)="validateMinTermMonths()"
+                      (blur)="validateMinTermMonths()"
                       name="minTermMonths"
                       min="1"
+                      step="1"
                       class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
                       placeholder="1"
                     />
@@ -221,9 +231,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                     <input
                       type="number"
                       [(ngModel)]="maxTermMonths"
-                      (ngModelChange)="calculatePreview()"
+                      (input)="validateMaxTermMonths()"
+                      (blur)="validateMaxTermMonths()"
                       name="maxTermMonths"
                       min="1"
+                      step="1"
                       class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
                       placeholder="6"
                     />
@@ -727,11 +739,11 @@ import { AuthService } from '../../../../../core/services/auth.service';
                             @if (product.loanTermType === 'fixed') {
                               <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                                 <span class="text-xs">🔒</span>
-                                <span class="text-xs font-medium">{{ (product.fixedTermDays || 90) / 30 }}mo Fixed</span>
+                                <span class="text-xs font-medium">{{ Math.round((product.fixedTermDays || 90) / 30) }}mo Fixed</span>
                               </div>
                             } @else {
                               <div class="text-xs text-gray-700 dark:text-gray-300">
-                                <p class="font-medium">{{ product.minTermDays / 30 }}-{{ product.maxTermDays / 30 }}mo</p>
+                                <p class="font-medium">{{ Math.round(product.minTermDays / 30) }}-{{ Math.round(product.maxTermDays / 30) }}mo</p>
                                 <p class="text-gray-500 dark:text-gray-400">Flexible</p>
                               </div>
                             }
@@ -914,6 +926,81 @@ export class QuickProductComponent {
         this.previewTermMonths = this.maxTermMonths;
       }
     }
+    this.calculatePreview();
+  }
+
+  validateMinAmount(): void {
+    // Remove leading zeros and ensure it's a valid number
+    this.minAmount = Number(this.minAmount) || 0;
+
+    // Ensure it's not negative
+    if (this.minAmount < 0) {
+      this.minAmount = 0;
+    }
+
+    // Trigger preview calculation
+    this.calculatePreview();
+  }
+
+  validateMaxAmount(): void {
+    // Remove leading zeros and ensure it's a valid number
+    this.maxAmount = Number(this.maxAmount) || 0;
+
+    // Ensure it's not negative
+    if (this.maxAmount < 0) {
+      this.maxAmount = 0;
+    }
+
+    // Ensure max is not less than min
+    if (this.maxAmount > 0 && this.maxAmount < this.minAmount) {
+      this.maxAmount = this.minAmount;
+    }
+
+    // Trigger preview calculation
+    this.calculatePreview();
+  }
+
+  validateMinTermMonths(): void {
+    // Round to whole number and remove leading zeros
+    this.minTermMonths = Math.round(Number(this.minTermMonths)) || 1;
+
+    // Ensure minimum is at least 1
+    if (this.minTermMonths < 1) {
+      this.minTermMonths = 1;
+    }
+
+    // Trigger preview calculation
+    this.calculatePreview();
+  }
+
+  validateMaxTermMonths(): void {
+    // Round to whole number and remove leading zeros
+    this.maxTermMonths = Math.round(Number(this.maxTermMonths)) || 1;
+
+    // Ensure minimum is at least 1
+    if (this.maxTermMonths < 1) {
+      this.maxTermMonths = 1;
+    }
+
+    // Ensure max is not less than min
+    if (this.maxTermMonths < this.minTermMonths) {
+      this.maxTermMonths = this.minTermMonths;
+    }
+
+    // Trigger preview calculation
+    this.calculatePreview();
+  }
+
+  validateFixedTermMonths(): void {
+    // Round to whole number and remove leading zeros
+    this.fixedTermMonths = Math.round(Number(this.fixedTermMonths)) || 1;
+
+    // Ensure minimum is at least 1
+    if (this.fixedTermMonths < 1) {
+      this.fixedTermMonths = 1;
+    }
+
+    // Trigger preview calculation
     this.calculatePreview();
   }
 

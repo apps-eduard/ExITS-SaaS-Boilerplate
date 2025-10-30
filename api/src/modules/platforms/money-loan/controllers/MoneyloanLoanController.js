@@ -268,6 +268,63 @@ class MoneyloanLoanController {
   }
 
   /**
+   * GET: Fetch all loan applications for a tenant (with optional filters)
+   * Route: GET /api/tenants/:tenantId/platforms/moneyloan/loans/applications
+   */
+  async getAllApplications(req, res) {
+    try {
+      const { tenantId } = req.params;
+      const filters = req.query;
+
+      const applications = await moneyloanLoanService.getAllApplications(tenantId, filters);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Loan applications fetched successfully',
+        data: applications,
+        pagination: {
+          total: applications.length,
+          page: parseInt(filters.page || '1'),
+          limit: parseInt(filters.limit || '50'),
+        },
+      });
+    } catch (error) {
+      logger.error('❌ Error fetching all applications:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch loan applications',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET: Fetch all loan applications for a customer
+   * Route: GET /api/tenants/:tenantId/platforms/moneyloan/loans/customers/:customerId/applications
+   */
+  async getCustomerApplications(req, res) {
+    try {
+      const { tenantId, customerId } = req.params;
+
+      const applications = await moneyloanLoanService.getCustomerApplications(tenantId, customerId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Customer applications fetched successfully',
+        data: applications,
+        count: applications.length,
+      });
+    } catch (error) {
+      logger.error('❌ Error fetching customer applications:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customer applications',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
    * PUT: Update loan application
    * Route: PUT /api/tenants/:tenantId/platforms/moneyloan/loans/applications/:applicationId
    */
