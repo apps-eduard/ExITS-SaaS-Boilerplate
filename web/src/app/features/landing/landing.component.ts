@@ -1,6 +1,7 @@
 import { Component, signal, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { RegisterComponentPath } from '../../core/decorators/register-component-path.decorator';
 
 interface Feature {
   id: string;
@@ -22,6 +23,7 @@ interface PricingPlan {
   badge?: string;
 }
 
+@RegisterComponentPath('src/app/features/landing/landing.component.ts', 'Landing Page')
 @Component({
   selector: 'app-landing',
   standalone: true,

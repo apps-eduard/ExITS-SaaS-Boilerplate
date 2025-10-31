@@ -27,9 +27,12 @@ interface MenuItem {
 
     <!-- Sidebar -->
     <aside
-      class="fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ease-in-out z-50"
+      class="fixed lg:relative top-0 left-0 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out z-50 lg:z-auto overflow-hidden"
       [class.-translate-x-full]="!isOpen()"
-      [class.translate-x-0]="isOpen()">
+      [class.translate-x-0]="isOpen()"
+      [class.w-64]="isOpen()"
+      [class.w-0]="!isOpen()"
+      [class.lg:border-r-0]="!isOpen()">
 
       <!-- Logo -->
       <div class="h-14 flex items-center justify-between px-3 border-b border-gray-200 dark:border-gray-700">

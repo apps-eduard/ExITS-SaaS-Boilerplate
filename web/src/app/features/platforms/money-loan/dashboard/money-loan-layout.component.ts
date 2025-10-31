@@ -1,11 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { DevInfoComponent } from '../../../../shared/components/dev-info/dev-info.component';
 
 @Component({
   selector: 'app-money-loan-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, DevInfoComponent],
   template: `
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Sidebar -->
@@ -415,6 +416,9 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 
           <!-- Right: User Info -->
           <div class="flex items-center gap-4">
+            <!-- Dev Info Icon -->
+            <app-dev-info />
+            
             <div class="relative">
               <button
                 (click)="toggleUserMenu()"

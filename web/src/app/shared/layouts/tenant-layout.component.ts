@@ -15,8 +15,7 @@ import { TenantSidebarComponent } from '../../features/tenant/tenant-sidebar/ten
 
       <!-- Main Content Area -->
       <div
-        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
-        [style.margin-left]="sidebar?.isOpen() ? '16rem' : '0'">
+        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
         <app-header (menuToggle)="toggleSidebar()" />
         <main class="flex-1 overflow-y-auto">
           <router-outlet />

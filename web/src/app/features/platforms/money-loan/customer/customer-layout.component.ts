@@ -1,18 +1,22 @@
 import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { DevInfoComponent } from '../../../../shared/components/dev-info/dev-info.component';
 
 @Component({
   selector: 'app-customer-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, DevInfoComponent],
   template: `
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Sidebar -->
-      <aside [class.hidden]="!sidebarOpen()"
-             class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out overflow-y-auto"
+      <aside
+             class="fixed md:relative inset-y-0 left-0 z-50 md:z-auto h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out overflow-y-auto"
              [class.-translate-x-full]="!sidebarOpen()"
-             [class.translate-x-0]="sidebarOpen()">
+             [class.translate-x-0]="sidebarOpen()"
+             [class.w-64]="sidebarOpen()"
+             [class.w-0]="!sidebarOpen()"
+             [class.md:border-r-0]="!sidebarOpen()">
 
         <!-- Logo / Tenant Info -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
@@ -110,8 +114,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 
       <!-- Main Content -->
       <div
-        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
-        [style.margin-left]="sidebarOpen() ? '16rem' : '0'">
+        class="flex-1 flex flex-col overflow-hidden w-full transition-all duration-300 ease-in-out">
         <!-- Top Navigation Bar -->
         <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
           <!-- Left: Menu Toggle & Platform Name -->
@@ -123,6 +126,10 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
+            
+            <!-- Dev Info Icon -->
+            <app-dev-info />
+            
             <div class="flex items-center gap-2">
               <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <span class="text-white font-bold text-sm">💰</span>

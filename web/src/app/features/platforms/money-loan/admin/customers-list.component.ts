@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CustomerService } from '../shared/services/customer.service';
 import { LoanCustomer } from '../shared/models/loan.models';
+import { ComponentPathService } from '../../../../core/services/component-path.service';
 
 @Component({
   selector: 'app-customers-list',
@@ -281,6 +282,7 @@ import { LoanCustomer } from '../shared/models/loan.models';
 export class CustomersListComponent implements OnInit {
   private customerService = inject(CustomerService);
   private router = inject(Router);
+  private componentPathService = inject(ComponentPathService);
 
   customers = signal<LoanCustomer[]>([]);
   stats = signal<any>(null);
@@ -297,6 +299,14 @@ export class CustomersListComponent implements OnInit {
   Math = Math;
 
   ngOnInit() {
+    // Register component path for dev info
+    this.componentPathService.setComponentPath({
+      componentName: 'CustomersListComponent',
+      moduleName: 'Money Loan - Customers',
+      filePath: 'src/app/features/platforms/money-loan/admin/customers-list.component.ts',
+      routePath: this.router.url
+    });
+
     this.loadCustomers();
     this.loadStats();
   }

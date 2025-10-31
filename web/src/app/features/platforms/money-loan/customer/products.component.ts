@@ -5,11 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { CurrencyMaskDirective } from '../../../../shared/directives/currency-mask.directive';
 
 @Component({
   selector: 'app-customer-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyMaskDirective],
   template: `
     <div class="p-4 md:p-6 max-w-7xl mx-auto">
       <!-- Header -->
@@ -79,14 +80,25 @@ import { ToastService } from '../../../../core/services/toast.service';
               <!-- Product Details -->
               <div class="p-4 space-y-3">
                 <!-- Loan Amount Range -->
-                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                  <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">💰 Loan Amount</p>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">
-                    {{ formatCurrency(product.minAmount) }}
-                  </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    up to {{ formatCurrency(product.maxAmount) }}
-                  </p>
+                <div class="space-y-2">
+                  <p class="text-xs text-gray-600 dark:text-gray-400 font-semibold">💰 Loan Amount</p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <!-- Min Amount -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2">
+                      <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Min</p>
+                      <p class="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {{ formatCurrency(product.minAmount) }}
+                      </p>
+                    </div>
+                    
+                    <!-- Max Amount -->
+                    <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg px-3 py-2">
+                      <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Max</p>
+                      <p class="text-sm font-bold text-purple-600 dark:text-purple-400">
+                        {{ formatCurrency(product.maxAmount) }}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Interest Rate -->
@@ -229,18 +241,15 @@ import { ToastService } from '../../../../core/services/toast.service';
                 <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   💰 Loan Amount
                 </label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₱</span>
-                  <input
-                    type="text"
-                    [value]="formatNumberWithCommas(calcAmount)"
-                    (input)="onAmountInput($event)"
-                    (blur)="validateLoanAmount()"
-                    class="w-full pl-7 pr-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    [class.border-red-500]="amountError()"
-                    [class.border-gray-300]="!amountError()"
-                    placeholder="Enter amount">
-                </div>
+                <input
+                  type="text"
+                  appCurrencyMask
+                  [(ngModel)]="calcAmount"
+                  (ngModelChange)="validateLoanAmount()"
+                  class="w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  [class.border-red-500]="amountError()"
+                  [class.border-gray-300]="!amountError()"
+                  placeholder="Enter amount">
                 @if (amountError()) {
                   <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ amountError() }}</p>
                 } @else {
@@ -726,20 +735,16 @@ export class CustomerProductsComponent implements OnInit {
     const product = this.selectedProduct();
     if (!product) return;
 
-    // Allow empty/zero values without auto-correcting (user might be typing)
-    if (isNaN(this.calcAmount) || this.calcAmount === null || this.calcAmount === undefined) {
-      this.calcAmount = 0;
-      this.amountError.set(`Minimum amount is ${this.formatCurrency(product.minAmount)}`);
-      return;
-    }
-
-    // Remove leading zeros
-    this.calcAmount = Number(this.calcAmount);
+    // Convert to number if it's a string (from currency directive)
+    const amount = Number(this.calcAmount) || 0;
+    this.calcAmount = amount;
 
     // Validate and set error messages
-    if (this.calcAmount === 0 || this.calcAmount < product.minAmount) {
+    if (amount === 0) {
+      this.amountError.set(`Please enter an amount`);
+    } else if (amount < product.minAmount) {
       this.amountError.set(`Minimum amount is ${this.formatCurrency(product.minAmount)}`);
-    } else if (this.calcAmount > product.maxAmount) {
+    } else if (amount > product.maxAmount) {
       this.amountError.set(`Maximum amount is ${this.formatCurrency(product.maxAmount)}`);
     } else {
       this.amountError.set('');
@@ -747,19 +752,6 @@ export class CustomerProductsComponent implements OnInit {
 
     // Trigger calculation update
     this.calculateLoan();
-  }
-
-  onAmountInput(event: any) {
-    // Remove commas and parse the number
-    const value = event.target.value.replace(/,/g, '');
-    // Allow empty string to be 0 (user might be clearing to type new value)
-    this.calcAmount = value === '' ? 0 : (parseFloat(value) || 0);
-    this.validateLoanAmount();
-  }
-
-  formatNumberWithCommas(num: number): string {
-    if (num === null || num === undefined || isNaN(num) || num === 0) return '';
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   isFormValid(): boolean {

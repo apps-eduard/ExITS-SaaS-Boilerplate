@@ -1,15 +1,20 @@
-import { Component, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, signal, inject, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { MoneyloanApplicationService } from '../../shared/services/moneyloan-application.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { ComponentPathService } from '../../../../../core/services/component-path.service';
+import { ToastService } from '../../../../../core/services/toast.service';
+import { ConfirmationService } from '../../../../../core/services/confirmation.service';
+import { CurrencyMaskDirective } from '../../../../../shared/directives/currency-mask.directive';
 import {
   DataManagementPageComponent,
   StatCard,
   FilterField,
   ColumnDefinition,
   ActionButton,
-  BulkAction
+  BulkAction  
 } from '../../../../../shared/components/ui';
 
 interface LoanApplication {
@@ -20,7 +25,14 @@ interface LoanApplication {
   last_name?: string;
   customer_email?: string;
   customer_phone?: string;
+  customer_credit_score?: number;
+  product_code?: string;
   product_name?: string;
+  product_min_amount?: number;
+  product_max_amount?: number;
+  product_platform_fee?: number;
+  product_processing_fee_percent?: number;
+  product_payment_frequency?: string;
   loan_product_id: number;
   requested_amount: number;
   requested_term_days: number;
@@ -41,14 +53,16 @@ interface LoanApplication {
   imports: [
     CommonModule, 
     FormsModule,
-    DataManagementPageComponent
+    DataManagementPageComponent,
+    CurrencyMaskDirective
   ],
   template: `
-    <app-data-management-page
-      [pageIcon]="'📝'"
-      [pageTitle]="'Pending Approvals'"
-      [pageDescription]="'Review and process loan applications'"
-      [statCards]="statCards"
+    <div class="h-full flex flex-col">
+      <app-data-management-page
+        [pageIcon]="'📝'"
+        [pageTitle]="'Pending Approvals'"
+        [pageDescription]="'Review and process loan applications'"
+        [statCards]="statCards"
       [filterFields]="filterFields"
       [filterValues]="filterValues"
       [columns]="columns"
@@ -80,49 +94,195 @@ interface LoanApplication {
       (nextPage)="onNextPage()"
     />
 
-    <!-- Approval Modal -->
+    <!-- Approval Modal - Compact Design -->
     @if (showApprovalModal()) {
       <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="showApprovalModal.set(false)">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full" (click)="$event.stopPropagation()">
-          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Approve Application</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+          
+          <!-- Modal Header - Compact -->
+          <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-2 rounded-t-lg">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-sm font-bold">📋 Review</h2>
+                  <span class="text-xs text-purple-100 truncate">#{{ selectedApplication()?.application_number }}</span>
+                  @if (selectedApplication()?.product_code) {
+                    <span class="px-1.5 py-0.5 text-xs font-mono font-semibold bg-white/20 text-white rounded">
+                      {{ selectedApplication()?.product_code }}
+                    </span>
+                  }
+                </div>
+                @if (selectedApplication()?.product_name) {
+                  <p class="text-xs text-purple-50 truncate">{{ selectedApplication()?.product_name }}</p>
+                }
+              </div>
+              <button (click)="showApprovalModal.set(false)" class="text-white hover:bg-white/20 rounded p-1 transition-colors flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="p-4 space-y-3">
+
+          <!-- Modal Body - Compact -->
+          <div class="p-3 space-y-2.5">
+            
+            <!-- Customer Info - Inline Compact -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-2.5 py-1.5">
+              <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Name:</span>
+                  <span class="font-semibold text-gray-900 dark:text-white truncate ml-1">{{ getCustomerName(selectedApplication()) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Score:</span>
+                  <span class="font-semibold ml-1" [class]="getCreditScoreClass(selectedApplication()?.customer_credit_score || 0)">
+                    {{ selectedApplication()?.customer_credit_score || 'N/A' }}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Requested:</span>
+                  <span class="font-semibold text-gray-900 dark:text-white ml-1">₱{{ formatNumber(selectedApplication()?.requested_amount || 0) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Term:</span>
+                  <span class="font-semibold text-gray-900 dark:text-white ml-1">{{ selectedApplication()?.requested_term_days }}d</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Approved Amount with Min/Max - Compact -->
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Approved Amount</label>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                💰 Approved Amount
+              </label>
               <input
-                type="number"
+                type="text"
+                appCurrencyMask
                 [(ngModel)]="approvalData.approved_amount"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                (ngModelChange)="validateAmount()"
+                [class]="'w-full px-2.5 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent ' + (amountError() ? 'border-red-500 dark:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-green-500')"
+                placeholder="Enter approved amount"
               />
+              @if (amountError()) {
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400 font-semibold">{{ amountError() }}</p>
+              }
+              @if (selectedApplication()?.product_min_amount || selectedApplication()?.product_max_amount) {
+                <div class="mt-1 flex gap-1.5 text-xs">
+                  <div class="flex-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-1.5 py-0.5 flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Min:</span>
+                    <span class="font-semibold text-blue-600 dark:text-blue-400">₱{{ formatNumber(selectedApplication()?.product_min_amount || 0) }}</span>
+                  </div>
+                  <div class="flex-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded px-1.5 py-0.5 flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Max:</span>
+                    <span class="font-semibold text-purple-600 dark:text-purple-400">₱{{ formatNumber(selectedApplication()?.product_max_amount || 0) }}</span>
+                  </div>
+                </div>
+              }
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Approved Term (days)</label>
-              <input
-                type="number"
-                [(ngModel)]="approvalData.approved_term_days"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+
+            <!-- Terms and Interest - Compact Row -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">📅 Term</label>
+                <input
+                  type="number"
+                  [(ngModel)]="approvalData.approved_term_days"
+                  readonly
+                  class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">📊 Rate (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  [(ngModel)]="approvalData.approved_interest_rate"
+                  readonly
+                  class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Interest Rate (%)</label>
-              <input
-                type="number"
-                step="0.01"
-                [(ngModel)]="approvalData.approved_interest_rate"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+
+            <!-- Payment Summary - Final Design -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-700 p-2.5">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2">Payment Summary</h3>
+              
+              <div class="space-y-0.5 text-xs">
+                <!-- Loan Amount -->
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-700 dark:text-gray-300">Loan Amount</span>
+                  <span class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(approvalData.approved_amount) }}</span>
+                </div>
+                
+                <!-- Deductions -->
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Processing Fee ({{ selectedApplication()?.product_processing_fee_percent || 0 }}%)</span>
+                  <span class="font-semibold text-red-600 dark:text-red-400">-₱{{ formatNumber(calcProcessingFee()) }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
+                  <span class="font-semibold text-red-600 dark:text-red-400">-₱{{ formatNumber(calcTotalPlatformFee()) }}</span>
+                </div>
+                
+                <!-- Divider -->
+                <div class="border-t border-gray-300 dark:border-gray-600 my-1.5"></div>
+                
+                <!-- Net Received -->
+                <div class="flex justify-between items-center bg-green-500/10 border border-green-500/20 dark:bg-green-500/20 dark:border-green-500/30 rounded px-2 py-1.5">
+                  <span class="font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
+                    <span>💰</span> Net Received
+                  </span>
+                  <span class="font-bold text-green-700 dark:text-green-300 text-sm">₱{{ formatNumber(calcNetPay()) }}</span>
+                </div>
+                <div class="text-xs text-green-700 dark:text-green-400 italic text-center -mt-0.5 mb-1">*You receive this today*</div>
+                
+                <!-- Interest Details -->
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Interest Rate (Flat)</span>
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ approvalData.approved_interest_rate }}%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 dark:text-gray-400">Total Interest</span>
+                  <span class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(calcTotalInterest()) }}</span>
+                </div>
+                
+                <!-- Divider -->
+                <div class="border-t border-gray-300 dark:border-gray-600 my-1.5"></div>
+                
+                <!-- Total Repayment -->
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-gray-900 dark:text-white">Total Repayment</span>
+                  <span class="font-bold text-blue-600 dark:text-blue-400 text-sm">₱{{ formatNumber(calcTotalRepayment()) }}</span>
+                </div>
+                
+                <!-- Payment Info -->
+                <div class="flex justify-between items-center pt-1 text-gray-600 dark:text-gray-400">
+                  <span>{{ getPaymentFrequencyLabel() }} Payment ({{ approvalData.approved_term_days }} days)</span>
+                  <span class="font-semibold text-blue-600 dark:text-blue-400">≈ ₱{{ formatNumber(calcPaymentAmount()) }}</span>
+                </div>
+              </div>
             </div>
+
+            <!-- Notes - Compact -->
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">📝 Notes <span class="text-red-500">*</span></label>
               <textarea
+                #notesTextarea
                 [(ngModel)]="approvalData.review_notes"
-                rows="3"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                (ngModelChange)="validateNotes()"
+                rows="2"
+                [class]="'w-full px-2.5 py-1.5 text-xs border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent resize-none ' + (notesError() ? 'border-red-500 dark:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-purple-500')"
+                placeholder="Please provide notes for this decision (required)..."
               ></textarea>
+              @if (notesError()) {
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400 font-semibold">{{ notesError() }}</p>
+              }
             </div>
           </div>
-          <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+
+          <!-- Modal Footer - Compact -->
+          <div class="p-2.5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-1.5 bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
             <button
               (click)="showApprovalModal.set(false)"
               class="px-3 py-1.5 text-xs font-medium rounded shadow-sm transition bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -130,10 +290,228 @@ interface LoanApplication {
               Cancel
             </button>
             <button
-              (click)="confirmApproval()"
-              class="px-3 py-1.5 text-xs font-medium rounded shadow-sm transition text-white bg-green-600 hover:bg-green-700"
+              (click)="rejectApplication()"
+              [disabled]="notesError() !== ''"
+              [class]="'px-3 py-1.5 text-xs font-medium rounded shadow-sm transition text-white ' + (notesError() ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700')"
             >
-              Confirm Approval
+              ❌ Reject
+            </button>
+            <button
+              (click)="confirmApproval()"
+              [disabled]="amountError() !== '' || notesError() !== ''"
+              [class]="'px-3 py-1.5 text-xs font-medium rounded shadow-sm transition text-white ' + (amountError() || notesError() ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700')"
+            >
+              ✅ Approve
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- View Application Modal -->
+    @if (showViewModal()) {
+      <div class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 z-50 animate-fadeIn">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
+          <!-- Modal Header -->
+          <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-3 py-2 rounded-t-lg flex items-center justify-between shadow-md z-10">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <div class="bg-white/20 rounded p-1">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-white">Application Details</h2>
+                  <p class="text-xs text-blue-100">#{{ selectedApplication()?.application_number }}</p>
+                </div>
+              </div>
+            </div>
+            <button (click)="showViewModal.set(false)" class="text-white hover:bg-white/20 rounded p-1 transition-colors flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="p-4 space-y-3">
+            <!-- Customer Info -->
+            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
+                <span>👤</span> Customer Information
+              </h3>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Name:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_first_name }} {{ selectedApplication()?.customer_last_name }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Email:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_email || 'N/A' }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Score:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_credit_score || 'N/A' }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Status:</span>
+                  <span [class]="'px-2 py-0.5 rounded text-xs font-medium ' + getStatusClass(selectedApplication()?.status)">
+                    {{ getStatusLabel(selectedApplication()?.status) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan Product Info -->
+            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
+                <span>📦</span> Product Information
+              </h3>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Product:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.product_name }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedApplication()?.product_code }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Purpose:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.purpose || 'N/A' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan Details -->
+            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
+                <span>💰</span> Loan Details
+              </h3>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Requested Amount:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(selectedApplication()?.requested_amount || 0) }}</p>
+                </div>
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Requested Term:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.requested_term_days }} days</p>
+                </div>
+                @if (selectedApplication()?.approved_amount) {
+                  <div>
+                    <span class="text-gray-600 dark:text-gray-400">Approved Amount:</span>
+                    <p class="font-semibold text-green-600 dark:text-green-400">₱{{ formatNumber(selectedApplication()?.approved_amount || 0) }}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-600 dark:text-gray-400">Approved Term:</span>
+                    <p class="font-semibold text-green-600 dark:text-green-400">{{ selectedApplication()?.approved_term_days }} days</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-600 dark:text-gray-400">Interest Rate:</span>
+                    <p class="font-semibold text-green-600 dark:text-green-400">{{ selectedApplication()?.approved_interest_rate }}%</p>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Payment Summary (if approved) -->
+            @if (selectedApplication()?.approved_amount && selectedApplication()?.status !== 'submitted') {
+              <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-700 p-3">
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2">Payment Summary</h3>
+                
+                <div class="space-y-0.5 text-xs">
+                  <!-- Loan Amount -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-700 dark:text-gray-300">Loan Amount</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(selectedApplication()?.approved_amount || 0) }}</span>
+                  </div>
+                  
+                  <!-- Deductions -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Processing Fee ({{ selectedApplication()?.product_processing_fee_percent || 0 }}%)</span>
+                    <span class="font-semibold text-red-600 dark:text-red-400">-₱{{ formatNumber(calcProcessingFeeForView()) }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
+                    <span class="font-semibold text-red-600 dark:text-red-400">-₱{{ formatNumber(calcTotalPlatformFeeForView()) }}</span>
+                  </div>
+                  
+                  <!-- Divider -->
+                  <div class="border-t border-gray-300 dark:border-gray-600 my-1.5"></div>
+                  
+                  <!-- Net Received -->
+                  <div class="flex justify-between items-center bg-green-500/10 border border-green-500/20 dark:bg-green-500/20 dark:border-green-500/30 rounded px-2 py-1.5">
+                    <span class="font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
+                      <span>💰</span> Net Received
+                    </span>
+                    <span class="font-bold text-green-700 dark:text-green-300 text-sm">₱{{ formatNumber(calcNetPayForView()) }}</span>
+                  </div>
+                  <div class="text-xs text-green-700 dark:text-green-400 italic text-center -mt-0.5 mb-1">*Customer receives this amount*</div>
+                  
+                  <!-- Interest Details -->
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Interest Rate (Flat)</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.approved_interest_rate }}%</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600 dark:text-gray-400">Total Interest</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(calcTotalInterestForView()) }}</span>
+                  </div>
+                  
+                  <!-- Divider -->
+                  <div class="border-t border-gray-300 dark:border-gray-600 my-1.5"></div>
+                  
+                  <!-- Total Repayment -->
+                  <div class="flex justify-between items-center">
+                    <span class="font-bold text-gray-900 dark:text-white">Total Repayment</span>
+                    <span class="font-bold text-blue-600 dark:text-blue-400 text-sm">₱{{ formatNumber(calcTotalRepaymentForView()) }}</span>
+                  </div>
+                  
+                  <!-- Payment Info -->
+                  <div class="flex justify-between items-center pt-1 text-gray-600 dark:text-gray-400">
+                    <span>{{ getPaymentFrequencyLabelForView() }} Payment ({{ selectedApplication()?.approved_term_days }} days)</span>
+                    <span class="font-semibold text-blue-600 dark:text-blue-400">≈ ₱{{ formatNumber(calcPaymentAmountForView()) }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Review Notes (if any) -->
+            @if (selectedApplication()?.review_notes) {
+              <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
+                  <span>📝</span> Review Notes
+                </h3>
+                <p class="text-xs text-gray-700 dark:text-gray-300">{{ selectedApplication()?.review_notes }}</p>
+              </div>
+            }
+
+            <!-- Dates -->
+            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
+                <span>📅</span> Timestamps
+              </h3>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-gray-600 dark:text-gray-400">Submitted:</span>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(selectedApplication()?.created_at) }}</p>
+                </div>
+                @if (selectedApplication()?.reviewed_at) {
+                  <div>
+                    <span class="text-gray-600 dark:text-gray-400">Reviewed:</span>
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(selectedApplication()?.reviewed_at) }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-3 border-t border-gray-200 dark:border-gray-700 flex justify-end bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
+            <button
+              (click)="showViewModal.set(false)"
+              class="px-4 py-2 text-xs font-medium rounded shadow-sm transition bg-gray-600 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              Close
             </button>
           </div>
         </div>
@@ -142,16 +520,26 @@ interface LoanApplication {
   `,
   styles: []
 })
-export class LoanApplicationsComponent implements OnInit {
+export class LoanApplicationsComponent implements OnInit, AfterViewInit {
   private applicationService = inject(MoneyloanApplicationService);
   private authService = inject(AuthService);
+  private componentPathService = inject(ComponentPathService);
+  private toastService = inject(ToastService);
+  private confirmationService = inject(ConfirmationService);
+  private http = inject(HttpClient);
+
+  @ViewChild('notesTextarea') notesTextarea?: ElementRef<HTMLTextAreaElement>;
 
   Math = Math;
   loading = signal(false);
   applications = signal<LoanApplication[]>([]);
+  products = signal<any[]>([]);
   stats = signal({ draft: 0, submitted: 0, under_review: 0, approved: 0, rejected: 0 });
   showApprovalModal = signal(false);
+  showViewModal = signal(false);
   selectedApplication = signal<LoanApplication | null>(null);
+  amountError = signal<string>('');
+  notesError = signal<string>('');
   private tenantId: string | number = '';
 
   approvalData = {
@@ -333,17 +721,10 @@ export class LoanApplicationsComponent implements OnInit {
       action: (app) => this.viewApplication(app)
     },
     {
-      icon: '✅',
-      label: 'Approve',
-      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
-      action: (app) => this.approveApplication(app),
-      show: (app) => app.status === 'submitted' || app.status === 'under_review'
-    },
-    {
-      icon: '❌',
-      label: 'Reject',
-      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded shadow-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
-      action: (app) => this.rejectApplication(app),
+      icon: '📋',
+      label: 'Review',
+      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
+      action: (app) => this.reviewApplication(app),
       show: (app) => app.status === 'submitted' || app.status === 'under_review'
     }
   ];
@@ -371,10 +752,42 @@ export class LoanApplicationsComponent implements OnInit {
   ];
 
   ngOnInit() {
+    // Register component path
+    this.componentPathService.setComponentPath({
+      componentName: 'LoanApplicationsComponent',
+      moduleName: 'Money Loan - Applications',
+      filePath: 'src/app/features/platforms/money-loan/admin/applications/loan-applications.component.ts',
+      routePath: window.location.pathname
+    });
+
     const user = this.authService.currentUser();
     this.tenantId = user?.tenantId || '';
 
+    this.loadProducts();
     this.loadApplications();
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus notes textarea when modal opens
+    if (this.showApprovalModal() && this.notesTextarea) {
+      setTimeout(() => {
+        this.notesTextarea?.nativeElement.focus();
+      }, 100);
+    }
+  }
+
+  loadProducts() {
+    this.http.get<any>(`/api/tenants/${this.tenantId}/platforms/moneyloan/loans/products`).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.products.set(response.data);
+          console.log('📦 Products loaded:', response.data);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading products:', error);
+      }
+    });
   }
 
   loadApplications() {
@@ -589,31 +1002,159 @@ export class LoanApplicationsComponent implements OnInit {
   }
 
   viewApplication(app: LoanApplication) {
-    // TODO: Navigate to application details page
-    console.log('View application:', app);
+    // Find the product details
+    const product = this.products().find(p => p.id === app.loan_product_id);
+    
+    // Enrich application with product data
+    const enrichedApp = {
+      ...app,
+      product_code: product?.productCode,
+      product_name: product?.name,
+      product_min_amount: product?.minAmount,
+      product_max_amount: product?.maxAmount,
+      product_platform_fee: product?.platformFee || 50,
+      product_processing_fee_percent: product?.processingFeePercent || 0,
+      product_payment_frequency: product?.paymentFrequency || 'monthly'
+    };
+    
+    this.selectedApplication.set(enrichedApp);
+    this.showViewModal.set(true);
   }
 
-  approveApplication(app: LoanApplication) {
-    this.selectedApplication.set(app);
+  reviewApplication(app: LoanApplication) {
+    // Find the product details
+    const product = this.products().find(p => p.id === app.loan_product_id);
+    
+    console.log('📝 Opening review modal for application:', app);
+    console.log('🔍 Found product:', product);
+    
+    // Enrich application with product data
+    const enrichedApp = {
+      ...app,
+      product_code: product?.productCode,
+      product_name: product?.name,
+      product_min_amount: product?.minAmount,
+      product_max_amount: product?.maxAmount,
+      product_platform_fee: product?.platformFee || 50,
+      product_processing_fee_percent: product?.processingFeePercent || 0,
+      product_payment_frequency: product?.paymentFrequency || 'monthly'
+    };
+    
+    console.log('Product Details:', {
+      code: enrichedApp.product_code,
+      name: enrichedApp.product_name,
+      min: enrichedApp.product_min_amount,
+      max: enrichedApp.product_max_amount,
+      platform_fee: enrichedApp.product_platform_fee,
+      processing_fee_percent: enrichedApp.product_processing_fee_percent,
+      payment_frequency: enrichedApp.product_payment_frequency,
+      credit_score: enrichedApp.customer_credit_score
+    });
+    
+    this.selectedApplication.set(enrichedApp);
     this.approvalData = {
       approved_amount: app.requested_amount,
       approved_term_days: app.requested_term_days,
-      approved_interest_rate: 12,
+      approved_interest_rate: product?.interestRate || 12,
       review_notes: ''
     };
+    this.amountError.set(''); // Clear any previous errors
+    this.notesError.set('Notes are required'); // Set initial error
     this.showApprovalModal.set(true);
+    
+    // Auto-focus notes field after modal renders
+    setTimeout(() => {
+      this.notesTextarea?.nativeElement.focus();
+    }, 100);
   }
 
-  confirmApproval() {
+  validateAmount(): void {
+    const app = this.selectedApplication();
+    if (!app) return;
+
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    const minAmount = app.product_min_amount || 0;
+    const maxAmount = app.product_max_amount || 0;
+
+    if (amount <= 0) {
+      this.amountError.set('Amount must be greater than zero');
+      return;
+    }
+
+    if (minAmount > 0 && amount < minAmount) {
+      this.amountError.set(`Amount must be at least ₱${this.formatNumber(minAmount)}`);
+      return;
+    }
+
+    if (maxAmount > 0 && amount > maxAmount) {
+      this.amountError.set(`Amount cannot exceed ₱${this.formatNumber(maxAmount)}`);
+      return;
+    }
+
+    this.amountError.set('');
+  }
+
+  validateNotes(): void {
+    const notes = this.approvalData.review_notes?.trim() || '';
+    
+    if (!notes || notes.length === 0) {
+      this.notesError.set('Notes are required');
+      return;
+    }
+
+    if (notes.length < 2) {
+      this.notesError.set('Notes must be at least 2 characters');
+      return;
+    }
+
+    this.notesError.set('');
+  }
+
+  async confirmApproval() {
     const app = this.selectedApplication();
     if (!app?.id) return;
+
+    // Validate amount before approval
+    this.validateAmount();
+    if (this.amountError()) {
+      this.toastService.error(`Cannot approve: ${this.amountError()}`);
+      return;
+    }
+
+    // Validate notes before approval
+    this.validateNotes();
+    if (this.notesError()) {
+      this.toastService.error(`Cannot approve: ${this.notesError()}`);
+      this.notesTextarea?.nativeElement.focus();
+      return;
+    }
+
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    if (amount <= 0) {
+      this.toastService.error('Please enter a valid approved amount');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Approve Loan Application',
+      message: `Are you sure you want to approve this loan application for ${this.getCustomerName(app)}?<br><br>
+        <strong>Amount:</strong> ₱${this.formatNumber(amount)}<br>
+        <strong>Term:</strong> ${this.approvalData.approved_term_days} days<br>
+        <strong>Interest Rate:</strong> ${this.approvalData.approved_interest_rate}%`,
+      confirmText: 'Approve',
+      cancelText: 'Cancel',
+      type: 'success'
+    });
+
+    if (!confirmed) return;
 
     const user = this.authService.currentUser();
 
     // Map frontend fields to backend expected fields
     const approvalPayload = {
       approvedBy: user?.id || 0,
-      approvedAmount: this.approvalData.approved_amount,
+      approvedAmount: amount,
       interestRate: this.approvalData.approved_interest_rate,
       loanTermDays: this.approvalData.approved_term_days,
       totalFees: 0,
@@ -625,32 +1166,57 @@ export class LoanApplicationsComponent implements OnInit {
     this.applicationService.approveApplication(String(this.tenantId), app.id, approvalPayload).subscribe({
       next: () => {
         this.showApprovalModal.set(false);
+        this.amountError.set('');
+        this.notesError.set('');
+        this.toastService.success(`✅ Loan application approved successfully! Amount: ₱${this.formatNumber(amount)}`);
         this.loadApplications();
       },
       error: (error) => {
         console.error('Failed to approve application:', error);
-        alert('Failed to approve application: ' + (error.error?.message || error.message));
+        this.toastService.error('Failed to approve application: ' + (error.error?.message || error.message));
       }
     });
   }
 
-  rejectApplication(app: LoanApplication) {
-    const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
+  async rejectApplication() {
+    const app = this.selectedApplication();
+    if (!app?.id) return;
+
+    // Validate notes before rejection
+    this.validateNotes();
+    if (this.notesError()) {
+      this.toastService.error(`Cannot reject: ${this.notesError()}`);
+      this.notesTextarea?.nativeElement.focus();
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Reject Loan Application',
+      message: `Are you sure you want to reject this loan application for ${this.getCustomerName(app)}?<br><br>
+        <strong>Reason:</strong> ${this.approvalData.review_notes}`,
+      confirmText: 'Reject',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
 
     const user = this.authService.currentUser();
-    if (!app.id) return;
 
     this.applicationService.rejectApplication(String(this.tenantId), app.id, {
-      reason: reason,
+      reason: this.approvalData.review_notes,
       rejectedBy: user?.id || 0
     }).subscribe({
       next: () => {
+        this.showApprovalModal.set(false);
+        this.notesError.set('');
+        this.toastService.success('❌ Loan application rejected successfully');
         this.loadApplications();
       },
       error: (error) => {
         console.error('Failed to reject application:', error);
-        alert('Failed to reject application');
+        this.toastService.error('Failed to reject application: ' + (error.error?.message || error.message));
       }
     });
   }
@@ -660,6 +1226,121 @@ export class LoanApplicationsComponent implements OnInit {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
+  }
+
+  /**
+   * Calculate processing fee (service charge)
+   * Processing fee is a percentage of the approved amount
+   */
+  calcProcessingFee(): number {
+    const app = this.selectedApplication();
+    if (!app || !this.approvalData.approved_amount) return 0;
+    
+    const processingFeePercent = app.product_processing_fee_percent || 0;
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    return (amount * processingFeePercent) / 100;
+  }
+
+  /**
+   * Calculate platform fee per month
+   * Platform fee is a fixed amount from product configuration
+   */
+  calcPlatformFeePerMonth(): number {
+    const app = this.selectedApplication();
+    if (!app) return 0;
+    
+    // Get platform fee from product data (default to 50 if not specified)
+    return app.product_platform_fee || 50;
+  }
+
+  /**
+   * Calculate total platform fee for the entire loan term
+   */
+  calcTotalPlatformFee(): number {
+    const termDays = Number(this.approvalData.approved_term_days) || 0;
+    const months = Math.round(termDays / 30);
+    return this.calcPlatformFeePerMonth() * months;
+  }
+
+  /**
+   * Calculate total interest for the entire loan term
+   * For FLAT rate: Interest = Amount × Rate / 100 (one-time, not multiplied by months)
+   * Flat rate means the interest is fixed for the entire loan term
+   */
+  calcTotalInterest(): number {
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    const rate = Number(this.approvalData.approved_interest_rate) || 0;
+    return (amount * rate) / 100;
+  }
+
+  /**
+   * Calculate total repayment (what customer must pay back)
+   * Total Repayment = Loan Amount + Interest + Processing Fee + Platform Fee
+   * Customer receives: Net Amount (after fee deductions)
+   * Customer pays back: Full amount including all fees and interest
+   */
+  calcTotalRepayment(): number {
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    const interest = this.calcTotalInterest();
+    const processing = this.calcProcessingFee();
+    const platform = this.calcTotalPlatformFee();
+    
+    return amount + interest + processing + platform;
+  }
+
+  /**
+   * Calculate net pay (amount customer actually receives)
+   * Net Pay = Approved Amount - Processing Fee - Total Platform Fee
+   * Note: Interest is NOT deducted upfront, customer receives full amount minus fees
+   */
+  calcNetPay(): number {
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    return amount - this.calcProcessingFee() - this.calcTotalPlatformFee();
+  }
+
+  /**
+   * Calculate number of payments based on term and payment frequency
+   */
+  calcNumberOfPayments(): number {
+    const app = this.selectedApplication();
+    if (!app) return 0;
+    
+    const frequency = app.product_payment_frequency || 'monthly';
+    const termDays = Number(this.approvalData.approved_term_days) || 0;
+    const termMonths = Math.round(termDays / 30);
+
+    switch (frequency) {
+      case 'daily':
+        return termDays;
+      case 'weekly':
+        return Math.ceil(termDays / 7);
+      case 'biweekly':
+        return Math.ceil(termDays / 14);
+      case 'monthly':
+        return termMonths;
+      default:
+        return termMonths; // Default to monthly
+    }
+  }
+
+  /**
+   * Calculate payment amount per installment
+   */
+  calcPaymentAmount(): number {
+    const numPayments = this.calcNumberOfPayments();
+    if (numPayments === 0) return 0;
+    return this.calcTotalRepayment() / numPayments;
+  }
+
+  /**
+   * Get payment frequency label
+   */
+  getPaymentFrequencyLabel(): string {
+    const app = this.selectedApplication();
+    if (!app) return 'Monthly';
+    
+    const frequency = app.product_payment_frequency || 'monthly';
+    return frequency.charAt(0).toUpperCase() + frequency.slice(1);
   }
 
   formatDate(date: string | undefined): string {
@@ -689,6 +1370,18 @@ export class LoanApplicationsComponent implements OnInit {
     return `Customer #${app.customer_id}`;
   }
 
+  getCreditScoreClass(score: number): string {
+    if (score >= 700) {
+      return 'text-green-600 dark:text-green-400 font-bold';
+    } else if (score >= 600) {
+      return 'text-blue-600 dark:text-blue-400 font-bold';
+    } else if (score >= 500) {
+      return 'text-yellow-600 dark:text-yellow-400 font-bold';
+    } else {
+      return 'text-red-600 dark:text-red-400 font-bold';
+    }
+  }
+
   getStatusClass(status: string): string {
     const classes: Record<string, string> = {
       'draft': 'bg-gray-100 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300',
@@ -711,6 +1404,87 @@ export class LoanApplicationsComponent implements OnInit {
       'cancelled': 'Cancelled'
     };
     return labels[status] || status;
+  }
+
+  // Calculation methods for View Modal
+  calcProcessingFeeForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_amount) return 0;
+    
+    const processingFeePercent = app.product_processing_fee_percent || 0;
+    const amount = Number(app.approved_amount) || 0;
+    return (amount * processingFeePercent) / 100;
+  }
+
+  calcTotalPlatformFeeForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_term_days) return 0;
+    
+    const termDays = Number(app.approved_term_days) || 0;
+    const months = Math.round(termDays / 30);
+    const platformFee = app.product_platform_fee || 50;
+    return platformFee * months;
+  }
+
+  calcTotalInterestForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_amount) return 0;
+    
+    const amount = Number(app.approved_amount) || 0;
+    const rate = Number(app.approved_interest_rate) || 0;
+    return (amount * rate) / 100;
+  }
+
+  calcNetPayForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_amount) return 0;
+    
+    const amount = Number(app.approved_amount) || 0;
+    return amount - this.calcProcessingFeeForView() - this.calcTotalPlatformFeeForView();
+  }
+
+  calcTotalRepaymentForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_amount) return 0;
+    
+    const amount = Number(app.approved_amount) || 0;
+    return amount + this.calcTotalInterestForView() + this.calcProcessingFeeForView() + this.calcTotalPlatformFeeForView();
+  }
+
+  calcPaymentAmountForView(): number {
+    const app = this.selectedApplication();
+    if (!app || !app.approved_term_days) return 0;
+    
+    const frequency = app.product_payment_frequency || 'monthly';
+    const termDays = Number(app.approved_term_days) || 0;
+    const termMonths = Math.round(termDays / 30);
+    
+    let numPayments = termMonths;
+    switch (frequency) {
+      case 'daily':
+        numPayments = termDays;
+        break;
+      case 'weekly':
+        numPayments = Math.ceil(termDays / 7);
+        break;
+      case 'biweekly':
+        numPayments = Math.ceil(termDays / 14);
+        break;
+      case 'monthly':
+        numPayments = termMonths;
+        break;
+    }
+    
+    if (numPayments === 0) return 0;
+    return this.calcTotalRepaymentForView() / numPayments;
+  }
+
+  getPaymentFrequencyLabelForView(): string {
+    const app = this.selectedApplication();
+    if (!app) return 'Monthly';
+    
+    const frequency = app.product_payment_frequency || 'monthly';
+    return frequency.charAt(0).toUpperCase() + frequency.slice(1);
   }
 
   changePage(page: number) {
@@ -743,3 +1517,4 @@ export class LoanApplicationsComponent implements OnInit {
     return pages;
   }
 }
+

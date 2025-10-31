@@ -26,10 +26,14 @@ interface MenuItem {
       class="fixed inset-0 bg-black/50 z-40 lg:hidden"
     ></div>
 
-    <!-- Sidebar: Fixed overlay on mobile, sticky on desktop -->
+    <!-- Sidebar: Fixed overlay on mobile, responsive on desktop -->
     <aside
-      [class]="isOpen() ? 'translate-x-0' : '-translate-x-full'"
-      class="fixed top-0 left-0 z-50 h-screen w-64 flex-shrink-0 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700"
+      class="fixed lg:relative top-0 left-0 z-50 lg:z-auto h-screen flex-shrink-0 transform transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-hidden"
+      [class.-translate-x-full]="!isOpen()"
+      [class.translate-x-0]="isOpen()"
+      [class.w-64]="isOpen()"
+      [class.w-0]="!isOpen()"
+      [class.lg:border-r-0]="!isOpen()"
     >
       <div class="flex h-full flex-col">
         <!-- Logo -->

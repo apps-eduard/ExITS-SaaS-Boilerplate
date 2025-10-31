@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../shared/components/header/header.component';
 import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
 import { AuthService } from '../../core/services/auth.service';
+import { RegisterComponentPath } from '../../core/decorators/register-component-path.decorator';
 
+@RegisterComponentPath('src/app/features/dashboard/dashboard.component.ts', 'Dashboard')
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -12,15 +14,15 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
       <app-sidebar #sidebar/>
       
-      <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 flex flex-col overflow-hidden w-full transition-all duration-300 ease-in-out">
         <app-header (menuToggle)="toggleSidebar()"/>
         
         <main class="flex-1 overflow-y-auto p-4 lg:p-6">
 
         <!-- Stats Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 transition-all duration-300">
             @for (stat of stats; track stat.label) {
-              <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+              <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 hover:scale-105 hover:-translate-y-1">
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">{{ stat.label }}</p>

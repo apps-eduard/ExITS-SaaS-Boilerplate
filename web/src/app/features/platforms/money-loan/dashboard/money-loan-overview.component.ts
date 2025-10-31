@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { ComponentPathService } from '../../../../core/services/component-path.service';
 
 @Component({
   selector: 'app-money-loan-overview',
@@ -297,9 +298,18 @@ export class MoneyLoanOverviewComponent implements OnInit {
     { id: 3, customerName: 'Sofia Mendoza', amount: 8000, time: '08:45 AM' }
   ]);
 
-  constructor(private router: Router) {}
+  private componentPathService = inject(ComponentPathService);
+  private router = inject(Router);
 
   ngOnInit() {
+    // Register component path for dev info
+    this.componentPathService.setComponentPath({
+      componentName: 'MoneyLoanOverviewComponent',
+      moduleName: 'Money Loan - Dashboard',
+      filePath: 'src/app/features/platforms/money-loan/dashboard/money-loan-overview.component.ts',
+      routePath: this.router.url
+    });
+
     this.loadDashboardData();
   }
 
