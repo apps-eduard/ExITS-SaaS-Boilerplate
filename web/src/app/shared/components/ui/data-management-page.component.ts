@@ -290,7 +290,7 @@ export interface BulkAction {
               </ng-container>
 
               <!-- Empty State -->
-              <tr *ngIf="!loading && data.length === 0">
+              <tr *ngIf="!loading && (!data || data.length === 0)">
                 <td [attr.colspan]="columns.length + (selectable ? 1 : 0) + (showRowNumbers ? 1 : 0)" class="px-3 py-12 text-center">
                   <div class="flex flex-col items-center gap-3">
                     <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
@@ -347,16 +347,17 @@ export interface BulkAction {
 
                   <!-- Actions Type -->
                   <div *ngIf="column.type === 'actions'" class="flex items-center justify-center gap-1">
-                    <button
-                      *ngFor="let action of rowActions"
-                      [hidden]="action.show && !action.show(item)"
-                      (click)="action.action(item)"
-                      type="button"
-                      [class]="action.class || 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group'"
-                      [title]="action.label"
-                    >
-                      <span class="w-3.5 h-3.5 transition-transform group-hover:scale-110">{{ action.icon }}</span>
-                    </button>
+                    <ng-container *ngFor="let action of rowActions">
+                      <button
+                        *ngIf="!action.show || action.show(item)"
+                        (click)="action.action(item)"
+                        type="button"
+                        [class]="action.class || 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group'"
+                        [title]="action.label"
+                      >
+                        <span class="w-3.5 h-3.5 transition-transform group-hover:scale-110">{{ action.icon }}</span>
+                      </button>
+                    </ng-container>
                   </div>
 
                   <!-- Custom Template -->

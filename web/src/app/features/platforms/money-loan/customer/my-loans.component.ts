@@ -1,191 +1,217 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { DataManagementPageComponent, StatCard, FilterField, ColumnDefinition, ActionButton } from '../../../../shared/components/ui/data-management-page.component';
 import { LoanService } from '../shared/services/loan.service';
 import { Loan } from '../shared/models/loan.models';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-my-loans',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, DataManagementPageComponent],
   template: `
-    <div class="p-4 md:p-6 space-y-4">
-      <!-- Header -->
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Loans</h1>
-          <p class="text-sm text-gray-600 dark:text-gray-400">View and manage all your loans</p>
-        </div>
+    <app-data-management-page
+      pageIcon="💳"
+      pageTitle="My Loans"
+      pageDescription="View and manage all your loans"
+      [statCards]="statCards()"
+      [filterFields]="filterFields"
+      [filterValues]="filterValues"
+      [columns]="columns"
+      [data]="filteredLoans() || []"
+      [rowActions]="rowActions"
+      [loading]="loading()"
+      [pagination]="pagination()"
+      (filterChange)="onFilterChange($event)"
+      (pageChange)="onPageChange($event)"
+    >
+      <div headerActions class="flex gap-2">
         <button
           (click)="navigateToApply()"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           Apply for New Loan
         </button>
       </div>
-
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Active Loans</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ activeLoans().length }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Outstanding</p>
-          <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">₱{{ formatCurrency(totalOutstanding()) }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Completed Loans</p>
-          <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ completedLoans().length }}</p>
-        </div>
-      </div>
-
-      <!-- Filter Tabs -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div class="border-b border-gray-200 dark:border-gray-700">
-          <nav class="flex -mb-px">
-            <button
-              (click)="filterStatus.set('all')"
-              [class]="filterStatus() === 'all' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-              class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
-              All Loans ({{ loans().length }})
-            </button>
-            <button
-              (click)="filterStatus.set('active')"
-              [class]="filterStatus() === 'active' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-              class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
-              Active ({{ activeLoans().length }})
-            </button>
-            <button
-              (click)="filterStatus.set('paid_off')"
-              [class]="filterStatus() === 'paid_off' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-              class="px-6 py-3 border-b-2 font-medium text-sm transition-colors">
-              Completed ({{ completedLoans().length }})
-            </button>
-          </nav>
-        </div>
-
-        <!-- Loans List -->
-        <div class="p-6">
-          @if (loading()) {
-            <div class="text-center py-12">
-              <svg class="animate-spin h-8 w-8 mx-auto text-blue-600" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          } @else if (filteredLoans().length === 0) {
-            <div class="text-center py-12">
-              <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <p class="text-gray-600 dark:text-gray-400 mb-4">No loans found</p>
-              <button
-                (click)="navigateToApply()"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Apply for Your First Loan
-              </button>
-            </div>
-          } @else {
-            <div class="space-y-4">
-              @for (loan of filteredLoans(); track loan.id) {
-                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
-                     (click)="viewLoanDetails(loan.id)">
-                  <!-- Loan Header -->
-                  <div class="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ loan.loanNumber }}</h3>
-                      <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Disbursed on {{ formatDate(loan.disbursementDate || '') }}
-                      </p>
-                    </div>
-                    <span [class]="getStatusClass(loan.status)">
-                      {{ loan.status }}
-                    </span>
-                  </div>
-
-                  <!-- Loan Details Grid -->
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p class="text-xs text-gray-600 dark:text-gray-400">Principal</p>
-                      <p class="text-sm font-semibold text-gray-900 dark:text-white">₱{{ formatCurrency(loan.principalAmount) }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-600 dark:text-gray-400">Total Amount</p>
-                      <p class="text-sm font-semibold text-blue-600 dark:text-blue-400">₱{{ formatCurrency(loan.totalAmount) }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-600 dark:text-gray-400">Outstanding</p>
-                      <p class="text-sm font-semibold text-orange-600 dark:text-orange-400">₱{{ formatCurrency(loan.outstandingBalance) }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-600 dark:text-gray-400">Monthly Payment</p>
-                      <p class="text-sm font-semibold text-green-600 dark:text-green-400">₱{{ formatCurrency(loan.monthlyPayment) }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Progress Bar -->
-                  <div class="mb-4">
-                    <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      <span>Repayment Progress</span>
-                      <span>{{ calculateProgress(loan) }}%</span>
-                    </div>
-                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        class="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300"
-                        [style.width.%]="calculateProgress(loan)">
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Loan Info -->
-                  <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                      <span>{{ loan.interestRate }}% interest</span>
-                      <span>•</span>
-                      <span>{{ Math.ceil(loan.termDays / 30) }} months</span>
-                      <span>•</span>
-                      <span>{{ loan.interestType }}</span>
-                    </div>
-                    @if (loan.status === 'active' || loan.status === 'overdue') {
-                      <button
-                        (click)="makePayment(loan.id, $event)"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Make Payment
-                      </button>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      </div>
-    </div>
+    </app-data-management-page>
   `
 })
 export class MyLoansComponent implements OnInit {
   private loanService = inject(LoanService);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
+  // Signals
   loans = signal<Loan[]>([]);
   loading = signal(false);
-  filterStatus = signal<'all' | 'active' | 'paid_off'>('all');
+  pagination = signal<any>({});
 
-  activeLoans = signal<Loan[]>([]);
-  completedLoans = signal<Loan[]>([]);
-  filteredLoans = signal<Loan[]>([]);
+  // Filter values
+  filterValues = {
+    page: 1,
+    limit: 20,
+    status: '' // Empty means all disbursed loans (active, overdue, paid_off)
+  };
 
-  // Expose Math for template
-  Math = Math;
+  // Computed signals
+  activeLoans = computed(() => (this.loans() || []).filter(l => l.status === 'active'));
+  overdueLoans = computed(() => (this.loans() || []).filter(l => l.status === 'overdue'));
+  completedLoans = computed(() => (this.loans() || []).filter(l => l.status === 'paid_off'));
+  
+  filteredLoans = computed(() => {
+    const all = this.loans() || [];
+    if (!this.filterValues.status) return all;
+    return all.filter(l => l.status === this.filterValues.status);
+  });
+
+  totalOutstanding = computed(() => 
+    [...this.activeLoans(), ...this.overdueLoans()].reduce((sum, loan) => sum + (loan.outstandingBalance || 0), 0)
+  );
+
+  // Stat cards
+  statCards = computed(() => [
+    {
+      label: 'Active Loans',
+      value: this.activeLoans().length,
+      icon: '🟢',
+      valueClass: 'text-lg font-bold text-green-600 dark:text-green-400',
+      iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30'
+    },
+    {
+      label: 'Total Outstanding',
+      value: `₱${this.formatCurrency(this.totalOutstanding())}`,
+      icon: '💰',
+      valueClass: 'text-lg font-bold text-orange-600 dark:text-orange-400',
+      iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30'
+    },
+    {
+      label: 'Overdue Loans',
+      value: this.overdueLoans().length,
+      icon: '⚠️',
+      valueClass: 'text-lg font-bold text-red-600 dark:text-red-400',
+      iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30'
+    },
+    {
+      label: 'Completed Loans',
+      value: this.completedLoans().length,
+      icon: '✅',
+      valueClass: 'text-lg font-bold text-blue-600 dark:text-blue-400',
+      iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30'
+    }
+  ] as StatCard[]);
+
+  // Filter fields
+  filterFields: FilterField[] = [
+    {
+      type: 'select',
+      label: 'Filter by Status',
+      modelKey: 'status',
+      options: [
+        { value: '', label: 'All Loans' },
+        { value: 'active', label: 'Active' },
+        { value: 'overdue', label: 'Overdue' },
+        { value: 'paid_off', label: 'Completed' }
+      ]
+    }
+  ];
+
+  // Column definitions
+  columns: ColumnDefinition[] = [
+    {
+      key: 'loanNumber',
+      label: 'Loan Number',
+      icon: '🔢',
+      sortable: true,
+      type: 'text',
+      width: '15%'
+    },
+    {
+      key: 'principalAmount',
+      label: 'Principal',
+      icon: '💵',
+      sortable: true,
+      type: 'number',
+      align: 'right',
+      format: (value) => `₱${this.formatCurrency(value)}`,
+      width: '12%'
+    },
+    {
+      key: 'outstandingBalance',
+      label: 'Outstanding',
+      icon: '📊',
+      sortable: true,
+      type: 'number',
+      align: 'right',
+      format: (value) => `₱${this.formatCurrency(value)}`,
+      width: '12%'
+    },
+    {
+      key: 'monthlyPayment',
+      label: 'Monthly Payment',
+      icon: '📅',
+      type: 'number',
+      align: 'right',
+      format: (value) => `₱${this.formatCurrency(value)}`,
+      width: '12%'
+    },
+    {
+      key: 'interestRate',
+      label: 'Interest',
+      icon: '📈',
+      type: 'text',
+      align: 'center',
+      format: (value, row) => `${value}% ${row?.interestType}`,
+      width: '10%'
+    },
+    {
+      key: 'disbursementDate',
+      label: 'Disbursed',
+      icon: '🗓️',
+      sortable: true,
+      type: 'date',
+      align: 'center',
+      format: (value) => this.formatDate(value),
+      width: '12%'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      icon: '🏷️',
+      type: 'badge',
+      align: 'center',
+      getBadgeClass: (value) => this.getStatusClass(value),
+      format: (value) => value?.toUpperCase().replace('_', ' ') || 'N/A',
+      width: '10%'
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      type: 'actions',
+      align: 'center',
+      width: '12%'
+    }
+  ];
+
+  // Row actions
+  rowActions: ActionButton[] = [
+    {
+      icon: '👁️',
+      label: 'View Details',
+      class: 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300',
+      action: (loan) => this.viewLoanDetails(loan.id)
+    },
+    {
+      icon: '💳',
+      label: 'Make Payment',
+      class: 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300',
+      action: (loan) => this.makePayment(loan.id),
+      show: (loan) => loan.status === 'active' || loan.status === 'overdue'
+    }
+  ];
 
   ngOnInit() {
     this.loadLoans();
@@ -193,51 +219,69 @@ export class MyLoansComponent implements OnInit {
 
   loadLoans() {
     this.loading.set(true);
-    // In real implementation, filter by current customer ID
-    this.loanService.listLoans({ page: 1, limit: 100 }).subscribe({
-      next: (response: { success: boolean; message: string; data: Loan[]; pagination: any }) => {
-        this.loans.set(response.data);
-        this.updateFilteredLoans();
+
+    // Get customer data from localStorage (customer portal uses separate auth)
+    const customerDataStr = localStorage.getItem('customerData');
+    
+    if (!customerDataStr) {
+      console.error('No customer data found in localStorage');
+      this.loading.set(false);
+      return;
+    }
+
+    const customerData = JSON.parse(customerDataStr);
+    const tenantId = customerData.tenantId;
+    const customerId = customerData.id;
+    
+    console.log('🔍 Customer My Loans - Auth Check:', {
+      tenantId,
+      customerId,
+      customerData
+    });
+    
+    if (!tenantId || !customerId) {
+      console.error('Missing tenantId or customer ID', { tenantId, customerId });
+      this.loading.set(false);
+      return;
+    }
+
+    console.log('📞 Calling listCustomerLoans with:', { tenantId: tenantId.toString(), customerId, filters: this.filterValues });
+
+    this.loanService.listCustomerLoans(tenantId.toString(), customerId, this.filterValues).subscribe({
+      next: (response) => {
+        console.log('✅ Customer loans loaded:', response);
+        this.loans.set(response.data || []);
+        this.pagination.set(response.pagination);
         this.loading.set(false);
       },
-      error: (error: any) => {
-        console.error('Error loading loans:', error);
+      error: (error) => {
+        console.error('❌ Error loading loans:', error);
         this.loading.set(false);
       }
     });
   }
 
-  updateFilteredLoans() {
-    const all = this.loans();
-    this.activeLoans.set(all.filter(l => l.status === 'active' || l.status === 'overdue'));
-    this.completedLoans.set(all.filter(l => l.status === 'paid_off'));
-
-    switch (this.filterStatus()) {
-      case 'active':
-        this.filteredLoans.set(this.activeLoans());
-        break;
-      case 'paid_off':
-        this.filteredLoans.set(this.completedLoans());
-        break;
-      default:
-        this.filteredLoans.set(all);
-    }
+  onFilterChange(filters: any): void {
+    this.filterValues = { ...this.filterValues, ...filters, page: 1 };
+    this.loadLoans();
   }
 
-  totalOutstanding(): number {
-    return this.activeLoans().reduce((sum, loan) => sum + loan.outstandingBalance, 0);
+  onPageChange(page: number): void {
+    this.filterValues.page = page;
+    this.loadLoans();
   }
 
   calculateProgress(loan: Loan): number {
-    const paid = loan.totalAmount - loan.outstandingBalance;
-    return Math.round((paid / loan.totalAmount) * 100);
+    const paid = (loan.totalAmount || 0) - (loan.outstandingBalance || 0);
+    return Math.round((paid / (loan.totalAmount || 1)) * 100);
   }
 
   formatCurrency(amount: number): string {
-    return amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   formatDate(date: string): string {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-PH', {
       year: 'numeric',
       month: 'short',
@@ -246,16 +290,15 @@ export class MyLoansComponent implements OnInit {
   }
 
   getStatusClass(status: string): string {
-    const baseClasses = 'px-3 py-1 text-xs font-medium rounded-full';
     switch (status) {
       case 'active':
-        return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400`;
+        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
       case 'overdue':
-        return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400`;
+        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
       case 'paid_off':
-        return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400`;
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400`;
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
     }
   }
 
@@ -263,8 +306,7 @@ export class MyLoansComponent implements OnInit {
     this.router.navigate(['/platforms/money-loan/customer/loans', loanId]);
   }
 
-  makePayment(loanId: number, event: Event) {
-    event.stopPropagation();
+  makePayment(loanId: number) {
     this.router.navigate(['/platforms/money-loan/customer/payment'], {
       queryParams: { loanId }
     });

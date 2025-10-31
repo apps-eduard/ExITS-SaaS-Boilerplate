@@ -175,7 +175,7 @@ export const routes: Routes = [
       },
       {
         path: 'loans/disbursement',
-        loadComponent: () => import('./features/platforms/money-loan/admin/loans-list.component').then(m => m.LoansListComponent)
+        loadComponent: () => import('./features/platforms/money-loan/admin/loan-disbursement.component').then(m => m.LoanDisbursementComponent)
       },
       {
         path: 'loans/calculator',

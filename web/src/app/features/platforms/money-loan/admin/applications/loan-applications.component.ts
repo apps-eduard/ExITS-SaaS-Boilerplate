@@ -45,6 +45,9 @@ interface LoanApplication {
   reviewed_by?: number;
   reviewed_at?: string;
   review_notes?: string;
+  reviewer_first_name?: string;
+  reviewer_last_name?: string;
+  reviewer_email?: string;
 }
 
 @Component({
@@ -310,106 +313,85 @@ interface LoanApplication {
 
     <!-- View Application Modal -->
     @if (showViewModal()) {
-      <div class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 z-50 animate-fadeIn">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
-          <!-- Modal Header -->
-          <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-3 py-2 rounded-t-lg flex items-center justify-between shadow-md z-10">
-            <div class="flex-1">
-              <div class="flex items-center gap-2">
-                <div class="bg-white/20 rounded p-1">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                  </svg>
+      <div class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-slideUp">
+          <!-- Modal Header - Compact -->
+          <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-3 py-2 rounded-t-lg">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-sm font-bold text-white">👁️ Application</h2>
+                  <span class="text-xs text-blue-100 truncate">#{{ selectedApplication()?.application_number }}</span>
                 </div>
-                <div>
-                  <h2 class="text-sm font-bold text-white">Application Details</h2>
-                  <p class="text-xs text-blue-100">#{{ selectedApplication()?.application_number }}</p>
-                </div>
+                @if (selectedApplication()?.product_name) {
+                  <p class="text-xs text-blue-50 truncate">{{ selectedApplication()?.product_name }}</p>
+                }
               </div>
+              <button (click)="showViewModal.set(false)" class="text-white hover:bg-white/20 rounded p-1 transition-colors flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
             </div>
-            <button (click)="showViewModal.set(false)" class="text-white hover:bg-white/20 rounded p-1 transition-colors flex-shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
           </div>
 
-          <!-- Modal Content -->
-          <div class="p-4 space-y-3">
-            <!-- Customer Info -->
-            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
-              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
-                <span>👤</span> Customer Information
-              </h3>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
+          <!-- Modal Content - Compact -->
+          <div class="p-3 space-y-2.5">
+            
+            <!-- Customer Info - Inline Compact (matching approval modal) -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-2.5 py-1.5">
+              <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-400">Name:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_first_name }} {{ selectedApplication()?.customer_last_name }}</p>
+                  <span class="font-semibold text-gray-900 dark:text-white truncate ml-1">{{ selectedApplication()?.first_name }} {{ selectedApplication()?.last_name }}</span>
                 </div>
-                <div>
-                  <span class="text-gray-600 dark:text-gray-400">Email:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_email || 'N/A' }}</p>
-                </div>
-                <div>
+                <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-400">Score:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.customer_credit_score || 'N/A' }}</p>
+                  <span class="font-semibold text-gray-900 dark:text-white ml-1">{{ selectedApplication()?.customer_credit_score || 'N/A' }}</span>
                 </div>
-                <div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Email:</span>
+                  <span class="font-medium text-gray-900 dark:text-white text-[10px] truncate ml-1">{{ selectedApplication()?.customer_email || 'N/A' }}</span>
+                </div>
+                <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-400">Status:</span>
-                  <span [class]="'px-2 py-0.5 rounded text-xs font-medium ' + getStatusClass(selectedApplication()?.status)">
+                  <span [class]="'px-1.5 py-0.5 rounded text-[10px] font-medium ml-1 ' + getStatusClass(selectedApplication()?.status)">
                     {{ getStatusLabel(selectedApplication()?.status) }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- Loan Product Info -->
-            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
-              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
-                <span>📦</span> Product Information
-              </h3>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span class="text-gray-600 dark:text-gray-400">Product:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.product_name }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedApplication()?.product_code }}</p>
+            <!-- Loan Details - Compact -->
+            <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded px-2.5 py-1.5">
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-1.5">💰 Loan Details</h3>
+              <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Requested:</span>
+                  <span class="font-semibold text-gray-900 dark:text-white ml-1">₱{{ formatNumber(selectedApplication()?.requested_amount || 0) }}</span>
                 </div>
-                <div>
-                  <span class="text-gray-600 dark:text-gray-400">Purpose:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.purpose || 'N/A' }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Loan Details -->
-            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
-              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
-                <span>💰</span> Loan Details
-              </h3>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span class="text-gray-600 dark:text-gray-400">Requested Amount:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">₱{{ formatNumber(selectedApplication()?.requested_amount || 0) }}</p>
-                </div>
-                <div>
-                  <span class="text-gray-600 dark:text-gray-400">Requested Term:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ selectedApplication()?.requested_term_days }} days</p>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Term:</span>
+                  <span class="font-semibold text-gray-900 dark:text-white ml-1">{{ selectedApplication()?.requested_term_days }}d</span>
                 </div>
                 @if (selectedApplication()?.approved_amount) {
-                  <div>
-                    <span class="text-gray-600 dark:text-gray-400">Approved Amount:</span>
-                    <p class="font-semibold text-green-600 dark:text-green-400">₱{{ formatNumber(selectedApplication()?.approved_amount || 0) }}</p>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Approved:</span>
+                    <span class="font-semibold text-green-600 dark:text-green-400 ml-1">₱{{ formatNumber(selectedApplication()?.approved_amount || 0) }}</span>
                   </div>
-                  <div>
-                    <span class="text-gray-600 dark:text-gray-400">Approved Term:</span>
-                    <p class="font-semibold text-green-600 dark:text-green-400">{{ selectedApplication()?.approved_term_days }} days</p>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Term:</span>
+                    <span class="font-semibold text-green-600 dark:text-green-400 ml-1">{{ selectedApplication()?.approved_term_days }}d</span>
                   </div>
-                  <div>
-                    <span class="text-gray-600 dark:text-gray-400">Interest Rate:</span>
-                    <p class="font-semibold text-green-600 dark:text-green-400">{{ selectedApplication()?.approved_interest_rate }}%</p>
+                  <div class="flex justify-between col-span-2">
+                    <span class="text-gray-600 dark:text-gray-400">Interest:</span>
+                    <span class="font-semibold text-green-600 dark:text-green-400 ml-1">{{ selectedApplication()?.approved_interest_rate }}%</span>
                   </div>
                 }
+                <div class="flex justify-between col-span-2">
+                  <span class="text-gray-600 dark:text-gray-400">Purpose:</span>
+                  <span class="font-medium text-gray-900 dark:text-white text-[11px] truncate ml-1">{{ selectedApplication()?.purpose || 'N/A' }}</span>
+                </div>
               </div>
             </div>
 
@@ -475,41 +457,49 @@ interface LoanApplication {
               </div>
             }
 
-            <!-- Review Notes (if any) -->
+            <!-- Review Notes (if any) - Compact -->
             @if (selectedApplication()?.review_notes) {
-              <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
-                <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
-                  <span>📝</span> Review Notes
-                </h3>
-                <p class="text-xs text-gray-700 dark:text-gray-300">{{ selectedApplication()?.review_notes }}</p>
+              <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded px-2.5 py-1.5">
+                <div class="flex items-center gap-1 mb-1">
+                  <span class="text-xs font-bold text-gray-900 dark:text-white">📝 Review Notes</span>
+                </div>
+                <p class="text-[11px] text-gray-700 dark:text-gray-300">{{ selectedApplication()?.review_notes }}</p>
               </div>
             }
 
-            <!-- Dates -->
-            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3">
-              <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-1">
-                <span>📅</span> Timestamps
-              </h3>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
+            <!-- Timestamps & Reviewer - Compact Inline -->
+            <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded px-2.5 py-1.5">
+              <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-400">Submitted:</span>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(selectedApplication()?.created_at) }}</p>
+                  <span class="font-medium text-gray-900 dark:text-white text-[10px] ml-1">{{ formatDate(selectedApplication()?.created_at) }}</span>
                 </div>
                 @if (selectedApplication()?.reviewed_at) {
-                  <div>
+                  <div class="flex justify-between">
                     <span class="text-gray-600 dark:text-gray-400">Reviewed:</span>
-                    <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(selectedApplication()?.reviewed_at) }}</p>
+                    <span class="font-medium text-gray-900 dark:text-white text-[10px] ml-1">{{ formatDate(selectedApplication()?.reviewed_at) }}</span>
+                  </div>
+                }
+                @if (selectedApplication()?.reviewer_first_name || selectedApplication()?.reviewer_last_name) {
+                  <div class="flex justify-between col-span-2">
+                    <span class="text-gray-600 dark:text-gray-400">Reviewed By:</span>
+                    <span class="font-medium text-gray-900 dark:text-white text-[11px] truncate ml-1">
+                      {{ selectedApplication()?.reviewer_first_name }} {{ selectedApplication()?.reviewer_last_name }}
+                      @if (selectedApplication()?.reviewer_email) {
+                        <span class="text-gray-400 text-[10px]">({{ selectedApplication()?.reviewer_email }})</span>
+                      }
+                    </span>
                   </div>
                 }
               </div>
             </div>
           </div>
 
-          <!-- Modal Footer -->
-          <div class="p-3 border-t border-gray-200 dark:border-gray-700 flex justify-end bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
+          <!-- Modal Footer - Compact -->
+          <div class="p-2.5 border-t border-gray-200 dark:border-gray-700 flex justify-end bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
             <button
               (click)="showViewModal.set(false)"
-              class="px-4 py-2 text-xs font-medium rounded shadow-sm transition bg-gray-600 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600"
+              class="px-3 py-1.5 text-xs font-medium rounded shadow-sm transition bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
             >
               Close
             </button>
@@ -725,7 +715,11 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
       label: 'Review',
       class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
       action: (app) => this.reviewApplication(app),
-      show: (app) => app.status === 'submitted' || app.status === 'under_review'
+      show: (app) => {
+        // Only show Review button for applications that haven't been reviewed yet
+        // Hide for approved, rejected, or any other final status
+        return app.status === 'submitted' || app.status === 'under_review';
+      }
     }
   ];
 
@@ -801,6 +795,12 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
       limit: this.pageSize
     }).subscribe({
       next: (response) => {
+        console.log('📦 Applications loaded with status:', response.data.map((app: any) => ({
+          id: app.id,
+          app_number: app.application_number,
+          status: app.status,
+          status_type: typeof app.status
+        })));
         this.applications.set(response.data || []);
         this.totalRecords.set(response.pagination?.total || 0);
         this.totalPages.set(Math.ceil(this.totalRecords() / this.pageSize));
@@ -1138,10 +1138,25 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
     // Show confirmation dialog
     const confirmed = await this.confirmationService.confirm({
       title: 'Approve Loan Application',
-      message: `Are you sure you want to approve this loan application for ${this.getCustomerName(app)}?<br><br>
-        <strong>Amount:</strong> ₱${this.formatNumber(amount)}<br>
-        <strong>Term:</strong> ${this.approvalData.approved_term_days} days<br>
-        <strong>Interest Rate:</strong> ${this.approvalData.approved_interest_rate}%`,
+      message: `
+        <div class="space-y-2">
+          <p class="mb-3">Are you sure you want to approve this loan application for <strong>${this.getCustomerName(app)}</strong>?</p>
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1.5">
+            <div class="flex justify-between">
+              <span class="text-gray-600 dark:text-gray-400">Amount:</span>
+              <span class="font-semibold">₱${this.formatNumber(amount)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600 dark:text-gray-400">Term:</span>
+              <span class="font-semibold">${this.approvalData.approved_term_days} days</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600 dark:text-gray-400">Interest Rate:</span>
+              <span class="font-semibold">${this.approvalData.approved_interest_rate}%</span>
+            </div>
+          </div>
+        </div>
+      `,
       confirmText: 'Approve',
       cancelText: 'Cancel',
       type: 'success'
@@ -1193,8 +1208,15 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
     // Show confirmation dialog
     const confirmed = await this.confirmationService.confirm({
       title: 'Reject Loan Application',
-      message: `Are you sure you want to reject this loan application for ${this.getCustomerName(app)}?<br><br>
-        <strong>Reason:</strong> ${this.approvalData.review_notes}`,
+      message: `
+        <div class="space-y-2">
+          <p class="mb-3">Are you sure you want to reject this loan application for <strong>${this.getCustomerName(app)}</strong>?</p>
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+            <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Rejection Reason:</div>
+            <div class="text-gray-900 dark:text-white">${this.approvalData.review_notes}</div>
+          </div>
+        </div>
+      `,
       confirmText: 'Reject',
       cancelText: 'Cancel',
       type: 'danger'

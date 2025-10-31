@@ -3,7 +3,7 @@
  * Business logic for loan applications and management
  */
 
-const pool = require('../../../../config/database');
+const knex = require('../../../../config/knex');
 const logger = require('../../../../utils/logger');
 
 class MoneyloanLoanService {
@@ -34,29 +34,19 @@ class MoneyloanLoanService {
       if (employmentStatus) appData.employmentStatus = employmentStatus;
       if (collateralDescription) appData.collateralDescription = collateralDescription;
 
-      const query = `
-        INSERT INTO money_loan_applications (
-          tenant_id, customer_id, loan_product_id, application_number,
-          requested_amount, requested_term_days, purpose, 
-          status, application_data, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        RETURNING *
-      `;
-
-      const values = [
-        tenantId,
-        customerId,
-        loanProductId,
-        appNumber,
-        requestedAmount,
-        requestedTermDays,
-        purpose || 'Loan application',
-        'submitted',
-        JSON.stringify(appData),
-      ];
-
-      const result = await pool.query(query, values);
-      const application = result.rows[0];
+      const [application] = await knex('money_loan_applications')
+        .insert({
+          tenantId,
+          customerId,
+          loanProductId,
+          applicationNumber: appNumber,
+          requestedAmount,
+          requestedTermDays,
+          purpose: purpose || 'Loan application',
+          status: 'submitted',
+          applicationData: appData,
+        })
+        .returning('*');
 
       logger.info(`✅ Loan application created: ${application.id}`);
       return application;
@@ -71,18 +61,15 @@ class MoneyloanLoanService {
    */
   async getLoanApplication(tenantId, applicationId) {
     try {
-      const query = `
-        SELECT * FROM money_loan_applications
-        WHERE id = $1 AND tenant_id = $2
-      `;
+      const application = await knex('money_loan_applications')
+        .where({ id: applicationId, tenant_id: tenantId })
+        .first();
 
-      const result = await pool.query(query, [applicationId, tenantId]);
-
-      if (result.rows.length === 0) {
+      if (!application) {
         throw new Error('Loan application not found');
       }
 
-      return result.rows[0];
+      return application;
     } catch (error) {
       logger.error('❌ Error fetching loan application:', error);
       throw error;
@@ -94,14 +81,11 @@ class MoneyloanLoanService {
    */
   async getCustomerApplications(tenantId, customerId) {
     try {
-      const query = `
-        SELECT * FROM money_loan_applications
-        WHERE tenant_id = $1 AND customer_id = $2
-        ORDER BY created_at DESC
-      `;
+      const applications = await knex('money_loan_applications')
+        .where({ tenant_id: tenantId, customer_id: customerId })
+        .orderBy('created_at', 'desc');
 
-      const result = await pool.query(query, [tenantId, customerId]);
-      return result.rows;
+      return applications;
     } catch (error) {
       logger.error('❌ Error fetching customer applications:', error);
       throw error;
@@ -113,51 +97,88 @@ class MoneyloanLoanService {
    */
   async getAllApplications(tenantId, filters = {}) {
     try {
-      const conditions = ['mla.tenant_id = $1'];
-      const values = [tenantId];
-      let paramCount = 2;
+      let query = knex('money_loan_applications as mla')
+        .leftJoin('customers as c', 'mla.customer_id', 'c.id')
+        .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+        .leftJoin('money_loan_customer_profiles as mlcp', function() {
+          this.on('mlcp.customer_id', '=', 'c.id')
+              .andOn('mlcp.tenant_id', '=', 'mla.tenant_id');
+        })
+        .leftJoin('users as u', 'mla.reviewed_by', 'u.id')
+        .where('mla.tenant_id', tenantId)
+        .select(
+          'mla.*',
+          'c.first_name',
+          'c.last_name',
+          'c.email as customer_email',
+          'c.phone as customer_phone',
+          'mlcp.credit_score as customer_credit_score',
+          'mlp.name as product_name',
+          'u.first_name as reviewer_first_name',
+          'u.last_name as reviewer_last_name',
+          'u.email as reviewer_email'
+        );
 
       if (filters.status) {
-        conditions.push(`mla.status = $${paramCount}`);
-        values.push(filters.status);
-        paramCount++;
+        query = query.where('mla.status', filters.status);
       }
 
       if (filters.product_id) {
-        conditions.push(`mla.loan_product_id = $${paramCount}`);
-        values.push(filters.product_id);
-        paramCount++;
+        query = query.where('mla.loan_product_id', filters.product_id);
       }
 
       if (filters.customer_id) {
-        conditions.push(`mla.customer_id = $${paramCount}`);
-        values.push(filters.customer_id);
-        paramCount++;
+        query = query.where('mla.customer_id', filters.customer_id);
       }
 
       if (filters.search) {
-        conditions.push(`(mla.application_number ILIKE $${paramCount} OR c.first_name ILIKE $${paramCount} OR c.last_name ILIKE $${paramCount})`);
-        values.push(`%${filters.search}%`);
-        paramCount++;
+        query = query.where(function() {
+          this.where('mla.application_number', 'ilike', `%${filters.search}%`)
+            .orWhere('c.first_name', 'ilike', `%${filters.search}%`)
+            .orWhere('c.last_name', 'ilike', `%${filters.search}%`);
+        });
       }
 
-      const query = `
-        SELECT 
-          mla.*,
-          c.first_name,
-          c.last_name,
-          c.email as customer_email,
-          c.phone as customer_phone,
-          mlp.name as product_name
-        FROM money_loan_applications mla
-        LEFT JOIN customers c ON mla.customer_id = c.id
-        LEFT JOIN money_loan_products mlp ON mla.loan_product_id = mlp.id
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY mla.created_at DESC
-      `;
-
-      const result = await pool.query(query, values);
-      return result.rows;
+      const applications = await query.orderBy('mla.created_at', 'desc');
+      
+      // Map the response to ensure correct field names for frontend
+      const mapped = applications.map(app => {
+        // Convert all camelCase to snake_case for frontend compatibility
+        return {
+          id: app.id,
+          tenant_id: app.tenantId,
+          application_number: app.applicationNumber,
+          customer_id: app.customerId,
+          loan_product_id: app.loanProductId,
+          requested_amount: app.requestedAmount,
+          requested_term_days: app.requestedTermDays,
+          purpose: app.purpose,
+          status: app.status,
+          reviewed_by: app.reviewedBy,
+          reviewed_at: app.reviewedAt,
+          review_notes: app.reviewNotes,
+          approved_amount: app.approvedAmount,
+          approved_term_days: app.approvedTermDays,
+          approved_interest_rate: app.approvedInterestRate,
+          application_data: app.applicationData,
+          credit_assessment: app.creditAssessment,
+          created_at: app.createdAt,
+          updated_at: app.updatedAt,
+          // Customer JOIN fields
+          first_name: app.firstName,
+          last_name: app.lastName,
+          customer_email: app.customerEmail,
+          customer_phone: app.customerPhone,
+          customer_credit_score: app.customerCreditScore,
+          product_name: app.productName,
+          // Reviewer JOIN fields
+          reviewer_first_name: app.reviewerFirstName,
+          reviewer_last_name: app.reviewerLastName,
+          reviewer_email: app.reviewerEmail
+        };
+      });
+      
+      return mapped;
     } catch (error) {
       logger.error('❌ Error fetching all applications:', error);
       throw error;
@@ -169,35 +190,20 @@ class MoneyloanLoanService {
    */
   async updateLoanApplication(tenantId, applicationId, updateData) {
     try {
-      const fields = [];
-      const values = [];
-      let paramCount = 1;
+      const [application] = await knex('money_loan_applications')
+        .where({ id: applicationId, tenant_id: tenantId })
+        .update({
+          ...updateData,
+          updated_at: knex.fn.now(),
+        })
+        .returning('*');
 
-      Object.keys(updateData).forEach((key) => {
-        fields.push(`${key} = $${paramCount}`);
-        values.push(updateData[key]);
-        paramCount++;
-      });
-
-      fields.push('updated_at = NOW()');
-      values.push(applicationId);
-      values.push(tenantId);
-
-      const query = `
-        UPDATE money_loan_applications
-        SET ${fields.join(', ')}
-        WHERE id = $${paramCount} AND tenant_id = $${paramCount + 1}
-        RETURNING *
-      `;
-
-      const result = await pool.query(query, values);
-
-      if (result.rows.length === 0) {
+      if (!application) {
         throw new Error('Loan application not found');
       }
 
       logger.info(`✅ Loan application updated: ${applicationId}`);
-      return result.rows[0];
+      return application;
     } catch (error) {
       logger.error('❌ Error updating loan application:', error);
       throw error;
@@ -208,11 +214,9 @@ class MoneyloanLoanService {
    * Approve loan application and create active loan
    */
   async approveLoanApplication(tenantId, applicationId, approvalData) {
-    const client = await pool.connect();
+    const trx = await knex.transaction();
 
     try {
-      await client.query('BEGIN');
-
       const {
         approvedBy,
         approvedAmount,
@@ -225,76 +229,60 @@ class MoneyloanLoanService {
       } = approvalData;
 
       // Get application details
-      const appQuery = `
-        SELECT * FROM money_loan_applications
-        WHERE id = $1 AND tenant_id = $2
-      `;
-      const appResult = await client.query(appQuery, [applicationId, tenantId]);
+      const application = await trx('money_loan_applications')
+        .where({ id: applicationId, tenantId })
+        .first();
 
-      if (appResult.rows.length === 0) {
+      if (!application) {
         throw new Error('Loan application not found');
       }
 
-      const application = appResult.rows[0];
-
       // Update application status
-      const updateAppQuery = `
-        UPDATE money_loan_applications
-        SET status = 'approved',
-            approved_by = $1,
-            approved_amount = $2,
-            approval_date = NOW(),
-            approval_notes = $3,
-            updated_at = NOW()
-        WHERE id = $4 AND tenant_id = $5
-      `;
-
-      await client.query(updateAppQuery, [
-        approvedBy,
-        approvedAmount,
-        notes,
-        applicationId,
-        tenantId,
-      ]);
+      await trx('money_loan_applications')
+        .where({ id: applicationId, tenant_id: tenantId })
+        .update({
+          status: 'approved',
+          reviewed_by: approvedBy,
+          approved_amount: approvedAmount,
+          approved_term_days: loanTermDays,
+          approved_interest_rate: interestRate,
+          reviewed_at: knex.fn.now(),
+          review_notes: notes,
+          updated_at: knex.fn.now(),
+        });
 
       // Create active loan record
-      const loanQuery = `
-        INSERT INTO money_loans (
-          tenant_id, application_id, loan_product_id, customer_id,
-          principal_amount, interest_rate, loan_term_days, total_fees,
-          total_interest, total_repayment, monthly_payment, outstanding_balance,
-          status, approval_date, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), NOW())
-        RETURNING *
-      `;
+      const totalAmount = approvedAmount + totalFees + totalInterest;
+      const loanNumber = `LOAN-${tenantId}-${Date.now()}`;
 
-      const totalRepayment = approvedAmount + totalFees + totalInterest;
+      const [loan] = await trx('money_loan_loans')
+        .insert({
+          tenant_id: tenantId,
+          application_id: applicationId,
+          loan_product_id: application.loanProductId,
+          customer_id: application.customerId,
+          loan_number: loanNumber,
+          principal_amount: approvedAmount,
+          interest_rate: interestRate,
+          interest_type: 'flat',
+          term_days: loanTermDays,
+          processing_fee: totalFees,
+          total_interest: totalInterest,
+          total_amount: totalAmount,
+          monthly_payment: monthlyPayment,
+          outstanding_balance: totalAmount,
+          status: 'pending',
+          approved_by: approvedBy,
+        })
+        .returning('*');
 
-      const loanResult = await client.query(loanQuery, [
-        tenantId,
-        applicationId,
-        application.loan_product_id,
-        application.customer_id,
-        approvedAmount,
-        interestRate,
-        loanTermDays,
-        totalFees,
-        totalInterest,
-        totalRepayment,
-        monthlyPayment,
-        totalRepayment,
-        'approved',
-      ]);
-
-      await client.query('COMMIT');
-      logger.info(`✅ Loan application approved and loan created: ${loanResult.rows[0].id}`);
-      return loanResult.rows[0];
+      await trx.commit();
+      logger.info(`✅ Loan application approved and loan created: ${loan.id}`);
+      return loan;
     } catch (error) {
-      await client.query('ROLLBACK');
+      await trx.rollback();
       logger.error('❌ Error approving loan application:', error);
       throw error;
-    } finally {
-      client.release();
     }
   }
 
@@ -303,32 +291,25 @@ class MoneyloanLoanService {
    */
   async rejectLoanApplication(tenantId, applicationId, rejectionData) {
     try {
-      const { rejectedBy, rejectionReason } = rejectionData;
+      const { rejectedBy, reason } = rejectionData;
 
-      const query = `
-        UPDATE money_loan_applications
-        SET status = 'rejected',
-            rejected_by = $1,
-            rejection_date = NOW(),
-            rejection_reason = $2,
-            updated_at = NOW()
-        WHERE id = $3 AND tenant_id = $4
-        RETURNING *
-      `;
+      const [application] = await knex('money_loan_applications')
+        .where({ id: applicationId, tenant_id: tenantId })
+        .update({
+          status: 'rejected',
+          reviewed_by: rejectedBy,
+          reviewed_at: knex.fn.now(),
+          review_notes: reason,
+          updated_at: knex.fn.now(),
+        })
+        .returning('*');
 
-      const result = await pool.query(query, [
-        rejectedBy,
-        rejectionReason,
-        applicationId,
-        tenantId,
-      ]);
-
-      if (result.rows.length === 0) {
+      if (!application) {
         throw new Error('Loan application not found');
       }
 
       logger.info(`✅ Loan application rejected: ${applicationId}`);
-      return result.rows[0];
+      return application;
     } catch (error) {
       logger.error('❌ Error rejecting loan application:', error);
       throw error;
@@ -340,34 +321,27 @@ class MoneyloanLoanService {
    */
   async disburseLoan(tenantId, loanId, disbursalData) {
     try {
-      const { disbursedBy, disbursementMethod, disbursementReference } = disbursalData;
+      const { disbursedBy, disbursementMethod, disbursementReference, disbursementNotes } = disbursalData;
 
-      const query = `
-        UPDATE money_loans
-        SET status = 'active',
-            disbursement_date = NOW(),
-            disbursed_by = $1,
-            disbursement_method = $2,
-            disbursement_reference = $3,
-            updated_at = NOW()
-        WHERE id = $4 AND tenant_id = $5
-        RETURNING *
-      `;
+      const [loan] = await knex('money_loan_loans')
+        .where({ id: loanId, tenant_id: tenantId })
+        .update({
+          status: 'active',
+          disbursement_date: knex.fn.now(),
+          disbursed_by: disbursedBy,
+          disbursement_method: disbursementMethod,
+          disbursement_reference: disbursementReference,
+          disbursement_notes: disbursementNotes,
+          updated_at: knex.fn.now(),
+        })
+        .returning('*');
 
-      const result = await pool.query(query, [
-        disbursedBy,
-        disbursementMethod,
-        disbursementReference,
-        loanId,
-        tenantId,
-      ]);
-
-      if (result.rows.length === 0) {
+      if (!loan) {
         throw new Error('Loan not found');
       }
 
       logger.info(`✅ Loan disbursed: ${loanId}`);
-      return result.rows[0];
+      return loan;
     } catch (error) {
       logger.error('❌ Error disbursing loan:', error);
       throw error;
@@ -379,18 +353,15 @@ class MoneyloanLoanService {
    */
   async getLoan(tenantId, loanId) {
     try {
-      const query = `
-        SELECT * FROM money_loans
-        WHERE id = $1 AND tenant_id = $2
-      `;
+      const loan = await knex('money_loan_loans')
+        .where({ id: loanId, tenant_id: tenantId })
+        .first();
 
-      const result = await pool.query(query, [loanId, tenantId]);
-
-      if (result.rows.length === 0) {
+      if (!loan) {
         throw new Error('Loan not found');
       }
 
-      return result.rows[0];
+      return loan;
     } catch (error) {
       logger.error('❌ Error fetching loan:', error);
       throw error;
@@ -402,14 +373,11 @@ class MoneyloanLoanService {
    */
   async getCustomerLoans(tenantId, customerId) {
     try {
-      const query = `
-        SELECT * FROM money_loans
-        WHERE tenant_id = $1 AND customer_id = $2
-        ORDER BY created_at DESC
-      `;
+      const loans = await knex('money_loan_loans')
+        .where({ tenant_id: tenantId, customer_id: customerId })
+        .orderBy('created_at', 'desc');
 
-      const result = await pool.query(query, [tenantId, customerId]);
-      return result.rows;
+      return loans;
     } catch (error) {
       logger.error('❌ Error fetching customer loans:', error);
       throw error;
@@ -421,21 +389,15 @@ class MoneyloanLoanService {
    */
   async getProductLoans(tenantId, productId, status = null) {
     try {
-      let query = `
-        SELECT * FROM money_loans
-        WHERE tenant_id = $1 AND loan_product_id = $2
-      `;
-      const values = [tenantId, productId];
+      let query = knex('money_loan_loans')
+        .where({ tenant_id: tenantId, loan_product_id: productId });
 
       if (status) {
-        query += ' AND status = $3';
-        values.push(status);
+        query = query.where({ status });
       }
 
-      query += ' ORDER BY created_at DESC';
-
-      const result = await pool.query(query, values);
-      return result.rows;
+      const loans = await query.orderBy('created_at', 'desc');
+      return loans;
     } catch (error) {
       logger.error('❌ Error fetching product loans:', error);
       throw error;
@@ -447,60 +409,115 @@ class MoneyloanLoanService {
    */
   async getLoansWithFilters(tenantId, filters) {
     try {
-      const conditions = ['tenant_id = $1'];
-      const values = [tenantId];
-      let paramCount = 2;
+      let query = knex('money_loan_loans as mll')
+        .leftJoin('customers as c', 'mll.customer_id', 'c.id')
+        .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
+        .where('mll.tenant_id', tenantId)
+        .select(
+          'mll.*',
+          'c.first_name',
+          'c.last_name',
+          'c.email as customer_email',
+          'mlp.name as product_name'
+        );
 
       if (filters.status) {
-        conditions.push(`status = $${paramCount}`);
-        values.push(filters.status);
-        paramCount++;
+        query = query.where('mll.status', filters.status);
       }
 
       if (filters.customerId) {
-        conditions.push(`customer_id = $${paramCount}`);
-        values.push(filters.customerId);
-        paramCount++;
+        query = query.where('mll.customer_id', filters.customerId);
       }
 
-      if (filters.productId) {
-        conditions.push(`loan_product_id = $${paramCount}`);
-        values.push(filters.productId);
-        paramCount++;
+      if (filters.loanProductId) {
+        query = query.where('mll.loan_product_id', filters.loanProductId);
       }
 
-      if (filters.minAmount) {
-        conditions.push(`principal_amount >= $${paramCount}`);
-        values.push(filters.minAmount);
-        paramCount++;
+      if (filters.search) {
+        query = query.where(function() {
+          this.where('mll.loan_number', 'ilike', `%${filters.search}%`)
+            .orWhere('c.first_name', 'ilike', `%${filters.search}%`)
+            .orWhere('c.last_name', 'ilike', `%${filters.search}%`);
+        });
       }
 
-      if (filters.maxAmount) {
-        conditions.push(`principal_amount <= $${paramCount}`);
-        values.push(filters.maxAmount);
-        paramCount++;
+      if (filters.createdAfter) {
+        query = query.where('mll.created_at', '>=', filters.createdAfter);
       }
 
-      if (filters.startDate) {
-        conditions.push(`created_at >= $${paramCount}`);
-        values.push(filters.startDate);
-        paramCount++;
+      if (filters.createdBefore) {
+        query = query.where('mll.created_at', '<=', filters.createdBefore);
       }
 
-      if (filters.endDate) {
-        conditions.push(`created_at <= $${paramCount}`);
-        values.push(filters.endDate);
-        paramCount++;
-      }
+      // Get total count
+      const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
+      const [{ count }] = await countQuery;
+      const total = parseInt(count);
 
-      const query = `
-        SELECT * FROM money_loans
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY created_at DESC
-      `;
+      // Pagination
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const offset = (page - 1) * limit;
 
-      const result = await pool.query(query, values);
-      return result.rows;
+      // Get paginated data
+      const loans = await query
+        .orderBy('mll.created_at', 'desc')
+        .limit(limit)
+        .offset(offset);
+
+      // Map fields properly (Knex postProcessResponse converts to camelCase, but we need snake_case for frontend)
+      const mapped = loans.map(loan => ({
+        id: loan.id,
+        tenant_id: loan.tenantId,
+        loan_number: loan.loanNumber,
+        customer_id: loan.customerId,
+        loan_product_id: loan.loanProductId,
+        application_id: loan.applicationId,
+        principal_amount: loan.principalAmount,
+        interest_rate: loan.interestRate,
+        interest_type: loan.interestType,
+        term_days: loan.termDays,
+        loan_term_months: Math.round(loan.termDays / 30),
+        processing_fee: loan.processingFee,
+        total_interest: loan.totalInterest,
+        total_amount: loan.totalAmount,
+        monthly_payment: loan.monthlyPayment,
+        disbursement_date: loan.disbursementDate,
+        first_payment_date: loan.firstPaymentDate,
+        maturity_date: loan.maturityDate,
+        amount_paid: loan.amountPaid,
+        outstanding_balance: loan.outstandingBalance,
+        penalty_amount: loan.penaltyAmount,
+        status: loan.status,
+        days_overdue: loan.daysOverdue,
+        approved_by: loan.approvedBy,
+        disbursed_by: loan.disbursedBy,
+        created_at: loan.createdAt,
+        updated_at: loan.updatedAt,
+        customer: {
+          fullName: `${loan.firstName || ''} ${loan.lastName || ''}`.trim(),
+          customerCode: `CUST-${loan.customerId}`,
+          email: loan.customerEmail
+        },
+        product_name: loan.productName,
+        // Frontend expects these for display
+        loanNumber: loan.loanNumber,
+        principalAmount: loan.principalAmount,
+        interestRate: loan.interestRate,
+        interestType: loan.interestType,
+        loanTermMonths: Math.round(loan.termDays / 30),
+        outstandingBalance: loan.outstandingBalance
+      }));
+
+      return {
+        data: mapped,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      };
     } catch (error) {
       logger.error('❌ Error fetching loans with filters:', error);
       throw error;
@@ -514,31 +531,24 @@ class MoneyloanLoanService {
     try {
       const { closedBy, closureReason } = closureData;
 
-      const query = `
-        UPDATE money_loans
-        SET status = 'closed',
-            closure_date = NOW(),
-            closed_by = $1,
-            closure_reason = $2,
-            outstanding_balance = 0,
-            updated_at = NOW()
-        WHERE id = $3 AND tenant_id = $4
-        RETURNING *
-      `;
+      const [loan] = await knex('money_loan_loans')
+        .where({ id: loanId, tenantId })
+        .update({
+          status: 'closed',
+          closureDate: knex.fn.now(),
+          closedBy,
+          closureReason,
+          outstandingBalance: 0,
+          updatedAt: knex.fn.now(),
+        })
+        .returning('*');
 
-      const result = await pool.query(query, [
-        closedBy,
-        closureReason,
-        loanId,
-        tenantId,
-      ]);
-
-      if (result.rows.length === 0) {
+      if (!loan) {
         throw new Error('Loan not found');
       }
 
       logger.info(`✅ Loan closed: ${loanId}`);
-      return result.rows[0];
+      return loan;
     } catch (error) {
       logger.error('❌ Error closing loan:', error);
       throw error;
@@ -552,30 +562,23 @@ class MoneyloanLoanService {
     try {
       const { suspendedBy, suspensionReason } = suspensionData;
 
-      const query = `
-        UPDATE money_loans
-        SET status = 'suspended',
-            suspension_date = NOW(),
-            suspended_by = $1,
-            suspension_reason = $2,
-            updated_at = NOW()
-        WHERE id = $3 AND tenant_id = $4
-        RETURNING *
-      `;
+      const [loan] = await knex('money_loan_loans')
+        .where({ id: loanId, tenantId })
+        .update({
+          status: 'suspended',
+          suspensionDate: knex.fn.now(),
+          suspendedBy,
+          suspensionReason,
+          updatedAt: knex.fn.now(),
+        })
+        .returning('*');
 
-      const result = await pool.query(query, [
-        suspendedBy,
-        suspensionReason,
-        loanId,
-        tenantId,
-      ]);
-
-      if (result.rows.length === 0) {
+      if (!loan) {
         throw new Error('Loan not found');
       }
 
       logger.info(`✅ Loan suspended: ${loanId}`);
-      return result.rows[0];
+      return loan;
     } catch (error) {
       logger.error('❌ Error suspending loan:', error);
       throw error;
@@ -587,25 +590,23 @@ class MoneyloanLoanService {
    */
   async resumeLoan(tenantId, loanId) {
     try {
-      const query = `
-        UPDATE money_loans
-        SET status = 'active',
-            suspension_date = NULL,
-            suspended_by = NULL,
-            suspension_reason = NULL,
-            updated_at = NOW()
-        WHERE id = $1 AND tenant_id = $2
-        RETURNING *
-      `;
+      const [loan] = await knex('money_loan_loans')
+        .where({ id: loanId, tenantId })
+        .update({
+          status: 'active',
+          suspensionDate: null,
+          suspendedBy: null,
+          suspensionReason: null,
+          updatedAt: knex.fn.now(),
+        })
+        .returning('*');
 
-      const result = await pool.query(query, [loanId, tenantId]);
-
-      if (result.rows.length === 0) {
+      if (!loan) {
         throw new Error('Loan not found');
       }
 
       logger.info(`✅ Loan resumed: ${loanId}`);
-      return result.rows[0];
+      return loan;
     } catch (error) {
       logger.error('❌ Error resuming loan:', error);
       throw error;
@@ -617,24 +618,23 @@ class MoneyloanLoanService {
    */
   async getLoansDashboard(tenantId) {
     try {
-      const query = `
-        SELECT 
-          COUNT(*) as total_loans,
-          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_loans,
-          COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_loans,
-          COUNT(CASE WHEN status = 'active' THEN 1 END) as active_loans,
-          COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed_loans,
-          COUNT(CASE WHEN status = 'defaulted' THEN 1 END) as defaulted_loans,
-          SUM(principal_amount) as total_principal,
-          SUM(outstanding_balance) as total_outstanding,
-          SUM(total_fees) as total_fees_collected,
-          SUM(total_interest) as total_interest_earned
-        FROM money_loans
-        WHERE tenant_id = $1
-      `;
+      const result = await knex('money_loan_loans')
+        .where({ tenantId })
+        .select(
+          knex.raw('COUNT(*) as total_loans'),
+          knex.raw("COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_loans"),
+          knex.raw("COUNT(CASE WHEN status = 'disbursed' THEN 1 END) as disbursed_loans"),
+          knex.raw("COUNT(CASE WHEN status = 'active' THEN 1 END) as active_loans"),
+          knex.raw("COUNT(CASE WHEN status = 'paid_off' THEN 1 END) as closed_loans"),
+          knex.raw("COUNT(CASE WHEN status = 'defaulted' THEN 1 END) as defaulted_loans"),
+          knex.raw('SUM(principal_amount) as total_principal'),
+          knex.raw('SUM(outstanding_balance) as total_outstanding'),
+          knex.raw('SUM(processing_fee) as total_fees_collected'),
+          knex.raw('SUM(total_interest) as total_interest_earned')
+        )
+        .first();
 
-      const result = await pool.query(query, [tenantId]);
-      return result.rows[0];
+      return result;
     } catch (error) {
       logger.error('❌ Error fetching loans dashboard:', error);
       throw error;

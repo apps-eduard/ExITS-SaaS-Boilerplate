@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LoanService } from '../shared/services/loan.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Loan } from '../shared/models/loan.models';
 
 @Component({
@@ -177,6 +178,7 @@ import { Loan } from '../shared/models/loan.models';
 })
 export class LoansListComponent implements OnInit {
   private loanService = inject(LoanService);
+  private authService = inject(AuthService);
 
   loans = signal<Loan[]>([]);
   loading = signal(false);
@@ -198,7 +200,14 @@ export class LoansListComponent implements OnInit {
   loadLoans(): void {
     this.loading.set(true);
 
-    this.loanService.listLoans(this.filters).subscribe({
+    const tenantId = this.authService.getTenantId();
+    if (!tenantId) {
+      console.error('No tenant ID found');
+      this.loading.set(false);
+      return;
+    }
+
+    this.loanService.listLoans(tenantId.toString(), this.filters).subscribe({
       next: (response) => {
         this.loans.set(response.data);
         this.pagination.set(response.pagination);

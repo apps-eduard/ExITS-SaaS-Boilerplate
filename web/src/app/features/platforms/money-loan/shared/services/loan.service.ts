@@ -37,7 +37,8 @@ export class LoanService {
     );
   }
 
-  listLoans(filters?: {
+  // Admin endpoint - requires tenantId
+  listLoans(tenantId: string, filters?: {
     page?: number;
     limit?: number;
     status?: string;
@@ -45,7 +46,19 @@ export class LoanService {
     search?: string;
   }): Observable<{ success: boolean; message: string; data: Loan[]; pagination: any }> {
     return this.http.get<{ success: boolean; message: string; data: Loan[]; pagination: any }>(
-      `${this.apiUrl}/loans`,
+      `/api/tenants/${tenantId}/platforms/moneyloan/loans`,
+      { params: filters as any }
+    );
+  }
+
+  // Customer endpoint - get loans for specific customer
+  listCustomerLoans(tenantId: string, customerId: number, filters?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Observable<{ success: boolean; message: string; data: Loan[]; pagination: any }> {
+    return this.http.get<{ success: boolean; message: string; data: Loan[]; pagination: any }>(
+      `/api/tenants/${tenantId}/platforms/moneyloan/loans/customers/${customerId}/loans`,
       { params: filters as any }
     );
   }

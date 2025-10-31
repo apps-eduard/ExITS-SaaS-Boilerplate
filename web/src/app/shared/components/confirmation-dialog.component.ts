@@ -45,8 +45,7 @@ import { ConfirmationService } from '../../core/services/confirmation.service';
               <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
                 {{ confirmationService.config().title }}
               </h3>
-              <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                {{ confirmationService.config().message }}
+              <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed" [innerHTML]="confirmationService.config().message">
               </p>
             </div>
           </div>
