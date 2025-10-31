@@ -4,6 +4,20 @@ import { Router } from '@angular/router';
 import { LoanService } from '../shared/services/loan.service';
 import { Loan } from '../shared/models/loan.models';
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,

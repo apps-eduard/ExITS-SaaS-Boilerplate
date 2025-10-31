@@ -1,8 +1,9 @@
-import { Component, inject, output, HostListener } from '@angular/core';
+import { Component, inject, output, HostListener, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-header',
@@ -10,7 +11,7 @@ import { ThemeService } from '../../../core/services/theme.service';
   imports: [CommonModule],
   template: `
     <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
-      <!-- Left: Menu Toggle -->
+      <!-- Left: Menu Toggle + Breadcrumb -->
       <div class="flex items-center gap-4">
         <button
           (click)="menuToggle.emit()"
@@ -19,6 +20,38 @@ import { ThemeService } from '../../../core/services/theme.service';
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
           </svg>
         </button>
+
+        <!-- Breadcrumb Navigation -->
+        <nav class="hidden md:flex items-center gap-2 text-sm">
+          @for (breadcrumb of breadcrumbs(); track $index) {
+            @if (!$last) {
+              <div class="flex items-center gap-2">
+                <a 
+                  [href]="breadcrumb.url"
+                  (click)="navigateTo(breadcrumb.url); $event.preventDefault()"
+                  class="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                  {{ breadcrumb.label }}
+                </a>
+                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+            } @else {
+              <span class="text-gray-900 dark:text-white font-medium">
+                {{ breadcrumb.label }}
+              </span>
+            }
+          }
+        </nav>
+
+        <!-- Mobile: Current Page Only -->
+        <div class="md:hidden flex items-center gap-2">
+          @if (currentPage(); as page) {
+            <span class="text-sm text-gray-900 dark:text-white font-medium">
+              {{ page }}
+            </span>
+          }
+        </div>
       </div>
 
       <!-- Right: Actions -->
@@ -118,6 +151,109 @@ export class HeaderComponent {
   menuToggle = output();
   showUserMenu = false;
   user = this.authService.currentUser;
+
+  // Breadcrumb state
+  currentUrl = signal('');
+  breadcrumbs = computed(() => this.generateBreadcrumbs(this.currentUrl()));
+  currentPage = computed(() => {
+    const crumbs = this.breadcrumbs();
+    return crumbs.length > 0 ? crumbs[crumbs.length - 1].label : '';
+  });
+
+  constructor() {
+    // Update breadcrumbs on route changes
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        this.currentUrl.set(event.urlAfterRedirects || event.url);
+      });
+
+    // Set initial URL
+    this.currentUrl.set(this.router.url);
+  }
+
+  private generateBreadcrumbs(url: string): Array<{ label: string; url: string }> {
+    if (!url || url === '/') {
+      return [{ label: 'Home', url: '/' }];
+    }
+
+    const segments = url.split('/').filter(s => s);
+    const breadcrumbs: Array<{ label: string; url: string }> = [];
+    let currentPath = '';
+
+    // Route label mapping
+    const labelMap: Record<string, string> = {
+      // Admin routes
+      'admin': 'Admin',
+      'dashboard': 'Dashboard',
+      'users': 'Users',
+      'roles': 'Roles',
+      'tenants': 'Tenants',
+      'products': 'Products',
+      'plans': 'Subscription Plans',
+      'audit': 'Audit Logs',
+      'system': 'System',
+      'config': 'Configuration',
+      'logs': 'System Logs',
+      'backup': 'Backup & Restore',
+      'recycle-bin': 'Recycle Bin',
+      
+      // Tenant routes
+      'tenant': 'Tenant',
+      'platform-configs': 'Platform Configs',
+      'billing': 'Billing',
+      'subscriptions': 'Subscriptions',
+      'usage': 'Usage',
+      'invoices': 'Invoices',
+      'platform-settings': 'Platform Settings',
+      
+      // Money Loan Platform
+      'money-loan': 'Money Loan',
+      'applications': 'Applications',
+      'customers': 'Customers',
+      'loans': 'Loans',
+      'payments': 'Payments',
+      'reports': 'Reports',
+      'collections': 'Collections',
+      'settings': 'Settings',
+      'product-config': 'Product Configuration',
+      
+      // Common
+      'profile': 'My Profile',
+      'new': 'New',
+      'edit': 'Edit',
+      'view': 'View',
+      'create': 'Create',
+    };
+
+    segments.forEach((segment, index) => {
+      currentPath += `/${segment}`;
+      
+      // Skip numeric IDs in breadcrumbs
+      if (/^\d+$/.test(segment)) {
+        return;
+      }
+
+      // Get friendly label
+      const label = labelMap[segment] || this.formatSegment(segment);
+      
+      breadcrumbs.push({
+        label,
+        url: currentPath
+      });
+    });
+
+    return breadcrumbs.length > 0 ? breadcrumbs : [{ label: 'Home', url: '/' }];
+  }
+
+  private formatSegment(segment: string): string {
+    // Convert kebab-case or snake_case to Title Case
+    return segment
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 
   toggleUserMenu(event: Event): void {
     event.stopPropagation();

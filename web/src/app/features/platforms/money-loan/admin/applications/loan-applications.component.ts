@@ -1,295 +1,107 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MoneyloanApplicationService } from '../../shared/services/moneyloan-application.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import {
+  DataManagementPageComponent,
+  StatCard,
+  FilterField,
+  ColumnDefinition,
+  ActionButton,
+  BulkAction
+} from '../../../../../shared/components/ui';
 
 interface LoanApplication {
   id?: number;
   application_number?: string;
-  customer_id: string;
-  customer_name?: string;
-  loan_product_id: string;
+  customer_id: number;
+  first_name?: string;
+  last_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
+  product_name?: string;
+  loan_product_id: number;
   requested_amount: number;
-  requested_term_months: number;
-  loan_purpose: string;
-  employment_status: string;
-  monthly_income: number;
-  existing_debts: number;
+  requested_term_days: number;
+  purpose?: string;
   status: string;
   created_at?: string;
   approved_amount?: number;
-  approved_term_months?: number;
-  interest_rate?: number;
+  approved_term_days?: number;
+  approved_interest_rate?: number;
+  reviewed_by?: number;
+  reviewed_at?: string;
+  review_notes?: string;
 }
 
 @Component({
   selector: 'app-loan-applications',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    DataManagementPageComponent
+  ],
   template: `
-    <div class="p-6 space-y-4">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span>📝</span>
-            Loan Applications
-          </h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Review and process loan applications
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            (click)="loadApplications()"
-            class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-      </div>
+    <app-data-management-page
+      [pageIcon]="'📝'"
+      [pageTitle]="'Pending Approvals'"
+      [pageDescription]="'Review and process loan applications'"
+      [statCards]="statCards"
+      [filterFields]="filterFields"
+      [filterValues]="filterValues"
+      [columns]="columns"
+      [data]="applications()"
+      [loading]="loading()"
+      [selectable]="true"
+      [showRowNumbers]="true"
+      [selectedIds]="selectedIds()"
+      [selectAll]="selectAll()"
+      [sortColumn]="sortColumn()"
+      [sortDirection]="sortDirection()"
+      [rowActions]="rowActions"
+      [bulkActions]="bulkActions"
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalRecords]="totalRecords()"
+      [totalPages]="totalPages()"
+      [emptyIcon]="'📋'"
+      [emptyTitle]="'No applications found'"
+      [emptyMessage]="'Try adjusting your filters to see more results'"
+      (filterChange)="onFilterChange($event)"
+      (clearFilters)="onClearFilters()"
+      (sortChange)="onSortChange($event)"
+      (toggleSelection)="toggleSelection($event)"
+      (selectAllChange)="toggleSelectAll()"
+      (clearSelection)="clearSelection()"
+      (pageSizeChange)="onPageSizeChange($event)"
+      (previousPage)="onPreviousPage()"
+      (nextPage)="onNextPage()"
+    />
 
-      <!-- Filters -->
-      <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-            <select
-              [(ngModel)]="filters.status"
-              (change)="loadApplications()"
-              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending Review</option>
-              <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Product</label>
-            <select
-              [(ngModel)]="filters.product_id"
-              (change)="loadApplications()"
-              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">All Products</option>
-              <option value="1">Personal Loan</option>
-              <option value="2">Business Loan</option>
-              <option value="3">Emergency Loan</option>
-            </select>
-          </div>
-
-          <div class="md:col-span-2">
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
-            <input
-              type="text"
-              [(ngModel)]="filters.search"
-              (input)="onSearch()"
-              placeholder="Search by application number, customer name..."
-              class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Pending</p>
-          <p class="text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">{{ stats().pending }}</p>
-        </div>
-        <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Under Review</p>
-          <p class="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ stats().under_review }}</p>
-        </div>
-        <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Approved</p>
-          <p class="text-xl font-bold text-green-600 dark:text-green-400 mt-1">{{ stats().approved }}</p>
-        </div>
-        <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Rejected</p>
-          <p class="text-xl font-bold text-red-600 dark:text-red-400 mt-1">{{ stats().rejected }}</p>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      @if (loading()) {
-        <div class="text-center py-12">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Loading applications...</p>
-        </div>
-      }
-
-      <!-- Applications Table -->
-      @if (!loading()) {
-        <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Application</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Customer</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Amount</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Term</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Purpose</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Monthly Income</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Date</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @for (app of applications(); track app.id) {
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td class="px-3 py-2">
-                      <code class="text-xs text-blue-600 dark:text-blue-400 font-medium">{{ app.application_number }}</code>
-                    </td>
-                    <td class="px-3 py-2">
-                      <p class="text-xs font-medium text-gray-900 dark:text-white">{{ app.customer_name }}</p>
-                    </td>
-                    <td class="px-3 py-2 text-right">
-                      <span class="text-sm font-semibold text-gray-900 dark:text-white">₱{{ app.requested_amount | number:'1.2-2' }}</span>
-                    </td>
-                    <td class="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400">
-                      {{ app.requested_term_months }} months
-                    </td>
-                    <td class="px-3 py-2">
-                      <span class="text-xs text-gray-600 dark:text-gray-400">{{ app.loan_purpose }}</span>
-                    </td>
-                    <td class="px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400">
-                      ₱{{ app.monthly_income | number:'1.2-2' }}
-                    </td>
-                    <td class="px-3 py-2 text-center">
-                      @if (app.status === 'pending') {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
-                          Pending
-                        </span>
-                      } @else if (app.status === 'under_review') {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                          Under Review
-                        </span>
-                      } @else if (app.status === 'approved') {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                          Approved
-                        </span>
-                      } @else if (app.status === 'rejected') {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
-                          Rejected
-                        </span>
-                      }
-                    </td>
-                    <td class="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400">
-                      {{ app.created_at | date:'short' }}
-                    </td>
-                    <td class="px-3 py-2">
-                      <div class="flex items-center justify-center gap-1">
-                        <button
-                          (click)="viewApplication(app)"
-                          class="p-1 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
-                          title="View Details"
-                        >
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                        @if (app.status === 'pending' || app.status === 'under_review') {
-                          <button
-                            (click)="approveApplication(app)"
-                            class="p-1 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition"
-                            title="Approve"
-                          >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                          <button
-                            (click)="rejectApplication(app)"
-                            class="p-1 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition"
-                            title="Reject"
-                          >
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        }
-                      </div>
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="9" class="px-3 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
-                      No applications found
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
-
-      <!-- Pagination -->
-      @if (totalPages() > 1) {
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalRecords()) }} of {{ totalRecords() }} results
-          </p>
-          <div class="flex items-center gap-1">
-            <button
-              (click)="changePage(currentPage - 1)"
-              [disabled]="currentPage === 1"
-              class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              Previous
-            </button>
-            @for (page of getPageNumbers(); track page) {
-              <button
-                (click)="changePage(page)"
-                [class.bg-blue-600]="page === currentPage"
-                [class.text-white]="page === currentPage"
-                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                {{ page }}
-              </button>
-            }
-            <button
-              (click)="changePage(currentPage + 1)"
-              [disabled]="currentPage === totalPages()"
-              class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      }
-    </div>
-
-    <!-- Approval Modal (Simple - can be enhanced) -->
+    <!-- Approval Modal -->
     @if (showApprovalModal()) {
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="showApprovalModal.set(false)">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Approve Application</h3>
-          <div class="space-y-3">
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" (click)="showApprovalModal.set(false)">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full" (click)="$event.stopPropagation()">
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Approve Application</h3>
+          </div>
+          <div class="p-4 space-y-3">
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Approved Amount</label>
               <input
                 type="number"
                 [(ngModel)]="approvalData.approved_amount"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Approved Term (months)</label>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Approved Term (days)</label>
               <input
                 type="number"
-                [(ngModel)]="approvalData.approved_term_months"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                [(ngModel)]="approvalData.approved_term_days"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
@@ -297,29 +109,29 @@ interface LoanApplication {
               <input
                 type="number"
                 step="0.01"
-                [(ngModel)]="approvalData.interest_rate"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                [(ngModel)]="approvalData.approved_interest_rate"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
               <textarea
-                [(ngModel)]="approvalData.approval_notes"
+                [(ngModel)]="approvalData.review_notes"
                 rows="3"
-                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               ></textarea>
             </div>
           </div>
-          <div class="flex justify-end gap-2 mt-4">
+          <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
             <button
               (click)="showApprovalModal.set(false)"
-              class="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600"
+              class="px-3 py-1.5 text-xs font-medium rounded shadow-sm transition bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
             >
               Cancel
             </button>
             <button
               (click)="confirmApproval()"
-              class="px-3 py-1.5 text-xs rounded bg-green-600 text-white hover:bg-green-700"
+              class="px-3 py-1.5 text-xs font-medium rounded shadow-sm transition text-white bg-green-600 hover:bg-green-700"
             >
               Confirm Approval
             </button>
@@ -337,28 +149,226 @@ export class LoanApplicationsComponent implements OnInit {
   Math = Math;
   loading = signal(false);
   applications = signal<LoanApplication[]>([]);
-  stats = signal({ pending: 0, under_review: 0, approved: 0, rejected: 0 });
+  stats = signal({ draft: 0, submitted: 0, under_review: 0, approved: 0, rejected: 0 });
   showApprovalModal = signal(false);
   selectedApplication = signal<LoanApplication | null>(null);
   private tenantId: string | number = '';
 
-  filters = {
-    status: '',
-    product_id: '',
-    search: ''
-  };
-
   approvalData = {
     approved_amount: 0,
-    approved_term_months: 0,
-    interest_rate: 12,
-    approval_notes: ''
+    approved_term_days: 0,
+    approved_interest_rate: 12,
+    review_notes: ''
   };
 
   currentPage = 1;
   pageSize = 20;
   totalRecords = signal(0);
   totalPages = signal(1);
+
+  // Selection state
+  selectedIds = signal<Set<number>>(new Set());
+  selectAll = signal(false);
+
+  // Sorting state
+  sortColumn = signal<string | null>(null);
+  sortDirection = signal<'asc' | 'desc'>('desc');
+
+  // Filter values
+  filterValues: Record<string, any> = {
+    search: '',
+    status: '',
+    product_id: ''
+  };
+
+  // Stats Cards Configuration
+  get statCards(): StatCard[] {
+    return [
+      {
+        label: 'Draft',
+        value: this.stats().draft,
+        icon: '📝',
+        valueClass: 'text-lg font-bold text-gray-600 dark:text-gray-400',
+        iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700'
+      },
+      {
+        label: 'Submitted',
+        value: this.stats().submitted,
+        icon: '⏳',
+        valueClass: 'text-lg font-bold text-yellow-600 dark:text-yellow-400',
+        iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30'
+      },
+      {
+        label: 'Under Review',
+        value: this.stats().under_review,
+        icon: '🔍',
+        valueClass: 'text-lg font-bold text-blue-600 dark:text-blue-400',
+        iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30'
+      },
+      {
+        label: 'Approved',
+        value: this.stats().approved,
+        icon: '✅',
+        valueClass: 'text-lg font-bold text-green-600 dark:text-green-400',
+        iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30'
+      },
+      {
+        label: 'Rejected',
+        value: this.stats().rejected,
+        icon: '❌',
+        valueClass: 'text-lg font-bold text-red-600 dark:text-red-400',
+        iconBgClass: 'flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30'
+      }
+    ];
+  }
+
+  // Filter Fields Configuration
+  filterFields: FilterField[] = [
+    {
+      type: 'search',
+      label: 'Search',
+      modelKey: 'search',
+      placeholder: 'Search by application number...'
+    },
+    {
+      type: 'select',
+      label: 'Status',
+      modelKey: 'status',
+      options: [
+        { value: '', label: 'All Status' },
+        { value: 'draft', label: 'Draft' },
+        { value: 'submitted', label: 'Submitted' },
+        { value: 'under_review', label: 'Under Review' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'rejected', label: 'Rejected' }
+      ]
+    },
+    {
+      type: 'select',
+      label: 'Product',
+      modelKey: 'product_id',
+      options: [
+        { value: '', label: 'All Products' }
+      ]
+    }
+  ];
+
+  // Table Columns Configuration
+  columns: ColumnDefinition[] = [
+    {
+      key: 'application_number',
+      label: 'Application #',
+      icon: '🔢',
+      sortable: true,
+      type: 'text'
+    },
+    {
+      key: 'customer_name',
+      label: 'Customer',
+      icon: '👤',
+      sortable: true,
+      type: 'text',
+      format: (value, row) => this.getCustomerName(row)
+    },
+    {
+      key: 'requested_amount',
+      label: 'Amount',
+      icon: '💰',
+      sortable: true,
+      type: 'number',
+      align: 'right',
+      format: (value) => `₱${this.formatNumber(value)}`
+    },
+    {
+      key: 'requested_term_days',
+      label: 'Term',
+      icon: '📅',
+      sortable: true,
+      type: 'text',
+      align: 'center',
+      format: (value) => `${value} days`
+    },
+    {
+      key: 'purpose',
+      label: 'Purpose',
+      icon: '📋',
+      sortable: false,
+      type: 'text',
+      format: (value) => value || 'N/A'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      icon: '🔘',
+      sortable: true,
+      type: 'badge',
+      align: 'center',
+      getBadgeClass: (value) => this.getStatusClass(value),
+      format: (value) => this.getStatusLabel(value)
+    },
+    {
+      key: 'created_at',
+      label: 'Date',
+      icon: '📆',
+      sortable: true,
+      type: 'date',
+      format: (value) => this.formatDate(value)
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      icon: '⚙️',
+      sortable: false,
+      type: 'actions',
+      align: 'center'
+    }
+  ];
+
+  // Row Actions Configuration
+  rowActions: ActionButton[] = [
+    {
+      icon: '👁️',
+      label: 'View Details',
+      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
+      action: (app) => this.viewApplication(app)
+    },
+    {
+      icon: '✅',
+      label: 'Approve',
+      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded shadow-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
+      action: (app) => this.approveApplication(app),
+      show: (app) => app.status === 'submitted' || app.status === 'under_review'
+    },
+    {
+      icon: '❌',
+      label: 'Reject',
+      class: 'inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded shadow-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 hover:shadow-md group',
+      action: (app) => this.rejectApplication(app),
+      show: (app) => app.status === 'submitted' || app.status === 'under_review'
+    }
+  ];
+
+  // Bulk Actions Configuration
+  bulkActions: BulkAction[] = [
+    {
+      icon: '📄',
+      label: 'CSV',
+      class: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition',
+      action: (items) => this.exportToCSV(items)
+    },
+    {
+      icon: '📊',
+      label: 'EXCEL',
+      class: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition',
+      action: (items) => this.exportToExcel(items)
+    },
+    {
+      icon: '📕',
+      label: 'PDF',
+      class: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition',
+      action: (items) => this.exportToPDF(items)
+    }
+  ];
 
   ngOnInit() {
     const user = this.authService.currentUser();
@@ -371,7 +381,9 @@ export class LoanApplicationsComponent implements OnInit {
     this.loading.set(true);
 
     this.applicationService.getApplications(String(this.tenantId), {
-      ...this.filters,
+      status: this.filterValues['status'] || '',
+      product_id: this.filterValues['product_id'] || '',
+      search: this.filterValues['search'] || '',
       page: this.currentPage,
       limit: this.pageSize
     }).subscribe({
@@ -392,16 +404,188 @@ export class LoanApplicationsComponent implements OnInit {
   calculateStats() {
     const apps = this.applications();
     this.stats.set({
-      pending: apps.filter(a => a.status === 'pending').length,
+      draft: apps.filter(a => a.status === 'draft').length,
+      submitted: apps.filter(a => a.status === 'submitted').length,
       under_review: apps.filter(a => a.status === 'under_review').length,
       approved: apps.filter(a => a.status === 'approved').length,
       rejected: apps.filter(a => a.status === 'rejected').length
     });
   }
 
-  onSearch() {
-    // Debounce search if needed
+  // Event handlers for DataManagementPageComponent
+  onFilterChange(event: { key: string; value: any }) {
+    this.filterValues[event.key] = event.value;
+    this.currentPage = 1;
     this.loadApplications();
+  }
+
+  onClearFilters() {
+    this.filterValues = {
+      status: '',
+      product_id: '',
+      search: ''
+    };
+    this.currentPage = 1;
+    this.loadApplications();
+  }
+
+  onPageSizeChange(size: number) {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.loadApplications();
+  }
+
+  onPreviousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.loadApplications();
+    }
+  }
+
+  onNextPage(): void {
+    if (this.currentPage < this.totalPages()) {
+      this.currentPage++;
+      this.loadApplications();
+    }
+  }
+
+  // Selection handlers
+  toggleSelection(id: number): void {
+    const selected = new Set(this.selectedIds());
+    if (selected.has(id)) {
+      selected.delete(id);
+    } else {
+      selected.add(id);
+    }
+    this.selectedIds.set(selected);
+    this.selectAll.set(selected.size === this.applications().length && this.applications().length > 0);
+  }
+
+  toggleSelectAll(): void {
+    if (this.selectAll()) {
+      this.selectedIds.set(new Set());
+      this.selectAll.set(false);
+    } else {
+      const allIds = new Set(this.applications().map(app => app.id!));
+      this.selectedIds.set(allIds);
+      this.selectAll.set(true);
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
+    this.selectAll.set(false);
+  }
+
+  // Sorting handler
+  onSortChange(column: string): void {
+    if (this.sortColumn() === column) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set('desc');
+    }
+    this.loadApplications();
+  }
+
+  // Bulk action handlers
+  bulkApprove(items: LoanApplication[]): void {
+    if (items.length === 0) return;
+
+    const confirmMessage = items.length === 1
+      ? `Approve application ${items[0].application_number}?`
+      : `Approve ${items.length} selected applications?`;
+
+    if (confirm(confirmMessage)) {
+      this.loading.set(true);
+      const approvals = items.map(item =>
+        this.applicationService.approveApplication(String(this.tenantId), item.id!, { notes: 'Bulk approval' })
+      );
+
+      Promise.all(approvals)
+        .then(() => {
+          this.clearSelection();
+          this.loadApplications();
+          alert(`Successfully approved ${items.length} application(s)`);
+        })
+        .catch(error => {
+          console.error('Bulk approval failed:', error);
+          alert('Some applications could not be approved. Please try again.');
+        })
+        .finally(() => {
+          this.loading.set(false);
+        });
+    }
+  }
+
+  bulkReject(items: LoanApplication[]): void {
+    if (items.length === 0) return;
+
+    const confirmMessage = items.length === 1
+      ? `Reject application ${items[0].application_number}?`
+      : `Reject ${items.length} selected applications?`;
+
+    const reason = prompt(confirmMessage + '\n\nPlease provide a reason for rejection:');
+    if (reason && reason.trim()) {
+      this.loading.set(true);
+      const rejections = items.map(item =>
+        this.applicationService.rejectApplication(String(this.tenantId), item.id!, { 
+          reason: reason.trim() 
+        })
+      );
+
+      Promise.all(rejections)
+        .then(() => {
+          this.clearSelection();
+          this.loadApplications();
+          alert(`Successfully rejected ${items.length} application(s)`);
+        })
+        .catch(error => {
+          console.error('Bulk rejection failed:', error);
+          alert('Some applications could not be rejected. Please try again.');
+        })
+        .finally(() => {
+          this.loading.set(false);
+        });
+    }
+  }
+
+  // Export handlers
+  exportToCSV(items: LoanApplication[]): void {
+    console.log(`Exporting ${items.length} application(s) to CSV`);
+    
+    // Prepare CSV data
+    const headers = ['Application #', 'Customer', 'Amount', 'Term (Days)', 'Purpose', 'Status', 'Submitted'];
+    const rows = items.map(app => [
+      app.application_number || '',
+      this.getCustomerName(app),
+      app.requested_amount?.toString() || '0',
+      app.requested_term_days?.toString() || '0',
+      app.purpose || 'N/A',
+      app.status || '',
+      app.created_at ? new Date(app.created_at).toLocaleDateString() : ''
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `loan-applications-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  }
+
+  exportToExcel(items: LoanApplication[]): void {
+    console.log(`Exporting ${items.length} application(s) to Excel`);
+    alert(`Export to Excel functionality coming soon! (${items.length} items selected)`);
+  }
+
+  exportToPDF(items: LoanApplication[]): void {
+    console.log(`Exporting ${items.length} application(s) to PDF`);
+    alert(`Export to PDF functionality coming soon! (${items.length} items selected)`);
   }
 
   viewApplication(app: LoanApplication) {
@@ -413,9 +597,9 @@ export class LoanApplicationsComponent implements OnInit {
     this.selectedApplication.set(app);
     this.approvalData = {
       approved_amount: app.requested_amount,
-      approved_term_months: app.requested_term_months,
-      interest_rate: 12,
-      approval_notes: ''
+      approved_term_days: app.requested_term_days,
+      approved_interest_rate: 12,
+      review_notes: ''
     };
     this.showApprovalModal.set(true);
   }
@@ -424,14 +608,28 @@ export class LoanApplicationsComponent implements OnInit {
     const app = this.selectedApplication();
     if (!app?.id) return;
 
-    this.applicationService.approveApplication(String(this.tenantId), app.id, this.approvalData).subscribe({
+    const user = this.authService.currentUser();
+
+    // Map frontend fields to backend expected fields
+    const approvalPayload = {
+      approvedBy: user?.id || 0,
+      approvedAmount: this.approvalData.approved_amount,
+      interestRate: this.approvalData.approved_interest_rate,
+      loanTermDays: this.approvalData.approved_term_days,
+      totalFees: 0,
+      totalInterest: 0,
+      monthlyPayment: 0,
+      notes: this.approvalData.review_notes
+    };
+
+    this.applicationService.approveApplication(String(this.tenantId), app.id, approvalPayload).subscribe({
       next: () => {
         this.showApprovalModal.set(false);
         this.loadApplications();
       },
       error: (error) => {
         console.error('Failed to approve application:', error);
-        alert('Failed to approve application');
+        alert('Failed to approve application: ' + (error.error?.message || error.message));
       }
     });
   }
@@ -440,9 +638,12 @@ export class LoanApplicationsComponent implements OnInit {
     const reason = prompt('Enter rejection reason:');
     if (!reason) return;
 
-    this.applicationService.rejectApplication(String(this.tenantId), app.id!, {
-      rejection_reason: reason,
-      rejection_notes: ''
+    const user = this.authService.currentUser();
+    if (!app.id) return;
+
+    this.applicationService.rejectApplication(String(this.tenantId), app.id, {
+      reason: reason,
+      rejectedBy: user?.id || 0
     }).subscribe({
       next: () => {
         this.loadApplications();
@@ -452,6 +653,64 @@ export class LoanApplicationsComponent implements OnInit {
         alert('Failed to reject application');
       }
     });
+  }
+
+  formatNumber(value: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  formatDate(date: string | undefined): string {
+    if (!date) return 'N/A';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  getCustomerName(app: LoanApplication): string {
+    if (app.first_name && app.last_name) {
+      return `${app.first_name} ${app.last_name}`;
+    }
+    if (app.first_name) return app.first_name;
+    if (app.last_name) return app.last_name;
+    if (app.customer_email) return app.customer_email;
+    return `Customer #${app.customer_id}`;
+  }
+
+  getStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      'draft': 'bg-gray-100 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300',
+      'submitted': 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
+      'under_review': 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
+      'approved': 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+      'rejected': 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+      'cancelled': 'bg-gray-100 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300'
+    };
+    return classes[status] || 'bg-gray-100 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300';
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      'draft': 'Draft',
+      'submitted': 'Submitted',
+      'under_review': 'Under Review',
+      'approved': 'Approved',
+      'rejected': 'Rejected',
+      'cancelled': 'Cancelled'
+    };
+    return labels[status] || status;
   }
 
   changePage(page: number) {

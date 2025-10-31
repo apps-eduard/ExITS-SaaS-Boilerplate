@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -26,6 +26,7 @@ interface PricingPlan {
   selector: 'app-landing',
   standalone: true,
   imports: [CommonModule, RouterLink],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './landing.component.html',
   styles: []
 })

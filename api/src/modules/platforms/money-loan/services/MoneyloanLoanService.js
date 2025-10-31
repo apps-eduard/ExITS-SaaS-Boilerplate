@@ -113,38 +113,47 @@ class MoneyloanLoanService {
    */
   async getAllApplications(tenantId, filters = {}) {
     try {
-      const conditions = ['tenant_id = $1'];
+      const conditions = ['mla.tenant_id = $1'];
       const values = [tenantId];
       let paramCount = 2;
 
       if (filters.status) {
-        conditions.push(`status = $${paramCount}`);
+        conditions.push(`mla.status = $${paramCount}`);
         values.push(filters.status);
         paramCount++;
       }
 
       if (filters.product_id) {
-        conditions.push(`loan_product_id = $${paramCount}`);
+        conditions.push(`mla.loan_product_id = $${paramCount}`);
         values.push(filters.product_id);
         paramCount++;
       }
 
       if (filters.customer_id) {
-        conditions.push(`customer_id = $${paramCount}`);
+        conditions.push(`mla.customer_id = $${paramCount}`);
         values.push(filters.customer_id);
         paramCount++;
       }
 
       if (filters.search) {
-        conditions.push(`(application_number ILIKE $${paramCount} OR customer_id::text ILIKE $${paramCount})`);
+        conditions.push(`(mla.application_number ILIKE $${paramCount} OR c.first_name ILIKE $${paramCount} OR c.last_name ILIKE $${paramCount})`);
         values.push(`%${filters.search}%`);
         paramCount++;
       }
 
       const query = `
-        SELECT * FROM money_loan_applications
+        SELECT 
+          mla.*,
+          c.first_name,
+          c.last_name,
+          c.email as customer_email,
+          c.phone as customer_phone,
+          mlp.name as product_name
+        FROM money_loan_applications mla
+        LEFT JOIN customers c ON mla.customer_id = c.id
+        LEFT JOIN money_loan_products mlp ON mla.loan_product_id = mlp.id
         WHERE ${conditions.join(' AND ')}
-        ORDER BY created_at DESC
+        ORDER BY mla.created_at DESC
       `;
 
       const result = await pool.query(query, values);
