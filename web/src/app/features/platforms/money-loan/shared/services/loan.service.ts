@@ -8,31 +8,31 @@ import { Loan, LoanOverview, RepaymentSchedule, LoanPayment } from '../models/lo
 })
 export class LoanService {
   private http = inject(HttpClient);
-  private apiUrl = '/api/money-loan';
+  private baseUrl = '/api/money-loan'; // NestJS route with /api prefix
 
   // ==================== LOAN PRODUCTS ====================
 
   getLoanProducts(tenantId: string): Observable<any> {
-    return this.http.get(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products`);
+    return this.http.get(`${this.baseUrl}/products`);
   }
 
   createLoanProduct(tenantId: string, productData: any): Observable<any> {
-    return this.http.post(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products`, productData);
+    return this.http.post(`${this.baseUrl}/products`, productData);
   }
 
   updateLoanProduct(tenantId: string, productId: number, productData: any): Observable<any> {
-    return this.http.put(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products/${productId}`, productData);
+    return this.http.put(`${this.baseUrl}/products/${productId}`, productData);
   }
 
   deleteLoanProduct(tenantId: string, productId: number): Observable<any> {
-    return this.http.delete(`/api/tenants/${tenantId}/platforms/moneyloan/loans/products/${productId}`);
+    return this.http.delete(`${this.baseUrl}/products/${productId}`);
   }
 
   // ==================== LOANS ====================
 
   createLoan(loanData: any): Observable<{ success: boolean; message: string; data: Loan }> {
     return this.http.post<{ success: boolean; message: string; data: Loan }>(
-      `${this.apiUrl}/loans`,
+      `${this.baseUrl}/loans`,
       loanData
     );
   }
@@ -46,7 +46,7 @@ export class LoanService {
     search?: string;
   }): Observable<{ success: boolean; message: string; data: Loan[]; pagination: any }> {
     return this.http.get<{ success: boolean; message: string; data: Loan[]; pagination: any }>(
-      `/api/tenants/${tenantId}/platforms/moneyloan/loans`,
+      `${this.baseUrl}/loans`,
       { params: filters as any }
     );
   }
@@ -58,26 +58,26 @@ export class LoanService {
     status?: string;
   }): Observable<{ success: boolean; message: string; data: Loan[]; pagination: any }> {
     return this.http.get<{ success: boolean; message: string; data: Loan[]; pagination: any }>(
-      `/api/tenants/${tenantId}/platforms/moneyloan/loans/customers/${customerId}/loans`,
+      `${this.baseUrl}/customers/${customerId}/loans`,
       { params: filters as any }
     );
   }
 
   getLoanById(loanId: number): Observable<{ success: boolean; data: Loan }> {
     return this.http.get<{ success: boolean; data: Loan }>(
-      `${this.apiUrl}/loans/${loanId}`
+      `${this.baseUrl}/loans/${loanId}`
     );
   }
 
   getLoanOverview(): Observable<{ success: boolean; data: LoanOverview }> {
     return this.http.get<{ success: boolean; data: LoanOverview }>(
-      `${this.apiUrl}/loans/overview`
+      `${this.baseUrl}/loans/overview`
     );
   }
 
   updateLoanStatus(loanId: number, status: string): Observable<{ success: boolean; message: string; data: Loan }> {
     return this.http.put<{ success: boolean; message: string; data: Loan }>(
-      `${this.apiUrl}/loans/${loanId}/status`,
+      `${this.baseUrl}/loans/${loanId}/status`,
       { status }
     );
   }
@@ -86,13 +86,13 @@ export class LoanService {
 
   getRepaymentSchedule(loanId: number): Observable<{ success: boolean; data: RepaymentSchedule[] }> {
     return this.http.get<{ success: boolean; data: RepaymentSchedule[] }>(
-      `${this.apiUrl}/loans/${loanId}/schedule`
+      `${this.baseUrl}/loans/${loanId}/schedule`
     );
   }
 
   getPaymentHistory(loanId: number): Observable<{ success: boolean; data: LoanPayment[] }> {
     return this.http.get<{ success: boolean; data: LoanPayment[] }>(
-      `${this.apiUrl}/loans/${loanId}/payments`
+      `${this.baseUrl}/loans/${loanId}/payments`
     );
   }
 
@@ -107,14 +107,14 @@ export class LoanService {
     notes?: string;
   }): Observable<{ success: boolean; message: string; data: LoanPayment }> {
     return this.http.post<{ success: boolean; message: string; data: LoanPayment }>(
-      `${this.apiUrl}/payments`,
+      `${this.baseUrl}/payments`,
       paymentData
     );
   }
 
   getTodayCollections(): Observable<{ success: boolean; data: any }> {
     return this.http.get<{ success: boolean; data: any }>(
-      `${this.apiUrl}/payments/today`
+      `${this.baseUrl}/payments/today`
     );
   }
 }

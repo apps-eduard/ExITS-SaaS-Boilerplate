@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -65,6 +65,26 @@ export class MoneyLoanController {
       success: true,
       message: 'Application approved successfully',
       data: loan,
+    };
+  }
+
+  @Put('applications/:id/reject')
+  @Permissions('money-loan:approve', 'money-loan:reject')
+  async rejectApplication(
+    @Param('id') id: string,
+    @Body() rejectDto: { notes: string },
+    @Req() req: any
+  ) {
+    const application = await this.moneyLoanService.rejectApplication(
+      req.user.tenantId,
+      parseInt(id),
+      rejectDto,
+      req.user.id
+    );
+    return {
+      success: true,
+      message: 'Application rejected successfully',
+      data: application,
     };
   }
 
@@ -244,6 +264,36 @@ export class MoneyLoanController {
     return {
       success: true,
       data: stats,
+    };
+  }
+
+  @Get('customers/:id/loans')
+  @Permissions('money-loan:read')
+  async getCustomerLoans(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const customerId = parseInt(id, 10);
+    
+    // If user is a customer, ensure they can only access their own loans
+    if (req.user?.type === 'customer' && req.user.customerId !== customerId) {
+      throw new ForbiddenException('Access to another customer\'s loans is not allowed');
+    }
+
+    const result = await this.moneyLoanService.getLoans(req.user.tenantId, {
+      customerId,
+      status,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : 100,
+    });
+    
+    return {
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
     };
   }
 }

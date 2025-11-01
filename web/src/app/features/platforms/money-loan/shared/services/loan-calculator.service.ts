@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 export interface LoanParams {
   loanAmount: number;
   termMonths: number;
-  paymentFrequency: 'daily' | 'weekly' | 'monthly';
+  paymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   interestRate: number;
   interestType: 'flat' | 'reducing' | 'compound';
   processingFeePercentage: number;
@@ -75,58 +75,67 @@ export class LoanCalculatorService {
       latePenaltyPercentage
     } = params;
 
-    // Calculate number of payments based on frequency
-    const numPayments = this.calculateNumPayments(termMonths, paymentFrequency);
+    const normalizedTerm = Math.max(1, Math.round(termMonths));
 
-    // Calculate interest based on type
+    // Calculate number of payments based on frequency
+    const numPayments = this.calculateNumPayments(normalizedTerm, paymentFrequency);
+
+    // Calculate interest based on type (interest rate assumed per month)
     let interestAmount: number;
     if (interestType === 'flat') {
-      interestAmount = this.calculateFlatInterest(loanAmount, interestRate);
+      interestAmount = this.calculateFlatInterest(loanAmount, interestRate, normalizedTerm);
     } else if (interestType === 'reducing') {
-      interestAmount = this.calculateReducingInterest(loanAmount, interestRate, numPayments);
+      interestAmount = this.calculateReducingInterest(
+        loanAmount,
+        interestRate,
+        normalizedTerm,
+        numPayments,
+        paymentFrequency
+      );
     } else {
-      interestAmount = this.calculateCompoundInterest(loanAmount, interestRate, termMonths);
+      interestAmount = this.calculateCompoundInterest(loanAmount, interestRate, normalizedTerm);
     }
 
-    // Processing fee calculation
+    // Processing fee calculation (percent of principal, collected upfront)
     const processingFeeAmount = loanAmount * (processingFeePercentage / 100);
 
-    // Total repayable (for flat: principal only, for reducing: calculated differently)
-    const totalRepayable = interestType === 'flat' 
-      ? loanAmount // In flat with pre-deducted interest, we only repay principal
-      : loanAmount + interestAmount;
+    // Platform fee is charged per month of the term
+    const platformFeeTotal = platformFee * normalizedTerm;
 
-    // Net proceeds = what borrower actually receives
-    const netProceeds = loanAmount - interestAmount - processingFeeAmount - platformFee;
+    // Total repayable = principal + earned interest + total platform fees
+    const totalRepayable = loanAmount + interestAmount + platformFeeTotal;
 
-    // Installment amount
-    const installmentAmount = totalRepayable / numPayments;
+    // Net proceeds = what borrower actually receives after upfront fees
+    const netProceeds = loanAmount - processingFeeAmount - platformFeeTotal;
 
-    // Effective interest rate (APR)
+    // Installment amount (guard against divide-by-zero)
+    const installmentAmount = numPayments > 0 ? totalRepayable / numPayments : 0;
+
+    // Effective interest rate (APR approximation)
     const effectiveInterestRate = this.calculateEffectiveRate(
       netProceeds,
       totalRepayable,
-      termMonths
+      normalizedTerm
     );
 
     // Grace period based on frequency
     const gracePeriodDays = this.getGracePeriod(paymentFrequency);
 
-    // Total deductions
-    const totalDeductions = interestAmount + processingFeeAmount + platformFee;
+    // Total deductions (upfront only)
+    const totalDeductions = processingFeeAmount + platformFeeTotal;
 
     // Monthly equivalent (for comparison)
-    const monthlyEquivalent = paymentFrequency === 'monthly' 
-      ? installmentAmount 
+    const monthlyEquivalent = paymentFrequency === 'monthly'
+      ? installmentAmount
       : this.convertToMonthlyEquivalent(installmentAmount, paymentFrequency);
 
     return {
       loanAmount,
-      termMonths,
+      termMonths: normalizedTerm,
       paymentFrequency,
       interestAmount,
       processingFeeAmount,
-      platformFee,
+      platformFee: platformFeeTotal,
       netProceeds,
       totalRepayable,
       numPayments,
@@ -142,38 +151,60 @@ export class LoanCalculatorService {
    * Calculate number of payments based on term and frequency
    */
   private calculateNumPayments(termMonths: number, frequency: string): number {
-    const multipliers = {
-      daily: 30,
-      weekly: 4,
-      monthly: 1
-    };
-    return termMonths * (multipliers[frequency as keyof typeof multipliers] || 1);
+    const roundedTerm = Math.max(0, Math.round(termMonths));
+    const termDays = roundedTerm * 30;
+
+    switch (frequency) {
+      case 'daily':
+        return termDays;
+      case 'weekly':
+        return roundedTerm * 4;
+      case 'biweekly':
+        return Math.ceil(termDays / 14);
+      case 'monthly':
+        return roundedTerm;
+      default:
+        return roundedTerm * 4;
+    }
   }
 
   /**
    * Flat interest: calculated once on principal
    */
-  private calculateFlatInterest(principal: number, rate: number): number {
-    return principal * (rate / 100);
+  private calculateFlatInterest(principal: number, ratePercent: number, termMonths: number): number {
+    return principal * (ratePercent / 100) * termMonths;
   }
 
   /**
    * Reducing balance: interest calculated on remaining balance
    */
-  private calculateReducingInterest(principal: number, annualRate: number, numPayments: number): number {
-    // This is simplified - actual reducing balance is more complex
-    // For now, return approximate total interest
-    const monthlyRate = annualRate / 12 / 100;
-    const totalInterest = principal * monthlyRate * numPayments * 0.5; // Approximate
-    return totalInterest;
+  private calculateReducingInterest(
+    principal: number,
+    ratePercent: number,
+    termMonths: number,
+    numPayments: number,
+    frequency: string
+  ): number {
+    if (numPayments === 0) return 0;
+
+    const paymentsPerMonth = this.getPaymentsPerMonth(frequency);
+    const periodicRate = paymentsPerMonth > 0 ? (ratePercent / 100) / paymentsPerMonth : 0;
+
+    if (periodicRate === 0) {
+      return principal * (ratePercent / 100) * termMonths;
+    }
+
+    const payment = principal * (periodicRate / (1 - Math.pow(1 + periodicRate, -numPayments)));
+    const totalPaid = payment * numPayments;
+    return totalPaid - principal;
   }
 
   /**
    * Compound interest: interest on interest
    */
-  private calculateCompoundInterest(principal: number, rate: number, termMonths: number): number {
-    const compoundRate = 1 + (rate / 100);
-    const compounded = principal * Math.pow(compoundRate, termMonths / 12);
+  private calculateCompoundInterest(principal: number, ratePercent: number, termMonths: number): number {
+    const monthlyRate = ratePercent / 100;
+    const compounded = principal * Math.pow(1 + monthlyRate, termMonths);
     return compounded - principal;
   }
 
@@ -203,12 +234,8 @@ export class LoanCalculatorService {
    * Convert installment to monthly equivalent
    */
   private convertToMonthlyEquivalent(installment: number, frequency: string): number {
-    const multipliers = {
-      daily: 30,
-      weekly: 4,
-      monthly: 1
-    };
-    return installment * (multipliers[frequency as keyof typeof multipliers] || 1);
+    const multiplier = this.getPaymentsPerMonth(frequency);
+    return installment * (multiplier || 1);
   }
 
   /**
@@ -227,18 +254,20 @@ export class LoanCalculatorService {
       dueDate.setDate(dueDate.getDate() + (i * daysBetweenPayments));
 
       const installment = calculation.installmentAmount;
-      const principal = installment; // For flat interest, all installment is principal
-      const interest = 0; // Interest already deducted upfront
+      const principalPortion = calculation.numPayments > 0
+        ? calculation.loanAmount / calculation.numPayments
+        : 0;
+      const interestPortion = Math.max(0, installment - principalPortion);
 
-      remainingBalance -= principal;
+      remainingBalance -= principalPortion;
       cumulativePaid += installment;
 
       schedule.push({
         paymentNumber: i,
         dueDate,
         installmentAmount: installment,
-        principal,
-        interest,
+        principal: principalPortion,
+        interest: interestPortion,
         remainingBalance: Math.max(0, remainingBalance),
         cumulativePaid
       });
@@ -257,6 +286,21 @@ export class LoanCalculatorService {
       monthly: 30
     };
     return days[frequency as keyof typeof days] || 30;
+  }
+
+  private getPaymentsPerMonth(frequency: string): number {
+    switch (frequency) {
+      case 'daily':
+        return 30;
+      case 'weekly':
+        return 4;
+      case 'biweekly':
+        return 2;
+      case 'monthly':
+        return 1;
+      default:
+        return 4;
+    }
   }
 
   /**

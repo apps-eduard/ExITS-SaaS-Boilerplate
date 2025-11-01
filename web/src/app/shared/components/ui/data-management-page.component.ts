@@ -68,10 +68,11 @@ export interface BulkAction {
       </div>
 
       <!-- Summary Stats Cards -->
-      <div *ngIf="statCards.length > 0" [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-' + statCards.length + ' gap-3'">
+      <div *ngIf="statCards.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div 
           *ngFor="let stat of statCards"
-          class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition"
+          [class]="'bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition' + (stat.onClick ? ' cursor-pointer' : '')"
+          (click)="stat.onClick ? stat.onClick() : null"
         >
           <div class="flex items-center justify-between">
             <div>

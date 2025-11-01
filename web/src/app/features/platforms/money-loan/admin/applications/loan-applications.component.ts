@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MoneyloanApplicationService } from '../../shared/services/moneyloan-application.service';
+import { LoanCalculatorService } from '../../shared/services/loan-calculator.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { ComponentPathService } from '../../../../../core/services/component-path.service';
 import { ToastService } from '../../../../../core/services/toast.service';
@@ -33,6 +34,7 @@ interface LoanApplication {
   product_platform_fee?: number;
   product_processing_fee_percent?: number;
   product_payment_frequency?: string;
+  product_interest_type?: string;
   loan_product_id: number;
   requested_amount: number;
   requested_term_days: number;
@@ -163,7 +165,7 @@ interface LoanApplication {
                 type="text"
                 appCurrencyMask
                 [(ngModel)]="approvalData.approved_amount"
-                (ngModelChange)="validateAmount()"
+                (ngModelChange)="onApprovalDataChange()"
                 [class]="'w-full px-2.5 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent ' + (amountError() ? 'border-red-500 dark:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-green-500')"
                 placeholder="Enter approved amount"
               />
@@ -512,6 +514,7 @@ interface LoanApplication {
 })
 export class LoanApplicationsComponent implements OnInit, AfterViewInit {
   private applicationService = inject(MoneyloanApplicationService);
+  private calculatorService = inject(LoanCalculatorService);
   private authService = inject(AuthService);
   private componentPathService = inject(ComponentPathService);
   private toastService = inject(ToastService);
@@ -536,7 +539,13 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
     approved_amount: 0,
     approved_term_days: 0,
     approved_interest_rate: 12,
-    review_notes: ''
+    review_notes: '',
+    // Calculated fields
+    calculated_interest: 0,
+    calculated_total: 0,
+    calculated_processing_fee: 0,
+    calculated_platform_fee: 0,
+    calculated_net_proceeds: 0
   };
 
   currentPage = 1;
@@ -795,13 +804,19 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
       limit: this.pageSize
     }).subscribe({
       next: (response) => {
-        console.log('📦 Applications loaded with status:', response.data.map((app: any) => ({
+        const normalizedApplications = Array.isArray(response.data)
+          ? response.data.map((app: any) => this.normalizeApplication(app))
+          : [];
+
+        console.log('📦 Applications loaded with status:', normalizedApplications.map((app: any) => ({
           id: app.id,
           app_number: app.application_number,
           status: app.status,
-          status_type: typeof app.status
+          status_type: typeof app.status,
+          created_at: app.created_at
         })));
-        this.applications.set(response.data || []);
+
+        this.applications.set(normalizedApplications);
         this.totalRecords.set(response.pagination?.total || 0);
         this.totalPages.set(Math.ceil(this.totalRecords() / this.pageSize));
         this.calculateStats();
@@ -823,6 +838,74 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
       approved: apps.filter(a => a.status === 'approved').length,
       rejected: apps.filter(a => a.status === 'rejected').length
     });
+  }
+
+  private normalizeApplication(application: any): LoanApplication {
+    if (!application) {
+      return application;
+    }
+
+    const normalizeStatus = (status: any) => {
+      if (status === null || status === undefined) {
+        return 'submitted';
+      }
+      return String(status).toLowerCase();
+    };
+
+    const pickDate = (...values: any[]): string | undefined => {
+      for (const value of values) {
+        if (!value) continue;
+        // Accept both ISO strings and numeric timestamps
+        if (typeof value === 'number') {
+          return new Date(value).toISOString();
+        }
+        if (typeof value === 'string' && value.trim() !== '') {
+          const parsed = new Date(value);
+          if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toISOString();
+          }
+          // If parsing fails, still return original string so formatter can handle custom formats
+          return value;
+        }
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value.toISOString();
+        }
+      }
+      return undefined;
+    };
+
+    const createdAt = pickDate(
+      application.created_at,
+      application.createdAt,
+      application.submitted_at,
+      application.submittedAt,
+      application.application_date,
+      application.applicationDate,
+      application.requested_at,
+      application.requestedAt
+    );
+
+    const reviewedAt = pickDate(
+      application.reviewed_at,
+      application.reviewedAt,
+      application.approved_at,
+      application.approvedAt
+    );
+
+    const firstName = application.first_name ?? application.firstName ?? application.customer_first_name ?? application.customerFirstName ?? application.customer?.first_name ?? application.customer?.firstName;
+    const lastName = application.last_name ?? application.lastName ?? application.customer_last_name ?? application.customerLastName ?? application.customer?.last_name ?? application.customer?.lastName;
+
+    const loanProductId = application.loan_product_id ?? application.loanProductId ?? application.product_id ?? application.productId;
+
+    return {
+      ...application,
+      first_name: firstName,
+      last_name: lastName,
+      loan_product_id: loanProductId,
+      status: normalizeStatus(application.status ?? application.application_status ?? application.applicationStatus),
+      created_at: createdAt,
+      reviewed_at: reviewedAt
+    };
   }
 
   // Event handlers for DataManagementPageComponent
@@ -1056,8 +1139,17 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
       approved_amount: app.requested_amount,
       approved_term_days: app.requested_term_days,
       approved_interest_rate: product?.interestRate || 12,
-      review_notes: ''
+      review_notes: '',
+      calculated_interest: 0,
+      calculated_total: 0,
+      calculated_processing_fee: 0,
+      calculated_platform_fee: 0,
+      calculated_net_proceeds: 0
     };
+    
+    // Calculate loan amounts using calculator service
+    this.calculateLoanAmounts();
+    
     this.amountError.set(''); // Clear any previous errors
     this.notesError.set('Notes are required'); // Set initial error
     this.showApprovalModal.set(true);
@@ -1066,6 +1158,49 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       this.notesTextarea?.nativeElement.focus();
     }, 100);
+  }
+
+  calculateLoanAmounts(): void {
+    const app = this.selectedApplication();
+    if (!app) return;
+
+    const amount = Number(this.approvalData.approved_amount) || 0;
+    const termDays = Number(this.approvalData.approved_term_days) || 0;
+    const interestRate = Number(this.approvalData.approved_interest_rate) || 0;
+
+    if (amount <= 0 || termDays <= 0 || interestRate <= 0) {
+      this.approvalData.calculated_interest = 0;
+      this.approvalData.calculated_total = 0;
+      this.approvalData.calculated_processing_fee = 0;
+      this.approvalData.calculated_platform_fee = 0;
+      this.approvalData.calculated_net_proceeds = 0;
+      return;
+    }
+
+    // Convert days to months for the calculator (assumes 30 days = 1 month)
+    const termMonths = Math.max(1, Math.round(termDays / 30));
+
+    const calculation = this.calculatorService.calculate({
+      loanAmount: amount,
+      termMonths: termMonths,
+      paymentFrequency: app.product_payment_frequency as any || 'monthly',
+      interestRate: interestRate,
+      interestType: (app.product_interest_type as any) || 'flat',
+      processingFeePercentage: app.product_processing_fee_percent || 0,
+      platformFee: app.product_platform_fee || 0,
+      latePenaltyPercentage: 0
+    });
+
+    this.approvalData.calculated_interest = calculation.interestAmount;
+    this.approvalData.calculated_total = calculation.totalRepayable;
+    this.approvalData.calculated_processing_fee = calculation.processingFeeAmount;
+    this.approvalData.calculated_platform_fee = calculation.platformFee;
+    this.approvalData.calculated_net_proceeds = calculation.netProceeds;
+  }
+
+  onApprovalDataChange(): void {
+    this.validateAmount();
+    this.calculateLoanAmounts();
   }
 
   validateAmount(): void {
@@ -1164,18 +1299,17 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
 
     if (!confirmed) return;
 
-    const user = this.authService.currentUser();
-
-    // Map frontend fields to backend expected fields
+    // Map frontend fields to backend DTO format - include all calculated values
     const approvalPayload = {
-      approvedBy: user?.id || 0,
       approvedAmount: amount,
-      interestRate: this.approvalData.approved_interest_rate,
-      loanTermDays: this.approvalData.approved_term_days,
-      totalFees: 0,
-      totalInterest: 0,
-      monthlyPayment: 0,
-      notes: this.approvalData.review_notes
+      approvedTermDays: Number(this.approvalData.approved_term_days) || 0,
+      interestRate: Number(this.approvalData.approved_interest_rate) || 0,
+      interestType: app?.product_interest_type || 'flat',
+      totalInterest: this.approvalData.calculated_interest,
+      totalAmount: this.approvalData.calculated_total,
+      processingFee: this.approvalData.calculated_processing_fee,
+      platformFee: this.approvalData.calculated_platform_fee,
+      notes: this.approvalData.review_notes || ''
     };
 
     this.applicationService.approveApplication(String(this.tenantId), app.id, approvalPayload).subscribe({
@@ -1255,12 +1389,7 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
    * Processing fee is a percentage of the approved amount
    */
   calcProcessingFee(): number {
-    const app = this.selectedApplication();
-    if (!app || !this.approvalData.approved_amount) return 0;
-    
-    const processingFeePercent = app.product_processing_fee_percent || 0;
-    const amount = Number(this.approvalData.approved_amount) || 0;
-    return (amount * processingFeePercent) / 100;
+    return this.approvalData.calculated_processing_fee || 0;
   }
 
   /**
@@ -1279,45 +1408,28 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
    * Calculate total platform fee for the entire loan term
    */
   calcTotalPlatformFee(): number {
-    const termDays = Number(this.approvalData.approved_term_days) || 0;
-    const months = Math.round(termDays / 30);
-    return this.calcPlatformFeePerMonth() * months;
+    return this.approvalData.calculated_platform_fee || 0;
   }
 
   /**
-   * Calculate total interest for the entire loan term
-   * For FLAT rate: Interest = Amount × Rate / 100 (one-time, not multiplied by months)
-   * Flat rate means the interest is fixed for the entire loan term
+   * Calculate total interest - uses calculator service
    */
   calcTotalInterest(): number {
-    const amount = Number(this.approvalData.approved_amount) || 0;
-    const rate = Number(this.approvalData.approved_interest_rate) || 0;
-    return (amount * rate) / 100;
+    return this.approvalData.calculated_interest || 0;
   }
 
   /**
-   * Calculate total repayment (what customer must pay back)
-   * Total Repayment = Loan Amount + Interest + Processing Fee + Platform Fee
-   * Customer receives: Net Amount (after fee deductions)
-   * Customer pays back: Full amount including all fees and interest
+   * Calculate total repayment (what customer must pay back) - uses calculator service
    */
   calcTotalRepayment(): number {
-    const amount = Number(this.approvalData.approved_amount) || 0;
-    const interest = this.calcTotalInterest();
-    const processing = this.calcProcessingFee();
-    const platform = this.calcTotalPlatformFee();
-    
-    return amount + interest + processing + platform;
+    return this.approvalData.calculated_total || 0;
   }
 
   /**
-   * Calculate net pay (amount customer actually receives)
-   * Net Pay = Approved Amount - Processing Fee - Total Platform Fee
-   * Note: Interest is NOT deducted upfront, customer receives full amount minus fees
+   * Calculate net pay (amount customer actually receives) - uses calculator service
    */
   calcNetPay(): number {
-    const amount = Number(this.approvalData.approved_amount) || 0;
-    return amount - this.calcProcessingFee() - this.calcTotalPlatformFee();
+    return this.approvalData.calculated_net_proceeds || 0;
   }
 
   /**
@@ -1366,18 +1478,26 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
   }
 
   formatDate(date: string | undefined): string {
-    if (!date) return 'N/A';
+    console.log('🗓️ formatDate called with:', date, 'type:', typeof date);
+    if (!date) {
+      console.log('❌ Date is empty/null/undefined');
+      return 'N/A';
+    }
     try {
       const d = new Date(date);
+      console.log('📅 Parsed date:', d, 'isValid:', !isNaN(d.getTime()));
       if (isNaN(d.getTime())) return 'N/A';
-      return d.toLocaleDateString('en-US', { 
+      const formatted = d.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric', 
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       });
+      console.log('✅ Formatted date:', formatted);
+      return formatted;
     } catch (e) {
+      console.error('❌ Date formatting error:', e);
       return 'N/A';
     }
   }

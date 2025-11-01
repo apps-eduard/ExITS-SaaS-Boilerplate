@@ -240,6 +240,22 @@ export class ApproveLoanDto {
   @IsNotEmpty()
   interestType: string;
 
+  @IsNumber()
+  @IsNotEmpty()
+  totalInterest: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  totalAmount: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  processingFee: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  platformFee: number;
+
   @IsString()
   @IsOptional()
   notes?: string;

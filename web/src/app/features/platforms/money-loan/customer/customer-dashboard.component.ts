@@ -239,17 +239,39 @@ export class CustomerDashboardComponent implements OnInit {
 
   loadCustomerLoans() {
     this.loading.set(true);
-    // In real implementation, this would filter by current customer ID
-    this.loanService.listLoans({ page: 1, limit: 10 }).subscribe({
-      next: (response: { success: boolean; message: string; data: Loan[]; pagination: any }) => {
-        this.loans.set(response.data);
+
+    const customerData = localStorage.getItem('customerData');
+    if (!customerData) {
+      console.warn('Customer data not found in localStorage. Unable to load loans.');
+      this.loading.set(false);
+      return;
+    }
+
+    try {
+      const customer = JSON.parse(customerData);
+      const tenantId = customer.tenantId || customer.tenant_id;
+      const customerId = customer.id;
+
+      if (!tenantId || !customerId) {
+        console.warn('Missing tenantId or customerId in stored customer data.', customer);
         this.loading.set(false);
-      },
-      error: (error: any) => {
-        console.error('Error loading loans:', error);
-        this.loading.set(false);
+        return;
       }
-    });
+
+      this.loanService.listCustomerLoans(String(tenantId), Number(customerId), { page: 1, limit: 10 }).subscribe({
+        next: (response: { success: boolean; message: string; data: Loan[]; pagination: any }) => {
+          this.loans.set(response.data || []);
+          this.loading.set(false);
+        },
+        error: (error: any) => {
+          console.error('Error loading loans:', error);
+          this.loading.set(false);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to parse customer data from localStorage.', error);
+      this.loading.set(false);
+    }
   }
 
   calculateProgress(loan: Loan): number {

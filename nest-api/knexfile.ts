@@ -58,7 +58,7 @@ const knexConfig: { [key: string]: Knex.Config } = {
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: './src/seeds',
+      directory: './src/database/seeds',
     },
     ...sharedConfig,
   },
@@ -78,7 +78,7 @@ const knexConfig: { [key: string]: Knex.Config } = {
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: './src/seeds',
+      directory: './src/database/seeds',
     },
     ...sharedConfig,
   },

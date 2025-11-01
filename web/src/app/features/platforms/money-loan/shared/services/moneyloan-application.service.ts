@@ -7,71 +7,69 @@ import { Observable } from 'rxjs';
 })
 export class MoneyloanApplicationService {
   private http = inject(HttpClient);
-  private getApiUrl(tenantId: string) {
-    return `/api/tenants/${tenantId}/platforms/moneyloan/loans`;
-  }
+  private baseUrl = '/api/money-loan'; // NestJS route with /api prefix
 
   // ==================== LOAN APPLICATIONS ====================
 
   getApplications(tenantId: string, filters?: any): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/applications`, { params: filters });
+    return this.http.get(`${this.baseUrl}/applications`, { params: filters });
   }
 
   getApplication(tenantId: string, applicationId: number): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/applications/${applicationId}`);
+    return this.http.get(`${this.baseUrl}/applications/${applicationId}`);
   }
 
   createApplication(tenantId: string, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/applications`, data);
+    return this.http.post(`${this.baseUrl}/applications`, data);
   }
 
   updateApplication(tenantId: string, applicationId: number, data: any): Observable<any> {
-    return this.http.put(`${this.getApiUrl(tenantId)}/applications/${applicationId}`, data);
+    return this.http.put(`${this.baseUrl}/applications/${applicationId}`, data);
   }
 
   approveApplication(tenantId: string, applicationId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/applications/${applicationId}/approve`, data);
+    return this.http.put(`${this.baseUrl}/applications/${applicationId}/approve`, data);
   }
 
   rejectApplication(tenantId: string, applicationId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/applications/${applicationId}/reject`, data);
+    return this.http.put(`${this.baseUrl}/applications/${applicationId}/reject`, data);
   }
 
   // ==================== LOAN OPERATIONS ====================
 
   disburseLoan(tenantId: string, loanId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/${loanId}/disburse`, data);
+    return this.http.post(`${this.baseUrl}/loans/${loanId}/disburse`, data);
   }
 
   getLoan(tenantId: string, loanId: number): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/${loanId}`);
+    return this.http.get(`${this.baseUrl}/loans/${loanId}`);
   }
 
   getCustomerLoans(tenantId: string, customerId: string): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/customers/${customerId}/loans`);
+    return this.http.get(`${this.baseUrl}/customers/${customerId}/loans`);
   }
 
   getProductLoans(tenantId: string, productId: string): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/products/${productId}/loans`);
+    return this.http.get(`${this.baseUrl}/products/${productId}/loans`);
   }
 
   getLoansWithFilters(tenantId: string, filters?: any): Observable<any> {
-    return this.http.get(this.getApiUrl(tenantId), { params: filters });
+    return this.http.get(`${this.baseUrl}/loans`, { params: filters });
   }
 
   closeLoan(tenantId: string, loanId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/${loanId}/close`, data);
+    return this.http.post(`${this.baseUrl}/loans/${loanId}/close`, data);
   }
 
   suspendLoan(tenantId: string, loanId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/${loanId}/suspend`, data);
+    return this.http.post(`${this.baseUrl}/loans/${loanId}/suspend`, data);
   }
 
   resumeLoan(tenantId: string, loanId: number, data: any): Observable<any> {
-    return this.http.post(`${this.getApiUrl(tenantId)}/${loanId}/resume`, data);
+    return this.http.post(`${this.baseUrl}/loans/${loanId}/resume`, data);
   }
 
   getLoansDashboard(tenantId: string): Observable<any> {
-    return this.http.get(`${this.getApiUrl(tenantId)}/dashboard`);
+    return this.http.get(`${this.baseUrl}/dashboard`);
   }
 }

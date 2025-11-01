@@ -23,10 +23,12 @@ import { ReportsDashboardComponent } from '../admin/reports/reports-dashboard.co
 
 // Payments
 import { PaymentProcessingComponent } from '../admin/payments/payment-processing.component';
+import { RecordPaymentComponent } from '../admin/payments/record-payment.component';
 
 // Customer Components
 import { LoanApplicationFormComponent } from '../customer/loan-application-form.component';
 import { LoanStatusTrackingComponent } from '../customer/loan-status-tracking.component';
+import { CustomerMakePaymentComponent } from '../customer/make-payment.component';
 
 const routes: Routes = [
   {
@@ -71,8 +73,8 @@ const routes: Routes = [
   },
   {
     path: 'payments/record',
-    component: PaymentFormComponent,
-    data: { title: 'Record Payment', permission: 'money_loan:payments:create' }
+    component: RecordPaymentComponent,
+    data: { title: 'Record Walk-in Payment', permission: 'money_loan:payments:create' }
   },
   {
     path: 'payments/process/:id',
@@ -129,9 +131,24 @@ const routes: Routes = [
     data: { title: 'Apply for Loan' }
   },
   {
+    path: 'customer/loan-status-tracking',
+    component: LoanStatusTrackingComponent,
+    data: { title: 'Track Application Status' }
+  },
+  {
     path: 'customer/status/:id',
     component: LoanStatusTrackingComponent,
     data: { title: 'Loan Status' }
+  },
+  {
+    path: 'customer/payment',
+    component: CustomerMakePaymentComponent,
+    data: { title: 'Make Payment' }
+  },
+  {
+    path: 'customer/loans/:id',
+    component: LoanDetailsComponent,
+    data: { title: 'Loan Details' }
   }
 ];
 

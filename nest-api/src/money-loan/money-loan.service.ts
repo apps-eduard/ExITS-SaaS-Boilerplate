@@ -16,6 +16,9 @@ export class MoneyLoanService {
 
   async createApplication(tenantId: number, createDto: CreateLoanApplicationDto) {
     const knex = this.knexService.instance;
+    console.log('🔍 CREATE APPLICATION - DTO:', createDto);
+    console.log('🔍 CREATE APPLICATION - Tenant ID:', tenantId);
+
     const appNumber = `APP-${tenantId}-${Date.now()}`;
 
     const appData: any = {};
@@ -35,10 +38,29 @@ export class MoneyLoanService {
         purpose: createDto.purpose || 'Loan application',
         status: 'submitted',
         application_data: JSON.stringify(appData),
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
       })
       .returning('*');
 
-    return application;
+    console.log('📦 CREATE APPLICATION - Raw DB response:', application);
+
+    // Fetch product details to include in response
+    const productDetails = await knex('money_loan_products')
+      .where({ id: createDto.loanProductId, tenant_id: tenantId })
+      .first();
+
+    console.log('🏷️ CREATE APPLICATION - Product details:', productDetails);
+
+    const result = {
+      ...application,
+      product_code: productDetails?.product_code || null,
+      product_name: productDetails?.name || null,
+    };
+
+    console.log('✅ CREATE APPLICATION - Final result:', result);
+
+    return result;
   }
 
   async getApplications(
@@ -81,6 +103,7 @@ export class MoneyLoanService {
         'mlp.platform_fee as product_platform_fee',
         'mlp.payment_frequency as product_payment_frequency',
         'mlp.interest_rate as product_interest_rate',
+        'mlp.interest_type as product_interest_type',
         'mlp.loan_term_type as product_loan_term_type',
         'mlp.fixed_term_days as product_fixed_term_days'
       )
@@ -124,7 +147,11 @@ export class MoneyLoanService {
       .offset(offset)
       .limit(limitNumber);
 
+    console.log('📋 GET APPLICATIONS - Raw rows from DB:', JSON.stringify(rows, null, 2));
+
     const data = rows.map((row: any) => this.mapApplicationRow(row));
+
+    console.log('📋 GET APPLICATIONS - Mapped data:', JSON.stringify(data, null, 2));
 
     return {
       data,
@@ -154,12 +181,16 @@ export class MoneyLoanService {
         status: 'approved',
         approved_amount: approveDto.approvedAmount,
         approved_term_days: approveDto.approvedTermDays,
-        approved_at: knex.fn.now(),
-        approved_by: approvedBy,
+        approved_interest_rate: approveDto.interestRate,
+        reviewed_at: knex.fn.now(),
+        reviewed_by: approvedBy,
+        review_notes: approveDto.notes,
+        updated_at: knex.fn.now(),
       });
 
     const loanNumber = `LOAN-${tenantId}-${Date.now()}`;
 
+    // Use pre-calculated values from frontend
     const [loan] = await knex('money_loan_loans')
       .insert({
         tenant_id: tenantId,
@@ -169,12 +200,52 @@ export class MoneyLoanService {
         loan_number: loanNumber,
         principal_amount: approveDto.approvedAmount,
         interest_rate: approveDto.interestRate,
+        interest_type: approveDto.interestType,
         term_days: approveDto.approvedTermDays,
+        processing_fee: approveDto.processingFee,
+        total_interest: approveDto.totalInterest,
+        total_amount: approveDto.totalAmount,
+        outstanding_balance: approveDto.totalAmount, // Starts at total amount
         status: 'pending',
       })
       .returning('*');
 
     return loan;
+  }
+
+  async rejectApplication(
+    tenantId: number,
+    applicationId: number,
+    rejectDto: { notes: string },
+    rejectedBy: number,
+  ) {
+    const knex = this.knexService.instance;
+
+    const application = await knex('money_loan_applications')
+      .where({ id: applicationId, tenant_id: tenantId })
+      .first();
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    if (application.status === 'approved' || application.status === 'rejected') {
+      throw new BadRequestException(`Application is already ${application.status}`);
+    }
+
+    await knex('money_loan_applications')
+      .where({ id: applicationId })
+      .update({
+        status: 'rejected',
+        review_notes: rejectDto.notes,
+        reviewed_at: knex.fn.now(),
+        reviewed_by: rejectedBy,
+        updated_at: knex.fn.now(),
+      });
+
+    return await knex('money_loan_applications')
+      .where({ id: applicationId })
+      .first();
   }
 
   async getLoans(
@@ -200,6 +271,17 @@ export class MoneyLoanService {
       limit = 20,
     } = filters;
 
+    console.log('🔎 [GET LOANS SERVICE] Starting query with filters:', {
+      tenantId,
+      customerId,
+      status,
+      loanProductId,
+      productId,
+      search,
+      page,
+      limit
+    });
+
     const pageNumber = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
     const limitNumber = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 100) : 20;
 
@@ -216,19 +298,29 @@ export class MoneyLoanService {
       .where('mll.tenant_id', tenantId);
 
     if (customerId) {
+      console.log('📌 Filtering by customerId:', customerId);
       baseQuery.where('mll.customer_id', customerId);
     }
 
     if (status) {
-      baseQuery.where('mll.status', status);
+      // Support comma-separated status values like 'active,overdue'
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      console.log('📌 Filtering by status:', statuses);
+      if (statuses.length === 1) {
+        baseQuery.where('mll.status', statuses[0]);
+      } else if (statuses.length > 1) {
+        baseQuery.whereIn('mll.status', statuses);
+      }
     }
 
     const normalizedProductId = productId ?? loanProductId;
     if (normalizedProductId) {
+      console.log('📌 Filtering by productId:', normalizedProductId);
       baseQuery.where('mll.loan_product_id', normalizedProductId);
     }
 
     if (search) {
+      console.log('📌 Searching for:', search);
       const like = `%${search}%`;
       baseQuery.where((builder) => {
         builder
@@ -245,6 +337,8 @@ export class MoneyLoanService {
       .count<{ count: string }[]>({ count: '*' });
 
     const total = Number(totalResult?.[0]?.count ?? 0);
+    console.log('📊 Total matching loans:', total);
+    
     const offset = (pageNumber - 1) * limitNumber;
 
     const rows = await baseQuery
@@ -253,7 +347,12 @@ export class MoneyLoanService {
       .offset(offset)
       .limit(limitNumber);
 
-  const data = rows.map((row: any) => this.mapLoanRow(row));
+    console.log('📦 Retrieved loans:', rows.length);
+    console.log('📝 SQL Query:', baseQuery.toString());
+
+    const data = rows.map((row: any) => this.mapLoanRow(row));
+    
+    console.log('✅ [GET LOANS SERVICE] Returning:', data.length, 'loans');
 
     return {
       data,
@@ -314,6 +413,10 @@ export class MoneyLoanService {
       return null;
     }
 
+    console.log('🔍 mapApplicationRow - Raw row keys:', Object.keys(row));
+    console.log('🔍 mapApplicationRow - created_at value:', row.created_at);
+    console.log('🔍 mapApplicationRow - createdAt value:', row.createdAt);
+
     const requestedAmount = row.requestedAmount ?? row.requested_amount ?? 0;
     const approvedAmount = row.approvedAmount ?? row.approved_amount ?? null;
     const requestedTermDays = row.requestedTermDays ?? row.requested_term_days ?? null;
@@ -321,6 +424,8 @@ export class MoneyLoanService {
 
     const applicationNumber = row.applicationNumber ?? row.application_number;
     const createdAt = row.createdAt ?? row.created_at ?? null;
+
+    console.log('✅ mapApplicationRow - Final createdAt:', createdAt);
 
     const customerFirstName = row.customerFirstName ?? row.firstName ?? row.customer_first_name ?? row.first_name;
     const customerLastName = row.customerLastName ?? row.lastName ?? row.customer_last_name ?? row.last_name;
@@ -330,6 +435,7 @@ export class MoneyLoanService {
       id: row.id,
       application_number: applicationNumber,
       customer_id: row.customerId ?? row.customer_id,
+      loan_product_id: row.loanProductId ?? row.loan_product_id,
       requested_amount: Number(requestedAmount) || 0,
       requested_term_days: requestedTermDays ?? 0,
       approved_amount: approvedAmount !== null ? Number(approvedAmount) : null,
@@ -353,6 +459,7 @@ export class MoneyLoanService {
       // camelCase duplicates for future use
       applicationNumber,
       customerId: row.customerId ?? row.customer_id,
+      loanProductId: row.loanProductId ?? row.loan_product_id,
       requestedAmount: Number(requestedAmount) || 0,
       requestedTermDays,
       approvedAmount: approvedAmount !== null ? Number(approvedAmount) : null,

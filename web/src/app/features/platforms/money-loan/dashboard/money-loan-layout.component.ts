@@ -135,6 +135,10 @@ import { DevInfoComponent } from '../../../../shared/components/dev-info/dev-inf
             </button>
             @if (expandedSections().payments) {
               <div class="ml-8 space-y-1">
+                <a routerLink="payments/record" routerLinkActive="text-blue-600 dark:text-blue-400"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  💵 Record Payment
+                </a>
                 <a routerLink="/platforms/money-loan/dashboard/payments/today" routerLinkActive="text-blue-600 dark:text-blue-400"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📅 Today's Collections

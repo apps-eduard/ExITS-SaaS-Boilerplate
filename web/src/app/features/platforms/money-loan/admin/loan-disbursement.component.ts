@@ -8,7 +8,6 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { Loan } from '../shared/models/loan.models';
 
 interface DisbursementData {
-  disbursedBy?: number;
   disbursementMethod: string;
   disbursementReference: string;
   disbursementNotes?: string;
@@ -409,13 +408,8 @@ export class LoanDisbursementComponent implements OnInit {
       return;
     }
 
-    // Add the current user ID as disbursedBy
-    const disbursementPayload = {
-      ...this.disbursementData,
-      disbursedBy: currentUser.id
-    };
-
-    this.applicationService.disburseLoan(tenantId.toString(), loan.id, disbursementPayload).subscribe({
+    // Backend will get disbursedBy from JWT token (req.user.id)
+    this.applicationService.disburseLoan(tenantId.toString(), loan.id, this.disbursementData).subscribe({
       next: (response) => {
         this.processing.set(false);
         this.closeDisbursementModal();

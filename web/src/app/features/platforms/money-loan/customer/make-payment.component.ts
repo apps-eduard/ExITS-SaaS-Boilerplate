@@ -236,22 +236,41 @@ export class CustomerMakePaymentComponent implements OnInit {
   }
 
   loadActiveLoans(preselectedId: number | null) {
-    this.loanService.listLoans({ page: 1, limit: 100 }).subscribe({
-      next: (response: { success: boolean; message: string; data: Loan[]; pagination: any }) => {
-        const active = response.data.filter((l: Loan) => l.status === 'active' || l.status === 'overdue');
-        this.activeLoans.set(active);
-        
-        if (preselectedId) {
-          const loan = active.find((l: Loan) => l.id === preselectedId);
-          if (loan) {
-            this.selectLoan(loan);
-          }
-        }
-      },
-      error: (error: any) => {
-        console.error('Error loading loans:', error);
+    const customerData = localStorage.getItem('customerData');
+    if (!customerData) {
+      console.warn('Customer data not found in localStorage. Unable to load active loans.');
+      return;
+    }
+
+    try {
+      const customer = JSON.parse(customerData);
+      const tenantId = customer.tenantId || customer.tenant_id;
+      const customerId = customer.id;
+
+      if (!tenantId || !customerId) {
+        console.warn('Missing tenantId or customerId in stored customer data.', customer);
+        return;
       }
-    });
+
+      this.loanService.listCustomerLoans(String(tenantId), Number(customerId), { page: 1, limit: 100 }).subscribe({
+        next: (response: { success: boolean; message: string; data: Loan[]; pagination: any }) => {
+          const active = (response.data || []).filter((l: Loan) => l.status === 'active' || l.status === 'overdue');
+          this.activeLoans.set(active);
+
+          if (preselectedId) {
+            const loan = active.find((l: Loan) => l.id === preselectedId);
+            if (loan) {
+              this.selectLoan(loan);
+            }
+          }
+        },
+        error: (error: any) => {
+          console.error('Error loading loans:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to parse customer data from localStorage.', error);
+    }
   }
 
   selectLoan(loan: Loan) {

@@ -134,8 +134,21 @@ export class MoneyLoanTenantController {
     @Query('limit') limit?: string,
   ) {
     const tenantId = this.ensureTenantAccess(req, this.parseTenantId(tenantIdParam));
+    
+    console.log('🔍 [LIST LOANS] Request received:', {
+      tenantId,
+      userType: req.user?.type,
+      customerId,
+      status,
+      search,
+      page,
+      limit,
+      loanProductId,
+      productId
+    });
+    
     if (req.user?.type === 'customer') {
-      const result = await this.moneyLoanService.getLoans(tenantId, {
+      const filters = {
         customerId: req.user.customerId,
         page: page ? parseInt(page, 10) : undefined,
         limit: limit ? parseInt(limit, 10) : undefined,
@@ -147,14 +160,18 @@ export class MoneyLoanTenantController {
           ? parseInt(legacyProductId, 10)
           : undefined,
         search,
-      });
+      };
+      console.log('👤 [CUSTOMER REQUEST] Filters:', filters);
+      const result = await this.moneyLoanService.getLoans(tenantId, filters);
+      console.log('✅ [CUSTOMER RESPONSE] Found:', result.data.length, 'loans');
       return {
         success: true,
         data: result.data,
         pagination: result.pagination,
       };
     }
-    const result = await this.moneyLoanService.getLoans(tenantId, {
+    
+    const filters = {
       customerId: customerId ? parseInt(customerId, 10) : undefined,
       status,
       loanProductId: loanProductId ? parseInt(loanProductId, 10) : undefined,
@@ -166,7 +183,10 @@ export class MoneyLoanTenantController {
       search,
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
-    });
+    };
+    console.log('👔 [ADMIN REQUEST] Filters:', filters);
+    const result = await this.moneyLoanService.getLoans(tenantId, filters);
+    console.log('✅ [ADMIN RESPONSE] Found:', result.data.length, 'loans');
     return {
       success: true,
       data: result.data,

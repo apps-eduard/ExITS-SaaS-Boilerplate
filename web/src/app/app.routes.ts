@@ -183,6 +183,10 @@ export const routes: Routes = [
       },
       // Payments
       {
+        path: 'payments/record',
+        loadComponent: () => import('./features/platforms/money-loan/admin/payments/record-payment.component').then(m => m.RecordPaymentComponent)
+      },
+      {
         path: 'payments/today',
         loadComponent: () => import('./features/platforms/money-loan/admin/payments/payment-processing.component').then(m => m.PaymentProcessingComponent)
       },

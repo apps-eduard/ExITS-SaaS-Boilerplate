@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CurrencyMaskDirective } from '../../../../shared/directives/currency-mask.directive';
+import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/services/loan-calculator.service';
 
 @Component({
   selector: 'app-customer-products',
@@ -41,7 +42,8 @@ import { CurrencyMaskDirective } from '../../../../shared/directives/currency-ma
             <div
               class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200"
               [class.opacity-60]="isProductDisabled(product)"
-              [class.pointer-events-none]="isProductDisabled(product) && false">
+              [class.pointer-events-none]="isProductDisabled(product)"
+              [attr.aria-disabled]="isProductDisabled(product) ? true : null">
               <!-- Product Header -->
               <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
                 <div class="flex items-start justify-between">
@@ -403,6 +405,7 @@ export class CustomerProductsComponent implements OnInit {
   private router = inject(Router);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private loanCalculator = inject(LoanCalculatorService);
 
   // Expose Math to template
   Math = Math;
@@ -410,12 +413,27 @@ export class CustomerProductsComponent implements OnInit {
   loading = signal(true);
   products = signal<any[]>([]);
   customerLoans = signal<any[]>([]); // Track customer's loans
+  hasBlockingLoans = computed(() =>
+    this.customerLoans().some((app: any) => this.blockingStatuses.has(app.status))
+  );
+  private readonly blockingStatuses = new Set([
+    'submitted',
+    'under_review',
+    'approved',
+    'pending',
+    'in_review',
+    'processing',
+    'awaiting_review',
+    'application_submitted'
+  ]);
 
   // Calculator state
   showCalculator = signal(false);
   selectedProduct = signal<any>(null);
   calcAmount = 0;
   calcTermMonths = 3;
+
+  private calculationCache: { key: string; result: LoanCalculation } | null = null;
 
   // Validation errors
   amountError = signal<string>('');
@@ -468,15 +486,21 @@ export class CustomerProductsComponent implements OnInit {
       const customerId = customer.id;
       const tenantId = customer.tenantId || '1';
 
+      console.log('🔄 Loading customer loans for customer:', customerId, 'tenant:', tenantId);
+
       // Fetch customer's loan applications (pending, submitted, under_review, approved)
-      this.http.get<any>(`/api/tenants/${tenantId}/platforms/moneyloan/loans/customers/${customerId}/applications`).subscribe({
+      this.http.get<any>(`/api/tenants/${tenantId}/platforms/moneyloan/loans/applications`, {
+        params: { customerId: String(customerId) }
+      }).subscribe({
         next: (response) => {
-          if (response.success && response.data) {
-            // Filter for applications that should lock the product
-            const relevantApplications = response.data.filter((app: any) =>
-              app.status === 'submitted' || app.status === 'under_review' || app.status === 'approved'
-            );
-            this.customerLoans.set(relevantApplications);
+          console.log('📥 Raw applications response:', response);
+          if (response.success && Array.isArray(response.data)) {
+            const normalizedApplications = response.data
+              .map((app: any) => this.normalizeLoanApplication(app))
+              .filter((app: any) => app && this.blockingStatuses.has(app.status));
+            
+            console.log('✅ Normalized and filtered applications:', normalizedApplications);
+            this.customerLoans.set(normalizedApplications);
           }
         },
         error: (error) => {
@@ -488,25 +512,141 @@ export class CustomerProductsComponent implements OnInit {
     }
   }
 
+  private normalizeLoanApplication(application: any): any {
+    if (!application) {
+      return null;
+    }
+
+    const loanProductId = this.normalizeProductId(
+      application.loan_product_id ?? application.loanProductId ?? application.product_id ?? application.productId ?? null
+    );
+    const productCode = this.normalizeProductCode(
+      application.product_code ?? application.productCode ?? application.product?.productCode ?? application.product?.product_code ?? null
+    );
+    const productKey = this.buildProductKey(loanProductId, productCode);
+
+    console.log('🔧 Normalizing application:', {
+      raw: {
+        loan_product_id: application.loan_product_id,
+        loanProductId: application.loanProductId,
+        product_code: application.product_code,
+        productCode: application.productCode,
+        status: application.status
+      },
+      normalized: {
+        loanProductId,
+        productCode,
+        productKey
+      }
+    });
+
+    if (!productKey) {
+      console.warn('⚠️ Application has no product key, skipping:', application);
+      return null;
+    }
+
+    const status = this.normalizeStatus(
+      application.status ?? application.applicationStatus ?? application.loan_status ?? 'submitted'
+    );
+
+    return {
+      ...application,
+      loan_product_id: loanProductId,
+      product_code: productCode ?? application.product_code ?? application.productCode,
+      status,
+      __productKey: productKey
+    };
+  }
+
+  private upsertCustomerLoan(application: any) {
+    const normalized = this.normalizeLoanApplication(application);
+    if (!normalized || !this.blockingStatuses.has(normalized.status)) {
+      return;
+    }
+
+    const normalizedId = normalized.id ?? normalized.loan_application_id ?? normalized.application_id ?? null;
+    const normalizedProductKey = this.getProductKeyFromApplication(normalized);
+    if (!normalizedProductKey) {
+      return;
+    }
+
+    this.customerLoans.update((loans) => {
+      const next = [...loans];
+      const index = next.findIndex((existing: any) => {
+        const existingId = existing.id ?? existing.loan_application_id ?? existing.application_id ?? null;
+        if (existingId && normalizedId) {
+          return existingId === normalizedId;
+        }
+        return this.getProductKeyFromApplication(existing) === normalizedProductKey;
+      });
+
+      if (index >= 0) {
+        next[index] = { ...next[index], ...normalized };
+        return next;
+      }
+
+      next.push(normalized);
+      return next;
+    });
+  }
+
   isProductDisabled(product: any): boolean {
     // Check if customer has pending or approved application with this product
     const applications = this.customerLoans();
-    return applications.some((app: any) =>
-      app.loan_product_id === product.id &&
-      (app.status === 'submitted' || app.status === 'under_review' || app.status === 'approved')
-    );
+    const productKey = this.getProductKeyFromProduct(product);
+    
+    const appDetails = applications.map((app: any) => {
+      const appKey = this.getProductKeyFromApplication(app);
+      const hasBlockingStatus = this.blockingStatuses.has(app.status);
+      const keysMatch = appKey === productKey;
+      return {
+        id: app.id,
+        loan_product_id: app.loan_product_id,
+        product_code: app.product_code,
+        status: app.status,
+        appKey,
+        hasBlockingStatus,
+        keysMatch,
+        shouldBlock: keysMatch && hasBlockingStatus
+      };
+    });
+    
+    console.log('🔍 Product Check - ID:', product?.id, 'Code:', product?.productCode, 'Key:', productKey);
+    console.log('📋 Blocking Statuses:', Array.from(this.blockingStatuses));
+    console.log('📦 Applications:', JSON.stringify(appDetails, null, 2));
+    
+    if (!productKey) {
+      return false;
+    }
+
+    const isDisabled = applications.some((app: any) => {
+      const appKey = this.getProductKeyFromApplication(app);
+      const match = appKey === productKey && this.blockingStatuses.has(app.status);
+      if (match) {
+        console.log('✅ Found matching blocking application:', app);
+      }
+      return match;
+    });
+    
+    console.log('🔒 Product disabled result:', isDisabled);
+    return isDisabled;
   }
 
   getProductDisabledReason(product: any): string {
     const applications = this.customerLoans();
+    const productKey = this.getProductKeyFromProduct(product);
+    if (!productKey) {
+      return '';
+    }
+
     const existingApp = applications.find((app: any) =>
-      app.loan_product_id === product.id &&
-      (app.status === 'submitted' || app.status === 'under_review' || app.status === 'approved')
+      this.getProductKeyFromApplication(app) === productKey &&
+      this.blockingStatuses.has(app.status)
     );
 
     if (!existingApp) return '';
 
-    if (existingApp.status === 'submitted' || existingApp.status === 'under_review') {
+    if (existingApp.status === 'submitted' || existingApp.status === 'under_review' || existingApp.status === 'pending' || existingApp.status === 'processing' || existingApp.status === 'awaiting_review') {
       return 'Pending Approval';
     }
     if (existingApp.status === 'approved') {
@@ -517,21 +657,100 @@ export class CustomerProductsComponent implements OnInit {
 
   getProductStatusTag(product: any): { text: string; color: string } {
     const applications = this.customerLoans();
+    const productKey = this.getProductKeyFromProduct(product);
+    if (!productKey) {
+      return { text: 'Active', color: 'green' };
+    }
+
     const existingApp = applications.find((app: any) =>
-      app.loan_product_id === product.id &&
-      (app.status === 'submitted' || app.status === 'under_review' || app.status === 'approved')
+      this.getProductKeyFromApplication(app) === productKey &&
+      this.blockingStatuses.has(app.status)
     );
 
     if (!existingApp) {
       return { text: 'Active', color: 'green' };
     }
 
-    if (existingApp.status === 'submitted' || existingApp.status === 'under_review') {
+    if (existingApp.status === 'submitted' || existingApp.status === 'under_review' || existingApp.status === 'pending' || existingApp.status === 'processing' || existingApp.status === 'awaiting_review') {
       return { text: 'Pending Approval', color: 'amber' };
     } else if (existingApp.status === 'approved') {
       return { text: 'Approved - Awaiting Disbursement', color: 'blue' };
     }
     return { text: 'Active', color: 'green' };
+  }
+
+  private normalizeProductId(value: any): string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'number' || typeof value === 'bigint') {
+      return String(value);
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim();
+    }
+
+    return null;
+  }
+
+  private normalizeStatus(status: any): string {
+    if (status === null || status === undefined) {
+      return 'submitted';
+    }
+
+    return String(status).toLowerCase();
+  }
+
+  private normalizeProductCode(value: any): string | null {
+    if (!value || (typeof value === 'string' && value.trim() === '')) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+
+    return String(value).trim().toLowerCase();
+  }
+
+  private buildProductKey(id: string | null, code: string | null): string | null {
+    if (id) {
+      return `id:${id}`;
+    }
+    if (code) {
+      return `code:${code}`;
+    }
+    return null;
+  }
+
+  private getProductKeyFromApplication(application: any): string | null {
+    if (!application) {
+      return null;
+    }
+
+    if (application.__productKey) {
+      return application.__productKey;
+    }
+
+    const id = this.normalizeProductId(
+      application.loan_product_id ?? application.loanProductId ?? application.product_id ?? application.productId ?? null
+    );
+    const code = this.normalizeProductCode(
+      application.product_code ?? application.productCode ?? application.product?.productCode ?? application.product?.product_code ?? null
+    );
+    return this.buildProductKey(id, code);
+  }
+
+  private getProductKeyFromProduct(product: any): string | null {
+    if (!product) {
+      return null;
+    }
+
+    const id = this.normalizeProductId(product.id ?? product.loanProductId ?? product.productId ?? null);
+    const code = this.normalizeProductCode(product.productCode ?? product.code ?? product.product_code ?? null);
+    return this.buildProductKey(id, code);
   }
 
   formatCurrency(amount: number): string {
@@ -546,6 +765,11 @@ export class CustomerProductsComponent implements OnInit {
   applyForLoan(product: any) {
     if (!product) return;
 
+    if (this.isProductDisabled(product)) {
+      this.toastService.info('You already have an active application for this product.');
+      return;
+    }
+
     // Get customer data
     const customerData = localStorage.getItem('customerData');
     if (!customerData) {
@@ -556,32 +780,34 @@ export class CustomerProductsComponent implements OnInit {
     try {
       const customer = JSON.parse(customerData);
       const customerId = customer.id;
-      const tenantId = customer.tenantId || '1';
 
       // Create loan application
       const applicationData = {
         customerId: customerId,
-        productId: product.id,
+        loanProductId: product.id,
         requestedAmount: product.minAmount, // Default to minimum amount
         requestedTermDays: product.loanTermType === 'fixed'
           ? product.fixedTermDays
           : product.minTermDays,
-        status: 'pending',
-        applicationDate: new Date().toISOString()
+        purpose: 'Quick apply from product card'
       };
 
-      this.http.post<any>(`/api/tenants/${tenantId}/platforms/moneyloan/loans/applications`, applicationData).subscribe({
+      console.log('🚀 Submitting application:', applicationData);
+
+      this.http.post<any>(`/api/money-loan/applications`, applicationData).subscribe({
         next: (response) => {
+          console.log('📦 Application response:', response);
           if (response.success) {
             this.toastService.success('✅ Loan application submitted successfully! Your application is pending approval.');
 
             // Add the new pending loan to customerLoans to update UI immediately
-            const newLoan = {
-              ...applicationData,
-              id: response.data?.id
-            };
-            this.customerLoans.update(loans => [...loans, newLoan]);
+            if (response.data) {
+              console.log('💾 Upserting application data:', response.data);
+              this.upsertCustomerLoan(response.data);
+              console.log('📊 Current customer loans after upsert:', this.customerLoans());
+            }
 
+            this.loadCustomerLoans();
             // Close calculator if open
             this.closeCalculator();
           } else {
@@ -600,6 +826,12 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   openCalculator(product: any) {
+    if (this.isProductDisabled(product)) {
+      this.toastService.info('You already have an active application for this product.');
+      return;
+    }
+
+    this.invalidateCalculationCache();
     this.selectedProduct.set(product);
     this.calcAmount = product.minAmount || 10000;
 
@@ -619,6 +851,7 @@ export class CustomerProductsComponent implements OnInit {
     // Trigger initial validation and calculation
     this.validateLoanAmount();
     this.validateLoanTerm();
+    this.invalidateCalculationCache();
   }
 
   closeCalculator() {
@@ -627,11 +860,18 @@ export class CustomerProductsComponent implements OnInit {
     // Clear validation errors when closing
     this.amountError.set('');
     this.termError.set('');
+    this.invalidateCalculationCache();
   }
 
   submitApplication() {
     const product = this.selectedProduct();
     if (!product) return;
+
+    if (this.isProductDisabled(product)) {
+      this.toastService.info('You already have an active application for this product.');
+      this.closeCalculator();
+      return;
+    }
 
     // Validate calculator inputs
     if (!this.calcAmount || this.calcAmount < product.minAmount || this.calcAmount > product.maxAmount) {
@@ -647,9 +887,8 @@ export class CustomerProductsComponent implements OnInit {
     }
 
     try {
-      const customer = JSON.parse(customerData);
-      const customerId = customer.id;
-      const tenantId = customer.tenantId || '1';
+  const customer = JSON.parse(customerData);
+  const customerId = customer.id;
 
       // Calculate term in days from months
       const termDays = Math.round(this.calcTermMonths * 30);
@@ -657,15 +896,13 @@ export class CustomerProductsComponent implements OnInit {
       // Create loan application with calculator values
       const applicationData = {
         customerId: customerId,
-        loanProductId: product.id, // Changed from productId to loanProductId
+        loanProductId: product.id,
         requestedAmount: this.calcAmount,
         requestedTermDays: termDays,
-        purpose: 'Customer loan application', // Added required purpose field
-        status: 'pending',
-        applicationDate: new Date().toISOString()
+        purpose: 'Customer loan application'
       };
 
-      this.http.post<any>(`/api/tenants/${tenantId}/platforms/moneyloan/loans/applications`, applicationData).subscribe({
+  this.http.post<any>(`/api/money-loan/applications`, applicationData).subscribe({
         next: (response) => {
           if (response.success) {
             this.toastService.success(`✅ Loan application submitted successfully! Amount: ${this.formatCurrency(this.calcAmount)}, Term: ${this.calcTermMonths} months. Your application is pending approval.`);
@@ -673,9 +910,10 @@ export class CustomerProductsComponent implements OnInit {
             // Add the new application to customerLoans to update UI immediately
             // Use the response data which has the correct database field names
             if (response.data) {
-              this.customerLoans.update(applications => [...applications, response.data]);
+              this.upsertCustomerLoan(response.data);
             }
 
+            this.loadCustomerLoans();
             // Close calculator
             this.closeCalculator();
           } else {
@@ -694,8 +932,8 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   calculateLoan() {
-    // This is called on input change to reactively update the calculations
-    // The actual calculations are done in the computed methods below
+    // Clear cached calculation so values recompute on next access
+    this.invalidateCalculationCache();
   }
 
   validateLoanTerm() {
@@ -779,97 +1017,137 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   calcProcessingFee(): number {
+    const calc = this.getLoanCalculation();
+    if (calc) return calc.processingFeeAmount;
+
     const product = this.selectedProduct();
     if (!product || !this.calcAmount) return 0;
-    return (this.calcAmount * (product.processingFeePercent || 0)) / 100;
+    const feePercent = Number(product.processingFeePercent) || 0;
+    return (this.calcAmount * feePercent) / 100;
   }
 
   calcPlatformFee(): number {
+    const calc = this.getLoanCalculation();
+    if (calc) return calc.platformFee;
+
     const product = this.selectedProduct();
     if (!product) return 0;
-    // Platform fee is a fixed amount, default to 50 if not specified
-    return product.platformFee || 50;
+    const term = Math.max(1, Math.round(Number(this.calcTermMonths) || 0));
+    const monthlyFee = Number(product.platformFee) || 50;
+    return monthlyFee * term;
   }
 
   calcNetReceived(): number {
-    // Net amount = Loan amount - Processing fee - Platform fee
-    const processingFee = this.calcProcessingFee();
-    const platformFee = this.calcPlatformFee();
-    const net = this.calcAmount - processingFee - platformFee;
+    const calc = this.getLoanCalculation();
+    if (calc) return calc.netProceeds;
+
+    const product = this.selectedProduct();
+    if (!product) return 0;
+
+    const amount = Number(this.calcAmount) || 0;
+    const feePercent = Number(product.processingFeePercent) || 0;
+    const processingFee = (amount * feePercent) / 100;
+    const term = Math.max(1, Math.round(Number(this.calcTermMonths) || 0));
+    const platformFee = (Number(product.platformFee) || 50) * term;
+    const net = amount - processingFee - platformFee;
     return isNaN(net) ? 0 : net;
   }
 
   calcTotalInterest(): number {
-    const product = this.selectedProduct();
-    if (!product || !this.calcAmount || !this.calcTermMonths) return 0;
-
-    // Additional NaN check
-    if (isNaN(this.calcAmount) || isNaN(this.calcTermMonths)) return 0;
-
-    const principal = this.calcAmount;
-    const rate = product.interestRate / 100;
-
-    if (product.interestType === 'flat') {
-      // Flat rate: Interest = Principal × Rate (rate already accounts for term)
-      return principal * rate;
-    } else {
-      // Diminishing (reducing balance): Use simple approximation
-      // More accurate calculation would require amortization schedule
-      const monthlyRate = rate / 12;
-      const numPayments = this.calcNumberOfPayments();
-      if (numPayments === 0) return 0;
-      const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-                             (Math.pow(1 + monthlyRate, numPayments) - 1);
-      return (monthlyPayment * numPayments) - principal;
-    }
+    const calc = this.getLoanCalculation();
+    return calc ? calc.interestAmount : 0;
   }
 
   calcTotalRepayment(): number {
-    const product = this.selectedProduct();
-    if (!product) return 0;
-
-    if (product.interestType === 'flat') {
-      const total = this.calcAmount + this.calcTotalInterest();
-      return isNaN(total) ? 0 : total;
-    }
-
-    const total = this.calcAmount + this.calcTotalInterest() + this.calcProcessingFee() + this.calcPlatformFee();
-    return isNaN(total) ? 0 : total;
+    const calc = this.getLoanCalculation();
+    return calc ? calc.totalRepayable : 0;
   }
 
   calcNumberOfPayments(): number {
-    const product = this.selectedProduct();
-    if (!product || !this.calcTermMonths) return 0;
-
-    // Additional NaN check
-    if (isNaN(this.calcTermMonths)) return 0;
-
-    const frequency = product.paymentFrequency || 'weekly';
-    const termMonths = Math.max(0, Math.round(this.calcTermMonths));
-
-    switch (frequency) {
-      case 'daily':
-        return termMonths * 30;
-      case 'weekly':
-        return termMonths * 4;
-      case 'biweekly':
-        return Math.ceil((termMonths * 30) / 14);
-      case 'monthly':
-        return termMonths;
-      default:
-        return termMonths * 4; // Default to weekly-style cadence
-    }
+    const calc = this.getLoanCalculation();
+    return calc ? calc.numPayments : 0;
   }
 
   calcPaymentAmount(): number {
-    const numPayments = this.calcNumberOfPayments();
-    if (numPayments === 0) return 0;
-    const amount = this.calcTotalRepayment() / numPayments;
-    return isNaN(amount) ? 0 : amount;
+    const calc = this.getLoanCalculation();
+    return calc ? calc.installmentAmount : 0;
   }
 
   capitalizeFirst(str: string): string {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  private invalidateCalculationCache(): void {
+    this.calculationCache = null;
+  }
+
+  private getLoanCalculation(): LoanCalculation | null {
+    const product = this.selectedProduct();
+    if (!product) return null;
+
+    const amount = Number(this.calcAmount);
+    const term = Number(this.calcTermMonths);
+
+    if (!amount || amount <= 0 || !term || term <= 0 || isNaN(amount) || isNaN(term)) {
+      return null;
+    }
+
+    const normalizedFrequency = this.normalizeFrequency(product.paymentFrequency);
+    const normalizedInterest = this.normalizeInterestType(product.interestType);
+    const roundedTerm = Math.max(1, Math.round(term));
+
+    const keyParts = [
+      product.id ?? 'unknown',
+      amount,
+      roundedTerm,
+      normalizedFrequency,
+      normalizedInterest,
+      Number(product.interestRate) || 0,
+      Number(product.processingFeePercent) || 0,
+      Number(product.platformFee) || 0,
+      Number(product.latePaymentPenaltyPercent) || 0
+    ];
+    const cacheKey = keyParts.join('|');
+
+    if (this.calculationCache && this.calculationCache.key === cacheKey) {
+      return this.calculationCache.result;
+    }
+
+    const params: LoanParams = {
+      loanAmount: amount,
+      termMonths: roundedTerm,
+      paymentFrequency: normalizedFrequency,
+      interestRate: Number(product.interestRate) || 0,
+      interestType: normalizedInterest,
+      processingFeePercentage: Number(product.processingFeePercent) || 0,
+      platformFee: Number(product.platformFee) || 0,
+      latePenaltyPercentage: Number(product.latePaymentPenaltyPercent) || 0
+    };
+
+    try {
+      const result = this.loanCalculator.calculate(params);
+      this.calculationCache = { key: cacheKey, result };
+      return result;
+    } catch (error) {
+      console.error('Error computing loan calculation:', error);
+      return null;
+    }
+  }
+
+  private normalizeFrequency(frequency: string | undefined): LoanParams['paymentFrequency'] {
+    const value = (frequency || 'weekly').toLowerCase();
+  const allowed = ['daily', 'weekly', 'biweekly', 'monthly'] as LoanParams['paymentFrequency'][];
+    return allowed.includes(value as LoanParams['paymentFrequency'])
+      ? (value as LoanParams['paymentFrequency'])
+      : 'weekly';
+  }
+
+  private normalizeInterestType(type: string | undefined): LoanParams['interestType'] {
+    const value = (type || 'flat').toLowerCase();
+  const allowed = ['flat', 'reducing', 'compound'] as LoanParams['interestType'][];
+    return allowed.includes(value as LoanParams['interestType'])
+      ? (value as LoanParams['interestType'])
+      : 'flat';
   }
 }

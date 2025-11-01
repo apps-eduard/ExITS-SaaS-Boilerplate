@@ -6,6 +6,7 @@ import { catchError, throwError } from 'rxjs';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   console.log('🔵 AUTH INTERCEPTOR CALLED for:', req.url, req.method);
   const authService = inject(AuthService);
+  let tokenAttached = false;
 
   // Public routes that don't need authentication
   // Use exact matching or specific patterns to avoid false positives
@@ -43,6 +44,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }
       });
       console.log('✅ Authorization header added for:', req.url);
+      tokenAttached = true;
     } else {
       console.log('⚠️ No token available for protected route:', req.url);
     }
@@ -59,7 +61,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       });
 
       // Only attempt logout if we're authenticated and got 401
-      if (error.status === 401 && authService.isAuthenticated()) {
+      if (error.status === 401) {
+        const hasToken = tokenAttached || !!authService.getAccessToken() || !!localStorage.getItem('customerToken');
+        if (!hasToken) {
+          console.log('⚠️ 401 received but no token present, skipping automatic logout');
+          return throwError(() => error);
+        }
+
+        if (!authService.isAuthenticated()) {
+          console.log('⚠️ 401 received with token but auth state already reset; skipping logout call');
+          return throwError(() => error);
+        }
+
         console.log('⚠️ 401 Unauthorized - logging out');
         authService.logout().subscribe({
           error: (logoutError) => {
