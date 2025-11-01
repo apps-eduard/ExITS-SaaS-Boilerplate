@@ -220,7 +220,7 @@ export class CustomerDashboardComponent implements OnInit {
   activeLoansCount = computed(() => this.activeLoans().length);
 
   totalBalance = computed(() => 
-    this.activeLoans().reduce((sum, loan) => sum + loan.outstandingBalance, 0)
+    this.activeLoans().reduce((sum, loan) => sum + (loan.outstandingBalance ?? 0), 0)
   );
 
   nextPaymentAmount = computed(() => {
@@ -279,8 +279,9 @@ export class CustomerDashboardComponent implements OnInit {
     return Math.round((paid / loan.totalAmount) * 100);
   }
 
-  formatCurrency(amount: number): string {
-    return amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  formatCurrency(amount: number | null | undefined): string {
+    const value = amount ?? 0;
+    return value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   formatDate(date: string): string {

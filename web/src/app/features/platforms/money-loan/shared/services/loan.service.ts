@@ -102,13 +102,19 @@ export class LoanService {
     loanId: number;
     amount: number;
     paymentMethod: string;
-    paymentDate: string;
+    paymentDate?: string;
     transactionId?: string;
     notes?: string;
   }): Observable<{ success: boolean; message: string; data: LoanPayment }> {
+    const { loanId, transactionId, paymentDate, ...rest } = paymentData;
+    const payload = {
+      loanId, // Include loanId in payload for DTO validation
+      ...rest,
+      reference: transactionId, // Map transactionId to reference
+    };
     return this.http.post<{ success: boolean; message: string; data: LoanPayment }>(
-      `${this.baseUrl}/payments`,
-      paymentData
+      `${this.baseUrl}/loans/${loanId}/payments`,
+      payload
     );
   }
 

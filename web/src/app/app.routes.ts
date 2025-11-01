@@ -50,6 +50,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/platforms/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
       },
       {
+        path: 'loans/:id',
+        loadComponent: () => import('./features/platforms/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
+      },
+      {
         path: 'apply',
         loadComponent: () => import('./features/platforms/money-loan/customer/apply-loan.component').then(m => m.ApplyLoanComponent)
       },
@@ -60,6 +64,14 @@ export const routes: Routes = [
       {
         path: 'payment',
         loadComponent: () => import('./features/platforms/money-loan/customer/make-payment.component').then(m => m.CustomerMakePaymentComponent)
+      },
+      {
+        path: 'loan-status-tracking',
+        loadComponent: () => import('./features/platforms/money-loan/customer/loan-status-tracking.component').then(m => m.LoanStatusTrackingComponent)
+      },
+      {
+        path: 'loan-status-tracking/:id',
+        loadComponent: () => import('./features/platforms/money-loan/customer/loan-status-tracking.component').then(m => m.LoanStatusTrackingComponent)
       },
       {
         path: '',

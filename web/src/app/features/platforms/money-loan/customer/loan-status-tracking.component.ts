@@ -412,10 +412,15 @@ export class LoanStatusTrackingComponent implements OnInit {
   });
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.loadApplicationDetails(parseInt(id));
-      this.loadDocuments(parseInt(id));
+    const idParam =
+      this.route.snapshot.paramMap.get('id') ||
+      this.route.snapshot.queryParamMap.get('applicationId') ||
+      this.route.snapshot.queryParamMap.get('loanId');
+
+    if (idParam) {
+      const id = parseInt(idParam, 10);
+      this.loadApplicationDetails(id);
+      this.loadDocuments(id);
     }
   }
 
@@ -491,7 +496,7 @@ export class LoanStatusTrackingComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/platforms/money-loan/customer/my-loans']);
+    this.router.navigate(['/platforms/money-loan/customer/loans']);
   }
 
   getStatusClass(status: string): string {

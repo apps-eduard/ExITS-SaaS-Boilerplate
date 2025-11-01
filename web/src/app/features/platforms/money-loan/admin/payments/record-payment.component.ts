@@ -1,10 +1,11 @@
-import { Component, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, signal, inject, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LoanService } from '../../shared/services/loan.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { CurrencyMaskDirective } from '../../../../../shared/directives/currency-mask.directive';
 
 interface PaymentData {
   loanId: number | null;
@@ -42,7 +43,7 @@ interface LoanWithSchedule {
 @Component({
   selector: 'app-record-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyMaskDirective],
   template: `
     <div class="p-4 space-y-4">
       <!-- Header -->
@@ -55,7 +56,15 @@ interface LoanWithSchedule {
 
       <!-- Search Customer/Loan -->
       <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
-        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">1. Find Loan</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">1. Find Loan</h2>
+          <button
+            *ngIf="searchQuery || searchResults().length > 0 || selectedLoan()"
+            (click)="resetSearch()"
+            class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded transition">
+            ↺ Reset
+          </button>
+        </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
@@ -75,6 +84,7 @@ interface LoanWithSchedule {
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Enter {{ searchType === 'loanNumber' ? 'Loan Number' : searchType === 'customerName' ? 'Name' : 'ID' }}</label>
             <div class="flex gap-2">
               <input
+                #searchInput
                 type="text"
                 [(ngModel)]="searchQuery"
                 (keyup.enter)="searchLoan()"
@@ -169,6 +179,12 @@ interface LoanWithSchedule {
             class="px-3 py-1.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 text-xs rounded-lg transition">
             💰 Pay Full
           </button>
+          <button
+            (click)="clearSelection()"
+            *ngIf="selectedInstallments().length > 0"
+            class="px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs rounded-lg transition">
+            ✖ Clear Selection
+          </button>
         </div>
 
         <!-- Installments List -->
@@ -238,12 +254,12 @@ interface LoanWithSchedule {
           <div>
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Amount *</label>
             <input
-              type="number"
+              type="text"
               [(ngModel)]="paymentData.amount"
-              step="0.01"
-              min="0"
-              [max]="selectedLoan()?.outstandingBalance"
-              placeholder="0.00"
+              (ngModelChange)="onAmountChange($event)"
+              appCurrencyMask
+              currencyCode="PHP"
+              placeholder="₱0.00"
               class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
             <p *ngIf="paymentData.amount && paymentData.amount > selectedLoan()?.outstandingBalance" class="text-xs text-red-600 mt-1">
               Cannot exceed outstanding balance
@@ -254,8 +270,10 @@ interface LoanWithSchedule {
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method *</label>
             <select
               [(ngModel)]="paymentData.paymentMethod"
+              (change)="onPaymentMethodChange()"
+              required
               class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-              <option value="cash">💵 Cash</option>
+              <option value="cash" selected>💵 Cash</option>
               <option value="check">📝 Check</option>
               <option value="bank_transfer">🏦 Bank Transfer</option>
               <option value="gcash">📱 GCash</option>
@@ -275,12 +293,18 @@ interface LoanWithSchedule {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reference Number</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Reference Number
+              <span *ngIf="paymentData.paymentMethod === 'cash'" class="text-xs text-gray-500">(Auto-generated)</span>
+            </label>
             <input
               type="text"
               [(ngModel)]="paymentData.referenceNumber"
+              [readonly]="paymentData.paymentMethod === 'cash'"
               placeholder="Receipt/Check/Transaction #"
-              class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              [class.bg-gray-50]="paymentData.paymentMethod === 'cash'"
+              [class.dark:bg-gray-600]="paymentData.paymentMethod === 'cash'">
           </div>
 
           <div>
@@ -302,7 +326,7 @@ interface LoanWithSchedule {
             </div>
             <div>
               <span class="text-gray-600 dark:text-gray-400">Payment Amount:</span>
-              <p class="font-medium text-blue-600 dark:text-blue-400">-₱{{ formatCurrency(paymentData.amount) }}</p>
+              <p class="font-medium text-blue-600 dark:text-blue-400">₱{{ formatCurrency(paymentData.amount) }}</p>
             </div>
             <div class="col-span-2 border-t border-green-200 dark:border-green-800 pt-2">
               <span class="text-gray-600 dark:text-gray-400">New Outstanding:</span>
@@ -326,7 +350,7 @@ interface LoanWithSchedule {
           <button
             (click)="recordPayment()"
             [disabled]="!canSubmit() || submitting()"
-            class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-sm rounded-lg transition font-medium">
+            class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm rounded-lg transition font-medium">
             {{ submitting() ? 'Recording...' : '✓ Record Payment' }}
           </button>
         </div>
@@ -335,7 +359,9 @@ interface LoanWithSchedule {
     </div>
   `
 })
-export class RecordPaymentComponent implements OnInit {
+export class RecordPaymentComponent implements OnInit, AfterViewInit {
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  
   private loanService = inject(LoanService);
   private router = inject(Router);
   private toastService = inject(ToastService);
@@ -349,6 +375,7 @@ export class RecordPaymentComponent implements OnInit {
   repaymentSchedule = signal<Installment[]>([]);
   loadingSchedule = signal(false);
   submitting = signal(false);
+  paymentAmount = signal<number | null>(null);
 
   maxDate = new Date().toISOString().split('T')[0];
 
@@ -374,11 +401,13 @@ export class RecordPaymentComponent implements OnInit {
   });
 
   canSubmit = computed(() => {
-    return this.selectedLoan() && 
-           this.paymentData.amount && 
-           this.paymentData.amount > 0 &&
-           this.paymentData.paymentMethod &&
-           this.paymentData.paymentDate;
+    const amount = this.paymentAmount();
+    const hasLoan = !!this.selectedLoan();
+    const hasAmount = amount != null && amount > 0;
+    const hasMethod = !!(this.paymentData.paymentMethod && this.paymentData.paymentMethod.trim());
+    const hasDate = !!this.paymentData.paymentDate;
+    
+    return hasLoan && hasAmount && hasMethod && hasDate;
   });
 
   ngOnInit() {
@@ -386,27 +415,33 @@ export class RecordPaymentComponent implements OnInit {
     if (!tenantId) {
       this.toastService.error('Tenant information not found');
     }
+    // Generate initial cash reference number since cash is the default
+    this.generateCashReferenceNumber();
+  }
+
+  onAmountChange(value: any) {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    this.paymentAmount.set(numValue);
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus on search input when component loads
+    setTimeout(() => {
+      this.searchInput?.nativeElement?.focus();
+    }, 100);
   }
 
   searchLoan() {
     if (!this.searchQuery.trim()) {
-      console.log('❌ Search aborted: empty query');
       return;
     }
-
-    console.log('🔍 Search triggered:', {
-      searchType: this.searchType,
-      searchQuery: this.searchQuery
-    });
 
     this.searching.set(true);
     this.searchResults.set([]);
 
     const tenantId = this.authService.getTenantId();
-    console.log('🏢 Tenant ID:', tenantId);
     
     if (!tenantId) {
-      console.log('❌ No tenant ID found');
       this.toastService.error('Tenant information not found');
       this.searching.set(false);
       return;
@@ -415,7 +450,7 @@ export class RecordPaymentComponent implements OnInit {
     // Build filters based on search type
     const filters: any = { 
       limit: 50,
-      status: 'active' // Only show disbursed active loans (not pending/approved)
+      status: 'active'
     };
     
     if (this.searchType === 'loanNumber') {
@@ -426,17 +461,11 @@ export class RecordPaymentComponent implements OnInit {
       const customerId = parseInt(this.searchQuery);
       if (!isNaN(customerId)) {
         filters.customerId = customerId;
-      } else {
-        console.log('❌ Invalid customer ID');
       }
     }
 
-    console.log('📡 Calling API with filters:', filters);
-    console.log('📡 LoanService exists?', !!this.loanService);
-
     this.loanService.listLoans(tenantId.toString(), filters).subscribe({
       next: (response: any) => {
-        console.log('✅ API Response:', response);
         const loans = response.data || [];
         this.searchResults.set(loans);
         
@@ -464,8 +493,11 @@ export class RecordPaymentComponent implements OnInit {
 
   loadRepaymentSchedule(loanId: number) {
     this.loadingSchedule.set(true);
+    console.log('🔄 Loading repayment schedule for loan:', loanId);
+    
     this.loanService.getRepaymentSchedule(loanId).subscribe({
       next: (response: any) => {
+        console.log('📦 Raw schedule response:', response);
         const schedule = (response.data || []).map((inst: any) => ({
           id: inst.id,
           installmentNumber: inst.installmentNumber || inst.installment_number,
@@ -477,6 +509,13 @@ export class RecordPaymentComponent implements OnInit {
           status: inst.status,
           selected: false
         }));
+        console.log('✅ Mapped schedule:', schedule);
+        console.log('📊 Schedule summary:', {
+          total: schedule.length,
+          paid: schedule.filter((s: any) => s.status === 'paid').length,
+          pending: schedule.filter((s: any) => s.status === 'pending').length,
+          overdue: schedule.filter((s: any) => s.status === 'overdue').length,
+        });
         this.repaymentSchedule.set(schedule);
         this.loadingSchedule.set(false);
       },
@@ -527,8 +566,55 @@ export class RecordPaymentComponent implements OnInit {
     this.updatePaymentAmount();
   }
 
+  clearSelection() {
+    const schedule = this.repaymentSchedule();
+    schedule.forEach(inst => {
+      inst.selected = false;
+    });
+    this.repaymentSchedule.set([...schedule]);
+    this.paymentData.amount = null;
+    this.paymentAmount.set(null); // Reset signal too
+    this.paymentData.installmentIds = [];
+  }
+
+  onPaymentMethodChange() {
+    // Auto-generate reference number for cash payments
+    if (this.paymentData.paymentMethod === 'cash') {
+      this.generateCashReferenceNumber();
+    } else {
+      // Clear for other payment methods so user can enter manually
+      if (this.paymentData.referenceNumber?.startsWith('CASH-')) {
+        this.paymentData.referenceNumber = '';
+      }
+    }
+  }
+
+  generateCashReferenceNumber() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    this.paymentData.referenceNumber = `CASH-${year}${month}${day}-${hours}${minutes}${seconds}-${random}`;
+  }
+
   updatePaymentAmount() {
-    this.paymentData.amount = this.totalSelectedAmount();
+    const total = this.totalSelectedAmount();
+    const rounded = Math.round(total * 100) / 100;
+    
+    // If total is 0, set to null instead to disable button
+    if (rounded === 0) {
+      this.paymentData.amount = null;
+      this.paymentAmount.set(null);
+    } else {
+      this.paymentData.amount = rounded;
+      this.paymentAmount.set(rounded);
+    }
+    
     this.paymentData.installmentIds = this.selectedInstallments().map(inst => inst.id);
   }
 
@@ -537,9 +623,12 @@ export class RecordPaymentComponent implements OnInit {
 
     this.submitting.set(true);
 
+    // Use the signal value for amount
+    const amount = this.paymentAmount() || 0;
+
     const payload = {
       loanId: this.paymentData.loanId!,
-      amount: this.paymentData.amount!,
+      amount: amount,
       paymentMethod: this.paymentData.paymentMethod,
       paymentDate: this.paymentData.paymentDate,
       transactionId: this.paymentData.referenceNumber || `WALKIN-${Date.now()}`,
@@ -549,7 +638,7 @@ export class RecordPaymentComponent implements OnInit {
     this.loanService.recordPayment(payload).subscribe({
       next: (response: any) => {
         this.submitting.set(false);
-        this.toastService.success(`Payment of ₱${this.formatCurrency(this.paymentData.amount!)} recorded for loan ${this.selectedLoan()?.loanNumber}`);
+        this.toastService.success(`Payment of ₱${this.formatCurrency(amount)} recorded for loan ${this.selectedLoan()?.loanNumber}`);
         
         // Reset form after 1.5 seconds
         setTimeout(() => {
@@ -557,11 +646,32 @@ export class RecordPaymentComponent implements OnInit {
         }, 1500);
       },
       error: (error: any) => {
-        console.error('Payment error:', error);
         this.submitting.set(false);
         this.toastService.error(error.error?.message || 'Failed to record payment. Please try again.');
       }
     });
+  }
+
+  resetSearch() {
+    this.searchQuery = '';
+    this.searchResults.set([]);
+    this.selectedLoan.set(null);
+    this.repaymentSchedule.set([]);
+    this.paymentData = {
+      loanId: null,
+      amount: null,
+      paymentMethod: 'cash',
+      paymentDate: this.maxDate,
+      referenceNumber: '', // Will be set below
+      notes: 'Walk-in payment',
+      installmentIds: []
+    };
+    // Generate cash reference number for default payment method
+    this.generateCashReferenceNumber();
+    // Re-focus on search input after reset
+    setTimeout(() => {
+      this.searchInput?.nativeElement?.focus();
+    }, 100);
   }
 
   clearForm() {
@@ -569,19 +679,23 @@ export class RecordPaymentComponent implements OnInit {
     this.searchQuery = '';
     this.searchResults.set([]);
     this.repaymentSchedule.set([]);
+    this.paymentAmount.set(null);
     this.paymentData = {
       loanId: null,
       amount: null,
       paymentMethod: 'cash',
       paymentDate: this.maxDate,
-      referenceNumber: '',
+      referenceNumber: '', // Will be set below
       notes: 'Walk-in payment',
       installmentIds: []
     };
+    // Generate cash reference number for default payment method
+    this.generateCashReferenceNumber();
   }
 
   formatCurrency(amount: number | null | undefined): string {
-    return (amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return (numAmount || 0).toFixed(2);
   }
 
   getInstallmentLabel(installmentNumber: number): string {

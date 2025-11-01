@@ -142,7 +142,7 @@ export class MoneyLoanController {
   }
 
   @Post('loans/:id/payments')
-  @Permissions('money-loan:payment')
+  @Permissions('money-loan:payments')
   async createPayment(
     @Param('id') id: string,
     @Body() createPaymentDto: CreatePaymentDto,
@@ -167,6 +167,16 @@ export class MoneyLoanController {
     return {
       success: true,
       data: payments,
+    };
+  }
+
+  @Get('loans/:id/schedule')
+  @Permissions('money-loan:read')
+  async getRepaymentSchedule(@Param('id') id: string, @Req() req: any) {
+    const schedule = await this.moneyLoanService.generateRepaymentSchedule(req.user.tenantId, parseInt(id));
+    return {
+      success: true,
+      data: schedule,
     };
   }
 
