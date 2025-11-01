@@ -28,20 +28,20 @@ async function resetPasswords() {
     console.log('Updating passwords in database...');
     
     // Update admin accounts
-    await knex('users').where('email', 'admin@exitsaas.com').update({ passwordHash: systemAdminHash });
-    await knex('users').where('email', 'admin-1@example.com').update({ passwordHash: tenantAdmin1Hash });
-    await knex('users').where('email', 'admin-2@example.com').update({ passwordHash: tenantAdmin2Hash });
+  await knex('users').where('email', 'admin@exitsaas.com').update({ password_hash: systemAdminHash });
+  await knex('users').where('email', 'admin-1@example.com').update({ password_hash: tenantAdmin1Hash });
+  await knex('users').where('email', 'admin-2@example.com').update({ password_hash: tenantAdmin2Hash });
     
     // Update employee accounts (if they exist)
     const employee1 = await knex('users').where('email', 'employee1@tenant1.com').first();
     if (employee1) {
-      await knex('users').where('email', 'employee1@tenant1.com').update({ passwordHash: employeeHash });
+  await knex('users').where('email', 'employee1@tenant1.com').update({ password_hash: employeeHash });
       console.log('✓ Updated employee1@tenant1.com password');
     }
     
     const employee2 = await knex('users').where('email', 'employee2@tenant1.com').first();
     if (employee2) {
-      await knex('users').where('email', 'employee2@tenant1.com').update({ passwordHash: employeeHash });
+  await knex('users').where('email', 'employee2@tenant1.com').update({ password_hash: employeeHash });
       console.log('✓ Updated employee2@tenant1.com password');
     }
     
@@ -59,7 +59,7 @@ async function resetPasswords() {
     for (const email of customerEmails) {
       const customer = await knex('users').where('email', email).first();
       if (customer) {
-        await knex('users').where('email', email).update({ passwordHash: customerHash });
+  await knex('users').where('email', email).update({ password_hash: customerHash });
         console.log(`✓ Updated ${email} password`);
       }
     }

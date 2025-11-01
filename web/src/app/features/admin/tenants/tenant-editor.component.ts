@@ -7,19 +7,17 @@ import { FormsModule } from '@angular/forms';
 interface TenantForm {
   name: string;
   subdomain: string;
-  logo_url?: string;
-  colors?: {
-    primary?: string;
-    secondary?: string;
-  };
-  // Contact Person
-  contact_person?: string;
-  contact_email?: string;
-  contact_phone?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  // Contact Person (local-only; not yet persisted server-side)
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   // Product Enablement
-  money_loan_enabled: boolean;
-  bnpl_enabled: boolean;
-  pawnshop_enabled: boolean;
+  moneyLoanEnabled: boolean;
+  bnplEnabled: boolean;
+  pawnshopEnabled: boolean;
 }
 
 @Component({
@@ -122,10 +120,10 @@ interface TenantForm {
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Name
                 </label>
-                <input
-                  type="text"
-                  [(ngModel)]="form.contact_person"
-                  name="contact_person"
+                  <input
+                    type="text"
+                    [(ngModel)]="form.contactPerson"
+                    name="contactPerson"
                   placeholder="John Doe"
                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 />
@@ -135,10 +133,10 @@ interface TenantForm {
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address
                 </label>
-                <input
-                  type="email"
-                  [(ngModel)]="form.contact_email"
-                  name="contact_email"
+                  <input
+                    type="email"
+                    [(ngModel)]="form.contactEmail"
+                    name="contactEmail"
                   placeholder="john.doe@example.com"
                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 />
@@ -148,10 +146,10 @@ interface TenantForm {
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Phone Number
                 </label>
-                <input
-                  type="tel"
-                  [(ngModel)]="form.contact_phone"
-                  name="contact_phone"
+                  <input
+                    type="tel"
+                    [(ngModel)]="form.contactPhone"
+                    name="contactPhone"
                   placeholder="+1 234 567 8900"
                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 />
@@ -175,8 +173,8 @@ interface TenantForm {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <!-- Money Loan -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
-                   [class.bg-green-50]="form.money_loan_enabled"
-                   [class.dark:bg-green-900/20]="form.money_loan_enabled">
+                      [class.bg-green-50]="form.moneyLoanEnabled"
+                      [class.dark:bg-green-900/20]="form.moneyLoanEnabled">
                 <div class="flex items-center gap-2 mb-2">
                   <span class="text-lg">💵</span>
                   <div>
@@ -185,21 +183,21 @@ interface TenantForm {
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox"
-                         [(ngModel)]="form.money_loan_enabled"
-                         name="money_loan_enabled"
+        <input type="checkbox"
+          [(ngModel)]="form.moneyLoanEnabled"
+          name="moneyLoanEnabled"
                          class="sr-only peer">
                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
                   <span class="ms-3 text-xs font-medium text-gray-900 dark:text-gray-300">
-                    {{ form.money_loan_enabled ? 'Enabled' : 'Disabled' }}
+                    {{ form.moneyLoanEnabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
               </div>
 
               <!-- BNPL -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
-                   [class.bg-blue-50]="form.bnpl_enabled"
-                   [class.dark:bg-blue-900/20]="form.bnpl_enabled">
+                      [class.bg-blue-50]="form.bnplEnabled"
+                      [class.dark:bg-blue-900/20]="form.bnplEnabled">
                 <div class="flex items-center gap-2 mb-2">
                   <span class="text-lg">💳</span>
                   <div>
@@ -208,21 +206,21 @@ interface TenantForm {
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox"
-                         [(ngModel)]="form.bnpl_enabled"
-                         name="bnpl_enabled"
+        <input type="checkbox"
+          [(ngModel)]="form.bnplEnabled"
+          name="bnplEnabled"
                          class="sr-only peer">
                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                   <span class="ms-3 text-xs font-medium text-gray-900 dark:text-gray-300">
-                    {{ form.bnpl_enabled ? 'Enabled' : 'Disabled' }}
+                    {{ form.bnplEnabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
               </div>
 
               <!-- Pawnshop -->
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-primary-500 transition-colors"
-                   [class.bg-purple-50]="form.pawnshop_enabled"
-                   [class.dark:bg-purple-900/20]="form.pawnshop_enabled">
+                      [class.bg-purple-50]="form.pawnshopEnabled"
+                      [class.dark:bg-purple-900/20]="form.pawnshopEnabled">
                 <div class="flex items-center gap-2 mb-2">
                   <span class="text-lg">💎</span>
                   <div>
@@ -231,13 +229,13 @@ interface TenantForm {
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox"
-                         [(ngModel)]="form.pawnshop_enabled"
-                         name="pawnshop_enabled"
+        <input type="checkbox"
+          [(ngModel)]="form.pawnshopEnabled"
+          name="pawnshopEnabled"
                          class="sr-only peer">
                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
                   <span class="ms-3 text-xs font-medium text-gray-900 dark:text-gray-300">
-                    {{ form.pawnshop_enabled ? 'Enabled' : 'Disabled' }}
+                    {{ form.pawnshopEnabled ? 'Enabled' : 'Disabled' }}
                   </span>
                 </label>
               </div>
@@ -289,17 +287,15 @@ export class TenantEditorComponent implements OnInit {
   form: TenantForm = {
     name: '',
     subdomain: '',
-    logo_url: '',
-    colors: {
-      primary: '#3b82f6',
-      secondary: '#8b5cf6'
-    },
-    contact_person: '',
-    contact_email: '',
-    contact_phone: '',
-    money_loan_enabled: false,
-    bnpl_enabled: false,
-    pawnshop_enabled: false
+    logoUrl: '',
+    primaryColor: '#3b82f6',
+    secondaryColor: '#8b5cf6',
+    contactPerson: '',
+    contactEmail: '',
+    contactPhone: '',
+    moneyLoanEnabled: false,
+    bnplEnabled: false,
+    pawnshopEnabled: false
   };
 
   ngOnInit(): void {
@@ -339,24 +335,21 @@ export class TenantEditorComponent implements OnInit {
         this.form = {
           name: tenant.name,
           subdomain: tenant.subdomain,
-          logo_url: tenant.logoUrl || '',
-          colors: { 
-            primary: tenant.primaryColor || '#3b82f6', 
-            secondary: tenant.secondaryColor || '#8b5cf6' 
-          },
-          // Fix: API returns camelCase (contactPerson) but form uses snake_case (contact_person)
-          contact_person: tenant.contactPerson || '',
-          contact_email: tenant.contactEmail || '',
-          contact_phone: tenant.contactPhone || '',
-          money_loan_enabled: tenant.moneyLoanEnabled || false,
-          bnpl_enabled: tenant.bnplEnabled || false,
-          pawnshop_enabled: tenant.pawnshopEnabled || false
+          logoUrl: tenant.logoUrl || '',
+          primaryColor: tenant.primaryColor || '#3b82f6',
+          secondaryColor: tenant.secondaryColor || '#8b5cf6',
+          contactPerson: tenant.contactPerson || '',
+          contactEmail: tenant.contactEmail || '',
+          contactPhone: tenant.contactPhone || '',
+          moneyLoanEnabled: tenant.moneyLoanEnabled ?? false,
+          bnplEnabled: tenant.bnplEnabled ?? false,
+          pawnshopEnabled: tenant.pawnshopEnabled ?? false
         };
         
         console.log('📝 Form populated with:', {
-          money_loan_enabled: this.form.money_loan_enabled,
-          bnpl_enabled: this.form.bnpl_enabled,
-          pawnshop_enabled: this.form.pawnshop_enabled
+          moneyLoanEnabled: this.form.moneyLoanEnabled,
+          bnplEnabled: this.form.bnplEnabled,
+          pawnshopEnabled: this.form.pawnshopEnabled
         });
         
         this.loading.set(false);
@@ -373,9 +366,12 @@ export class TenantEditorComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
 
-    const request = this.isEditMode()
-      ? this.http.put<any>(`/api/tenants/${this.tenantId()}`, this.form)
-      : this.http.post<any>('/api/tenants', this.form);
+    const isEdit = this.isEditMode();
+    const payload = this.buildPayload(isEdit);
+
+    const request = isEdit
+      ? this.http.put<any>(`/api/tenants/${this.tenantId()}`, payload)
+      : this.http.post<any>('/api/tenants', payload);
 
     request.subscribe({
       next: (response) => {
@@ -390,4 +386,41 @@ export class TenantEditorComponent implements OnInit {
       }
     });
   }
+
+    private buildPayload(isEdit: boolean) {
+      const trimmed = (value?: string) => {
+        if (value === undefined || value === null) {
+          return undefined;
+        }
+        const result = value.trim();
+        return result.length ? result : undefined;
+      };
+
+      const base: Record<string, any> = {
+        name: trimmed(this.form.name) ?? this.form.name,
+        logoUrl: trimmed(this.form.logoUrl),
+        primaryColor: trimmed(this.form.primaryColor),
+        secondaryColor: trimmed(this.form.secondaryColor),
+        moneyLoanEnabled: this.form.moneyLoanEnabled,
+        bnplEnabled: this.form.bnplEnabled,
+        pawnshopEnabled: this.form.pawnshopEnabled,
+      };
+
+      if (!isEdit) {
+        base['subdomain'] = trimmed(this.form.subdomain) ?? this.form.subdomain;
+      }
+
+      return this.stripUndefined(base);
+    }
+
+    private stripUndefined(payload: Record<string, any>) {
+      const cleaned: Record<string, any> = {};
+      Object.keys(payload).forEach((key) => {
+        const value = payload[key];
+        if (value !== undefined) {
+          cleaned[key] = value;
+        }
+      });
+      return cleaned;
+    }
 }

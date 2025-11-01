@@ -620,8 +620,13 @@ export class UsersListComponent implements OnInit {
 
     // In tenant context, only show tenant users for the current tenant
     if (this.isTenantContext()) {
-      const currentUser = this.authService.currentUser();
-      users = users.filter(u => u.tenantId === currentUser?.tenantId);
+      const tenantId = this.authService.getTenantId();
+      if (tenantId === null || tenantId === undefined) {
+        users = [];
+      } else {
+        const tenantIdStr = String(tenantId);
+        users = users.filter(u => u.tenantId !== null && u.tenantId !== undefined && String(u.tenantId) === tenantIdStr);
+      }
     }
 
     // Filter by status

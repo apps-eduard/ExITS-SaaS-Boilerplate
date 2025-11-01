@@ -21,7 +21,7 @@ import { TenantSidebarComponent } from '../../features/tenant/tenant-sidebar/ten
           <router-outlet />
         </main>
       </div>
-    </div>
+  </div>
   `
 })
 export class TenantLayoutComponent {

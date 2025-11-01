@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
-import { ComponentPathService } from '../../../core/services/component-path.service';
 import { SpaceService } from '../../../core/services/space.service';
 import { DevInfoComponent } from '../dev-info/dev-info.component';
 import { filter } from 'rxjs/operators';
@@ -13,7 +12,7 @@ import { filter } from 'rxjs/operators';
   standalone: true,
   imports: [CommonModule, DevInfoComponent],
   template: `
-    <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6">
+    <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 w-full">
       <!-- Left: Menu Toggle + Breadcrumb -->
       <div class="flex items-center gap-4">
         <button
@@ -28,7 +27,7 @@ import { filter } from 'rxjs/operators';
         <app-dev-info />
 
         <!-- Current Space Badge -->
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border {{ spaceService.getBadgeColor() }}">
+  <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border {{ spaceService.getBadgeColor() }}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="spaceService.getIcon()"/>
           </svg>
@@ -59,45 +58,6 @@ import { filter } from 'rxjs/operators';
             }
           }
         </nav>
-
-        <!-- Component File Path Display -->
-        @if (componentPathService.getComponentFileName(); as fileName) {
-          <div class="hidden lg:flex items-center gap-3 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
-            <!-- Module Name Badge -->
-            @if (componentPathService.getModuleName(); as moduleName) {
-              <div class="flex items-center gap-2 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 rounded-md border border-primary-200 dark:border-primary-800">
-                <svg class="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-                <span class="text-xs font-semibold text-primary-700 dark:text-primary-300">
-                  {{ moduleName }}
-                </span>
-              </div>
-            }
-            
-            <!-- Component Filename -->
-            <div class="flex items-center gap-2 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-              <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-              </svg>
-              <span class="text-xs font-semibold text-blue-700 dark:text-blue-300 font-mono">
-                {{ fileName }}
-              </span>
-            </div>
-            
-            <!-- Full File Path (on hover or optional) -->
-            @if (componentPathService.getFormattedPath(); as filePath) {
-              <div class="flex items-center gap-1.5" title="{{ filePath }}">
-                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono max-w-xs truncate">
-                  {{ filePath }}
-                </span>
-              </div>
-            }
-          </div>
-        }
 
         <!-- Mobile: Current Page Only -->
         <div class="md:hidden flex items-center gap-2">
@@ -201,7 +161,6 @@ import { filter } from 'rxjs/operators';
 export class HeaderComponent {
   authService = inject(AuthService);
   themeService = inject(ThemeService);
-  componentPathService = inject(ComponentPathService);
   spaceService = inject(SpaceService);
   router = inject(Router);
 

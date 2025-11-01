@@ -12,7 +12,7 @@ import { RBACService } from '../../../core/services/rbac.service';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="p-4">
+  <div class="p-4 w-full">
       <!-- Header with Icon -->
       <div class="mb-4">
         <div class="flex items-center justify-between">
@@ -39,7 +39,7 @@ import { RBACService } from '../../../core/services/rbac.service';
       </div>
 
       <!-- Summary Cards (kept as requested) -->
-      <div class="grid grid-cols-4 gap-3 mb-3">
+  <div class="grid grid-cols-4 gap-3 mb-3 w-full">
         <div class="group rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div>
@@ -95,7 +95,7 @@ import { RBACService } from '../../../core/services/rbac.service';
       </div>
 
       <!-- Filters Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3 w-full">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
           <!-- Search -->
           <div class="md:col-span-2">
@@ -321,7 +321,7 @@ import { RBACService } from '../../../core/services/rbac.service';
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
                       <span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                        {{ role.permissions?.length || 0 }}
+                        {{ role.permissions?.length ?? role.permissionCount ?? 0 }}
                       </span>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
@@ -562,7 +562,13 @@ export class RolesListComponent implements OnInit {
 
   getTotalPermissions(): number {
     return this.roleService.rolesSignal().reduce((sum, role) => {
-      return sum + (role.permissions?.length || 0);
+      if (Array.isArray(role.permissions) && role.permissions.length) {
+        return sum + role.permissions.length;
+      }
+      if (typeof role.permissionCount === 'number') {
+        return sum + role.permissionCount;
+      }
+      return sum;
     }, 0);
   }
 
@@ -715,7 +721,7 @@ export class RolesListComponent implements OnInit {
         role.description || '',
         role.space,
         role.tenantName || '',
-        role.permissions?.length || 0,
+        role.permissions?.length ?? role.permissionCount ?? 0,
         role.status
       ].map(field => `"${field}"`).join(','))
     ];

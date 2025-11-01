@@ -254,7 +254,10 @@ export class RBACService {
     const permissions = Array.from(this.userPermissions());
     return permissions
       .filter(p => p.startsWith(`${menuKey}:`))
-      .map(p => p.split(':')[1]);
+      .map(p => {
+        const segments = p.split(':');
+        return segments[segments.length - 1];
+      });
   }
 
   // ==================== ADMIN APIs ====================

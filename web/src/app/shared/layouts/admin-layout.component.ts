@@ -9,15 +9,14 @@ import { SidebarComponent } from '../components/sidebar/sidebar.component';
   standalone: true,
   imports: [CommonModule, RouterOutlet, HeaderComponent, SidebarComponent],
   template: `
-    <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <app-sidebar #sidebar />
 
       <div
-        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
-        [style.margin-left]="sidebar?.isOpen() ? '16rem' : '0'">
+        class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out min-w-0 w-full">
         <app-header (menuToggle)="toggleSidebar()" />
 
-        <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+        <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 min-w-0 w-full">
           <router-outlet />
         </main>
       </div>

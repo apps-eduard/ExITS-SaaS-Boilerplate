@@ -42,7 +42,7 @@ interface Pagination {
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
-    <div class="p-6 space-y-4">
+  <div class="p-6 space-y-4 w-full">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
@@ -67,7 +67,7 @@ interface Pagination {
       </div>
 
       <!-- Filters & Search -->
-      <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+  <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 w-full">
         <div class="p-3">
           <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
@@ -137,7 +137,7 @@ interface Pagination {
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
@@ -199,7 +199,7 @@ interface Pagination {
       </div>
 
       <!-- Tenants Table -->
-      <div *ngIf="!loading() && !error()" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+  <div *ngIf="!loading() && !error()" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden w-full">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

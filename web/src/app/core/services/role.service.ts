@@ -21,6 +21,7 @@ export interface Role {
   parentRoleId?: string;
   tenantId?: number | null;
   tenantName?: string | null;
+  permissionCount?: number;
   createdAt?: string;
   updatedAt?: string;
   permissions?: Permission[];
@@ -434,9 +435,11 @@ export class RoleService {
     editCount: number;
     deleteCount: number;
   } {
-    if (!role || !role.permissions) {
+    const totalPermissions = role.permissions?.length ?? role.permissionCount ?? 0;
+
+    if (!role || !role.permissions || role.permissions.length === 0) {
       return {
-        totalPermissions: 0,
+        totalPermissions,
         resourceCount: 0,
         resources: [],
         actions: [],
@@ -465,7 +468,7 @@ export class RoleService {
     }
 
     return {
-      totalPermissions: role.permissions.length,
+      totalPermissions,
       resourceCount: resources.size,
       resources: Array.from(resources),
       actions: Array.from(actions),

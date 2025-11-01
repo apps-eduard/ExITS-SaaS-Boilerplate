@@ -26,13 +26,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Only add token for non-public routes
   if (!isPublicRoute) {
-    // Check for customer token first (for customer portal routes)
-    let token = localStorage.getItem('customerToken');
+    const customerToken = localStorage.getItem('customerToken');
+    const adminToken = authService.getAccessToken();
 
-    // If no customer token, try admin token
-    if (!token) {
-      token = authService.getAccessToken();
-    }
+    const isCustomerApi = req.url.includes('/api/customer/');
+
+    // Prefer the token that matches the target API surface to avoid cross-contamination
+    const token = isCustomerApi
+      ? customerToken || adminToken
+      : adminToken || customerToken;
 
     if (token) {
       req = req.clone({

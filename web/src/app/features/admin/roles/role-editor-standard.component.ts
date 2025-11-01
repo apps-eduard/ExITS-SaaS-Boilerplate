@@ -262,6 +262,18 @@ export class RoleEditorComponent implements OnInit {
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
 
+  private parsePermissionKey(permKey: string): { resource: string; action: string } {
+    if (!permKey) {
+      return { resource: '', action: '' };
+    }
+    const segments = permKey.split(':');
+    if (segments.length < 2) {
+      return { resource: permKey, action: '' };
+    }
+    const action = segments.pop()!;
+    return { resource: segments.join(':'), action };
+  }
+
   constructor(
     public roleService: RoleService,
     private route: ActivatedRoute,
@@ -348,8 +360,10 @@ export class RoleEditorComponent implements OnInit {
   getTotalSelectedResources(): number {
     const resources = new Set<string>();
     this.selectedPermissions().forEach(permKey => {
-      const [resource] = permKey.split(':');
-      resources.add(resource);
+      const { resource } = this.parsePermissionKey(permKey);
+      if (resource) {
+        resources.add(resource);
+      }
     });
     return resources.size;
   }
@@ -357,7 +371,7 @@ export class RoleEditorComponent implements OnInit {
   getActionCount(action: string): number {
     let count = 0;
     this.selectedPermissions().forEach(permKey => {
-      const [, permAction] = permKey.split(':');
+      const { action: permAction } = this.parsePermissionKey(permKey);
       if (permAction === action) count++;
     });
     return count;

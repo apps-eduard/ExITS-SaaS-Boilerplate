@@ -793,7 +793,10 @@ export class CustomerProductsComponent implements OnInit {
 
   calcNetReceived(): number {
     // Net amount = Loan amount - Processing fee - Platform fee
-    return this.calcAmount - this.calcProcessingFee() - this.calcPlatformFee();
+    const processingFee = this.calcProcessingFee();
+    const platformFee = this.calcPlatformFee();
+    const net = this.calcAmount - processingFee - platformFee;
+    return isNaN(net) ? 0 : net;
   }
 
   calcTotalInterest(): number {
@@ -807,8 +810,8 @@ export class CustomerProductsComponent implements OnInit {
     const rate = product.interestRate / 100;
 
     if (product.interestType === 'flat') {
-      // Flat rate: Interest = Principal × Rate × Term
-      return principal * rate * this.calcTermMonths;
+      // Flat rate: Interest = Principal × Rate (rate already accounts for term)
+      return principal * rate;
     } else {
       // Diminishing (reducing balance): Use simple approximation
       // More accurate calculation would require amortization schedule
@@ -822,6 +825,14 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   calcTotalRepayment(): number {
+    const product = this.selectedProduct();
+    if (!product) return 0;
+
+    if (product.interestType === 'flat') {
+      const total = this.calcAmount + this.calcTotalInterest();
+      return isNaN(total) ? 0 : total;
+    }
+
     const total = this.calcAmount + this.calcTotalInterest() + this.calcProcessingFee() + this.calcPlatformFee();
     return isNaN(total) ? 0 : total;
   }
@@ -834,19 +845,19 @@ export class CustomerProductsComponent implements OnInit {
     if (isNaN(this.calcTermMonths)) return 0;
 
     const frequency = product.paymentFrequency || 'weekly';
-    const termDays = this.calcTermMonths * 30;
+    const termMonths = Math.max(0, Math.round(this.calcTermMonths));
 
     switch (frequency) {
       case 'daily':
-        return termDays;
+        return termMonths * 30;
       case 'weekly':
-        return Math.ceil(termDays / 7);
+        return termMonths * 4;
       case 'biweekly':
-        return Math.ceil(termDays / 14);
+        return Math.ceil((termMonths * 30) / 14);
       case 'monthly':
-        return this.calcTermMonths;
+        return termMonths;
       default:
-        return Math.ceil(termDays / 7); // Default to weekly
+        return termMonths * 4; // Default to weekly-style cadence
     }
   }
 

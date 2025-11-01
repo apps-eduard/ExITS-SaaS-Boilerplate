@@ -20,7 +20,7 @@ interface ResourceGroup {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="p-4 space-y-4">
+  <div class="p-4 space-y-4 w-full">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -94,7 +94,7 @@ interface ResourceGroup {
       </div>
 
       <!-- Form -->
-      <div *ngIf="!roleService.loadingSignal()" class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+  <div *ngIf="!roleService.loadingSignal()" class="grid w-full grid-cols-1 xl:grid-cols-4 gap-4">
 
         <!-- Role Info (1 column) -->
         <div class="xl:col-span-1">
@@ -668,6 +668,18 @@ export class RoleEditorComponent implements OnInit {
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
 
+  private parsePermissionKey(permKey: string): { resource: string; action: string } {
+    if (!permKey) {
+      return { resource: '', action: '' };
+    }
+    const segments = permKey.split(':');
+    if (segments.length < 2) {
+      return { resource: permKey, action: '' };
+    }
+    const action = segments.pop()!;
+    return { resource: segments.join(':'), action };
+  }
+
   // Tenant context detection
   isTenantContext = signal(false);
 
@@ -868,11 +880,10 @@ export class RoleEditorComponent implements OnInit {
 
   // Helper method to get the category of a permission
   getPermissionCategory(permKey: string): 'system' | 'tenant' | null {
-    const [resource, action] = permKey.split(':');
+    const { resource, action } = this.parsePermissionKey(permKey);
 
-    // Find the group that matches both resource and action
     for (const group of this.resourceGroups) {
-      if (group.resource === resource && group.actions.includes(action)) {
+      if (group.resource === resource && action && group.actions.includes(action)) {
         // Business category is treated as tenant
         return group.category === 'business' ? 'tenant' : group.category;
       }
@@ -977,8 +988,8 @@ export class RoleEditorComponent implements OnInit {
     if (this.areAllMoneyLoanSelected()) {
       // Unselect all Money Loan permissions only, keep others
       this.selectedPermissions().forEach(permKey => {
-        const [resource] = permKey.split(':');
-        const group = this.resourceGroups.find(g => g.resource === resource);
+        const { resource } = this.parsePermissionKey(permKey);
+        const group = resource ? this.resourceGroups.find(g => g.resource === resource) : undefined;
         if (!group || group.product !== 'money-loan') {
           perms.add(permKey);
         }
@@ -986,8 +997,8 @@ export class RoleEditorComponent implements OnInit {
     } else {
       // Keep all current non-money-loan permissions
       this.selectedPermissions().forEach(permKey => {
-        const [resource] = permKey.split(':');
-        const group = this.resourceGroups.find(g => g.resource === resource);
+        const { resource } = this.parsePermissionKey(permKey);
+        const group = resource ? this.resourceGroups.find(g => g.resource === resource) : undefined;
         if (!group || group.product !== 'money-loan') {
           perms.add(permKey);
         }
@@ -1093,8 +1104,10 @@ export class RoleEditorComponent implements OnInit {
   getTotalSelectedResources(): number {
     const resources = new Set<string>();
     this.selectedPermissions().forEach(permKey => {
-      const [resource] = permKey.split(':');
-      resources.add(resource);
+      const { resource } = this.parsePermissionKey(permKey);
+      if (resource) {
+        resources.add(resource);
+      }
     });
     return resources.size;
   }
@@ -1102,7 +1115,7 @@ export class RoleEditorComponent implements OnInit {
   getActionCount(action: string): number {
     let count = 0;
     this.selectedPermissions().forEach(permKey => {
-      const [, permAction] = permKey.split(':');
+      const { action: permAction } = this.parsePermissionKey(permKey);
       if (permAction === action) count++;
     });
     return count;
