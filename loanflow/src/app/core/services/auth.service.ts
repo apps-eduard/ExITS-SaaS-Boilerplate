@@ -78,21 +78,20 @@ export class AuthService {
     );
   }
 
-  logout(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/logout`, {}).pipe(
-      tap(() => {
-        this.clearTokens();
-        this.currentUserSubject.next(null);
-        this.isAuthenticatedSubject.next(false);
-        this.router.navigate(['/auth/login']);
-      }),
-      catchError((error) => {
-        this.clearTokens();
-        this.currentUserSubject.next(null);
-        this.isAuthenticatedSubject.next(false);
-        return throwError(() => error);
-      })
-    );
+  logout(): void {
+    // Clear tokens and user data immediately
+    this.clearTokens();
+    this.currentUserSubject.next(null);
+    this.isAuthenticatedSubject.next(false);
+
+    // Try to notify server (fire and forget)
+    this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
+      next: () => console.log('Logout successful on server'),
+      error: (error) => console.warn('Logout server call failed:', error)
+    });
+
+    // Navigate to login page
+    this.router.navigate(['/auth/login']);
   }
 
   register(email: string, password: string, firstName: string, lastName: string): Observable<AuthResponse> {

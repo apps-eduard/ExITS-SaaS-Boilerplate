@@ -18,7 +18,7 @@ import {
   ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline } from 'ionicons/icons';
+import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 
@@ -34,8 +34,6 @@ import { ThemeService } from '../../core/services/theme.service';
     IonContent,
     IonCard,
     IonCardContent,
-    IonItem,
-    IonInput,
     IonButton,
     IonIcon,
     IonSpinner,
@@ -43,269 +41,526 @@ import { ThemeService } from '../../core/services/theme.service';
   ],
   template: `
     <ion-header class="ion-no-border">
-      <ion-toolbar color="primary">
-        <ion-title class="text-center font-bold">LoanFlow</ion-title>
+      <ion-toolbar>
+        <ion-title class="text-center font-bold">
+          <div class="flex items-center justify-center gap-2">
+            <ion-icon name="cash-outline" class="text-2xl"></ion-icon>
+            <span>LoanFlow</span>
+          </div>
+        </ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="toggleTheme()">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
+          <ion-button (click)="toggleTheme()" class="theme-toggle">
+            <ion-icon 
+              [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
+              slot="icon-only"
+            ></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding" [class.dark-mode]="themeService.isDark()">
+    <ion-content class="login-content">
       <div class="login-container">
         
-        <!-- Logo/Header Section -->
-        <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <ion-icon name="cash-outline" class="text-5xl text-white"></ion-icon>
+        <!-- Hero Section -->
+        <div class="hero-section">
+          <div class="logo-circle">
+            <ion-icon name="cash-outline" class="logo-icon"></ion-icon>
           </div>
-          <h1 class="text-3xl font-bold heading-text mb-2">Welcome Back</h1>
-          <p class="subtitle-text">Sign in to your account</p>
+          <h1 class="welcome-title">Welcome Back</h1>
+          <p class="welcome-subtitle">Sign in to manage your loans</p>
         </div>
 
-        <!-- Login Form -->
-        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-          <ion-card class="shadow-lg card-bg">
-            <ion-card-content class="p-6">
+        <!-- Login Form Card -->
+        <ion-card class="login-card">
+          <ion-card-content class="card-content">
+            <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
               
               <!-- Email Input -->
-              <ion-item lines="none" class="mb-4 rounded-lg input-item">
-                <ion-icon name="person-outline" slot="start" color="medium"></ion-icon>
-                <ion-input
-                  type="email"
-                  placeholder="Email"
-                  [(ngModel)]="email"
-                  name="email"
-                  required
-                  autocomplete="email"
-                ></ion-input>
-              </ion-item>
+              <div class="input-group">
+                <label class="input-label">Email Address</label>
+                <div class="input-wrapper">
+                  <ion-icon name="person-outline" class="input-icon"></ion-icon>
+                  <input
+                    type="email"
+                    class="custom-input"
+                    placeholder="Enter your email"
+                    [(ngModel)]="email"
+                    name="email"
+                    required
+                    autocomplete="email"
+                  />
+                </div>
+              </div>
 
               <!-- Password Input -->
-              <ion-item lines="none" class="mb-6 rounded-lg input-item">
-                <ion-icon name="lock-closed-outline" slot="start" color="medium"></ion-icon>
-                <ion-input
-                  type="password"
-                  placeholder="Password"
-                  [(ngModel)]="password"
-                  name="password"
-                  required
-                  autocomplete="current-password"
-                ></ion-input>
-              </ion-item>
+              <div class="input-group">
+                <label class="input-label">Password</label>
+                <div class="input-wrapper">
+                  <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
+                  <input
+                    type="password"
+                    class="custom-input"
+                    placeholder="Enter your password"
+                    [(ngModel)]="password"
+                    name="password"
+                    required
+                    autocomplete="current-password"
+                  />
+                </div>
+              </div>
 
               <!-- Login Button -->
               <ion-button
                 type="submit"
                 expand="block"
                 [disabled]="loading || !loginForm.valid"
-                class="font-semibold"
+                class="login-button"
+                size="large"
               >
-                <ion-spinner name="crescent" *ngIf="loading" class="mr-2"></ion-spinner>
+                <ion-spinner name="crescent" *ngIf="loading" class="button-spinner"></ion-spinner>
                 <ion-icon name="log-in-outline" slot="start" *ngIf="!loading"></ion-icon>
                 {{ loading ? 'Signing in...' : 'Sign In' }}
               </ion-button>
 
-            </ion-card-content>
-          </ion-card>
-        </form>
+            </form>
+          </ion-card-content>
+        </ion-card>
 
-        <!-- Quick Login Section -->
-        <div class="mt-8">
-          <div class="text-center mb-4">
-            <p class="subtitle-text text-sm">Quick Login (Development Only)</p>
+        <!-- Divider -->
+        <div class="divider">
+          <span class="divider-text">Quick Login (Dev Only)</span>
+        </div>
+
+        <!-- Quick Login Cards -->
+        <div class="quick-login-grid">
+          <!-- Customer Quick Logins -->
+          <div 
+            class="quick-login-card customer-card"
+            (click)="quickLogin(testUsers[0])"
+          >
+            <div class="quick-card-content">
+              <div class="user-avatar customer-avatar">
+                <span class="avatar-text">{{ testUsers[0].initials }}</span>
+              </div>
+              <div class="user-info">
+                <p class="user-name">{{ testUsers[0].name }}</p>
+                <p class="user-role">{{ testUsers[0].role }}</p>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+            </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Customer Quick Logins -->
-            <ion-card 
-              button
-              (click)="quickLogin(testUsers[0])"
-              class="quick-login-card customer-card"
-            >
-              <ion-card-content class="text-center p-3">
-                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span class="text-white font-bold">{{ testUsers[0].initials }}</span>
-                </div>
-                <p class="text-sm font-semibold card-text">{{ testUsers[0].name }}</p>
-                <p class="text-xs subtitle-text">{{ testUsers[0].role }}</p>
-              </ion-card-content>
-            </ion-card>
-
-            <ion-card 
-              button
-              (click)="quickLogin(testUsers[1])"
-              class="quick-login-card customer-card"
-            >
-              <ion-card-content class="text-center p-3">
-                <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span class="text-white font-bold">{{ testUsers[1].initials }}</span>
-                </div>
-                <p class="text-sm font-semibold card-text">{{ testUsers[1].name }}</p>
-                <p class="text-xs subtitle-text">{{ testUsers[1].role }}</p>
-              </ion-card-content>
-            </ion-card>
-
-            <!-- Collector Quick Logins -->
-            <ion-card 
-              button
-              (click)="quickLogin(testUsers[2])"
-              class="quick-login-card collector-card"
-            >
-              <ion-card-content class="text-center p-3">
-                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span class="text-white font-bold">{{ testUsers[2].initials }}</span>
-                </div>
-                <p class="text-sm font-semibold card-text">{{ testUsers[2].name }}</p>
-                <p class="text-xs subtitle-text">{{ testUsers[2].role }}</p>
-              </ion-card-content>
-            </ion-card>
-
-            <ion-card 
-              button
-              (click)="quickLogin(testUsers[3])"
-              class="quick-login-card collector-card"
-            >
-              <ion-card-content class="text-center p-3">
-                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span class="text-white font-bold">{{ testUsers[3].initials }}</span>
-                </div>
-                <p class="text-sm font-semibold card-text">{{ testUsers[3].name }}</p>
-                <p class="text-xs subtitle-text">{{ testUsers[3].role }}</p>
-              </ion-card-content>
-            </ion-card>
+          <div 
+            class="quick-login-card customer-card"
+            (click)="quickLogin(testUsers[1])"
+          >
+            <div class="quick-card-content">
+              <div class="user-avatar customer-avatar">
+                <span class="avatar-text">{{ testUsers[1].initials }}</span>
+              </div>
+              <div class="user-info">
+                <p class="user-name">{{ testUsers[1].name }}</p>
+                <p class="user-role">{{ testUsers[1].role }}</p>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+            </div>
           </div>
+
+          <!-- Collector Quick Logins -->
+          <div 
+            class="quick-login-card collector-card"
+            (click)="quickLogin(testUsers[2])"
+          >
+            <div class="quick-card-content">
+              <div class="user-avatar collector-avatar">
+                <span class="avatar-text">{{ testUsers[2].initials }}</span>
+              </div>
+              <div class="user-info">
+                <p class="user-name">{{ testUsers[2].name }}</p>
+                <p class="user-role">{{ testUsers[2].role }}</p>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+            </div>
+          </div>
+
+          <div 
+            class="quick-login-card collector-card"
+            (click)="quickLogin(testUsers[3])"
+          >
+            <div class="quick-card-content">
+              <div class="user-avatar collector-avatar">
+                <span class="avatar-text">{{ testUsers[3].initials }}</span>
+              </div>
+              <div class="user-info">
+                <p class="user-name">{{ testUsers[3].name }}</p>
+                <p class="user-role">{{ testUsers[3].role }}</p>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+          <p class="footer-text">© 2025 LoanFlow. All rights reserved.</p>
         </div>
 
       </div>
     </ion-content>
   `,
   styles: [`
+    /* Main Content */
+    .login-content {
+      --background: linear-gradient(135deg, 
+        var(--ion-color-primary-tint) 0%, 
+        var(--ion-color-secondary-tint) 100%);
+    }
+
     .login-container {
-      max-width: 500px;
+      max-width: 480px;
       margin: 0 auto;
-      padding: 2rem 0;
-    }
-
-    ion-item {
-      --background: transparent;
-      --padding-start: 12px;
-    }
-
-    ion-card {
-      margin: 0;
-    }
-
-    /* Dark mode support */
-    .heading-text {
-      color: var(--ion-text-color, #111827);
-    }
-
-    .subtitle-text {
-      color: var(--ion-color-medium);
-    }
-
-    .card-text {
-      color: var(--ion-text-color);
-    }
-
-    .card-bg {
-      background: var(--ion-card-background, #ffffff);
-    }
-
-    .input-item {
-      border: 1px solid var(--ion-color-medium);
-      --background: var(--ion-item-background, transparent);
-    }
-
-    .quick-login-card {
-      margin: 0;
-      border: 2px solid;
-    }
-
-    .customer-card {
-      background: var(--ion-color-success-tint);
-      border-color: var(--ion-color-success);
-      --background: var(--ion-color-success-tint);
-    }
-
-    .collector-card {
-      background: var(--ion-color-primary-tint);
-      border-color: var(--ion-color-primary);
-      --background: var(--ion-color-primary-tint);
-    }
-
-    .grid {
-      display: grid;
-    }
-
-    .grid-cols-2 {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .gap-3 {
-      gap: 0.75rem;
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .mb-2 { margin-bottom: 0.5rem; }
-    .mb-4 { margin-bottom: 1rem; }
-    .mb-6 { margin-bottom: 1.5rem; }
-    .mb-8 { margin-bottom: 2rem; }
-    .mt-8 { margin-top: 2rem; }
-    .mr-2 { margin-right: 0.5rem; }
-
-    .mx-auto {
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .w-12 { width: 3rem; }
-    .h-12 { height: 3rem; }
-    .w-20 { width: 5rem; }
-    .h-20 { height: 5rem; }
-
-    .rounded-full { border-radius: 9999px; }
-    .rounded-lg { border-radius: 0.5rem; }
-
-    .flex {
+      padding: 2rem 1rem;
+      min-height: 100%;
       display: flex;
+      flex-direction: column;
     }
 
-    .items-center {
+    /* Header Styles */
+    ion-toolbar {
+      --background: transparent;
+      --border-style: none;
+    }
+
+    .theme-toggle {
+      --background-hover: rgba(255, 255, 255, 0.1);
+      --border-radius: 50%;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-top: 1rem;
+    }
+
+    .logo-circle {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .logo-icon {
+      font-size: 3.5rem;
+      color: white;
+    }
+
+    .welcome-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome-subtitle {
+      font-size: 1rem;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+    }
+
+    /* Login Card */
+    .login-card {
+      margin: 0;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--ion-card-background);
+    }
+
+    .card-content {
+      padding: 2rem !important;
+    }
+
+    /* Form Inputs */
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
       align-items: center;
     }
 
-    .justify-center {
-      justify-content: center;
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      font-size: 1.25rem;
+      color: var(--ion-color-medium);
+      z-index: 2;
     }
 
+    .custom-input {
+      width: 100%;
+      padding: 1rem 1rem 1rem 3rem;
+      font-size: 1rem;
+      border: 2px solid var(--ion-border-color, #e5e7eb);
+      border-radius: 12px;
+      background: var(--ion-item-background);
+      color: var(--ion-text-color);
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    .custom-input:focus {
+      outline: none;
+      border-color: var(--ion-color-primary);
+      box-shadow: 0 0 0 3px rgba(56, 128, 255, 0.1);
+    }
+
+    .custom-input::placeholder {
+      color: var(--ion-color-medium);
+      opacity: 0.7;
+    }
+
+    /* Login Button */
+    .login-button {
+      margin-top: 1rem;
+      --border-radius: 12px;
+      --box-shadow: 0 4px 12px rgba(56, 128, 255, 0.3);
+      font-weight: 600;
+      font-size: 1rem;
+      height: 56px;
+      text-transform: none;
+    }
+
+    .button-spinner {
+      margin-right: 0.5rem;
+    }
+
+    /* Divider */
+    .divider {
+      text-align: center;
+      margin: 2rem 0 1.5rem;
+      position: relative;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--ion-border-color, #e5e7eb);
+    }
+
+    .divider-text {
+      position: relative;
+      background: var(--ion-background-color);
+      padding: 0 1rem;
+      font-size: 0.875rem;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+    }
+
+    /* Quick Login Grid */
+    .quick-login-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .quick-login-card {
+      background: var(--ion-card-background);
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .quick-login-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .quick-login-card:active {
+      transform: translateY(0);
+    }
+
+    .customer-card {
+      border-color: var(--ion-color-success);
+      background: rgba(45, 211, 111, 0.05);
+    }
+
+    .customer-card:hover {
+      background: rgba(45, 211, 111, 0.1);
+    }
+
+    .collector-card {
+      border-color: var(--ion-color-primary);
+      background: rgba(56, 128, 255, 0.05);
+    }
+
+    .collector-card:hover {
+      background: rgba(56, 128, 255, 0.1);
+    }
+
+    .quick-card-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .customer-avatar {
+      background: linear-gradient(135deg, #2dd36f, #1ab759);
+    }
+
+    .collector-avatar {
+      background: linear-gradient(135deg, #3880ff, #2563eb);
+    }
+
+    .avatar-text {
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .user-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .user-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      margin: 0 0 0.25rem 0;
+    }
+
+    .user-role {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    .card-arrow {
+      font-size: 1.25rem;
+      color: var(--ion-color-medium);
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+
+    .quick-login-card:hover .card-arrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+
+    /* Footer */
+    .login-footer {
+      text-align: center;
+      padding: 1.5rem 0;
+      margin-top: auto;
+    }
+
+    .footer-text {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    /* Utility Classes */
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 0.5rem; }
+    .text-center { text-align: center; }
+    .text-2xl { font-size: 1.5rem; }
     .font-bold { font-weight: 700; }
-    .font-semibold { font-weight: 600; }
 
-    .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
-    .text-5xl { font-size: 3rem; line-height: 1; }
-    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-    .text-xs { font-size: 0.75rem; line-height: 1rem; }
+    /* Dark Mode Adjustments */
+    body.dark .login-content,
+    .dark .login-content {
+      --background: linear-gradient(135deg, 
+        rgba(66, 140, 255, 0.15) 0%, 
+        rgba(80, 200, 255, 0.15) 100%),
+        var(--ion-background-color);
+    }
 
-    .bg-primary { background-color: var(--ion-color-primary); }
-    .bg-green-500 { background-color: #22c55e; }
-    .bg-green-600 { background-color: #16a34a; }
-    .bg-blue-500 { background-color: #3b82f6; }
-    .bg-blue-600 { background-color: #2563eb; }
+    body.dark .custom-input,
+    .dark .custom-input {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
 
-    .text-white { color: #ffffff; }
+    body.dark .custom-input:focus,
+    .dark .custom-input:focus {
+      border-color: var(--ion-color-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
 
-    .p-3 { padding: 0.75rem; }
-    .p-6 { padding: 1.5rem; }
+    body.dark .divider::before,
+    .dark .divider::before {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
-    .shadow-lg {
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    body.dark .quick-login-card,
+    .dark .quick-login-card {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    body.dark .customer-card,
+    .dark .customer-card {
+      background: rgba(45, 211, 111, 0.08);
+    }
+
+    body.dark .customer-card:hover,
+    .dark .customer-card:hover {
+      background: rgba(45, 211, 111, 0.15);
+    }
+
+    body.dark .collector-card,
+    .dark .collector-card {
+      background: rgba(66, 140, 255, 0.08);
+    }
+
+    body.dark .collector-card:hover,
+    .dark .collector-card:hover {
+      background: rgba(66, 140, 255, 0.15);
     }
   `]
 })
@@ -333,7 +588,8 @@ export class LoginPage {
       'lock-closed-outline': lockClosedOutline,
       'log-in-outline': logInOutline,
       'moon-outline': moonOutline,
-      'sunny-outline': sunnyOutline
+      'sunny-outline': sunnyOutline,
+      'arrow-forward-outline': arrowForwardOutline
     });
   }
 

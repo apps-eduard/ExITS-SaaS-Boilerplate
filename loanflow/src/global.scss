@@ -103,12 +103,267 @@ ion-content {
   --ion-color-light-tint: #f5f6f9;
 
   --ion-background-color: #ffffff;
+  --ion-text-color: #000000;
+  --ion-card-background: #ffffff;
+  --ion-item-background: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ion-background-color: #1a1a1a;
-    --ion-color-light-contrast: #ffffff;
-    --ion-color-light-contrast-rgb: 255, 255, 255;
+/* Dark Mode */
+body.dark,
+.dark {
+  --ion-color-primary: #428cff;
+  --ion-color-primary-rgb: 66, 140, 255;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #3a7be0;
+  --ion-color-primary-tint: #5598ff;
+
+  --ion-color-secondary: #50c8ff;
+  --ion-color-secondary-rgb: 80, 200, 255;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #46b0e0;
+  --ion-color-secondary-tint: #62ceff;
+
+  --ion-color-tertiary: #6a64ff;
+  --ion-color-tertiary-rgb: 106, 100, 255;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #5d58e0;
+  --ion-color-tertiary-tint: #7974ff;
+
+  --ion-color-success: #2fdf75;
+  --ion-color-success-rgb: 47, 223, 117;
+  --ion-color-success-contrast: #000000;
+  --ion-color-success-contrast-rgb: 0, 0, 0;
+  --ion-color-success-shade: #29c467;
+  --ion-color-success-tint: #44e283;
+
+  --ion-color-warning: #ffd534;
+  --ion-color-warning-rgb: 255, 213, 52;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #e0bb2e;
+  --ion-color-warning-tint: #ffd948;
+
+  --ion-color-danger: #ff4961;
+  --ion-color-danger-rgb: 255, 73, 97;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #e04055;
+  --ion-color-danger-tint: #ff5b71;
+
+  --ion-color-dark: #f4f5f8;
+  --ion-color-dark-rgb: 244, 245, 248;
+  --ion-color-dark-contrast: #000000;
+  --ion-color-dark-contrast-rgb: 0, 0, 0;
+  --ion-color-dark-shade: #d7d8da;
+  --ion-color-dark-tint: #f5f6f9;
+
+  --ion-color-medium: #989aa2;
+  --ion-color-medium-rgb: 152, 154, 162;
+  --ion-color-medium-contrast: #000000;
+  --ion-color-medium-contrast-rgb: 0, 0, 0;
+  --ion-color-medium-shade: #86888f;
+  --ion-color-medium-tint: #a2a4ab;
+
+  --ion-color-light: #222428;
+  --ion-color-light-rgb: 34, 36, 40;
+  --ion-color-light-contrast: #ffffff;
+  --ion-color-light-contrast-rgb: 255, 255, 255;
+  --ion-color-light-shade: #1e2023;
+  --ion-color-light-tint: #383a3e;
+
+  --ion-background-color: #0f0f0f;
+  --ion-background-color-rgb: 15, 15, 15;
+
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255, 255, 255;
+
+  --ion-border-color: #222222;
+
+  --ion-card-background: #1c1c1e;
+  --ion-item-background: #1c1c1e;
+
+  --ion-toolbar-background: #0f0f0f;
+}
+
+/* ===== MODERN CONFIRMATION DIALOG STYLES ===== */
+.modern-confirmation-alert {
+  --backdrop-opacity: 0.6;
+  
+  .alert-wrapper {
+    border-radius: 20px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    overflow: hidden;
+    max-width: 320px;
+    animation: slideIn 0.3s ease-out;
+    background: var(--ion-background-color) !important;
+  }
+
+  .alert-head {
+    padding: 28px 24px 12px 24px !important;
+    text-align: center;
+    background: var(--ion-background-color);
+    
+    h2 {
+      font-size: 1.5rem !important;
+      font-weight: 700 !important;
+      color: var(--ion-text-color) !important;
+      margin: 0 !important;
+      letter-spacing: -0.02em;
+    }
+  }
+
+  .alert-message {
+    padding: 8px 24px 28px 24px !important;
+    font-size: 0.9375rem !important;
+    line-height: 1.6 !important;
+    color: var(--ion-color-medium) !important;
+    text-align: center;
+    background: var(--ion-background-color);
+  }
+
+  .alert-button-group {
+    padding: 0 !important;
+    border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+    display: flex;
+    background: var(--ion-background-color);
+    
+    button {
+      margin: 0 !important;
+      flex: 1;
+      height: 56px !important;
+      font-size: 1rem !important;
+      font-weight: 600 !important;
+      border-radius: 0 !important;
+      transition: all 0.2s ease !important;
+      background: transparent !important;
+      text-align: center !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      
+      .alert-button-inner {
+        justify-content: center !important;
+      }
+      
+      &.alert-button-cancel {
+        color: var(--ion-color-medium) !important;
+        border-right: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.03) !important;
+        }
+
+        &:active {
+          background: rgba(0, 0, 0, 0.06) !important;
+        }
+      }
+      
+      &.alert-button-confirm {
+        font-weight: 700 !important;
+        
+        &.alert-button-primary {
+          color: #3880ff !important;
+        }
+        
+        &.alert-button-success {
+          color: #10b981 !important;
+        }
+        
+        &.alert-button-warning {
+          color: #f59e0b !important;
+        }
+        
+        &.alert-button-danger {
+          color: #ef4444 !important;
+        }
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.03) !important;
+        }
+
+        &:active {
+          background: rgba(0, 0, 0, 0.06) !important;
+        }
+      }
+    }
+  }
+}
+
+/* Dark mode adjustments for confirmation dialog */
+body.dark .modern-confirmation-alert,
+.dark .modern-confirmation-alert {
+  .alert-wrapper {
+    background: #1c1c1e !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+  }
+
+  .alert-head {
+    background: #1c1c1e;
+  }
+
+  .alert-message {
+    background: #1c1c1e;
+  }
+
+  .alert-button-group {
+    border-top-color: rgba(255, 255, 255, 0.1);
+    background: #1c1c1e;
+    
+    button {
+      background: transparent !important;
+
+      &.alert-button-cancel {
+        border-right-color: rgba(255, 255, 255, 0.1);
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        &:active {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+      }
+      
+      &.alert-button-confirm {
+        &.alert-button-primary {
+          color: #4c8dff !important;
+        }
+        
+        &.alert-button-success {
+          color: #34d399 !important;
+        }
+        
+        &.alert-button-warning {
+          color: #fbbf24 !important;
+        }
+        
+        &.alert-button-danger {
+          color: #f87171 !important;
+        }
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        &:active {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+      }
+    }
+  }
+}
+
+/* Slide in animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

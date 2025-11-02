@@ -14,7 +14,8 @@ import {
   IonBadge,
   IonSkeletonText,
   IonButtons,
-  IonChip
+  IonChip,
+  ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -37,6 +38,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { ConfirmationService } from '../../core/services/confirmation.service';
 
 interface RouteCustomer {
   id: number;
@@ -79,21 +81,26 @@ interface CollectionStats {
   ],
   template: `
     <ion-header class="ion-no-border">
-      <ion-toolbar class="bg-gradient-to-r from-purple-600 to-purple-800 text-white">
+      <ion-toolbar class="custom-toolbar">
         <ion-buttons slot="start">
-          <ion-button (click)="logout()">
+          <ion-button (click)="logout()" class="header-btn">
             <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title class="font-bold">Collection Route</ion-title>
+        <ion-title>
+          <div class="header-title">
+            <ion-icon name="map-outline" class="title-icon"></ion-icon>
+            <span class="title-text">Route</span>
+          </div>
+        </ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="themeService.toggleTheme()">
+          <ion-button (click)="themeService.toggleTheme()" class="header-btn">
             <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-button (click)="syncNow()">
+          <ion-button (click)="syncNow()" class="header-btn">
             <ion-icon [name]="syncing() ? 'sync-outline' : 'sync-outline'" slot="icon-only" [class.animate-spin]="syncing()"></ion-icon>
             @if (syncService.pendingSyncCount() > 0) {
-              <ion-badge color="danger" class="absolute -top-1 -right-1 text-xs">
+              <ion-badge color="danger" class="sync-badge">
                 {{ syncService.pendingSyncCount() }}
               </ion-badge>
             }
@@ -103,159 +110,160 @@ interface CollectionStats {
 
       <!-- Sync Status Banner -->
       @if (!syncService.isOnline()) {
-        <div class="bg-orange-500 text-white px-4 py-2 text-center text-sm font-semibold">
-          <ion-icon name="sync-outline" class="mr-1"></ion-icon>
-          Offline Mode - {{ syncService.pendingSyncCount() }} pending sync
+        <div class="offline-banner">
+          <ion-icon name="cloud-offline-outline" class="offline-icon"></ion-icon>
+          <span>Offline Mode - {{ syncService.pendingSyncCount() }} pending sync</span>
         </div>
       }
     </ion-header>
 
-    <ion-content class="bg-gray-50 dark:bg-gray-900">
+    <ion-content class="main-content">
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="p-4 space-y-4">
+      <div class="dashboard-container">
         
-        <!-- Collector Info Banner -->
-        <div class="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm opacity-90">Field Collector</p>
-              <h1 class="text-2xl font-bold mt-1">{{ currentUser()?.firstName || 'Collector' }} {{ currentUser()?.lastName || '' }}</h1>
-              <p class="text-xs opacity-75 mt-1">{{ currentDate }}</p>
-            </div>
-            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-              <ion-icon name="person-outline" class="text-4xl"></ion-icon>
-            </div>
+        <!-- User Info Header -->
+        <div class="user-header">
+          <div class="user-info">
+            <p class="user-greeting">Hello, <strong>{{ currentUser()?.firstName || 'Collector' }}</strong></p>
+            <p class="user-subtitle">{{ currentDate }}</p>
           </div>
         </div>
 
         <!-- Collection Stats -->
-        <div class="grid grid-cols-2 gap-3">
+        <div class="stats-grid">
           <!-- Total Assigned -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-2">
-              <ion-icon name="list-outline" class="text-xl text-purple-600 dark:text-purple-400"></ion-icon>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon-wrapper stat-icon-purple">
+                <ion-icon class="stat-icon" name="list-outline"></ion-icon>
+              </div>
             </div>
             @if (loading()) {
-              <ion-skeleton-text animated class="w-16 h-6 rounded"></ion-skeleton-text>
+              <ion-skeleton-text animated class="stat-skeleton"></ion-skeleton-text>
             } @else {
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats().totalAssigned }}</p>
+              <h2 class="stat-value">{{ stats().totalAssigned }}</h2>
             }
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Assigned</p>
+            <p class="stat-label">Assigned</p>
+            <div class="stat-decoration stat-decoration-purple"></div>
           </div>
 
           <!-- Visited -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-2">
-              <ion-icon name="checkmark-circle-outline" class="text-xl text-blue-600 dark:text-blue-400"></ion-icon>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon-wrapper stat-icon-success">
+                <ion-icon class="stat-icon" name="checkmark-circle-outline"></ion-icon>
+              </div>
             </div>
             @if (loading()) {
-              <ion-skeleton-text animated class="w-16 h-6 rounded"></ion-skeleton-text>
+              <ion-skeleton-text animated class="stat-skeleton"></ion-skeleton-text>
             } @else {
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats().visited }}</p>
+              <h2 class="stat-value">{{ stats().visited }}</h2>
             }
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visited</p>
+            <p class="stat-label">Visited</p>
+            <div class="stat-decoration stat-decoration-success"></div>
           </div>
 
           <!-- Total Collected -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-2">
-              <ion-icon name="cash-outline" class="text-xl text-green-600 dark:text-green-400"></ion-icon>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon-wrapper stat-icon-primary">
+                <ion-icon class="stat-icon" name="cash-outline"></ion-icon>
+              </div>
             </div>
             @if (loading()) {
-              <ion-skeleton-text animated class="w-16 h-6 rounded"></ion-skeleton-text>
+              <ion-skeleton-text animated class="stat-skeleton"></ion-skeleton-text>
             } @else {
-              <p class="text-xl font-bold text-gray-900 dark:text-white">₱{{ formatCurrency(stats().totalCollected) }}</p>
+              <h2 class="stat-value stat-value-sm">₱{{ formatCurrency(stats().totalCollected) }}</h2>
             }
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Collected</p>
+            <p class="stat-label">Collected</p>
+            <div class="stat-decoration stat-decoration-primary"></div>
           </div>
 
           <!-- Pending -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-2">
-              <ion-icon name="time-outline" class="text-xl text-orange-600 dark:text-orange-400"></ion-icon>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon-wrapper stat-icon-warning">
+                <ion-icon class="stat-icon" name="time-outline"></ion-icon>
+              </div>
             </div>
             @if (loading()) {
-              <ion-skeleton-text animated class="w-16 h-6 rounded"></ion-skeleton-text>
+              <ion-skeleton-text animated class="stat-skeleton"></ion-skeleton-text>
             } @else {
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats().pendingVisits }}</p>
+              <h2 class="stat-value">{{ stats().pendingVisits }}</h2>
             }
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pending</p>
+            <p class="stat-label">Pending</p>
+            <div class="stat-decoration stat-decoration-warning"></div>
           </div>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Today's Progress</span>
-            <span class="text-sm font-bold text-purple-600 dark:text-purple-400">{{ progressPercentage() }}%</span>
+        <!-- Progress Card -->
+        <div class="progress-card">
+          <div class="progress-header">
+            <span class="progress-title">Today's Progress</span>
+            <span class="progress-percentage">{{ progressPercentage() }}%</span>
           </div>
-          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+          <div class="progress-bar-container">
             <div 
-              class="bg-gradient-to-r from-purple-500 to-purple-600 h-full transition-all duration-500 rounded-full"
+              class="progress-bar-fill"
               [style.width.%]="progressPercentage()"
             ></div>
           </div>
         </div>
 
         <!-- Filter Chips -->
-        <div class="flex gap-2 overflow-x-auto pb-2">
+        <div class="filter-chips">
           <ion-chip 
-            [class.bg-purple-600]="filter() === 'all'"
-            [class.text-white]="filter() === 'all'"
-            [class.bg-gray-200]="filter() !== 'all'"
-            [class.dark:bg-gray-700]="filter() !== 'all'"
+            class="filter-chip"
+            [class.chip-active]="filter() === 'all'"
+            [class.chip-inactive]="filter() !== 'all'"
             (click)="setFilter('all')"
-            class="cursor-pointer"
           >
             All ({{ customers().length }})
           </ion-chip>
           <ion-chip 
-            [class.bg-orange-600]="filter() === 'not-visited'"
-            [class.text-white]="filter() === 'not-visited'"
-            [class.bg-gray-200]="filter() !== 'not-visited'"
-            [class.dark:bg-gray-700]="filter() !== 'not-visited'"
+            class="filter-chip filter-chip-pending"
+            [class.chip-active]="filter() === 'not-visited'"
+            [class.chip-inactive]="filter() !== 'not-visited'"
             (click)="setFilter('not-visited')"
-            class="cursor-pointer"
           >
             Pending ({{ filterCount('not-visited') }})
           </ion-chip>
           <ion-chip 
-            [class.bg-green-600]="filter() === 'collected'"
-            [class.text-white]="filter() === 'collected'"
-            [class.bg-gray-200]="filter() !== 'collected'"
-            [class.dark:bg-gray-700]="filter() !== 'collected'"
+            class="filter-chip filter-chip-success"
+            [class.chip-active]="filter() === 'collected'"
+            [class.chip-inactive]="filter() !== 'collected'"
             (click)="setFilter('collected')"
-            class="cursor-pointer"
           >
             Collected ({{ filterCount('collected') }})
           </ion-chip>
         </div>
 
         <!-- Customer Route List -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md">
-          <h2 class="text-base font-bold text-gray-900 dark:text-white mb-3">Today's Route</h2>
+        <div class="section-card">
+          <h3 class="section-title">Today's Route</h3>
 
           @if (loading()) {
-            <div class="space-y-3">
+            <div class="customers-loading">
               @for (i of [1,2,3,4]; track i) {
-                <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <ion-skeleton-text animated class="w-40 h-5 rounded mb-2"></ion-skeleton-text>
-                  <ion-skeleton-text animated class="w-32 h-4 rounded"></ion-skeleton-text>
+                <div class="customer-skeleton">
+                  <ion-skeleton-text animated class="skeleton-name"></ion-skeleton-text>
+                  <ion-skeleton-text animated class="skeleton-address"></ion-skeleton-text>
                 </div>
               }
             </div>
           } @else if (filteredCustomers().length === 0) {
-            <div class="text-center py-8">
-              <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                <ion-icon name="map-outline" class="text-3xl text-gray-400"></ion-icon>
+            <div class="empty-state">
+              <div class="empty-icon-wrapper">
+                <ion-icon name="map-outline" class="empty-icon"></ion-icon>
               </div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">No customers assigned</p>
+              <p class="empty-title">No customers found</p>
+              <p class="empty-subtitle">Check back later or adjust your filters</p>
             </div>
           } @else {
-            <div class="space-y-3">
+            <div class="customers-list">
               @for (customer of filteredCustomers(); track customer.id) {
                 <div 
                   class="p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-lg"
@@ -334,168 +342,487 @@ interface CollectionStats {
     </ion-content>
   `,
   styles: [`
-    /* Layout utilities */
+    /* ===== HEADER STYLES ===== */
+    .custom-toolbar {
+      --background: linear-gradient(135deg, #a855f7, #6366f1);
+      --color: white;
+      --border-style: none;
+      --min-height: 60px;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .title-icon {
+      font-size: 1.5rem;
+    }
+
+    .title-text {
+      font-weight: 700;
+    }
+
+    .header-btn {
+      --background-hover: rgba(255, 255, 255, 0.15);
+      --border-radius: 50%;
+      --padding-start: 8px;
+      --padding-end: 8px;
+      position: relative;
+    }
+
+    .sync-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      font-size: 0.65rem;
+      min-width: 16px;
+      height: 16px;
+    }
+
+    .offline-banner {
+      background: #f59e0b;
+      color: white;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .offline-icon {
+      font-size: 1.125rem;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+      --background: var(--ion-background-color);
+    }
+
+    .dashboard-container {
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== USER HEADER ===== */
+    .user-header {
+      margin-bottom: 1.5rem;
+      padding: 0 0.25rem;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .user-greeting {
+      font-size: 1.125rem;
+      color: var(--ion-text-color);
+      margin: 0;
+      font-weight: 400;
+    }
+
+    .user-greeting strong {
+      font-weight: 700;
+    }
+
+    .user-subtitle {
+      font-size: 0.875rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    /* ===== STATS GRID ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--ion-card-background);
+      border-radius: 16px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--ion-border-color, #e5e7eb);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:active {
+      transform: scale(0.98);
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-icon-wrapper {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+    }
+
+    .stat-icon-purple {
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+    }
+
+    .stat-icon-purple .stat-icon {
+      color: white;
+    }
+
+    .stat-icon-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .stat-icon-primary .stat-icon {
+      color: white;
+    }
+
+    .stat-icon-success {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+    }
+
+    .stat-icon-success .stat-icon {
+      color: white;
+    }
+
+    .stat-icon-warning {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+    }
+
+    .stat-icon-warning .stat-icon {
+      color: white;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin: 0 0 0.25rem 0;
+      line-height: 1.2;
+    }
+
+    .stat-value-sm {
+      font-size: 1.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .stat-skeleton {
+      width: 70%;
+      height: 24px;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-decoration {
+      position: absolute;
+      bottom: -10px;
+      right: -10px;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      opacity: 0.1;
+    }
+
+    .stat-decoration-purple {
+      background: #a855f7;
+    }
+
+    .stat-decoration-primary {
+      background: #667eea;
+    }
+
+    .stat-decoration-success {
+      background: #00f2fe;
+    }
+
+    .stat-decoration-warning {
+      background: #f5576c;
+    }
+
+    /* ===== PROGRESS CARD ===== */
+    .progress-card {
+      background: var(--ion-card-background);
+      border-radius: 16px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--ion-border-color, #e5e7eb);
+    }
+
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+    }
+
+    .progress-percentage {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #a855f7;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 12px;
+      background: var(--ion-color-light);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a855f7, #6366f1);
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+    }
+
+    /* ===== FILTER CHIPS ===== */
+    .filter-chips {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.25rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.875rem;
+      font-weight: 600;
+      --background: var(--ion-color-light);
+      --color: var(--ion-text-color);
+    }
+
+    .chip-active {
+      --background: #a855f7 !important;
+      --color: white !important;
+    }
+
+    .chip-inactive {
+      --background: var(--ion-color-light);
+      --color: var(--ion-color-medium);
+    }
+
+    .filter-chip-pending.chip-active {
+      --background: #f59e0b !important;
+    }
+
+    .filter-chip-success.chip-active {
+      --background: #10b981 !important;
+    }
+
+    /* ===== SECTION CARD ===== */
+    .section-card {
+      background: var(--ion-card-background);
+      border-radius: 18px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--ion-border-color, #e5e7eb);
+    }
+
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin: 0 0 1rem 0;
+    }
+
+    /* ===== CUSTOMERS LIST ===== */
+    .customers-loading {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .customer-skeleton {
+      background: var(--ion-item-background);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .skeleton-name {
+      width: 50%;
+      height: 16px;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .skeleton-address {
+      width: 40%;
+      height: 12px;
+      border-radius: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+    }
+
+    .empty-icon-wrapper {
+      width: 80px;
+      height: 80px;
+      background: var(--ion-color-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      color: var(--ion-color-medium);
+    }
+
+    .empty-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .empty-subtitle {
+      font-size: 0.875rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    .customers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* Legacy utility classes for customer cards */
     .flex { display: flex; }
-    .grid { display: grid; }
-    .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-    
-    .items-center { align-items: center; }
     .items-start { align-items: flex-start; }
+    .items-center { align-items: center; }
     .justify-between { justify-content: space-between; }
-    .justify-center { justify-content: center; }
-    
     .gap-2 { gap: 0.5rem; }
     .gap-3 { gap: 0.75rem; }
     .space-y-3 > * + * { margin-top: 0.75rem; }
-    .space-y-4 > * + * { margin-top: 1rem; }
-    
-    /* Sizing */
-    .w-10 { width: 2.5rem; }
-    .h-10 { height: 2.5rem; }
-    .w-16 { width: 4rem; }
-    .h-16 { height: 4rem; }
-    .w-full { width: 100%; }
-    
-    /* Spacing */
-    .p-2 { padding: 0.5rem; }
-    .p-3 { padding: 0.75rem; }
-    .p-4 { padding: 1rem; }
-    .p-6 { padding: 1.5rem; }
-    .pb-2 { padding-bottom: 0.5rem; }
-    .mb-1 { margin-bottom: 0.25rem; }
-    .mb-2 { margin-bottom: 0.5rem; }
     .mb-3 { margin-bottom: 0.75rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-1 { margin-bottom: 0.25rem; }
     .mt-1 { margin-top: 0.25rem; }
-    .mr-1 { margin-right: 0.25rem; }
-    .mx-auto { margin-left: auto; margin-right: auto; }
-    
-    /* Text */
-    .text-xs { font-size: 0.75rem; line-height: 1rem; }
     .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
     .text-base { font-size: 1rem; line-height: 1.5rem; }
-    .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-    .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-    .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
-    .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-    
-    .font-medium { font-weight: 500; }
+    .text-xs { font-size: 0.75rem; line-height: 1rem; }
     .font-semibold { font-weight: 600; }
+    .font-medium { font-weight: 500; }
     .font-bold { font-weight: 700; }
-    
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    
-    .opacity-75 { opacity: 0.75; }
-    
-    /* Colors */
-    .text-white { color: #ffffff; }
-    .text-purple-600 { color: #9333ea; }
-    .text-blue-600 { color: #2563eb; }
-    .text-green-600 { color: #16a34a; }
-    .text-orange-500 { color: #f97316; }
-    .text-orange-600 { color: #ea580c; }
-    .text-gray-400 { color: #9ca3af; }
-    .text-gray-500 { color: #6b7280; }
-    .text-gray-600 { color: #4b5563; }
-    .text-gray-700 { color: #374151; }
     .text-gray-900 { color: #111827; }
-    
-    .bg-white { background-color: #ffffff; }
-    .bg-gray-50 { background-color: #f9fafb; }
-    .bg-gray-100 { background-color: #f3f4f6; }
-    .bg-gray-200 { background-color: #e5e7eb; }
-    .bg-orange-50 { background-color: #fff7ed; }
-    .bg-orange-200 { background-color: #fed7aa; }
-    .bg-orange-500 { background-color: #f97316; }
-    .bg-orange-600 { background-color: #ea580c; }
-    .bg-green-50 { background-color: #f0fdf4; }
-    .bg-green-200 { background-color: #bbf7d0; }
-    .bg-blue-50 { background-color: #eff6ff; }
-    .bg-blue-200 { background-color: #bfdbfe; }
-    .bg-purple-100 { background-color: #f3e8ff; }
-    .bg-purple-400 { background-color: #c084fc; }
-    .bg-purple-600 { color: #9333ea; }
-    
-    /* Dark mode colors */
+    .text-gray-600 { color: #4b5563; }
+    .text-gray-500 { color: #6b7280; }
+    .text-orange-600 { color: #ea580c; }
+    .text-green-600 { color: #16a34a; }
     .dark\\:text-white { color: var(--ion-text-color, #ffffff); }
     .dark\\:text-gray-300 { color: #d1d5db; }
     .dark\\:text-gray-400 { color: #9ca3af; }
-    .dark\\:text-purple-400 { color: #c084fc; }
-    .dark\\:text-blue-400 { color: #60a5fa; }
-    .dark\\:text-green-400 { color: #4ade80; }
     .dark\\:text-orange-400 { color: #fb923c; }
-    
-    .dark\\:bg-gray-700 { background-color: #374151; }
-    .dark\\:bg-gray-800 { background-color: #1f2937; }
-    .dark\\:bg-gray-900 { background-color: #111827; }
-    .dark\\:bg-purple-900\\/30 { background-color: rgba(88, 28, 135, 0.3); }
-    .dark\\:bg-blue-900\\/30 { background-color: rgba(30, 58, 138, 0.3); }
-    .dark\\:bg-green-900\\/30 { background-color: rgba(20, 83, 45, 0.3); }
-    .dark\\:bg-orange-900\\/30 { background-color: rgba(124, 45, 18, 0.3); }
-    .dark\\:bg-orange-900\\/10 { background-color: rgba(124, 45, 18, 0.1); }
-    .dark\\:bg-green-900\\/10 { background-color: rgba(20, 83, 45, 0.1); }
-    .dark\\:bg-blue-900\\/10 { background-color: rgba(30, 58, 138, 0.1); }
-    
-    /* Border */
-    .border-2 { border-width: 2px; }
-    .rounded-lg { border-radius: 0.5rem; }
+    .dark\\:text-green-400 { color: #4ade80; }
+    .p-4 { padding: 1rem; }
     .rounded-xl { border-radius: 0.75rem; }
-    .rounded-2xl { border-radius: 1rem; }
-    .rounded-full { border-radius: 9999px; }
-    
-    .border-gray-100 { border-color: #f3f4f6; }
-    .border-gray-200 { border-color: #e5e7eb; }
+    .border-2 { border-width: 2px; }
     .border-orange-200 { border-color: #fed7aa; }
     .border-green-200 { border-color: #bbf7d0; }
     .border-blue-200 { border-color: #bfdbfe; }
-    
-    .dark\\:border-gray-700 { border-color: #374151; }
+    .border-gray-200 { border-color: #e5e7eb; }
     .dark\\:border-orange-800 { border-color: #9a3412; }
     .dark\\:border-green-800 { border-color: #166534; }
     .dark\\:border-blue-800 { border-color: #1e40af; }
-    
-    /* Shadow */
-    .shadow-md {
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    }
-    .shadow-lg {
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    }
-    
-    /* Effects */
-    .backdrop-blur-sm { backdrop-filter: blur(4px); }
-    
-    /* Gradients */
-    .bg-gradient-to-r {
-      background-image: linear-gradient(to right, var(--tw-gradient-stops));
-    }
-    .from-purple-500 { --tw-gradient-from: #a855f7; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(168, 85, 247, 0)); }
-    .via-purple-600 { --tw-gradient-stops: var(--tw-gradient-from), #9333ea, var(--tw-gradient-to, rgba(147, 51, 234, 0)); }
-    .to-indigo-600 { --tw-gradient-to: #4f46e5; }
-    
-    .from-purple-600 { --tw-gradient-from: #9333ea; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(147, 51, 234, 0)); }
-    .to-purple-800 { --tw-gradient-to: #6b21a8; }
-    
-    /* Progress bar */
+    .dark\\:border-gray-700 { border-color: #374151; }
+    .bg-orange-50 { background-color: #fff7ed; }
+    .bg-green-50 { background-color: #f0fdf4; }
+    .bg-blue-50 { background-color: #eff6ff; }
+    .dark\\:bg-orange-900\\/10 { background-color: rgba(124, 45, 18, 0.1); }
+    .dark\\:bg-green-900\\/10 { background-color: rgba(20, 83, 45, 0.1); }
+    .dark\\:bg-blue-900\\/10 { background-color: rgba(30, 58, 138, 0.1); }
     .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-    .duration-500 { transition-duration: 500ms; }
-    
-    /* Hover effects */
+    .cursor-pointer { cursor: pointer; }
     .hover\\:shadow-lg:hover {
       box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     }
-    
-    /* Cursor */
-    .cursor-pointer { cursor: pointer; }
-    
-    /* Overflow */
-    .overflow-hidden { overflow: hidden; }
-    .overflow-x-auto { overflow-x: auto; }
-    
-    .flex-1 { flex: 1 1 0%; }
-    
-    /* Animation */
+
+    /* ===== DARK MODE ADJUSTMENTS ===== */
+    body.dark .stat-card,
+    .dark .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .progress-card,
+    .dark .progress-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .section-card,
+    .dark .section-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .empty-icon-wrapper,
+    .dark .empty-icon-wrapper {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .progress-bar-container,
+    .dark .progress-bar-container {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .customer-skeleton,
+    .dark .customer-skeleton {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* ===== ANIMATION ===== */
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
@@ -526,7 +853,9 @@ export class CollectorRoutePage implements OnInit {
     private authService: AuthService,
     public syncService: SyncService,
     private router: Router,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private confirmationService: ConfirmationService,
+    private toastController: ToastController
   ) {
     addIcons({
       mapOutline,
@@ -643,7 +972,20 @@ export class CollectorRoutePage implements OnInit {
     window.open(`https://maps.google.com/?q=${address}`, '_system');
   }
 
-  logout() {
-    this.authService.logout();
+  async logout() {
+    const confirmed = await this.confirmationService.confirmLogout();
+    
+    if (confirmed) {
+      this.authService.logout();
+      
+      const toast = await this.toastController.create({
+        message: 'Logged out successfully',
+        duration: 2000,
+        position: 'bottom',
+        color: 'success',
+        icon: 'checkmark-circle-outline'
+      });
+      await toast.present();
+    }
   }
 }
