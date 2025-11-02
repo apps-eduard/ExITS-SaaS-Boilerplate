@@ -64,22 +64,23 @@ interface LoanProduct {
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar class="custom-toolbar">
-        <ion-buttons slot="start">
-          <ion-button (click)="goBack()" class="header-btn">
-            <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        
-        <ion-title class="header-title">
-          <ion-icon name="card-outline" class="title-icon"></ion-icon>
-          <span class="title-text">Loan Products</span>
-        </ion-title>
-        
-        <ion-buttons slot="end">
-          <ion-button (click)="themeService.toggleTheme()" class="header-btn">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
+        <div class="toolbar-content">
+          <div class="toolbar-left">
+            <ion-button (click)="goBack()" class="icon-btn" fill="clear">
+              <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
+          </div>
+          
+          <div class="toolbar-center">
+            <ion-icon name="card-outline" class="title-icon"></ion-icon>
+            <span class="title-text">Products</span>
+          </div>
+          
+          <div class="toolbar-right">
+            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -212,30 +213,77 @@ interface LoanProduct {
       --color: white;
       --border-style: none;
       --min-height: 60px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 0;
+      --padding-end: 0;
     }
 
-    .header-title {
+    .toolbar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      width: 100%;
+      height: 60px;
+      color: white;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toolbar-left {
+      justify-content: flex-start;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+    }
+
+    .toolbar-center {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      font-size: 1.125rem;
-      font-weight: 700;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .info-text {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .title-icon {
-      font-size: 1.5rem;
+      font-size: 22px;
+      flex-shrink: 0;
     }
 
     .title-text {
+      font-size: 18px;
       font-weight: 700;
+      white-space: nowrap;
     }
 
-    .header-btn {
-      --background-hover: rgba(255, 255, 255, 0.15);
-      --border-radius: 50%;
+    .icon-btn {
       --padding-start: 8px;
       --padding-end: 8px;
+      margin: 0;
+      height: 40px;
+      width: 40px;
+    }
+
+    .icon-btn ion-icon {
+      font-size: 22px;
     }
 
     /* ===== MAIN CONTENT ===== */
@@ -601,7 +649,13 @@ export class ApplyLoanPage implements OnInit {
   async loadLoanProducts() {
     this.loading.set(true);
     try {
-      const productsData = await this.apiService.getLoanProducts().toPromise();
+      // Get current user's tenant ID
+      const user = this.authService.currentUser();
+      const tenantId = user?.tenant?.id;
+      
+      console.log('🏢 Loading products for tenant:', tenantId);
+      
+      const productsData = await this.apiService.getLoanProducts(tenantId).toPromise();
       
       if (productsData && Array.isArray(productsData)) {
         const mappedProducts = productsData.map((product: any) => ({

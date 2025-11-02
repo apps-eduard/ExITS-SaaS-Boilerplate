@@ -1,0 +1,258 @@
+.summary-card {
+  margin: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .summary-content {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .summary-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .summary-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--ion-color-light);
+  }
+
+  .summary-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 4px;
+  }
+
+  .summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ion-color-dark);
+
+    &.primary {
+      color: var(--ion-color-primary);
+    }
+  }
+}
+
+.filter-card {
+  margin: 0 16px 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  ion-card-content {
+    padding: 8px;
+  }
+
+  ion-segment {
+    --background: var(--ion-color-light);
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+
+  ion-spinner {
+    margin-bottom: 16px;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.875rem;
+  }
+}
+
+.empty-state {
+  margin: 60px 16px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    margin-bottom: 8px;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.875rem;
+  }
+}
+
+.payment-card {
+  margin: 0 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+
+  ion-card-header {
+    padding: 16px;
+  }
+
+  ion-card-content {
+    padding: 0 16px 16px;
+  }
+}
+
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .payment-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .payment-icon {
+    font-size: 32px;
+    color: var(--ion-color-primary);
+  }
+
+  .payment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .payment-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ion-color-dark);
+    margin: 0;
+  }
+
+  .payment-reference {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+  }
+
+  ion-badge {
+    text-transform: capitalize;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+  }
+}
+
+.payment-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ion-color-light);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .detail-icon {
+    font-size: 20px;
+    color: var(--ion-color-medium);
+    flex-shrink: 0;
+  }
+
+  .detail-content {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .detail-label {
+    font-size: 0.875rem;
+    color: var(--ion-color-medium);
+  }
+
+  .detail-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ion-color-dark);
+    text-align: right;
+  }
+}
+
+.breakdown-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ion-color-light);
+
+  .breakdown-title {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    margin-bottom: 12px;
+  }
+
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .breakdown-item {
+    background: var(--ion-color-light);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+
+    .breakdown-label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--ion-color-medium);
+      margin-bottom: 4px;
+    }
+
+    .breakdown-value {
+      display: block;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+
+      &.danger {
+        color: var(--ion-color-danger);
+      }
+    }
+  }
+}
+
+.payment-notes {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+
+  .notes-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    margin-bottom: 4px;
+  }
+
+  .notes-text {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--ion-color-medium);
+    line-height: 1.4;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 576px) {
+  .breakdown-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

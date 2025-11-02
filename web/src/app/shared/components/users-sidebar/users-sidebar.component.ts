@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RBACService } from '../../../core/services/rbac.service';
 
@@ -118,7 +118,7 @@ interface MenuItem {
         <!-- Footer -->
         <div class="border-t border-gray-200 px-4 py-2 dark:border-gray-700">
           <button
-            (click)="authService.logout().subscribe()"
+            (click)="logout()"
             class="flex w-full items-center gap-2 rounded px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition"
           >
             <span class="text-lg">🚪</span>
@@ -133,6 +133,7 @@ interface MenuItem {
 export class UsersSidebarComponent {
   authService = inject(AuthService);
   rbacService = inject(RBACService);
+  router = inject(Router);
 
   isOpen = signal(false);
   isDesktop = signal(window.innerWidth >= 1024);
@@ -199,6 +200,17 @@ export class UsersSidebarComponent {
       newGroups.add(label);
     }
     this.expandedGroups.set(newGroups);
+  }
+
+  logout() {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   closeMenu() {

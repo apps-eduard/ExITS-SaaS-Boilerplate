@@ -16,7 +16,7 @@ export class ThemeService {
     const defaultDark = savedTheme === null ? true : savedTheme === 'dark';
     this.isDark.set(defaultDark);
     
-    console.log('🎨 ThemeService initialized:', { savedTheme, defaultDark });
+    // console.log('🎨 ThemeService initialized:', { savedTheme, defaultDark });
     
     // Apply theme immediately
     this.applyTheme(defaultDark);
@@ -24,7 +24,7 @@ export class ThemeService {
     // Apply theme on change with effect
     effect(() => {
       const dark = this.isDark();
-      console.log('🎨 ThemeService effect triggered, applying dark mode:', dark);
+      // console.log('🎨 ThemeService effect triggered, applying dark mode:', dark);
       this.applyTheme(dark);
     });
   }
@@ -34,7 +34,7 @@ export class ThemeService {
     if (isDark) {
       html.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      console.log('🎨 Applied DARK theme');
+      // console.log('🎨 Applied DARK theme');
     } else {
       html.classList.remove('dark');
       localStorage.setItem('theme', 'light');

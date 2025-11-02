@@ -18,7 +18,7 @@ import {
   ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline } from 'ionicons/icons';
+import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 
@@ -74,11 +74,34 @@ import { ThemeService } from '../../core/services/theme.service';
         <!-- Login Form Card -->
         <ion-card class="login-card">
           <ion-card-content class="card-content">
+            
+            <!-- Login Type Toggle -->
+            <div class="login-type-toggle">
+              <button 
+                type="button"
+                class="toggle-btn"
+                [class.active]="!loginAsEmployee"
+                (click)="loginAsEmployee = false"
+              >
+                <ion-icon name="person-outline"></ion-icon>
+                Customer
+              </button>
+              <button 
+                type="button"
+                class="toggle-btn"
+                [class.active]="loginAsEmployee"
+                (click)="loginAsEmployee = true"
+              >
+                <ion-icon name="briefcase-outline"></ion-icon>
+                Employee
+              </button>
+            </div>
+
             <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
               
               <!-- Email Input -->
               <div class="input-group">
-                <label class="input-label">Email Address</label>
+                <label class="input-label">{{ loginAsEmployee ? 'Email' : 'Email or Phone' }}</label>
                 <div class="input-wrapper">
                   <ion-icon name="person-outline" class="input-icon"></ion-icon>
                   <input
@@ -210,11 +233,72 @@ import { ThemeService } from '../../core/services/theme.service';
     </ion-content>
   `,
   styles: [`
-    /* Main Content */
+    /* Main Content - Exact match from web: bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 */
     .login-content {
-      --background: linear-gradient(135deg, 
-        var(--ion-color-primary-tint) 0%, 
-        var(--ion-color-secondary-tint) 100%);
+      --background: linear-gradient(to bottom right,
+                    #f9fafb 0%,
+                    #eff6ff 50%,
+                    #faf5ff 100%);
+    }
+
+    /* Dark mode - Exact match from web: dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 */
+    @media (prefers-color-scheme: dark) {
+      .login-content {
+        --background: linear-gradient(to bottom right,
+                      #111827 0%,
+                      #1f2937 50%,
+                      #111827 100%);
+      }
+    }
+
+    /* Wrapper for pseudo elements */
+    ion-content::part(scroll) {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Blue circle top-left - matching web exactly */
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: -6rem;
+      left: -6rem;
+      width: 24rem;
+      height: 24rem;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 9999px;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    /* Purple circle bottom-right - matching web exactly */
+    .login-container::after {
+      content: '';
+      position: absolute;
+      bottom: -6rem;
+      right: -6rem;
+      width: 24rem;
+      height: 24rem;
+      background: rgba(168, 85, 247, 0.1);
+      border-radius: 9999px;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    /* Pink/rose circle center - matching web exactly */
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24rem;
+      height: 24rem;
+      background: rgba(236, 72, 153, 0.05);
+      border-radius: 9999px;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: -1;
     }
 
     .login-container {
@@ -224,6 +308,9 @@ import { ThemeService } from '../../core/services/theme.service';
       min-height: 100%;
       display: flex;
       flex-direction: column;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
     }
 
     /* Header Styles */
@@ -242,6 +329,7 @@ import { ThemeService } from '../../core/services/theme.service';
       text-align: center;
       margin-bottom: 2rem;
       padding-top: 1rem;
+      position: relative;
     }
 
     .logo-circle {
@@ -292,6 +380,47 @@ import { ThemeService } from '../../core/services/theme.service';
 
     .card-content {
       padding: 2rem !important;
+    }
+
+    /* Login Type Toggle */
+    .login-type-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      padding: 0.25rem;
+      background: var(--ion-color-light);
+      border-radius: 12px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .toggle-btn ion-icon {
+      font-size: 1.2rem;
+    }
+
+    .toggle-btn.active {
+      background: var(--ion-color-primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(56, 128, 255, 0.3);
+    }
+
+    .toggle-btn:not(.active):hover {
+      background: rgba(var(--ion-color-primary-rgb), 0.1);
     }
 
     /* Form Inputs */
@@ -568,6 +697,7 @@ export class LoginPage {
   email = '';
   password = '';
   loading = false;
+  loginAsEmployee = false; // Toggle: false = Customer, true = Employee
 
   // Quick login test users (matching database seed)
   testUsers = [
@@ -589,7 +719,8 @@ export class LoginPage {
       'log-in-outline': logInOutline,
       'moon-outline': moonOutline,
       'sunny-outline': sunnyOutline,
-      'arrow-forward-outline': arrowForwardOutline
+      'arrow-forward-outline': arrowForwardOutline,
+      'briefcase-outline': briefcaseOutline
     });
   }
 
@@ -604,16 +735,20 @@ export class LoginPage {
 
     this.loading = true;
     try {
-      const response = await this.authService.login(this.email, this.password).toPromise();
+      // Use appropriate login method based on toggle
+      const response = this.loginAsEmployee 
+        ? await this.authService.loginAsStaff(this.email, this.password).toPromise()
+        : await this.authService.loginAsCustomer(this.email, this.password).toPromise();
+      
       console.log('Login response:', response);
       
       const user = this.authService.currentUser();
-      console.log('Current user after login:', user);
+      console.log('Current user:', user);
       console.log('User role:', user?.role);
-      
-      // Navigate based on role (case-insensitive comparison)
       const role = user?.role?.toLowerCase();
-      if (role === 'employee' || role === 'collector') {
+      
+      // Navigate based on role
+      if (role === 'collector' || role === 'employee') {
         console.log('Navigating to collector route...');
         await this.router.navigate(['/collector/route']);
       } else {

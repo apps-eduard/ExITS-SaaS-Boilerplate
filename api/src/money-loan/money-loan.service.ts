@@ -596,6 +596,22 @@ export class MoneyLoanService {
       .orderBy('created_at', 'desc');
   }
 
+  async getAllPayments(tenantId: number) {
+    const knex = this.knexService.instance;
+
+    return await knex('money_loan_payments')
+      .select(
+        'money_loan_payments.*',
+        'money_loan_loans.loan_number',
+        'customers.first_name as customer_first_name',
+        'customers.last_name as customer_last_name'
+      )
+      .leftJoin('money_loan_loans', 'money_loan_payments.loan_id', 'money_loan_loans.id')
+      .leftJoin('customers', 'money_loan_payments.customer_id', 'customers.id')
+      .where({ 'money_loan_payments.tenant_id': tenantId })
+      .orderBy('money_loan_payments.created_at', 'desc');
+  }
+
   async generateRepaymentSchedule(tenantId: number, loanId: number) {
     const knex = this.knexService.instance;
 

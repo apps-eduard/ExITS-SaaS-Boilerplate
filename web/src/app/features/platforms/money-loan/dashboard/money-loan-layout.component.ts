@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { DevInfoComponent } from '../../../../shared/components/dev-info/dev-info.component';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-money-loan-layout',
@@ -507,6 +508,8 @@ export class MoneyLoanLayoutComponent {
     settings: false
   });
 
+  private authService = inject(AuthService);
+
   constructor(private router: Router) {
     this.loadUserInfo();
     // Initialize sidebar visibility based on screen size
@@ -567,8 +570,13 @@ export class MoneyLoanLayoutComponent {
   }
 
   logout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

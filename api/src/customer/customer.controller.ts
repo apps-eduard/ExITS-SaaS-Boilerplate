@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CustomerService } from './customer.service';
 import { CustomerLoginDto } from './dto/customer-auth.dto';
@@ -61,14 +61,63 @@ export class CustomerController {
   @Get('auth/payments')
   @UseGuards(JwtAuthGuard)
   async getPayments(@Req() req: any, @Query('loanId') loanId?: string) {
+    console.log('🔐 getPayments - req.user:', req.user);
+    
+    const customerId = req.user.customerId;
+    const tenantId = req.user.tenantId;
+    
+    if (!customerId) {
+      throw new NotFoundException('Customer ID not found in token');
+    }
+    
+    console.log(`📋 getPayments - Customer ID: ${customerId}, Tenant ID: ${tenantId}, Loan ID: ${loanId || 'all'}`);
+    
     const payments = await this.customerService.getPayments(
-      req.user.customerId,
-      req.user.tenantId,
+      customerId,
+      tenantId,
       loanId ? parseInt(loanId) : undefined
     );
     return {
       success: true,
       data: payments,
+    };
+  }
+
+  @Get('auth/dashboard')
+  @UseGuards(JwtAuthGuard)
+  async getAuthDashboard(@Req() req: any) {
+    const customerId = req.user.customerId;
+    const tenantId = req.user.tenantId;
+    
+    if (!customerId) {
+      throw new NotFoundException('Customer ID not found in token');
+    }
+    
+    const dashboard = await this.customerService.getDashboardByCustomerId(customerId, tenantId);
+    return {
+      success: true,
+      data: dashboard,
+    };
+  }
+
+  @Get('auth/loans/:loanId')
+  @UseGuards(JwtAuthGuard)
+  async getAuthLoanDetails(@Req() req: any, @Param('loanId') loanId: string) {
+    const customerId = req.user.customerId;
+    const tenantId = req.user.tenantId;
+    
+    if (!customerId) {
+      throw new NotFoundException('Customer ID not found in token');
+    }
+    
+    const loanDetails = await this.customerService.getLoanDetailsByCustomerId(
+      customerId, 
+      tenantId, 
+      parseInt(loanId)
+    );
+    return {
+      success: true,
+      data: loanDetails,
     };
   }
 }

@@ -27,7 +27,8 @@ import {
   alertCircleOutline,
   eyeOutline,
   moonOutline,
-  sunnyOutline
+  sunnyOutline,
+  businessOutline
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -69,22 +70,23 @@ interface Loan {
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar class="custom-toolbar">
-        <ion-buttons slot="start">
-          <ion-button (click)="goBack()" class="header-btn">
-            <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        
-        <ion-title class="header-title">
-          <ion-icon name="document-text-outline" class="title-icon"></ion-icon>
-          <span class="title-text">My Loans</span>
-        </ion-title>
-        
-        <ion-buttons slot="end">
-          <ion-button (click)="themeService.toggleTheme()" class="header-btn">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
+        <div class="toolbar-content">
+          <div class="toolbar-left">
+            <ion-button (click)="goBack()" class="icon-btn" fill="clear">
+              <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
+          </div>
+          
+          <div class="toolbar-center">
+            <ion-icon name="document-text-outline" class="title-icon"></ion-icon>
+            <span class="title-text">My Loans</span>
+          </div>
+          
+          <div class="toolbar-right">
+            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -268,30 +270,77 @@ interface Loan {
       --color: white;
       --border-style: none;
       --min-height: 60px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 0;
+      --padding-end: 0;
     }
 
-    .header-title {
+    .toolbar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      width: 100%;
+      height: 60px;
+      color: white;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toolbar-left {
+      justify-content: flex-start;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+    }
+
+    .toolbar-center {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      font-size: 1.125rem;
-      font-weight: 700;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .info-text {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .title-icon {
-      font-size: 1.5rem;
+      font-size: 22px;
+      flex-shrink: 0;
     }
 
     .title-text {
+      font-size: 18px;
       font-weight: 700;
+      white-space: nowrap;
     }
 
-    .header-btn {
-      --background-hover: rgba(255, 255, 255, 0.15);
-      --border-radius: 50%;
+    .icon-btn {
       --padding-start: 8px;
       --padding-end: 8px;
+      margin: 0;
+      height: 40px;
+      width: 40px;
+    }
+
+    .icon-btn ion-icon {
+      font-size: 22px;
     }
 
     /* ===== MAIN CONTENT ===== */
@@ -725,7 +774,8 @@ export class CustomerLoansPage implements OnInit {
       alertCircleOutline,
       eyeOutline,
       moonOutline,
-      sunnyOutline
+      sunnyOutline,
+      businessOutline
     });
   }
 
@@ -736,46 +786,52 @@ export class CustomerLoansPage implements OnInit {
   async loadLoans() {
     this.loading.set(true);
     try {
-      const user = this.authService.currentUser();
-      console.log('Current user in loans page:', user);
+      console.log('Fetching authenticated customer loans...');
+      const response = await this.apiService.getCustomerLoans().toPromise();
+      console.log('Loans API response:', response);
+      console.log('Response data array:', JSON.stringify(response?.data, null, 2));
       
-      // Get the numeric user ID (same as customer ID for customer users)
-      const customerId = (user as any)?.id;
-      
-      console.log('Customer ID for loans:', customerId);
-      
-      if (!customerId) {
-        console.warn('No customer ID found');
-        this.loading.set(false);
-        return;
-      }
-
-      console.log('Fetching loans for customer:', customerId);
-      const loansData = await this.apiService.getCustomerLoans(customerId).toPromise();
-      console.log('Loans API response:', loansData);
+      // Handle response structure
+      const loansData = response?.data || response;
       
       if (loansData && Array.isArray(loansData)) {
+        console.log('📊 Processing loans data:', loansData);
+        
         const mappedLoans = loansData.map((loan: any) => {
-          const amount = loan.amount || loan.principal_amount || 0;
-          const balance = loan.balance || loan.remaining_balance || 0;
-          const totalPaid = amount - balance;
+          console.log('🔍 Raw loan data:', loan);
+          
+          const amount = parseFloat(loan.principalAmount || loan.principal_amount || loan.amount || 0);
+          const balance = parseFloat(loan.outstandingBalance || loan.outstanding_balance || loan.balance || loan.remainingBalance || loan.remaining_balance || 0);
+          const totalPaid = parseFloat(loan.amountPaid || loan.amount_paid || 0);
           const progress = amount > 0 ? Math.round((totalPaid / amount) * 100) : 0;
+
+          console.log(`💰 Loan ${loan.id}: amount=${amount}, balance=${balance}, totalPaid=${totalPaid}, status=${loan.status}`);
+
+          // Determine actual status based on balance or status
+          let actualStatus = this.mapLoanStatus(loan.status);
+          // If balance is 0 or negative, mark as completed
+          if (balance <= 0 && amount > 0) {
+            actualStatus = 'completed';
+            console.log(`✅ Loan ${loan.id} marked as completed (balance <= 0)`);
+          }
 
           return {
             id: loan.id,
             loanNumber: loan.loanNumber || loan.loan_number || `LN-${loan.id}`,
             amount: amount,
-            balance: balance,
-            interestRate: loan.interestRate || loan.interest_rate || 0,
-            term: loan.term || loan.loan_term || 0,
-            monthlyPayment: loan.monthlyPayment || loan.monthly_payment || 0,
-            status: this.mapLoanStatus(loan.status),
-            startDate: loan.startDate || loan.start_date || loan.disbursement_date || 'N/A',
-            dueDate: loan.dueDate || loan.next_payment_date || loan.due_date || 'N/A',
+            balance: Math.max(0, balance), // Don't show negative balance
+            interestRate: parseFloat(loan.interestRate || loan.interest_rate || 0),
+            term: loan.termDays || loan.term_days || loan.term || loan.loan_term || 0,
+            monthlyPayment: parseFloat(loan.monthlyPayment || loan.monthly_payment || 0),
+            status: actualStatus,
+            startDate: loan.disbursementDate || loan.disbursement_date || loan.startDate || loan.start_date || 'N/A',
+            dueDate: loan.maturityDate || loan.maturity_date || loan.nextPaymentDate || loan.next_payment_date || loan.dueDate || loan.due_date || 'N/A',
             totalPaid: totalPaid,
             progress: progress
           };
         });
+        
+        console.log('📋 Final mapped loans:', mappedLoans);
         this.loans.set(mappedLoans);
       }
     } catch (error) {
@@ -794,7 +850,7 @@ export class CustomerLoansPage implements OnInit {
 
   private mapLoanStatus(apiStatus: string): 'active' | 'completed' | 'overdue' | 'pending' {
     const status = (apiStatus || '').toLowerCase();
-    if (status === 'paid' || status === 'completed' || status === 'closed') {
+    if (status === 'paid' || status === 'paid_off' || status === 'completed' || status === 'closed' || status === 'fully_paid') {
       return 'completed';
     }
     if (status === 'overdue' || status === 'late' || status === 'delinquent') {

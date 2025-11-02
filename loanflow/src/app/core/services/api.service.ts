@@ -68,9 +68,9 @@ export class ApiService {
   /**
    * Loan-specific API calls
    */
-  getCustomerLoans(customerId: number | string): Observable<any[]> {
-    console.log(`🔵 API Call: GET ${this.apiUrl}/loans/customer/${customerId}`);
-    return this.get<any[]>(`loans/customer/${customerId}`);
+  getCustomerLoans(): Observable<any> {
+    console.log(`🔵 API Call: GET ${this.apiUrl}/customers/auth/loans`);
+    return this.get<any>('customers/auth/loans');
   }
 
   getLoanById(loanId: number | string): Observable<any> {
@@ -99,19 +99,23 @@ export class ApiService {
   /**
    * Customer API calls
    */
-  getCustomerDashboard(customerId: number | string): Observable<any> {
-    return this.get<any>(`customers/${customerId}/dashboard`);
+  getCustomerDashboard(): Observable<any> {
+    return this.get<any>('customers/auth/dashboard');
   }
 
-  getLoanDetails(userId: number | string, loanId: number | string): Observable<any> {
-    return this.get<any>(`customers/${userId}/loans/${loanId}`);
+  getLoanDetails(loanId: number | string): Observable<any> {
+    return this.get<any>(`customers/auth/loans/${loanId}`);
   }
 
-  getPaymentHistory(customerId: number | string): Observable<any[]> {
-    return this.get<any[]>(`customers/${customerId}/payments`);
+  getPaymentHistory(loanId?: number | string): Observable<any> {
+    const params = loanId ? `?loanId=${loanId}` : '';
+    return this.get<any>(`customers/auth/payments${params}`);
   }
 
-  getLoanProducts(): Observable<any[]> {
+  getLoanProducts(tenantId?: string): Observable<any[]> {
+    if (tenantId) {
+      return this.get<any[]>(`loan-products/tenant/${tenantId}`);
+    }
     return this.get<any[]>('loan-products');
   }
 

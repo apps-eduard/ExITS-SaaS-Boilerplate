@@ -96,10 +96,20 @@ interface Payment {
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar class="custom-toolbar">
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/customer/dashboard" class="back-btn"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Loan Details</ion-title>
+        <div class="toolbar-content">
+          <div class="toolbar-left">
+            <ion-back-button defaultHref="/customer/dashboard" class="icon-btn"></ion-back-button>
+            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
+          </div>
+          
+          <div class="toolbar-center">
+            <span class="title-text">Loan Details</span>
+          </div>
+          
+          <div class="toolbar-right">
+            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -372,10 +382,73 @@ interface Payment {
       --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
       --color: white;
       --min-height: 60px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 0;
+      --padding-end: 0;
     }
 
-    .back-btn {
+    .toolbar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      width: 100%;
+      height: 60px;
+      color: white;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toolbar-left {
+      justify-content: flex-start;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+    }
+
+    .toolbar-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .info-text {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .title-text {
+      font-size: 18px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
       --color: white;
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      height: 40px;
+      width: 40px;
+    }
+
+    .icon-btn ion-icon {
+      font-size: 22px;
     }
 
     .main-content {
@@ -923,23 +996,44 @@ export class LoanDetailsPage implements OnInit {
     this.loading.set(true);
     try {
       const user = this.authService.currentUser();
-      const userId = (user as any)?.userId || (user as any)?.customerId || user?.id || this.authService.getCurrentUserId();
       
-      if (!userId) {
+      if (!user) {
         throw new Error('User not found');
       }
 
-      console.log('📡 Loading loan details - User ID:', userId, 'Loan ID:', this.loanId());
-      const response = await this.apiService.getLoanDetails(userId, this.loanId()!).toPromise();
+      console.log('📡 Loading loan details - Loan ID:', this.loanId());
+      const response = await this.apiService.getLoanDetails(this.loanId()!).toPromise();
+      const loanData = response?.data || response;
       
-      console.log('✅ Loan details response:', response);
-      console.log('📊 Schedule data:', response?.schedule);
-      console.log('💰 Payment data:', response?.payments);
-      console.log('📈 Total Paid:', response?.totalPaid);
-      console.log('📉 Outstanding:', response?.outstandingBalance);
+      console.log('✅ Loan details response:', loanData);
+      console.log('📊 Schedule data:', loanData?.schedule);
+      console.log('💰 Payment data:', loanData?.payments);
       
-      if (response) {
-        this.loanDetails.set(response);
+      if (loanData && loanData.loan) {
+        // Flatten the response structure for template compatibility
+        const flattenedData = {
+          ...loanData.loan,
+          schedule: (loanData.schedule || []).map((item: any) => ({
+            id: item.id,
+            installmentNumber: item.installment_number || item.installmentNumber,
+            dueDate: item.due_date || item.dueDate,
+            principalAmount: item.principal_amount || item.principalAmount || 0,
+            interestAmount: item.interest_amount || item.interestAmount || 0,
+            totalAmount: item.total_amount || item.totalAmount || 0,
+            outstandingAmount: item.outstanding_amount || item.outstandingAmount || 0,
+            status: item.status
+          })),
+          payments: loanData.payments || [],
+          paymentProgress: loanData.paymentProgress || 0,
+          // Calculate totalPaid from payments
+          totalPaid: loanData.payments?.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0) || 0
+        };
+        
+        console.log('📈 Total Paid:', flattenedData.totalPaid);
+        console.log('📉 Outstanding:', flattenedData.outstandingBalance);
+        console.log('📅 Mapped schedule:', flattenedData.schedule);
+        
+        this.loanDetails.set(flattenedData);
       }
     } catch (error) {
       console.error('Failed to load loan details:', error);
@@ -957,7 +1051,8 @@ export class LoanDetailsPage implements OnInit {
     }
   }
 
-  formatCurrency(amount: number): string {
+  formatCurrency(amount: number | undefined): string {
+    if (amount === undefined || amount === null) return '0';
     return amount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 

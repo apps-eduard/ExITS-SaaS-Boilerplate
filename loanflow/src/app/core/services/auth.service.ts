@@ -32,6 +32,7 @@ export interface AuthResponse {
 })
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
+  private customerApiUrl = `${environment.apiUrl}/customers/auth`;
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -47,14 +48,56 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
+    // Try customer login first, then fallback to staff/collector login
+    return this.loginAsCustomer(email, password).pipe(
+      catchError(() => this.loginAsStaff(email, password))
+    );
+  }
+
+  // Public method for explicit customer login
+  loginAsCustomer(email: string, password: string): Observable<AuthResponse> {
+    const body = { identifier: email, password };
+    return this.http.post<any>(`${this.customerApiUrl}/login`, body).pipe(
+      map((response) => {
+        console.log('Customer login response:', response);
+        if (response.data) {
+          // Use the user object from backend which includes tenant info
+          const userData = response.data.user;
+          const tokens = response.data.tokens;
+          
+          const mapped = {
+            accessToken: tokens.accessToken || tokens.access_token,
+            refreshToken: tokens.refreshToken || tokens.refresh_token,
+            user: userData, // Use backend's user object with tenant info
+            expiresIn: response.data.expiresIn || response.data.expires_in || 3600
+          } as AuthResponse;
+          console.log('Mapped customer response:', mapped);
+          return mapped;
+        }
+        return response as AuthResponse;
+      }),
+      tap((response) => {
+        console.log('Setting customer tokens');
+        this.setTokens(response);
+        this.currentUserSubject.next(response.user);
+        this.isAuthenticatedSubject.next(true);
+      }),
+      catchError((error) => {
+        console.log('Customer login failed, will try staff login');
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // Public method for explicit staff/employee login
+  loginAsStaff(email: string, password: string): Observable<AuthResponse> {
     const body = { email, password };
     return this.http.post<any>(`${this.apiUrl}/login`, body).pipe(
       map((response) => {
-        console.log('Raw API response:', response);
-        // Handle API response structure: { success, message, data: { accessToken, refreshToken, user/customer } }
+        console.log('Staff/Collector login response:', response);
+        // Handle API response structure for staff
         if (response.data) {
-          // Handle both user and customer response structures
-          const userData = response.data.user || response.data.customer;
+          const userData = response.data.user;
           const tokens = response.data.tokens || response.data;
           
           const mapped = {
@@ -63,20 +106,19 @@ export class AuthService {
             user: userData,
             expiresIn: response.data.expiresIn || response.data.expires_in || 3600
           } as AuthResponse;
-          console.log('Mapped to AuthResponse:', mapped);
+          console.log('Mapped staff response:', mapped);
           return mapped;
         }
-        // Fallback for direct response structure
         return response as AuthResponse;
       }),
       tap((response) => {
-        console.log('Setting tokens with response:', response);
+        console.log('Setting staff tokens');
         this.setTokens(response);
         this.currentUserSubject.next(response.user);
         this.isAuthenticatedSubject.next(true);
       }),
       catchError((error) => {
-        console.error('Login error:', error);
+        console.error('Staff login failed:', error);
         return throwError(() => new Error(error.error?.message || 'Login failed'));
       })
     );
@@ -188,6 +230,12 @@ export class AuthService {
 
   userRole(): 'customer' | 'collector' | null {
     const role = this.currentUser()?.role?.toLowerCase() ?? null;
+    
+    // Map 'employee' to 'collector' for mobile app routing
+    if (role === 'employee') {
+      return 'collector';
+    }
+    
     return role === 'customer' || role === 'collector' ? role : null;
   }
 

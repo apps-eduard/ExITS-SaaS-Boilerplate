@@ -1,0 +1,142 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/customer/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Payment History</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Summary Card -->
+  <ion-card class="summary-card">
+    <ion-card-content>
+      <div class="summary-content">
+        <div class="summary-item">
+          <ion-label class="summary-label">Total Payments</ion-label>
+          <div class="summary-value">{{ payments.length }}</div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-item">
+          <ion-label class="summary-label">Total Amount Paid</ion-label>
+          <div class="summary-value primary">{{ formatCurrency(totalPaid) }}</div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Filter Segment -->
+  <ion-card class="filter-card">
+    <ion-card-content>
+      <ion-segment [value]="selectedFilter" (ionChange)="onFilterChange($event)">
+        <ion-segment-button value="all">
+          <ion-label>All</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="completed">
+          <ion-label>Completed</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="pending">
+          <ion-label>Pending</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Loading payments...</p>
+  </div>
+
+  <!-- Empty State -->
+  <ion-card *ngIf="!loading && filteredPayments.length === 0" class="empty-state">
+    <ion-card-content>
+      <ion-icon name="receipt-outline" class="empty-icon"></ion-icon>
+      <h2>No Payments Found</h2>
+      <p *ngIf="selectedFilter === 'all'">You haven't made any payments yet.</p>
+      <p *ngIf="selectedFilter !== 'all'">No {{ selectedFilter }} payments found.</p>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Payment List -->
+  <ion-list *ngIf="!loading && filteredPayments.length > 0">
+    <ion-card *ngFor="let payment of filteredPayments" class="payment-card">
+      <ion-card-header>
+        <div class="payment-header">
+          <div class="payment-header-left">
+            <ion-icon [name]="getPaymentMethodIcon(payment.paymentMethod)" class="payment-icon"></ion-icon>
+            <div class="payment-info">
+              <ion-card-title class="payment-amount">
+                {{ formatCurrency(payment.amount) }}
+              </ion-card-title>
+              <ion-note class="payment-reference">{{ payment.paymentReference }}</ion-note>
+            </div>
+          </div>
+          <ion-badge [color]="getStatusColor(payment.status)">
+            {{ payment.status }}
+          </ion-badge>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Loan Information -->
+        <div class="payment-detail-row">
+          <ion-icon name="receipt-outline" class="detail-icon"></ion-icon>
+          <div class="detail-content">
+            <ion-label class="detail-label">Loan Number</ion-label>
+            <ion-note class="detail-value">{{ payment.loanNumber }}</ion-note>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="payment-detail-row">
+          <ion-icon [name]="getPaymentMethodIcon(payment.paymentMethod)" class="detail-icon"></ion-icon>
+          <div class="detail-content">
+            <ion-label class="detail-label">Payment Method</ion-label>
+            <ion-note class="detail-value">{{ getPaymentMethodLabel(payment.paymentMethod) }}</ion-note>
+          </div>
+        </div>
+
+        <!-- Payment Date -->
+        <div class="payment-detail-row">
+          <ion-icon name="calendar-outline" class="detail-icon"></ion-icon>
+          <div class="detail-content">
+            <ion-label class="detail-label">Payment Date</ion-label>
+            <ion-note class="detail-value">
+              {{ formatDate(payment.paymentDate) }} at {{ formatTime(payment.createdAt) }}
+            </ion-note>
+          </div>
+        </div>
+
+        <!-- Amount Breakdown -->
+        <div class="breakdown-section" *ngIf="payment.principalAmount > 0 || payment.interestAmount > 0">
+          <ion-label class="breakdown-title">Amount Breakdown</ion-label>
+          <div class="breakdown-grid">
+            <div class="breakdown-item" *ngIf="payment.principalAmount > 0">
+              <ion-label class="breakdown-label">Principal</ion-label>
+              <ion-note class="breakdown-value">{{ formatCurrency(payment.principalAmount) }}</ion-note>
+            </div>
+            <div class="breakdown-item" *ngIf="payment.interestAmount > 0">
+              <ion-label class="breakdown-label">Interest</ion-label>
+              <ion-note class="breakdown-value">{{ formatCurrency(payment.interestAmount) }}</ion-note>
+            </div>
+            <div class="breakdown-item" *ngIf="payment.penaltyAmount > 0">
+              <ion-label class="breakdown-label">Penalty</ion-label>
+              <ion-note class="breakdown-value danger">{{ formatCurrency(payment.penaltyAmount) }}</ion-note>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="payment-notes" *ngIf="payment.notes">
+          <ion-label class="notes-label">Notes</ion-label>
+          <ion-note class="notes-text">{{ payment.notes }}</ion-note>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </ion-list>
+</ion-content>

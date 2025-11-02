@@ -190,6 +190,16 @@ export class MoneyLoanController {
     };
   }
 
+  @Get('payments')
+  @Permissions('money-loan:read')
+  async getAllPayments(@Req() req: any) {
+    const payments = await this.moneyLoanService.getAllPayments(req.user.tenantId);
+    return {
+      success: true,
+      data: payments,
+    };
+  }
+
   @Get('loans/:id/schedule')
   @Permissions('money-loan:read')
   async getRepaymentSchedule(@Param('id') id: string, @Req() req: any) {

@@ -208,7 +208,7 @@ export const routes: Routes = [
       },
       {
         path: 'payments/history',
-        loadComponent: () => import('./features/platforms/money-loan/admin/payment-form.component').then(m => m.PaymentFormComponent)
+        loadComponent: () => import('./features/platforms/money-loan/admin/payments/payment-history.component').then(m => m.PaymentHistoryComponent)
       },
       {
         path: 'payments/bulk-import',

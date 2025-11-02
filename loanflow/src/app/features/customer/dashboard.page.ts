@@ -79,22 +79,24 @@ interface RecentLoan {
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar class="custom-toolbar">
-        <ion-buttons slot="start">
-          <ion-button (click)="logout()" class="header-btn">
-            <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>
-          <div class="header-title">
+        <div class="toolbar-content">
+          <div class="toolbar-left">
+            <ion-icon name="business-outline" class="info-icon"></ion-icon>
+            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
+          </div>
+          
+          <div class="toolbar-center">
             <ion-icon name="wallet-outline" class="title-icon"></ion-icon>
             <span class="title-text">Dashboard</span>
           </div>
-        </ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="themeService.toggleTheme()" class="header-btn">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
+          
+          <div class="toolbar-right">
+            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+            <ion-button (click)="logout()" class="icon-btn" fill="clear">
+              <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -350,6 +352,83 @@ interface RecentLoan {
       --color: white;
       --border-style: none;
       --min-height: 60px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 0;
+      --padding-end: 0;
+    }
+
+    .toolbar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      width: 100%;
+      height: 60px;
+      color: white;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toolbar-left {
+      justify-content: flex-start;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+    }
+
+    .toolbar-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .info-icon {
+      font-size: 18px;
+      opacity: 0.9;
+      flex-shrink: 0;
+    }
+
+    .info-text {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .title-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .title-text {
+      font-size: 18px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      height: 40px;
+      width: 40px;
+    }
+
+    .icon-btn ion-icon {
+      font-size: 22px;
     }
 
     .header-title {
@@ -374,6 +453,43 @@ interface RecentLoan {
       --border-radius: 50%;
       --padding-start: 8px;
       --padding-end: 8px;
+    }
+
+    .tenant-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      color: white;
+    }
+
+    .tenant-icon {
+      font-size: 1.25rem;
+      opacity: 0.9;
+    }
+
+    .tenant-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      opacity: 0.95;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+    }
+
+    .user-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      opacity: 0.95;
+      margin-right: 0.25rem;
+    }
+
+    .logout-btn {
+      margin: 0;
     }
 
     /* ===== MAIN CONTENT ===== */
@@ -1075,23 +1191,21 @@ export class CustomerDashboardPage implements OnInit {
       const user = this.authService.currentUser();
       console.log('🔵 Current user:', user);
       
-      // For customer portal, use the userId (which is customer_id in money_loan_loans table)
-      const customerId = (user as any)?.userId || (user as any)?.customerId || user?.id || this.authService.getCurrentUserId();
-      
-      console.log('🔵 Customer ID for API:', customerId);
-      
-      if (!customerId) {
-        console.warn('⚠️ No customer ID found');
+      if (!user) {
+        console.warn('⚠️ No user found');
         this.setMockData();
         return;
       }
 
-      console.log('🔵 Fetching dashboard data for customer:', customerId);
+      console.log('🔵 Fetching dashboard data from authenticated endpoint');
 
-      // Fetch dashboard data (which includes recent loans)
-      const dashboardData = await this.apiService.getCustomerDashboard(customerId).toPromise();
-
+      // Fetch dashboard data using JWT authenticated endpoint
+      const response = await this.apiService.getCustomerDashboard().toPromise();
+      console.log('📡 Raw API response:', response);
+      
+      const dashboardData = response?.data || response;
       console.log('📊 Dashboard data received:', dashboardData);
+      console.log('📊 Recent loans:', dashboardData?.recentLoans);
 
       // Update stats from dashboard data
       if (dashboardData) {
@@ -1130,12 +1244,22 @@ export class CustomerDashboardPage implements OnInit {
               });
             }
 
+            const balance = parseFloat(loan.balance) || 0;
+            const amount = parseFloat(loan.amount) || 0;
+            
+            // Determine actual status based on balance
+            let actualStatus = this.mapLoanStatus(loan.status);
+            // If balance is 0 or negative, mark as completed
+            if (balance <= 0 && amount > 0) {
+              actualStatus = 'completed';
+            }
+
             return {
               id: loan.id,
               loanNumber: loan.loanNumber || `LN-${loan.id}`,
-              amount: parseFloat(loan.amount) || 0,
-              balance: parseFloat(loan.balance) || 0,
-              status: this.mapLoanStatus(loan.status),
+              amount: amount,
+              balance: Math.max(0, balance), // Don't show negative balance
+              status: actualStatus,
               dueDate: formattedDueDate
             };
           });
