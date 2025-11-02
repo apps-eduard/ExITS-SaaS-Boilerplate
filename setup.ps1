@@ -113,6 +113,26 @@ function Install-Dependencies {
     }
     Pop-Location
     
+    # LoanFlow
+    Write-Step "Checking LoanFlow dependencies..."
+    Push-Location loanflow
+    if (!(Test-Path "node_modules")) {
+        Write-Info "Installing LoanFlow dependencies (this may take a few minutes)..."
+        $output = npm install 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "LoanFlow dependencies installed successfully"
+        } else {
+            Write-Error-Custom "LoanFlow install failed"
+            Write-Host "$($Red)Error output:$($Reset)"
+            $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+            Pop-Location
+            return $false
+        }
+    } else {
+        Write-Success "LoanFlow dependencies already installed"
+    }
+    Pop-Location
+    
     Write-Success "All dependencies are ready"
     return $true
 }

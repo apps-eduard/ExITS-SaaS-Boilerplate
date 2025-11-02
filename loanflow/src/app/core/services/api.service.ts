@@ -103,6 +103,10 @@ export class ApiService {
     return this.get<any>(`customers/${customerId}/dashboard`);
   }
 
+  getLoanDetails(userId: number | string, loanId: number | string): Observable<any> {
+    return this.get<any>(`customers/${userId}/loans/${loanId}`);
+  }
+
   getPaymentHistory(customerId: number | string): Observable<any[]> {
     return this.get<any[]>(`customers/${customerId}/payments`);
   }

@@ -13,6 +13,15 @@ export class CustomerController {
     return await this.customerService.getDashboard(parseInt(id));
   }
 
+  // Loan details endpoint for mobile app
+  @Get(':userId/loans/:loanId')
+  async getLoanDetails(
+    @Param('userId') userId: string,
+    @Param('loanId') loanId: string
+  ) {
+    return await this.customerService.getLoanDetails(parseInt(userId), parseInt(loanId));
+  }
+
   // Legacy customer/auth routes
   @Post('auth/login')
   async login(@Body() loginDto: CustomerLoginDto) {

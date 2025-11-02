@@ -31,7 +31,8 @@ import {
   moonOutline,
   sunnyOutline,
   chevronForwardOutline,
-  calendarOutline
+  calendarOutline,
+  alertCircleOutline
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -1058,7 +1059,8 @@ export class CustomerDashboardPage implements OnInit {
       moonOutline,
       sunnyOutline,
       chevronForwardOutline,
-      calendarOutline
+      calendarOutline,
+      alertCircleOutline
     });
   }
 
@@ -1071,75 +1073,103 @@ export class CustomerDashboardPage implements OnInit {
     this.loading.set(true);
     try {
       const user = this.authService.currentUser();
-      console.log('Current user:', user);
+      console.log('🔵 Current user:', user);
       
-      // For customer portal, use the customerId from the user object
-      const customerId = (user as any)?.customerId || user?.id || this.authService.getCurrentUserId();
+      // For customer portal, use the userId (which is customer_id in money_loan_loans table)
+      const customerId = (user as any)?.userId || (user as any)?.customerId || user?.id || this.authService.getCurrentUserId();
       
-      console.log('Customer ID:', customerId);
+      console.log('🔵 Customer ID for API:', customerId);
       
       if (!customerId) {
-        console.warn('No customer ID found');
+        console.warn('⚠️ No customer ID found');
         this.setMockData();
         return;
       }
 
-      console.log('Fetching dashboard data for customer:', customerId);
+      console.log('🔵 Fetching dashboard data for customer:', customerId);
 
-      // Fetch dashboard data and loans in parallel
-      const [dashboardData, loansData] = await Promise.all([
-        this.apiService.getCustomerDashboard(customerId).toPromise(),
-        this.apiService.getCustomerLoans(customerId).toPromise()
-      ]);
+      // Fetch dashboard data (which includes recent loans)
+      const dashboardData = await this.apiService.getCustomerDashboard(customerId).toPromise();
 
-      console.log('Dashboard data received:', dashboardData);
-      console.log('Loans data received:', loansData);
+      console.log('📊 Dashboard data received:', dashboardData);
 
       // Update stats from dashboard data
       if (dashboardData) {
+        // Format next payment date
+        let formattedDate = 'N/A';
+        if (dashboardData.nextPaymentDate) {
+          const date = new Date(dashboardData.nextPaymentDate);
+          formattedDate = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          });
+        }
+
         this.stats.set({
           totalLoans: dashboardData.totalLoans || 0,
           activeLoans: dashboardData.activeLoans || 0,
-          totalBorrowed: dashboardData.totalBorrowed || 0,
-          totalPaid: dashboardData.totalPaid || 0,
-          remainingBalance: dashboardData.remainingBalance || 0,
-          nextPaymentAmount: dashboardData.nextPaymentAmount || 0,
-          nextPaymentDate: dashboardData.nextPaymentDate || 'N/A'
+          totalBorrowed: parseFloat(dashboardData.totalBorrowed) || 0,
+          totalPaid: parseFloat(dashboardData.totalPaid) || 0,
+          remainingBalance: parseFloat(dashboardData.remainingBalance) || 0,
+          nextPaymentAmount: parseFloat(dashboardData.nextPaymentAmount) || 0,
+          nextPaymentDate: formattedDate
         });
+
+        // Update recent loans from dashboard data
+        if (dashboardData.recentLoans && Array.isArray(dashboardData.recentLoans)) {
+          const mappedLoans = dashboardData.recentLoans.map((loan: any) => {
+            // Format due date
+            let formattedDueDate = 'N/A';
+            if (loan.dueDate) {
+              const date = new Date(loan.dueDate);
+              formattedDueDate = date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              });
+            }
+
+            return {
+              id: loan.id,
+              loanNumber: loan.loanNumber || `LN-${loan.id}`,
+              amount: parseFloat(loan.amount) || 0,
+              balance: parseFloat(loan.balance) || 0,
+              status: this.mapLoanStatus(loan.status),
+              dueDate: formattedDueDate
+            };
+          });
+          console.log('📋 Mapped recent loans:', mappedLoans);
+          this.recentLoans.set(mappedLoans);
+        }
       }
 
-      // Update loans list
-      if (loansData && Array.isArray(loansData)) {
-        // Map API response to our loan interface
-        const mappedLoans = loansData.slice(0, 5).map((loan: any) => ({
-          id: loan.id,
-          loanNumber: loan.loanNumber || loan.loan_number || `LN-${loan.id}`,
-          amount: loan.amount || loan.principal_amount || 0,
-          balance: loan.balance || loan.remaining_balance || loan.outstanding_balance || 0,
-          status: this.mapLoanStatus(loan.status),
-          dueDate: loan.dueDate || loan.next_payment_date || loan.due_date || 'N/A'
-        }));
-        console.log('Mapped loans:', mappedLoans);
-        this.recentLoans.set(mappedLoans);
-      }
-
-      console.log('Dashboard data loaded successfully');
+      console.log('✅ Dashboard data loaded successfully');
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      // Only show mock data in development
-      if (window.location.hostname === 'localhost') {
-        console.warn('Using mock data for development');
-        this.setMockData();
-      } else {
-        // Show error toast in production
-        const toast = await this.toastController.create({
-          message: 'Failed to load dashboard data',
-          duration: 3000,
-          position: 'bottom',
-          color: 'danger'
-        });
-        await toast.present();
-      }
+      console.error('❌ Failed to load dashboard data:', error);
+      console.error('Error details:', error);
+      
+      // Show error toast
+      const toast = await this.toastController.create({
+        message: 'Failed to load dashboard data. Please try again.',
+        duration: 3000,
+        position: 'bottom',
+        color: 'danger',
+        icon: 'alert-circle-outline'
+      });
+      await toast.present();
+      
+      // Set empty data instead of mock data
+      this.stats.set({
+        totalLoans: 0,
+        activeLoans: 0,
+        totalBorrowed: 0,
+        totalPaid: 0,
+        remainingBalance: 0,
+        nextPaymentAmount: 0,
+        nextPaymentDate: 'N/A'
+      });
+      this.recentLoans.set([]);
     } finally {
       this.loading.set(false);
     }
@@ -1148,14 +1178,25 @@ export class CustomerDashboardPage implements OnInit {
   /**
    * Map API loan status to display status
    */
-  private mapLoanStatus(apiStatus: string): 'active' | 'completed' | 'overdue' {
+  private mapLoanStatus(apiStatus: string): 'active' | 'pending' | 'completed' | 'overdue' {
     const status = (apiStatus || '').toLowerCase();
-    if (status === 'paid' || status === 'completed' || status === 'closed') {
+    
+    // Completed/Paid statuses
+    if (status === 'paid' || status === 'completed' || status === 'closed' || status === 'fully_paid') {
       return 'completed';
     }
+    
+    // Overdue/Late statuses
     if (status === 'overdue' || status === 'late' || status === 'delinquent') {
       return 'overdue';
     }
+    
+    // Pending statuses
+    if (status === 'pending' || status === 'submitted' || status === 'under_review') {
+      return 'pending';
+    }
+    
+    // Active statuses (approved, disbursed, active)
     return 'active';
   }
 
