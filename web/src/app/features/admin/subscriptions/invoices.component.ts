@@ -159,7 +159,7 @@ interface InvoiceItem {
               <span class="w-3.5 h-3.5">🔄</span>
               Clear
             </button>
-            
+
             @if (getSelectedCount() > 0) {
               <div class="flex items-center gap-2">
                 <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -173,7 +173,7 @@ interface InvoiceItem {
                 </button>
               </div>
             }
-            
+
             <select
               [(ngModel)]="pageSize"
               (change)="onPageSizeChange()"
@@ -196,7 +196,7 @@ interface InvoiceItem {
                 Export Selected
               </button>
             }
-            
+
             <button
               (click)="exportAll()"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
@@ -204,7 +204,7 @@ interface InvoiceItem {
               <span class="w-3.5 h-3.5">📊</span>
               Export All
             </button>
-            
+
             <span class="text-xs text-gray-600 dark:text-gray-400">
               Showing {{ paginatedInvoices().length }} of {{ filteredInvoices().length }}
             </span>
@@ -317,7 +317,7 @@ interface InvoiceItem {
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap">
                       <div class="flex flex-col">
-                        <span class="text-xs text-gray-900 dark:text-white">Issue: {{ formatDate(invoice.issueDate) }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Issue: {{ formatDate(invoice.issueDate) }}</span>
                         <span class="text-xs text-gray-500 dark:text-gray-400">Due: {{ formatDate(invoice.dueDate) }}</span>
                       </div>
                     </td>
@@ -607,7 +607,7 @@ export class InvoicesComponent {
   pageSize = 25;
   totalPages = signal(1);
   paginatedInvoices = signal<Invoice[]>([]);
-  
+
   // Selection state
   selectedInvoices = new Set<number>();
   selectAll = false;
@@ -786,7 +786,7 @@ export class InvoicesComponent {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

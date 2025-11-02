@@ -13,10 +13,10 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
   standalone: true,
   imports: [CommonModule, FormsModule, CurrencyMaskDirective],
   template: `
-    <div class="p-4 md:p-6 max-w-7xl mx-auto">
+    <div class="p-4 max-w-7xl mx-auto">
       <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">💼 Available Loan Products</h1>
+      <div class="mb-4">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">💼 Available Loan Products</h1>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Browse and compare our competitive loan options</p>
       </div>
 
@@ -37,7 +37,7 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
         </div>
       } @else {
         <!-- Products Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           @for (product of products(); track product.id) {
             <div
               class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200"
@@ -45,7 +45,7 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
               [class.pointer-events-none]="isProductDisabled(product)"
               [attr.aria-disabled]="isProductDisabled(product) ? true : null">
               <!-- Product Header -->
-              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
+              <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
                     <div class="flex items-center gap-2 mb-1 flex-wrap">
@@ -80,9 +80,9 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
               </div>
 
               <!-- Product Details -->
-              <div class="p-4 space-y-3">
+              <div class="p-3 space-y-2">
                 <!-- Loan Amount Range -->
-                <div class="space-y-2">
+                <div class="space-y-1.5">
                   <p class="text-xs text-gray-600 dark:text-gray-400 font-semibold">💰 Loan Amount</p>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <!-- Min Amount -->
@@ -92,7 +92,7 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
                         {{ formatCurrency(product.minAmount) }}
                       </p>
                     </div>
-                    
+
                     <!-- Max Amount -->
                     <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg px-3 py-2">
                       <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Max</p>
@@ -498,7 +498,7 @@ export class CustomerProductsComponent implements OnInit {
             const normalizedApplications = response.data
               .map((app: any) => this.normalizeLoanApplication(app))
               .filter((app: any) => app && this.blockingStatuses.has(app.status));
-            
+
             console.log('✅ Normalized and filtered applications:', normalizedApplications);
             this.customerLoans.set(normalizedApplications);
           }
@@ -594,7 +594,7 @@ export class CustomerProductsComponent implements OnInit {
     // Check if customer has pending or approved application with this product
     const applications = this.customerLoans();
     const productKey = this.getProductKeyFromProduct(product);
-    
+
     const appDetails = applications.map((app: any) => {
       const appKey = this.getProductKeyFromApplication(app);
       const hasBlockingStatus = this.blockingStatuses.has(app.status);
@@ -610,11 +610,11 @@ export class CustomerProductsComponent implements OnInit {
         shouldBlock: keysMatch && hasBlockingStatus
       };
     });
-    
+
     console.log('🔍 Product Check - ID:', product?.id, 'Code:', product?.productCode, 'Key:', productKey);
     console.log('📋 Blocking Statuses:', Array.from(this.blockingStatuses));
     console.log('📦 Applications:', JSON.stringify(appDetails, null, 2));
-    
+
     if (!productKey) {
       return false;
     }
@@ -627,7 +627,7 @@ export class CustomerProductsComponent implements OnInit {
       }
       return match;
     });
-    
+
     console.log('🔒 Product disabled result:', isDisabled);
     return isDisabled;
   }

@@ -1,0 +1,92 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>ExITS SaaS Login</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="login-container">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Welcome Back</ion-card-title>
+        <ion-card-subtitle>Sign in to your account</ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <form [formGroup]="loginForm">
+          <!-- Email Input -->
+          <ion-item>
+            <ion-label position="floating">Email</ion-label>
+            <ion-input
+              formControlName="email"
+              type="email"
+              placeholder="your@email.com"
+            ></ion-input>
+          </ion-item>
+          <ion-text color="danger" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+            <p>Valid email is required</p>
+          </ion-text>
+
+          <!-- Password Input -->
+          <ion-item>
+            <ion-label position="floating">Password</ion-label>
+            <ion-input
+              formControlName="password"
+              [type]="showPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+            ></ion-input>
+            <ion-button
+              fill="clear"
+              slot="end"
+              (click)="togglePasswordVisibility()"
+            >
+              <ion-icon
+                [name]="showPassword ? 'eye-off' : 'eye'"
+                slot="icon-only"
+              ></ion-icon>
+            </ion-button>
+          </ion-item>
+          <ion-text color="danger" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+            <p>Password is required (min 6 characters)</p>
+          </ion-text>
+
+          <!-- Remember Me -->
+          <ion-item>
+            <ion-label>Remember me</ion-label>
+            <ion-checkbox formControlName="rememberMe" slot="start"></ion-checkbox>
+          </ion-item>
+
+          <!-- Login Button -->
+          <ion-button
+            expand="block"
+            color="primary"
+            (click)="login()"
+            [disabled]="loginForm.invalid || isLoading"
+            class="ion-margin-top"
+          >
+            <ion-spinner *ngIf="isLoading" name="crescent"></ion-spinner>
+            <span *ngIf="!isLoading">Sign In</span>
+          </ion-button>
+        </form>
+
+        <!-- Forgot Password Link -->
+        <ion-text class="ion-text-center ion-margin-top">
+          <p>
+            <ion-button fill="clear" size="small">Forgot password?</ion-button>
+          </p>
+        </ion-text>
+      </ion-card-content>
+
+      <ion-card-footer>
+        <ion-text class="ion-text-center">
+          <p>
+            Don't have an account?
+            <ion-button fill="clear" size="small" (click)="goToRegister()">
+              Sign up
+            </ion-button>
+          </p>
+        </ion-text>
+      </ion-card-footer>
+    </ion-card>
+  </div>
+</ion-content>

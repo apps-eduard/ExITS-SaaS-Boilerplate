@@ -1,0 +1,7 @@
+{
+  "name": "exitsaas-mobile",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

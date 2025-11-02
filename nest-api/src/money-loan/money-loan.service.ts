@@ -501,17 +501,41 @@ export class MoneyLoanService {
       return null;
     }
 
-  const termDays = row.termDays ?? row.approvedTermDays ?? row.requestedTermDays ?? null;
-  const loanTermMonths = termDays ? Math.max(1, Math.round(termDays / 30)) : 0;
+    const termDays = row.termDays ?? row.approvedTermDays ?? row.requestedTermDays ?? null;
+    const loanTermMonths = termDays ? Math.max(1, Math.round(termDays / 30)) : 0;
+
+    // Explicitly map financial fields to ensure they are numbers
+    const principalAmount = parseFloat(row.principalAmount || row.principal_amount || 0);
+    const totalInterest = parseFloat(row.totalInterest || row.total_interest || 0);
+    const totalAmount = parseFloat(row.totalAmount || row.total_amount || 0);
+    const amountPaid = parseFloat(row.amountPaid || row.amount_paid || 0);
+    const outstandingBalance = parseFloat(row.outstandingBalance || row.outstanding_balance || principalAmount);
+    const processingFee = parseFloat(row.processingFee || row.processing_fee || 0);
+    const penaltyAmount = parseFloat(row.penaltyAmount || row.penalty_amount || 0);
+    const interestRate = parseFloat(row.interestRate || row.interest_rate || 0);
+    const monthlyPayment = row.monthlyPayment || row.monthly_payment || null;
 
     return {
       ...row,
+      // Override with explicitly parsed values
+      principalAmount,
+      totalInterest,
+      totalAmount,
+      amountPaid,
+      outstandingBalance,
+      processingFee,
+      penaltyAmount,
+      interestRate,
+      monthlyPayment: monthlyPayment ? parseFloat(monthlyPayment) : null,
+      termDays: parseInt(row.termDays || row.term_days || 0),
+      daysOverdue: parseInt(row.daysOverdue || row.days_overdue || 0),
       loanTermMonths,
       customer: {
-        fullName: [row.firstName, row.lastName].filter(Boolean).join(' ') || 'N/A',
+        fullName: [row.firstName || row.first_name, row.lastName || row.last_name].filter(Boolean).join(' ') || 'N/A',
         customerCode: row.customerId ? `CUST-${row.customerId}` : undefined,
-        email: row.customerEmail ?? undefined,
+        email: (row.customerEmail || row.customer_email) ?? undefined,
       },
+      productName: row.productName || row.product_name,
     };
   }
 
@@ -550,11 +574,13 @@ export class MoneyLoanService {
         .returning('*');
 
       const newBalance = Number(loan.outstandingBalance || loan.principalAmount) - createPaymentDto.amount;
+      const newAmountPaid = Number(loan.amountPaid || loan.amount_paid || 0) + createPaymentDto.amount;
 
       await trx('money_loan_loans')
         .where({ id: createPaymentDto.loanId })
         .update({
           outstanding_balance: newBalance,
+          amount_paid: newAmountPaid,
           status: newBalance <= 0 ? 'paid_off' : loan.status,
         });
 
@@ -698,15 +724,18 @@ export class MoneyLoanService {
         installment_number: i,
         dueDate: dueDate.toISOString().split('T')[0],
         due_date: dueDate.toISOString().split('T')[0],
-        principalDue: amountPerInstallment * (principalAmount / totalAmount),
+        principalAmount: amountPerInstallment * (principalAmount / totalAmount),
         principal_due: amountPerInstallment * (principalAmount / totalAmount),
-        interestDue: amountPerInstallment * (totalInterest / totalAmount),
+        interestAmount: amountPerInstallment * (totalInterest / totalAmount),
         interest_due: amountPerInstallment * (totalInterest / totalAmount),
-        totalDue: amountPerInstallment,
+        totalAmount: amountPerInstallment,
         total_due: amountPerInstallment,
         amountPaid: amountPaidForThisInstallment,
         amount_paid: amountPaidForThisInstallment,
-        status
+        outstandingAmount: amountPerInstallment - amountPaidForThisInstallment,
+        penaltyAmount: 0,
+        status: status === 'partial' ? 'partially_paid' : status,
+        daysOverdue: status === 'overdue' ? Math.max(0, Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0
       });
     }
 

@@ -9,8 +9,8 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-      <div class="max-w-7xl mx-auto space-y-6">
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div class="max-w-7xl mx-auto space-y-3">
         <!-- Header -->
         <div class="flex items-center justify-between">
           <div>
@@ -22,8 +22,8 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
               </svg>
               Back to My Loans
             </button>
-            <div class="flex items-center gap-3">
-              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Loan Details</h1>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl font-bold text-gray-900 dark:text-white">Loan Details</h1>
               @if (loan()) {
                 <span [class]="getStatusClass(loan()!.status)">
                   {{ getStatusLabel(loan()!.status) }}
@@ -39,8 +39,8 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
           @if (loan() && (loan()!.status === 'active' || loan()!.status === 'overdue')) {
             <button
               (click)="makePayment()"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
               Make Payment
@@ -58,34 +58,34 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
           </div>
         } @else if (loan()) {
           <!-- Loan Summary Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Principal Amount</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ formatCurrency(loan()!.principalAmount) }}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Principal Amount</p>
+              <p class="text-xl font-bold text-gray-900 dark:text-white">₱{{ formatCurrency(loan()!.principalAmount) }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Outstanding Balance</p>
-              <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">₱{{ formatCurrency(loan()!.outstandingBalance) }}</p>
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Outstanding Balance</p>
+              <p class="text-xl font-bold text-orange-600 dark:text-orange-400">₱{{ formatCurrency(loan()!.outstandingBalance) }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Amount Paid</p>
-              <p class="text-2xl font-bold text-green-600 dark:text-green-400">₱{{ formatCurrency(loan()!.amountPaid) }}</p>
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Amount Paid</p>
+              <p class="text-xl font-bold text-green-600 dark:text-green-400">₱{{ formatCurrency(loan()!.amountPaid) }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Monthly Payment</p>
-              <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">₱{{ formatCurrency(loan()!.monthlyPayment || 0) }}</p>
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Monthly Payment</p>
+              <p class="text-xl font-bold text-blue-600 dark:text-blue-400">₱{{ formatCurrency(loan()!.monthlyPayment || 0) }}</p>
             </div>
           </div>
 
           <!-- Progress Bar -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Repayment Progress</h2>
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-1.5">
+              <h2 class="text-base font-semibold text-gray-900 dark:text-white">Repayment Progress</h2>
               <span class="text-sm font-medium text-gray-900 dark:text-white">{{ calculateProgress() }}%</span>
             </div>
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
-              <div 
-                class="bg-gradient-to-r from-blue-500 to-green-500 h-4 rounded-full transition-all duration-300"
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1.5">
+              <div
+                class="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
                 [style.width.%]="calculateProgress()">
               </div>
             </div>
@@ -97,16 +97,16 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
 
           <!-- Loan Information -->
           <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 Loan Information
               </h2>
             </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Product</p>
                   <p class="text-base font-medium text-gray-900 dark:text-white">{{ loan()!.productName || 'N/A' }}</p>
@@ -165,25 +165,25 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
               <nav class="flex -mb-px">
                 <button
                   (click)="activeTab.set('schedule')"
-                  [class]="activeTab() === 'schedule' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                  [class]="activeTab() === 'schedule'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'"
-                  class="px-6 py-4 border-b-2 font-medium text-sm transition-colors">
+                  class="px-4 py-2 border-b-2 font-medium text-xs transition-colors">
                   Repayment Schedule
                 </button>
                 <button
                   (click)="activeTab.set('payments')"
-                  [class]="activeTab() === 'payments' 
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                  [class]="activeTab() === 'payments'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'"
-                  class="px-6 py-4 border-b-2 font-medium text-sm transition-colors">
+                  class="px-4 py-2 border-b-2 font-medium text-xs transition-colors">
                   Payment History
                 </button>
               </nav>
             </div>
 
             <!-- Tab Content -->
-            <div class="p-6">
+            <div class="p-4">
               @if (activeTab() === 'schedule') {
                 <!-- Repayment Schedule -->
                 @if (loadingSchedule()) {
@@ -200,27 +200,27 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
                     <table class="w-full">
                       <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700">
-                          <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Installment</th>
-                          <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Due Date</th>
-                          <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Principal</th>
-                          <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Interest</th>
-                          <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Total Due</th>
-                          <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Paid</th>
-                          <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Balance</th>
-                          <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
+                          <th class="text-left py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Installment</th>
+                          <th class="text-left py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Due Date</th>
+                          <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Principal</th>
+                          <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Interest</th>
+                          <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Total Due</th>
+                          <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Paid</th>
+                          <th class="text-right py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Balance</th>
+                          <th class="text-center py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         @for (item of schedule(); track item.id) {
                           <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                            <td class="py-3 px-4 text-sm text-gray-900 dark:text-white">#{{ item.installmentNumber }}</td>
-                            <td class="py-3 px-4 text-sm text-gray-900 dark:text-white">{{ formatDate(item.dueDate) }}</td>
-                            <td class="py-3 px-4 text-sm text-right text-gray-900 dark:text-white">₱{{ formatCurrency(item.principalAmount) }}</td>
-                            <td class="py-3 px-4 text-sm text-right text-gray-900 dark:text-white">₱{{ formatCurrency(item.interestAmount) }}</td>
-                            <td class="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">₱{{ formatCurrency(item.totalAmount) }}</td>
-                            <td class="py-3 px-4 text-sm text-right text-green-600 dark:text-green-400">₱{{ formatCurrency(item.amountPaid) }}</td>
-                            <td class="py-3 px-4 text-sm text-right text-orange-600 dark:text-orange-400">₱{{ formatCurrency(item.outstandingAmount) }}</td>
-                            <td class="py-3 px-4 text-center">
+                            <td class="py-2 px-3 text-xs text-gray-900 dark:text-white">#{{ item.installmentNumber }}</td>
+                            <td class="py-2 px-3 text-xs text-gray-900 dark:text-white">{{ formatDate(item.dueDate) }}</td>
+                            <td class="py-2 px-3 text-xs text-right text-gray-900 dark:text-white">₱{{ formatCurrency(item.principalAmount) }}</td>
+                            <td class="py-2 px-3 text-xs text-right text-gray-900 dark:text-white">₱{{ formatCurrency(item.interestAmount) }}</td>
+                            <td class="py-2 px-3 text-xs text-right font-medium text-gray-900 dark:text-white">₱{{ formatCurrency(item.totalAmount) }}</td>
+                            <td class="py-2 px-3 text-xs text-right text-green-600 dark:text-green-400">₱{{ formatCurrency(item.amountPaid) }}</td>
+                            <td class="py-2 px-3 text-xs text-right text-orange-600 dark:text-orange-400">₱{{ formatCurrency(item.outstandingAmount) }}</td>
+                            <td class="py-2 px-3 text-center">
                               <span [class]="getScheduleStatusClass(item.status)">
                                 {{ getScheduleStatusLabel(item.status) }}
                               </span>
@@ -246,10 +246,10 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
                     <p class="text-gray-600 dark:text-gray-400">No payment history available</p>
                   </div>
                 } @else {
-                  <div class="space-y-4">
+                  <div class="space-y-2">
                     @for (payment of payments(); track payment.id) {
-                      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
-                        <div class="flex items-start justify-between mb-3">
+                      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
+                        <div class="flex items-start justify-between mb-2">
                           <div>
                             <p class="font-semibold text-gray-900 dark:text-white">₱{{ formatCurrency(payment.amount) }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(payment.paymentDate) }}</p>
@@ -258,7 +258,7 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
                             {{ getPaymentStatusLabel(payment.status) }}
                           </span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                           <div>
                             <p class="text-xs text-gray-600 dark:text-gray-400">Reference</p>
                             <p class="font-mono text-gray-900 dark:text-white">{{ payment.paymentReference }}</p>
@@ -277,9 +277,9 @@ import { Loan, RepaymentSchedule, LoanPayment } from '../shared/models/loan.mode
                           </div>
                         </div>
                         @if (payment.notes) {
-                          <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                          <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                             <p class="text-xs text-gray-600 dark:text-gray-400">Notes</p>
-                            <p class="text-sm text-gray-900 dark:text-white mt-1">{{ payment.notes }}</p>
+                            <p class="text-xs text-gray-900 dark:text-white mt-1">{{ payment.notes }}</p>
                           </div>
                         }
                       </div>

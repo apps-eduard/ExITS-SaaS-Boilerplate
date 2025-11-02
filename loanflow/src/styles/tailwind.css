@@ -1,0 +1,81 @@
+// Tailwind CSS base styles + Ionic theming
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ionic CSS variables for theming */
+:root {
+  --ion-color-primary: #3b82f6;
+  --ion-color-primary-rgb: 59, 130, 246;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #3470d8;
+  --ion-color-primary-tint: #4f8ff7;
+
+  --ion-color-success: #10b981;
+  --ion-color-success-rgb: 16, 185, 129;
+  --ion-color-success-contrast: #ffffff;
+  
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #000000;
+  
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  
+  --ion-background-color: #ffffff;
+  --ion-text-color: #1f2937;
+  
+  --ion-toolbar-background: #1e40af;
+  --ion-toolbar-color: #ffffff;
+}
+
+/* Dark mode theme */
+.dark {
+  --ion-background-color: #111827;
+  --ion-background-color-rgb: 17, 24, 39;
+  --ion-text-color: #f9fafb;
+  --ion-text-color-rgb: 249, 250, 251;
+  
+  --ion-color-step-50: #1f2937;
+  --ion-color-step-100: #374151;
+  --ion-color-step-150: #4b5563;
+  --ion-color-step-200: #6b7280;
+  --ion-color-step-250: #9ca3af;
+  --ion-color-step-300: #d1d5db;
+  --ion-color-step-350: #e5e7eb;
+  --ion-color-step-400: #f3f4f6;
+  --ion-color-step-450: #f9fafb;
+  --ion-color-step-500: #ffffff;
+}
+
+/* Custom utility classes */
+@layer components {
+  .card-compact {
+    @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3;
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+}
+
+/* Safe area padding for notched devices */
+ion-content {
+  --padding-top: env(safe-area-inset-top);
+  --padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
