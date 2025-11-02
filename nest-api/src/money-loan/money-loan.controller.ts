@@ -121,6 +121,26 @@ export class MoneyLoanController {
     };
   }
 
+  @Get('loans/overview')
+  @Permissions('money-loan:read')
+  async getLoansOverview(@Req() req: any) {
+    const stats = await this.moneyLoanService.getOverview(req.user.tenantId);
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  @Get('loans/:id')
+  @Permissions('money-loan:read')
+  async getLoanById(@Param('id') id: string, @Req() req: any) {
+    const loan = await this.moneyLoanService.getLoanById(req.user.tenantId, parseInt(id));
+    return {
+      success: true,
+      data: loan,
+    };
+  }
+
   @Post('loans/:id/disburse')
   @Permissions('money-loan:disburse', 'money-loan:loans:disburse')
   async disburseLoan(
@@ -194,16 +214,6 @@ export class MoneyLoanController {
   @Get('overview')
   @Permissions('money-loan:read')
   async getOverview(@Req() req: any) {
-    const stats = await this.moneyLoanService.getOverview(req.user.tenantId);
-    return {
-      success: true,
-      data: stats,
-    };
-  }
-
-  @Get('loans/overview')
-  @Permissions('money-loan:read')
-  async getLoansOverview(@Req() req: any) {
     const stats = await this.moneyLoanService.getOverview(req.user.tenantId);
     return {
       success: true,

@@ -214,7 +214,7 @@ export class CustomerDashboardComponent implements OnInit {
   creditScore = signal(650);
 
   activeLoans = computed(() => 
-    this.loans().filter(loan => loan.status === 'active' || loan.status === 'overdue')
+    this.loans().filter(loan => loan.status === 'active' || loan.status === 'disbursed' || loan.status === 'overdue')
   );
 
   activeLoansCount = computed(() => this.activeLoans().length);

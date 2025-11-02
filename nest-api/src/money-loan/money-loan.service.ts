@@ -365,6 +365,30 @@ export class MoneyLoanService {
     };
   }
 
+  async getLoanById(tenantId: number, loanId: number) {
+    const knex = this.knexService.instance;
+
+    const [loan] = await knex('money_loan_loans as mll')
+      .leftJoin('customers as c', 'mll.customer_id', 'c.id')
+      .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
+      .select(
+        'mll.*',
+        'c.first_name',
+        'c.last_name',
+        'c.email as customer_email',
+        'mlp.name as product_name'
+      )
+      .where('mll.id', loanId)
+      .andWhere('mll.tenant_id', tenantId)
+      .limit(1);
+
+    if (!loan) {
+      throw new NotFoundException('Loan not found');
+    }
+
+    return this.mapLoanRow(loan);
+  }
+
   async disburseLoan(tenantId: number, loanId: number, disburseDto: DisburseLoanDto, disbursedBy: number) {
     const knex = this.knexService.instance;
 

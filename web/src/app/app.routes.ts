@@ -51,7 +51,7 @@ export const routes: Routes = [
       },
       {
         path: 'loans/:id',
-        loadComponent: () => import('./features/platforms/money-loan/customer/my-loans.component').then(m => m.MyLoansComponent)
+        loadComponent: () => import('./features/platforms/money-loan/customer/loan-details.component').then(m => m.LoanDetailsComponent)
       },
       {
         path: 'apply',

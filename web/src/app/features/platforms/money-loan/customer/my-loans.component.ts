@@ -46,6 +46,31 @@ interface Tab {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="space-y-4 p-4">
+      <!-- Debug Info (Remove in production) -->
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-xs">
+        <p class="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">🔍 Debug Info:</p>
+        <div class="space-y-1 text-yellow-800 dark:text-yellow-200">
+          <p>Loading: {{ loading() }}</p>
+          <p>Applications: {{ applications().length }}</p>
+          <p>Loans: {{ loans().length }}</p>
+          <p>All Items: {{ allItems().length }}</p>
+          <p>Displayed Items: {{ displayedItems().length }}</p>
+          <p>Active Tab: {{ activeTab() }}</p>
+          <div class="mt-2 border-t border-yellow-300 pt-2">
+            <p class="font-semibold mb-1">Loan Statuses:</p>
+            @for (loan of loans(); track loan.id) {
+              <p>Loan #{{ loan.loanNumber || loan.loan_number }}: {{ loan.status }}</p>
+            }
+          </div>
+          <div class="mt-2 border-t border-yellow-300 pt-2">
+            <p class="font-semibold mb-1">Application Statuses:</p>
+            @for (app of applications(); track app.id) {
+              <p>App #{{ app.application_number || app.applicationNumber }}: {{ app.status }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div>
@@ -102,12 +127,46 @@ interface Tab {
         <!-- Loading State -->
         <div *ngIf="loading()" class="p-8 text-center">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading your loans...</p>
         </div>
 
         <!-- Empty State -->
-        <div *ngIf="!loading() && displayedItems().length === 0" class="p-8 text-center">
-          <p class="text-gray-600 dark:text-gray-400">No items found</p>
+        <div *ngIf="!loading() && displayedItems().length === 0" class="p-12 text-center">
+          <svg class="w-20 h-20 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            @if (activeTab() === 'all') {
+              No loans or applications yet
+            } @else if (activeTab() === 'applications') {
+              No loan applications
+            } @else if (activeTab() === 'active') {
+              No active loans
+            } @else if (activeTab() === 'rejected') {
+              No rejected applications
+            } @else if (activeTab() === 'completed') {
+              No completed loans
+            } @else {
+              No {{ activeTab() }} items found
+            }
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            @if (activeTab() === 'all' || activeTab() === 'applications') {
+              Get started by applying for a loan
+            } @else {
+              Try switching to a different tab to see other items
+            }
+          </p>
+          @if (activeTab() === 'all' || activeTab() === 'applications') {
+            <button
+              (click)="navigateToApply()"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Apply for Loan
+            </button>
+          }
         </div>
 
         <!-- Content -->
@@ -299,7 +358,10 @@ export class MyLoansComponent implements OnInit {
       case 'applications':
         return all.filter(item => item.type === 'application');
       case 'active':
-        return all.filter(item => item.type === 'loan' && (item.status === 'active' || item.status === 'overdue'));
+        return all.filter(item => 
+          item.type === 'loan' && 
+          (item.status === 'active' || item.status === 'overdue' || item.status === 'disbursed')
+        );
       case 'loans':
         return all.filter(item => item.type === 'loan');
       case 'rejected':
@@ -328,7 +390,7 @@ export class MyLoansComponent implements OnInit {
   );
   
   activeLoans = computed(() => 
-    this.loans().filter(l => l.status === 'active').length
+    this.loans().filter(l => l.status === 'active' || l.status === 'disbursed' || l.status === 'overdue').length
   );
   
   overdueLoans = computed(() => 
@@ -345,7 +407,7 @@ export class MyLoansComponent implements OnInit {
 
   totalOutstanding = computed(() => 
     this.loans()
-      .filter(l => l.status === 'active' || l.status === 'overdue')
+      .filter(l => l.status === 'active' || l.status === 'disbursed' || l.status === 'overdue')
       .reduce((sum, loan) => sum + (loan.outstandingBalance || 0), 0)
   );
 
@@ -417,22 +479,26 @@ export class MyLoansComponent implements OnInit {
     const customerDataStr = localStorage.getItem('customerData');
     
     if (!customerDataStr) {
-      console.error('No customer data found in localStorage');
+      console.error('❌ No customer data found in localStorage');
       this.loading.set(false);
       return;
     }
 
     const customerData = JSON.parse(customerDataStr);
-    const tenantId = customerData.tenantId;
-    const customerId = customerData.id;
+    const tenantId = customerData.tenantId || customerData.tenant_id;
+    const customerId = customerData.id || customerData.customerId;
     
-    console.log('🔍 Customer My Loans - Loading data for:', { tenantId, customerId });
+    console.log('🔍 Customer My Loans - Loading data for:', { tenantId, customerId, customerData });
     
     if (!tenantId || !customerId) {
-      console.error('Missing tenantId or customer ID', { tenantId, customerId });
+      console.error('❌ Missing tenantId or customer ID', { tenantId, customerId, customerData });
       this.loading.set(false);
       return;
     }
+
+    console.log('📡 Making API calls...');
+    console.log('  - Applications: /api/money-loan/applications?customerId=' + customerId);
+    console.log('  - Loans: /api/money-loan/customers/' + customerId + '/loans');
 
     Promise.all([
       this.applicationService.getApplications(tenantId.toString(), { customerId }).toPromise(),
@@ -444,8 +510,8 @@ export class MyLoansComponent implements OnInit {
       const apps = (applicationsResponse as any)?.data || [];
       const lns = (loansResponse as any)?.data || [];
       
-      console.log('📊 Applications array:', apps);
-      console.log('📊 Loans array:', lns);
+      console.log('📊 Applications count:', apps.length, 'Data:', apps);
+      console.log('📊 Loans count:', lns.length, 'Data:', lns);
       
       this.applications.set(apps);
       this.loans.set(lns);
@@ -457,6 +523,12 @@ export class MyLoansComponent implements OnInit {
       console.log('✅ All items computed:', this.allItems());
     }).catch((error) => {
       console.error('❌ Error loading data:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        error: error.error
+      });
       this.loading.set(false);
     });
   }
