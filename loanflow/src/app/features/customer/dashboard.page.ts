@@ -5,7 +5,6 @@ import { Router, RouterLink } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
-  IonTitle,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -13,14 +12,13 @@ import {
   IonIcon,
   IonBadge,
   IonSkeletonText,
-  IonButtons,
   ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { 
-  walletOutline, 
-  cardOutline, 
-  timeOutline, 
+import {
+  walletOutline,
+  cardOutline,
+  timeOutline,
   checkmarkCircleOutline,
   trendingUpOutline,
   documentTextOutline,
@@ -66,32 +64,30 @@ interface RecentLoan {
     RouterLink,
     IonHeader,
     IonToolbar,
-    IonTitle,
     IonContent,
     IonRefresher,
     IonRefresherContent,
     IonButton,
     IonIcon,
     IonBadge,
-    IonSkeletonText,
-    IonButtons
+    IonSkeletonText
   ],
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar class="custom-toolbar">
         <div class="toolbar-content">
-          <div class="toolbar-left">
-            <ion-icon name="business-outline" class="info-icon"></ion-icon>
-            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
-          </div>
-          
           <div class="toolbar-center">
             <ion-icon name="wallet-outline" class="title-icon"></ion-icon>
             <span class="title-text">Dashboard</span>
           </div>
           
           <div class="toolbar-right">
-            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
+              <ion-icon 
+                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
+                slot="icon-only"
+              ></ion-icon>
+            </ion-button>
             <ion-button (click)="logout()" class="icon-btn" fill="clear">
               <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
             </ion-button>
@@ -107,8 +103,29 @@ interface RecentLoan {
 
       <div class="dashboard-container">
   
+        <!-- Hero Overview -->
+  <div class="dashboard-hero animate-fade-up">
+          <div class="hero-left">
+            <p class="hero-greeting">
+              <ion-icon name="person-circle-outline" class="greeting-icon"></ion-icon>
+              {{ authService.currentUser()?.firstName }} {{ authService.currentUser()?.lastName }}
+            </p>
+            <p class="hero-subtitle">{{ currentDateTime() }}</p>
+            <div class="hero-tags">
+              <span class="hero-tag">
+                <ion-icon name="business-outline" class="tag-icon"></ion-icon>
+                {{ authService.currentUser()?.tenant?.name || 'LoanFlow Tenant' }}
+              </span>
+              <span class="hero-tag" *ngIf="stats().activeLoans > 0">
+                <ion-icon name="checkmark-circle-outline" class="tag-icon"></ion-icon>
+                {{ stats().activeLoans }} active loans
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Stats Grid -->
-        <div class="stats-grid">
+  <div class="stats-grid animate-fade-up delay-1">
           <!-- Total Borrowed Card -->
           <div class="stat-card stat-primary">
             <div class="stat-header">
@@ -176,8 +193,37 @@ interface RecentLoan {
         </div>
 
         <!-- Next Payment Card -->
+        <!-- Insights Snapshot -->
+        <div class="insights-card animate-fade-up delay-2">
+          <div class="insight-item">
+            <div class="insight-ring" [style.background]="progressRingBackground()">
+              <div class="ring-center">
+                <span class="ring-value">{{ clampedProgress() }}%</span>
+                <span class="ring-label">Paid</span>
+              </div>
+            </div>
+            <div class="insight-details">
+              <p class="insight-title">Repayment progress</p>
+              <p class="insight-subtitle">
+                ₱{{ formatCurrency(stats().totalPaid) }} of ₱{{ formatCurrency(stats().totalBorrowed) }} cleared
+              </p>
+            </div>
+          </div>
+          <div class="insight-divider"></div>
+          <div class="insight-item">
+            <div class="insight-icon-wrapper">
+              <ion-icon name="calendar-outline" class="insight-icon"></ion-icon>
+            </div>
+            <div class="insight-details">
+              <p class="insight-title">Next payment</p>
+              <p class="insight-subtitle">{{ stats().nextPaymentDate || 'No upcoming dues' }}</p>
+              <p class="insight-amount">₱{{ formatCurrency(stats().nextPaymentAmount) }}</p>
+            </div>
+          </div>
+        </div>
+
         @if (stats().nextPaymentAmount > 0) {
-          <div class="payment-card">
+          <div class="payment-card animate-fade-up delay-3">
             <div class="payment-header">
               <div class="payment-icon-wrapper">
                 <ion-icon name="time-outline" class="payment-icon"></ion-icon>
@@ -206,7 +252,7 @@ interface RecentLoan {
         }
 
         <!-- Quick Actions -->
-        <div class="section-card">
+  <div class="section-card animate-fade-up delay-4">
           <div class="section-header">
             <h2 class="section-title">Quick Actions</h2>
           </div>
@@ -258,7 +304,7 @@ interface RecentLoan {
         </div>
 
         <!-- Recent Loans -->
-        <div class="section-card">
+  <div class="section-card animate-fade-up delay-5">
           <div class="section-header">
             <h2 class="section-title">Recent Loans</h2>
             <ion-button 
@@ -368,44 +414,19 @@ interface RecentLoan {
       color: white;
     }
 
-    .toolbar-left,
-    .toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .toolbar-left {
-      justify-content: flex-start;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
-    }
-
     .toolbar-center {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      flex: 0 0 auto;
+      flex: 1;
     }
 
-    .info-icon {
-      font-size: 18px;
-      opacity: 0.9;
-      flex-shrink: 0;
-    }
-
-    .info-text {
-      font-size: 13px;
-      font-weight: 600;
-      opacity: 0.95;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: flex-end;
     }
 
     .title-icon {
@@ -494,13 +515,433 @@ interface RecentLoan {
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      --background: var(--ion-background-color);
+      --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)) , var(--ion-background-color);
     }
 
     .dashboard-container {
       padding: 1rem;
       max-width: 600px;
       margin: 0 auto;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-fade-up {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+      animation: fadeUp 0.6s ease forwards;
+      animation-delay: 0s;
+    }
+
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.1s; }
+    .delay-3 { animation-delay: 0.15s; }
+    .delay-4 { animation-delay: 0.2s; }
+    .delay-5 { animation-delay: 0.25s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fade-up {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ===== HERO CARD ===== */
+    .dashboard-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      background: var(--ion-card-background);
+      border-radius: 22px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .dashboard-hero::before,
+    .dashboard-hero::after {
+      content: '';
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(60px);
+      opacity: 0.4;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .dashboard-hero::before {
+      width: 220px;
+      height: 220px;
+      background: rgba(102, 126, 234, 0.35);
+      top: -120px;
+      right: -80px;
+    }
+
+    .dashboard-hero::after {
+      width: 160px;
+      height: 160px;
+      background: rgba(56, 189, 248, 0.35);
+      bottom: -100px;
+      left: -60px;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-greeting {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin: 0;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .greeting-icon {
+      font-size: 1.4rem;
+      color: var(--ion-color-primary);
+      flex-shrink: 0;
+    }
+
+    .hero-subtitle {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    @media (min-width: 400px) {
+      .hero-greeting {
+        font-size: 1.4rem;
+      }
+
+      .greeting-icon {
+        font-size: 1.6rem;
+      }
+
+      .hero-subtitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .hero-greeting {
+        font-size: 1.5rem;
+      }
+
+      .greeting-icon {
+        font-size: 1.75rem;
+      }
+
+      .hero-subtitle {
+        font-size: 0.95rem;
+      }
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(var(--ion-color-primary-rgb), 0.1);
+      color: var(--ion-color-primary);
+      font-size: 0.7rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .hero-tag {
+        gap: 0.4rem;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.75rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .hero-tag {
+        font-size: 0.8rem;
+      }
+    }
+
+    .tag-icon {
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    @media (min-width: 400px) {
+      .tag-icon {
+        font-size: 1rem;
+      }
+    }
+
+    .hero-right {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-progress {
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 18px;
+      padding: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ion-color-medium);
+    }
+
+    .progress-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0ea5e9, #6366f1);
+      transition: width 0.6s ease;
+    }
+
+    .progress-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      font-weight: 600;
+    }
+
+    @media (min-width: 540px) {
+      .dashboard-hero {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .hero-left {
+        flex: 1;
+      }
+
+      .hero-right {
+        flex: 1;
+      }
+    }
+
+    /* ===== INSIGHTS CARD ===== */
+    .insights-card {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      background: var(--ion-card-background);
+      border-radius: 20px;
+      padding: 1.5rem 1.25rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.18));
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .insight-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .insight-divider {
+      height: 1px;
+      width: 100%;
+      background: var(--ion-border-color, rgba(148, 163, 184, 0.2));
+      opacity: 0.6;
+    }
+
+    .insight-ring {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: conic-gradient(rgba(14, 165, 233, 0.85) 0 0%, rgba(148, 163, 184, 0.25) 0% 100%);
+      position: relative;
+    }
+
+    .ring-center {
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ion-text-color);
+      box-shadow: inset 0 1px 6px rgba(15, 23, 42, 0.12);
+      font-weight: 700;
+    }
+
+    .ring-value {
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+
+    .ring-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--ion-color-medium);
+      letter-spacing: 0.08em;
+    }
+
+    .insight-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      color: var(--ion-text-color);
+    }
+
+    .insight-title {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    @media (min-width: 400px) {
+      .insight-title {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .insight-title {
+        font-size: 0.95rem;
+      }
+    }
+
+    .insight-subtitle {
+      margin: 0;
+      font-size: 0.7rem;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    @media (min-width: 400px) {
+      .insight-subtitle {
+        font-size: 0.75rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .insight-subtitle {
+        font-size: 0.8rem;
+      }
+    }
+
+    .insight-amount {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .insight-amount {
+        font-size: 1.1rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .insight-amount {
+        font-size: 1.15rem;
+      }
+    }
+
+    .insight-icon-wrapper {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(99, 102, 241, 0.2));
+      color: var(--ion-color-primary);
+      flex-shrink: 0;
+    }
+
+    .insight-icon {
+      font-size: 1.4rem;
+    }
+
+    @media (min-width: 500px) {
+      .insights-card {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .insight-divider {
+        height: 100%;
+        width: 1px;
+      }
+
+      .insight-item {
+        flex: 1;
+      }
     }
 
     /* ===== USER HEADER ===== */
@@ -614,18 +1055,37 @@ interface RecentLoan {
     }
 
     .stat-value {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--ion-text-color);
       margin: 0 0 0.25rem 0;
       line-height: 1.2;
     }
 
+    @media (min-width: 400px) {
+      .stat-value {
+        font-size: 1.4rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .stat-value {
+        font-size: 1.5rem;
+      }
+    }
+
     .stat-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--ion-color-medium);
       margin: 0;
       font-weight: 500;
+      line-height: 1.3;
+    }
+
+    @media (min-width: 400px) {
+      .stat-label {
+        font-size: 0.75rem;
+      }
     }
 
     .stat-skeleton {
@@ -759,10 +1219,23 @@ interface RecentLoan {
     }
 
     .section-title {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 700;
       color: var(--ion-text-color);
       margin: 0;
+      line-height: 1.3;
+    }
+
+    @media (min-width: 400px) {
+      .section-title {
+        font-size: 1.1rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .section-title {
+        font-size: 1.125rem;
+      }
     }
 
     .view-all-btn {
@@ -869,9 +1342,22 @@ interface RecentLoan {
 
     .action-label {
       flex: 1;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-weight: 600;
       color: var(--ion-text-color);
+      line-height: 1.3;
+    }
+
+    @media (min-width: 400px) {
+      .action-label {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .action-label {
+        font-size: 0.95rem;
+      }
     }
 
     .action-arrow {
@@ -1075,6 +1561,75 @@ interface RecentLoan {
     }
 
     /* ===== DARK MODE ADJUSTMENTS ===== */
+    body.dark .main-content,
+    .dark .main-content {
+      --background: linear-gradient(160deg, rgba(14, 165, 233, 0.08), rgba(79, 70, 229, 0.12)), var(--ion-background-color);
+    }
+
+    body.dark .dashboard-hero,
+    .dark .dashboard-hero {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(148, 163, 184, 0.2);
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
+    }
+
+    body.dark .dashboard-hero::before,
+    .dark .dashboard-hero::before {
+      background: rgba(99, 102, 241, 0.35);
+    }
+
+    body.dark .dashboard-hero::after,
+    .dark .dashboard-hero::after {
+      background: rgba(14, 165, 233, 0.35);
+    }
+
+    body.dark .hero-tag,
+    .dark .hero-tag {
+      background: rgba(79, 70, 229, 0.25);
+      color: rgba(224, 231, 255, 0.95);
+    }
+
+    body.dark .hero-progress,
+    .dark .hero-progress {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(148, 163, 184, 0.15);
+    }
+
+    body.dark .progress-bar,
+    .dark .progress-bar {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    body.dark .insights-card,
+    .dark .insights-card {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: rgba(148, 163, 184, 0.16);
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
+    }
+
+    body.dark .insight-divider,
+    .dark .insight-divider {
+      background: rgba(148, 163, 184, 0.25);
+    }
+
+    body.dark .ring-center,
+    .dark .ring-center {
+      background: rgba(15, 23, 42, 0.9);
+      color: rgba(226, 232, 240, 0.95);
+      box-shadow: inset 0 1px 6px rgba(255, 255, 255, 0.04);
+    }
+
+    body.dark .insight-subtitle,
+    .dark .insight-subtitle {
+      color: rgba(148, 163, 184, 0.85);
+    }
+
+    body.dark .insight-icon-wrapper,
+    .dark .insight-icon-wrapper {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(99, 102, 241, 0.25));
+      color: rgba(224, 231, 255, 0.95);
+    }
+
     body.dark .stat-card,
     .dark .stat-card {
       background: rgba(255, 255, 255, 0.05);
@@ -1155,7 +1710,7 @@ export class CustomerDashboardPage implements OnInit {
 
   constructor(
     private apiService: ApiService,
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router,
     public themeService: ThemeService,
     private confirmationService: ConfirmationService,
@@ -1183,6 +1738,10 @@ export class CustomerDashboardPage implements OnInit {
   ngOnInit() {
     this.currentUser.set(this.authService.currentUser());
     this.loadDashboardData();
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
   }
 
   async loadDashboardData() {
@@ -1355,6 +1914,49 @@ export class CustomerDashboardPage implements OnInit {
     const total = this.stats().totalBorrowed;
     const paid = this.stats().totalPaid;
     return total > 0 ? Math.round((paid / total) * 100) : 0;
+  }
+
+  clampedProgress(): number {
+    const progress = this.paymentProgress();
+    return Math.max(0, Math.min(100, progress));
+  }
+
+  greetingMessage(): string {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning';
+    }
+    if (hour >= 12 && hour < 18) {
+      return 'Good afternoon';
+    }
+    return 'Good evening';
+  }
+
+  currentDateTime(): string {
+    const now = new Date();
+    const dateOptions: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    const timeOptions: Intl.DateTimeFormatOptions = { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    };
+    const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+    const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
+    return `${formattedDate} at ${formattedTime}`;
+  }
+
+  progressRingBackground(): string {
+    const progress = this.clampedProgress();
+    const progressStop = `${progress}%`;
+    const isDark = this.themeService.isDark();
+    const activeColor = isDark ? 'rgba(96, 165, 250, 0.95)' : 'rgba(14, 165, 233, 0.95)';
+    const remainderColor = isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(148, 163, 184, 0.22)';
+    return `conic-gradient(${activeColor} 0 ${progressStop}, ${remainderColor} ${progressStop} 100%)`;
   }
 
   async logout() {

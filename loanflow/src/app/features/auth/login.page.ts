@@ -67,8 +67,8 @@ import { ThemeService } from '../../core/services/theme.service';
           <div class="logo-circle">
             <ion-icon name="cash-outline" class="logo-icon"></ion-icon>
           </div>
-          <h1 class="welcome-title">Welcome Back</h1>
-          <p class="welcome-subtitle">Sign in to manage your loans</p>
+          <h1 class="welcome-title">LoanFlow</h1>
+          <p class="welcome-subtitle">Secure Login Portal</p>
         </div>
 
         <!-- Login Form Card -->
@@ -233,21 +233,19 @@ import { ThemeService } from '../../core/services/theme.service';
     </ion-content>
   `,
   styles: [`
-    /* Main Content - Exact match from web: bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 */
     .login-content {
-      --background: linear-gradient(to bottom right,
-                    #f9fafb 0%,
-                    #eff6ff 50%,
-                    #faf5ff 100%);
+      --background: linear-gradient(165deg,
+                    rgba(var(--ion-color-primary-rgb), 0.16) 0%,
+                    rgba(var(--ion-color-secondary-rgb), 0.12) 40%,
+                    var(--ion-background-color) 100%);
     }
 
-    /* Dark mode - Exact match from web: dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 */
     @media (prefers-color-scheme: dark) {
       .login-content {
-        --background: linear-gradient(to bottom right,
-                      #111827 0%,
-                      #1f2937 50%,
-                      #111827 100%);
+        --background: linear-gradient(165deg,
+                      rgba(var(--ion-color-primary-rgb), 0.35) 0%,
+                      rgba(var(--ion-color-secondary-rgb), 0.28) 35%,
+                      var(--ion-background-color) 100%);
       }
     }
 
@@ -265,7 +263,7 @@ import { ThemeService } from '../../core/services/theme.service';
       left: -6rem;
       width: 24rem;
       height: 24rem;
-      background: rgba(59, 130, 246, 0.1);
+      background: rgba(var(--ion-color-primary-rgb), 0.18);
       border-radius: 9999px;
       filter: blur(80px);
       pointer-events: none;
@@ -279,7 +277,7 @@ import { ThemeService } from '../../core/services/theme.service';
       right: -6rem;
       width: 24rem;
       height: 24rem;
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(var(--ion-color-tertiary-rgb), 0.18);
       border-radius: 9999px;
       filter: blur(80px);
       pointer-events: none;
@@ -294,7 +292,7 @@ import { ThemeService } from '../../core/services/theme.service';
       transform: translate(-50%, -50%);
       width: 24rem;
       height: 24rem;
-      background: rgba(236, 72, 153, 0.05);
+      background: rgba(var(--ion-color-secondary-rgb), 0.12);
       border-radius: 9999px;
       filter: blur(80px);
       pointer-events: none;
@@ -644,9 +642,10 @@ import { ThemeService } from '../../core/services/theme.service';
     /* Dark Mode Adjustments */
     body.dark .login-content,
     .dark .login-content {
-      --background: linear-gradient(135deg, 
-        rgba(66, 140, 255, 0.15) 0%, 
-        rgba(80, 200, 255, 0.15) 100%),
+      --background: linear-gradient(170deg,
+        rgba(var(--ion-color-primary-rgb), 0.32) 0%,
+        rgba(var(--ion-color-secondary-rgb), 0.28) 35%,
+        rgba(15, 23, 42, 0.85) 100%),
         var(--ion-background-color);
     }
 
@@ -674,22 +673,22 @@ import { ThemeService } from '../../core/services/theme.service';
 
     body.dark .customer-card,
     .dark .customer-card {
-      background: rgba(45, 211, 111, 0.08);
+      background: rgba(var(--ion-color-success-rgb), 0.14);
     }
 
     body.dark .customer-card:hover,
     .dark .customer-card:hover {
-      background: rgba(45, 211, 111, 0.15);
+      background: rgba(var(--ion-color-success-rgb), 0.22);
     }
 
     body.dark .employee-card,
     .dark .employee-card {
-      background: rgba(66, 140, 255, 0.08);
+      background: rgba(var(--ion-color-primary-rgb), 0.16);
     }
 
     body.dark .employee-card:hover,
     .dark .employee-card:hover {
-      background: rgba(66, 140, 255, 0.15);
+      background: rgba(var(--ion-color-primary-rgb), 0.24);
     }
   `]
 })

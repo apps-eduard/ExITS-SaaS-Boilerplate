@@ -612,6 +612,91 @@ export class MoneyLoanService {
       .orderBy('money_loan_payments.created_at', 'desc');
   }
 
+  async getTodayCollections(tenantId: number) {
+    const knex = this.knexService.instance;
+
+    // Get today's date range (start and end of day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.toISOString();
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayEnd = tomorrow.toISOString();
+
+    // Get all payments made today
+    const payments = await knex('money_loan_payments as mlp')
+      .select(
+        'mlp.id',
+        'mlp.payment_reference',
+        'mlp.loan_id',
+        'mlp.customer_id',
+        'mlp.amount',
+        'mlp.principal_amount',
+        'mlp.interest_amount',
+        'mlp.penalty_amount',
+        'mlp.payment_method',
+        'mlp.payment_date',
+        'mlp.status',
+        'mlp.created_at',
+        'mll.loan_number',
+        'c.first_name as customer_first_name',
+        'c.last_name as customer_last_name'
+      )
+      .leftJoin('money_loan_loans as mll', 'mlp.loan_id', 'mll.id')
+      .leftJoin('customers as c', 'mlp.customer_id', 'c.id')
+      .where('mlp.tenant_id', tenantId)
+      .whereBetween('mlp.payment_date', [todayStart, todayEnd])
+      .orderBy('mlp.created_at', 'desc');
+
+    // Calculate summary statistics
+    const completedPayments = payments.filter(p => p.status === 'completed');
+    const summary = {
+      date: today.toISOString().split('T')[0],
+      totalPayments: completedPayments.length,
+      totalAmount: completedPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0),
+      principalCollected: completedPayments.reduce((sum, p) => sum + parseFloat(p.principal_amount || 0), 0),
+      interestCollected: completedPayments.reduce((sum, p) => sum + parseFloat(p.interest_amount || 0), 0),
+      penaltyCollected: completedPayments.reduce((sum, p) => sum + parseFloat(p.penalty_amount || 0), 0),
+    };
+
+    // Get today's expected payments from repayment schedules
+    const expectedPaymentsResult = await knex('money_loan_repayment_schedules as mlrs')
+      .select(knex.raw('COALESCE(SUM(mlrs.total_amount), 0) as total_expected'))
+      .where('mlrs.tenant_id', tenantId)
+      .whereBetween('mlrs.due_date', [todayStart, todayEnd])
+      .whereIn('mlrs.status', ['pending', 'partially_paid', 'overdue'])
+      .first();
+
+    const expectedAmount = parseFloat((expectedPaymentsResult as any)?.total_expected || 0);
+    const collectionRate = expectedAmount > 0 ? Math.min(100, Math.round((summary.totalAmount / expectedAmount) * 100)) : 0;
+
+    // Format payment details with customer names
+    const formattedPayments = payments.map(p => ({
+      id: p.id,
+      paymentReference: p.payment_reference,
+      loanNumber: p.loan_number,
+      customerName: `${p.customer_first_name || ''} ${p.customer_last_name || ''}`.trim() || 'Unknown',
+      amount: parseFloat(p.amount || 0),
+      principalAmount: parseFloat(p.principal_amount || 0),
+      interestAmount: parseFloat(p.interest_amount || 0),
+      penaltyAmount: parseFloat(p.penalty_amount || 0),
+      paymentMethod: p.payment_method,
+      paymentDate: p.payment_date,
+      status: p.status,
+      createdAt: p.created_at,
+    }));
+
+    return {
+      summary: {
+        ...summary,
+        expectedAmount,
+        collectionRate,
+      },
+      payments: formattedPayments,
+    };
+  }
+
   async generateRepaymentSchedule(tenantId: number, loanId: number) {
     const knex = this.knexService.instance;
 

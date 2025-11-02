@@ -4,9 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
-  IonTitle,
   IonContent,
-  IonButtons,
   IonBackButton,
   IonButton,
   IonIcon,
@@ -25,10 +23,13 @@ import {
   timeOutline,
   alertCircleOutline,
   walletOutline,
-  trendingUpOutline
+  trendingUpOutline,
+  moonOutline,
+  sunnyOutline
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 interface LoanDetails {
   id: number;
@@ -50,6 +51,7 @@ interface LoanDetails {
   productDescription: string;
   productMinAmount: number;
   productMaxAmount: number;
+  processingFee?: number;
   schedule: RepaymentSchedule[];
   payments: Payment[];
 }
@@ -81,12 +83,10 @@ interface Payment {
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonButtons,
-    IonBackButton,
+  IonHeader,
+  IonToolbar,
+  IonContent,
+  IonBackButton,
     IonButton,
     IonIcon,
     IonBadge,
@@ -99,7 +99,6 @@ interface Payment {
         <div class="toolbar-content">
           <div class="toolbar-left">
             <ion-back-button defaultHref="/customer/dashboard" class="icon-btn"></ion-back-button>
-            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
           </div>
           
           <div class="toolbar-center">
@@ -107,7 +106,12 @@ interface Payment {
           </div>
           
           <div class="toolbar-right">
-            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
+              <ion-icon 
+                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
+                slot="icon-only"
+              ></ion-icon>
+            </ion-button>
           </div>
         </div>
       </ion-toolbar>
@@ -185,33 +189,59 @@ interface Payment {
           </div>
 
           <!-- Loan Terms -->
-          <div class="section-card">
+          <div class="section-card compact-terms">
             <h2 class="section-title">
               <ion-icon name="document-text-outline"></ion-icon>
               Loan Terms
             </h2>
-            <div class="terms-grid">
-              <div class="term-item">
-                <p class="term-label">Interest Rate</p>
-                <p class="term-value">{{ loanDetails()!.interestRate }}% per annum</p>
-              </div>
-              <div class="term-item">
-                <p class="term-label">Loan Term</p>
-                <p class="term-value">{{ loanDetails()!.term }} months</p>
-              </div>
-              @if (getPaymentFrequency()) {
-                <div class="term-item">
-                  <p class="term-label">Payment Frequency</p>
-                  <p class="term-value">{{ getPaymentFrequency() }}</p>
+            <div class="terms-list">
+              <div class="term-list-item">
+                <ion-icon name="trending-up-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Interest Rate</p>
+                  <p class="term-list-value highlight">{{ loanDetails()!.interestRate }}% (Flat)</p>
                 </div>
-              }
-              <div class="term-item">
-                <p class="term-label">Disbursement Date</p>
-                <p class="term-value">{{ formatDate(loanDetails()!.disbursementDate) }}</p>
               </div>
-              <div class="term-item">
-                <p class="term-label">Maturity Date</p>
-                <p class="term-value">{{ formatDate(loanDetails()!.maturityDate) }}</p>
+              <div class="term-list-item">
+                <ion-icon name="calendar-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Loan Term</p>
+                  <p class="term-list-value">{{ loanDetails()!.term }} months</p>
+                </div>
+              </div>
+              <div class="term-list-item">
+                <ion-icon name="time-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Payment Frequency</p>
+                  <p class="term-list-value">{{ getPaymentFrequency() || 'Weekly' }}</p>
+                </div>
+              </div>
+              <div class="term-list-item">
+                <ion-icon name="card-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Processing Fee</p>
+                  <p class="term-list-value">{{ loanDetails()!.processingFee || '5.00' }}%</p>
+                </div>
+              </div>
+              <div class="term-list-item">
+                <ion-icon name="wallet-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Platform Fee</p>
+                  <div style="text-align: right;">
+                    <p class="term-list-value">₱50/mo</p>
+                    <p class="term-list-value muted">Only while loan is active</p>
+                  </div>
+                </div>
+              </div>
+              <div class="term-list-item">
+                <ion-icon name="alert-circle-outline" class="term-list-icon"></ion-icon>
+                <div class="term-list-content">
+                  <p class="term-list-label">Late Penalty</p>
+                  <div style="text-align: right;">
+                    <p class="term-list-value warning">10.00%/day</p>
+                    <p class="term-list-value muted">0 day grace period</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -252,7 +282,7 @@ interface Payment {
               <!-- Schedule Summary -->
               <div class="schedule-summary">
                 <div class="summary-item">
-                  <span class="summary-label">Total Payments</span>
+                  <span class="summary-label">Total</span>
                   <span class="summary-value">{{ loanDetails()!.schedule.length }}</span>
                 </div>
                 <div class="summary-item">
@@ -271,47 +301,49 @@ interface Payment {
 
               <div class="schedule-list">
                 @for (item of loanDetails()!.schedule; track item.id) {
-                  <div class="schedule-item" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.overdue]="item.status === 'overdue'">
-                    <div class="schedule-header">
-                      <div class="installment-info">
-                        <span class="installment-number">Payment #{{ item.installmentNumber }}</span>
-                        <span class="installment-date">{{ formatDate(item.dueDate) }}</span>
+                  <div class="schedule-card" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.overdue]="item.status === 'overdue'">
+                    <div class="schedule-card-header">
+                      <div class="schedule-number-date">
+                        <span class="schedule-number">#{{ item.installmentNumber }}</span>
+                        <span class="schedule-date">
+                          <ion-icon name="calendar-outline"></ion-icon>
+                          {{ formatDate(item.dueDate) }}
+                        </span>
                       </div>
                       <ion-badge 
                         [color]="getStatusColor(item.status)"
-                        class="schedule-status"
+                        class="schedule-badge"
                       >
                         {{ getScheduleStatusLabel(item.status) }}
                       </ion-badge>
                     </div>
-                    <div class="schedule-body">
-                      <div class="schedule-amounts-grid">
-                        <div class="schedule-amount-box">
-                          <span class="schedule-label">Principal</span>
-                          <span class="schedule-value">₱{{ formatCurrency(item.principalAmount) }}</span>
+                    <div class="schedule-card-body">
+                      <div class="schedule-grid">
+                        <div class="schedule-grid-item">
+                          <span class="grid-label">PRINCIPAL</span>
+                          <span class="grid-value">₱{{ formatCurrency(item.principalAmount) }}</span>
                         </div>
-                        <div class="schedule-amount-box">
-                          <span class="schedule-label">Interest</span>
-                          <span class="schedule-value">₱{{ formatCurrency(item.interestAmount) }}</span>
+                        <div class="schedule-grid-item">
+                          <span class="grid-label">INTEREST</span>
+                          <span class="grid-value">₱{{ formatCurrency(item.interestAmount) }}</span>
                         </div>
-                        <div class="schedule-amount-box total-box">
-                          <span class="schedule-label">Total Due</span>
-                          <span class="schedule-value total">₱{{ formatCurrency(item.totalAmount) }}</span>
+                        <div class="schedule-grid-item">
+                          <span class="grid-label">TOTAL</span>
+                          <span class="grid-value total">₱{{ formatCurrency(item.totalAmount) }}</span>
                         </div>
-                        @if (item.status !== 'paid') {
-                          <div class="schedule-amount-box outstanding-box">
-                            <span class="schedule-label">Outstanding</span>
-                            <span class="schedule-value outstanding">₱{{ formatCurrency(item.outstandingAmount) }}</span>
-                          </div>
-                        } @else {
-                          <div class="schedule-amount-box paid-box">
-                            <span class="schedule-label">Status</span>
-                            <span class="schedule-value paid-text">
+                        <div class="schedule-grid-item">
+                          <span class="grid-label">STATUS</span>
+                          @if (item.status === 'paid') {
+                            <span class="grid-value status-paid">
                               <ion-icon name="checkmark-circle-outline"></ion-icon>
                               Paid
                             </span>
-                          </div>
-                        }
+                          } @else if (item.status === 'pending') {
+                            <span class="grid-value status-pending">Pending</span>
+                          } @else {
+                            <span class="grid-value status-overdue">Overdue</span>
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -611,6 +643,155 @@ interface Payment {
       font-size: 1.25rem;
     }
 
+    /* Compact Terms Section */
+    .compact-terms {
+      padding: 1.25rem;
+    }
+
+    .terms-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .term-list-item {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.15));
+    }
+
+    .term-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .term-list-icon {
+      font-size: 1.15rem;
+      color: var(--ion-color-medium);
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .term-list-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .term-list-label {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    .term-list-value {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--ion-text-color);
+      margin: 0;
+      line-height: 1.3;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .term-list-value.highlight {
+      color: var(--ion-color-success);
+    }
+
+    .term-list-value.warning {
+      color: var(--ion-color-warning);
+    }
+
+    .term-list-value.muted {
+      font-size: 0.7rem;
+      opacity: 0.6;
+    }
+
+    @media (min-width: 400px) {
+      .term-list-label {
+        font-size: 0.85rem;
+      }
+
+      .term-list-value {
+        font-size: 0.85rem;
+      }
+
+      .term-list-value.muted {
+        font-size: 0.75rem;
+      }
+    }
+
+    /* Old compact grid styles - kept for backward compatibility */
+    .terms-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 500px) {
+      .terms-compact-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .term-compact-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.75rem;
+      background: var(--ion-item-background);
+      border-radius: 12px;
+      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
+    }
+
+    .term-compact-icon {
+      font-size: 1.25rem;
+      color: var(--ion-color-primary);
+      flex-shrink: 0;
+    }
+
+    .term-compact-content {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .term-compact-label {
+      font-size: 0.65rem;
+      color: var(--ion-color-medium);
+      margin: 0 0 0.2rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .term-compact-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin: 0;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media (min-width: 400px) {
+      .term-compact-label {
+        font-size: 0.7rem;
+      }
+
+      .term-compact-value {
+        font-size: 0.9rem;
+      }
+    }
+
     /* Terms Grid */
     .terms-grid {
       display: grid;
@@ -702,9 +883,9 @@ interface Payment {
     .schedule-summary {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0.75rem;
+      gap: 0.5rem;
       margin-bottom: 1.25rem;
-      padding: 1rem;
+      padding: 0.75rem;
       background: var(--ion-background-color);
       border-radius: 12px;
       border: 1px solid var(--ion-border-color, #e5e7eb);
@@ -714,21 +895,47 @@ interface Payment {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.15rem;
     }
 
     .summary-label {
-      font-size: 0.7rem;
+      font-size: 0.6rem;
       color: var(--ion-color-medium);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       font-weight: 600;
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .summary-label {
+        font-size: 0.65rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .summary-label {
+        font-size: 0.7rem;
+      }
     }
 
     .summary-value {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--ion-text-color);
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .summary-value {
+        font-size: 1.35rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .summary-value {
+        font-size: 1.5rem;
+      }
     }
 
     .summary-value.paid {
@@ -747,14 +954,210 @@ interface Payment {
     .schedule-list {
       display: flex;
       flex-direction: column;
+      gap: 1rem;
+    }
+
+    .schedule-card {
+      background: var(--ion-item-background);
+      border: 2px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
+      border-radius: 16px;
+      padding: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .schedule-card.paid {
+      border-color: var(--ion-color-success);
+    }
+
+    .schedule-card.pending {
+      border-color: var(--ion-border-color, rgba(148, 163, 184, 0.2));
+    }
+
+    .schedule-card.overdue {
+      border-color: var(--ion-color-danger);
+    }
+
+    .schedule-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .schedule-number-date {
+      display: flex;
+      align-items: center;
       gap: 0.75rem;
     }
 
+    .schedule-number {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    .schedule-date {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .schedule-date ion-icon {
+      font-size: 0.85rem;
+    }
+
+    .schedule-badge {
+      font-size: 0.7rem;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      border-radius: 12px;
+    }
+
+    .schedule-card-body {
+      background: var(--ion-background-color, rgba(148, 163, 184, 0.05));
+      border-radius: 12px;
+      padding: 0.85rem;
+    }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .schedule-grid-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .grid-label {
+      font-size: 0.65rem;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .grid-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      line-height: 1.2;
+    }
+
+    .grid-value.total {
+      color: #3b82f6;
+      font-size: 1.1rem;
+    }
+
+    .grid-value.status-paid {
+      color: var(--ion-color-success);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .grid-value.status-paid ion-icon {
+      font-size: 1.1rem;
+    }
+
+    .grid-value.status-pending {
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+
+    .grid-value.status-overdue {
+      color: var(--ion-color-danger);
+      font-size: 0.9rem;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-card {
+        padding: 1.15rem;
+      }
+
+      .schedule-card-body {
+        padding: 1rem;
+      }
+
+      .grid-label {
+        font-size: 0.7rem;
+      }
+
+      .grid-value {
+        font-size: 1.05rem;
+      }
+
+      .grid-value.total {
+        font-size: 1.15rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-card {
+        padding: 1.25rem;
+      }
+
+      .schedule-number {
+        font-size: 1.15rem;
+      }
+
+      .schedule-date {
+        font-size: 0.8rem;
+      }
+
+      .schedule-card-body {
+        padding: 1.1rem;
+      }
+
+      .schedule-grid {
+        gap: 0.85rem;
+      }
+
+      .grid-label {
+        font-size: 0.75rem;
+      }
+
+      .grid-value {
+        font-size: 1.1rem;
+      }
+
+      .grid-value.total {
+        font-size: 1.2rem;
+      }
+
+      .grid-value.status-paid {
+        font-size: 0.95rem;
+      }
+
+      .grid-value.status-paid ion-icon {
+        font-size: 1.15rem;
+      }
+    }
+
+    /* Old schedule styles - keeping for backward compatibility */
     .schedule-item {
       background: var(--ion-item-background);
       border: 1px solid var(--ion-border-color, #e5e7eb);
       border-radius: 12px;
-      padding: 1rem;
+      padding: 0.75rem;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-item {
+        padding: 0.85rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-item {
+        padding: 1rem;
+      }
     }
 
     .schedule-item.paid {
@@ -771,29 +1174,62 @@ interface Payment {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--ion-border-color, #e5e7eb);
+    }
+
+    @media (min-width: 500px) {
+      .schedule-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+      }
     }
 
     .installment-info {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.2rem;
     }
 
     .installment-number {
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-weight: 700;
       color: var(--ion-text-color);
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .installment-number {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .installment-number {
+        font-size: 0.95rem;
+      }
     }
 
     .installment-date {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       color: var(--ion-color-medium);
       display: flex;
       align-items: center;
       gap: 0.25rem;
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .installment-date {
+        font-size: 0.75rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .installment-date {
+        font-size: 0.8rem;
+      }
     }
 
     .installment-date::before {
@@ -802,9 +1238,16 @@ interface Payment {
     }
 
     .schedule-status {
-      font-size: 0.7rem;
-      padding: 0.3rem 0.7rem;
+      font-size: 0.65rem;
+      padding: 0.25rem 0.6rem;
       font-weight: 600;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-status {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.7rem;
+      }
     }
 
     .schedule-body {
@@ -815,17 +1258,53 @@ interface Payment {
     .schedule-amounts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
+      gap: 0.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    @media (min-width: 500px) {
+      .schedule-amounts-grid {
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .schedule-total-row {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    @media (min-width: 500px) {
+      .schedule-total-row {
+        gap: 0.5rem;
+      }
+    }
+
+    .schedule-total-row .schedule-amount-box {
+      flex: 1;
     }
 
     .schedule-amount-box {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
-      padding: 0.75rem;
+      gap: 0.15rem;
+      padding: 0.5rem;
       background: var(--ion-background-color);
       border-radius: 8px;
       border: 1px solid var(--ion-border-color, #e5e7eb);
+    }
+
+    @media (min-width: 400px) {
+      .schedule-amount-box {
+        padding: 0.55rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-amount-box {
+        gap: 0.2rem;
+        padding: 0.6rem;
+      }
     }
 
     .schedule-amount-box.total-box {
@@ -841,43 +1320,112 @@ interface Payment {
     .schedule-amount-box.paid-box {
       background: rgba(16, 185, 129, 0.05);
       border-color: rgba(16, 185, 129, 0.2);
-      grid-column: span 2;
     }
 
     .schedule-label {
-      font-size: 0.7rem;
+      font-size: 0.55rem;
       color: var(--ion-color-medium);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       font-weight: 600;
+      line-height: 1.1;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-label {
+        font-size: 0.6rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.4px;
+      }
     }
 
     .schedule-value {
-      font-size: 1rem;
+      font-size: 0.8rem;
       color: var(--ion-text-color);
       font-weight: 600;
+      line-height: 1.1;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-value {
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-value {
+        font-size: 0.9rem;
+      }
     }
 
     .schedule-value.total {
       color: #3b82f6;
-      font-size: 1.1rem;
+      font-size: 0.85rem;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-value.total {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-value.total {
+        font-size: 0.95rem;
+      }
     }
 
     .schedule-value.outstanding {
       color: var(--ion-color-danger);
-      font-size: 1.1rem;
+      font-size: 0.85rem;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-value.outstanding {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-value.outstanding {
+        font-size: 0.95rem;
+      }
     }
 
     .schedule-value.paid-text {
       color: var(--ion-color-success);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 1.1rem;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+    }
+
+    @media (min-width: 400px) {
+      .schedule-value.paid-text {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .schedule-value.paid-text {
+        gap: 0.4rem;
+        font-size: 0.95rem;
+      }
     }
 
     .schedule-value.paid-text ion-icon {
-      font-size: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    @media (min-width: 500px) {
+      .schedule-value.paid-text ion-icon {
+        font-size: 1.2rem;
+      }
     }
 
     /* Payments List */
@@ -966,7 +1514,8 @@ export class LoanDetailsPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: ApiService,
-    private authService: AuthService,
+    public authService: AuthService,
+    public themeService: ThemeService,
     private toastController: ToastController
   ) {
     addIcons({
@@ -978,7 +1527,9 @@ export class LoanDetailsPage implements OnInit {
       timeOutline,
       alertCircleOutline,
       walletOutline,
-      trendingUpOutline
+      trendingUpOutline,
+      moonOutline,
+      sunnyOutline
     });
   }
 
@@ -988,6 +1539,10 @@ export class LoanDetailsPage implements OnInit {
       this.loanId.set(parseInt(id));
       this.loadLoanDetails();
     }
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
   }
 
   async loadLoanDetails() {

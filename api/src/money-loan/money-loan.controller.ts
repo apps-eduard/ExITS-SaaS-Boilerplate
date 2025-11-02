@@ -200,6 +200,16 @@ export class MoneyLoanController {
     };
   }
 
+  @Get('payments/today')
+  @Permissions('money-loan:read')
+  async getTodayCollections(@Req() req: any) {
+    const collections = await this.moneyLoanService.getTodayCollections(req.user.tenantId);
+    return {
+      success: true,
+      data: collections,
+    };
+  }
+
   @Get('loans/:id/schedule')
   @Permissions('money-loan:read')
   async getRepaymentSchedule(@Param('id') id: string, @Req() req: any) {

@@ -56,9 +56,7 @@ interface Loan {
     CommonModule,
     IonHeader,
     IonToolbar,
-    IonTitle,
     IonContent,
-    IonButtons,
     IonButton,
     IonIcon,
     IonBadge,
@@ -75,7 +73,6 @@ interface Loan {
             <ion-button (click)="goBack()" class="icon-btn" fill="clear">
               <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
             </ion-button>
-            <span class="info-text">{{ authService.currentUser()?.tenant?.name || 'Tenant' }}</span>
           </div>
           
           <div class="toolbar-center">
@@ -84,7 +81,12 @@ interface Loan {
           </div>
           
           <div class="toolbar-right">
-            <span class="info-text">{{ authService.currentUser()?.firstName || 'User' }}</span>
+            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
+              <ion-icon 
+                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
+                slot="icon-only"
+              ></ion-icon>
+            </ion-button>
           </div>
         </div>
       </ion-toolbar>
@@ -759,7 +761,7 @@ export class CustomerLoansPage implements OnInit {
 
   constructor(
     private apiService: ApiService,
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router,
     public themeService: ThemeService,
     private toastController: ToastController
@@ -781,6 +783,10 @@ export class CustomerLoansPage implements OnInit {
 
   ngOnInit() {
     this.loadLoans();
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
   }
 
   async loadLoans() {

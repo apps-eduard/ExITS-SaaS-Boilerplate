@@ -204,7 +204,7 @@ export const routes: Routes = [
       },
       {
         path: 'payments/today',
-        loadComponent: () => import('./features/platforms/money-loan/admin/payments/payment-processing.component').then(m => m.PaymentProcessingComponent)
+        loadComponent: () => import('./features/platforms/money-loan/admin/payments/today-collections.component').then(m => m.TodayCollectionsComponent)
       },
       {
         path: 'payments/history',

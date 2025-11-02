@@ -90,6 +90,7 @@ interface DisbursementData {
               <select 
                 [(ngModel)]="disbursementData.disbursementMethod"
                 name="disbursementMethod"
+                (ngModelChange)="onDisbursementMethodChange($event)"
                 required
                 class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500">
                 <option value="">Select Method</option>
@@ -105,13 +106,20 @@ interface DisbursementData {
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Reference Number <span class="text-red-500">*</span>
+                @if (disbursementData.disbursementMethod === 'cash') {
+                  <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(Auto-generated)</span>
+                }
               </label>
               <input 
                 type="text"
                 [(ngModel)]="disbursementData.disbursementReference"
                 name="disbursementReference"
                 required
-                placeholder="Enter transaction reference number"
+                [readonly]="disbursementData.disbursementMethod === 'cash'"
+                [placeholder]="disbursementData.disbursementMethod === 'cash' ? 'Auto-generated for cash' : 'Enter transaction reference number'"
+                [class.bg-gray-100]="disbursementData.disbursementMethod === 'cash'"
+                [class.dark:bg-gray-900]="disbursementData.disbursementMethod === 'cash'"
+                [class.cursor-not-allowed]="disbursementData.disbursementMethod === 'cash'"
                 class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-blue-500">
             </div>
 
@@ -370,6 +378,30 @@ export class LoanDisbursementComponent implements OnInit {
       disbursementReference: '',
       disbursementNotes: ''
     };
+  }
+
+  onDisbursementMethodChange(method: string): void {
+    if (method === 'cash') {
+      // Auto-generate reference number for cash disbursements
+      this.disbursementData.disbursementReference = this.generateCashReference();
+    } else {
+      // Clear the reference number for other methods
+      if (this.disbursementData.disbursementReference.startsWith('CASH-')) {
+        this.disbursementData.disbursementReference = '';
+      }
+    }
+  }
+
+  generateCashReference(): string {
+    const loan = this.selectedLoan();
+    const date = new Date();
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+    const timeStr = date.getHours().toString().padStart(2, '0') + 
+                   date.getMinutes().toString().padStart(2, '0') + 
+                   date.getSeconds().toString().padStart(2, '0');
+    const loanNumber = loan?.loanNumber || 'UNKNOWN';
+    
+    return `CASH-${dateStr}-${timeStr}-${loanNumber}`;
   }
 
   closeDisbursementModal(): void {
