@@ -234,6 +234,7 @@ exports.seed = async function(knex) {
     { permission_key: 'customer-profile:update', resource: 'customer-profile', action: 'update', description: 'Update own customer profile', space: 'customer' },
     { permission_key: 'customer-loans:read', resource: 'customer-loans', action: 'read', description: 'View own loans', space: 'customer' },
     { permission_key: 'customer-loans:apply', resource: 'customer-loans', action: 'apply', description: 'Apply for new loan', space: 'customer' },
+    { permission_key: 'customer-loan-products:read', resource: 'customer-loan-products', action: 'read', description: 'View available loan products', space: 'customer' },
     { permission_key: 'customer-payments:read', resource: 'customer-payments', action: 'read', description: 'View own payment history', space: 'customer' },
     { permission_key: 'customer-payments:create', resource: 'customer-payments', action: 'create', description: 'Make loan payments', space: 'customer' },
     { permission_key: 'customer-dashboard:view', resource: 'customer-dashboard', action: 'view', description: 'View customer dashboard', space: 'customer' }
@@ -317,10 +318,11 @@ exports.seed = async function(knex) {
   
   // Tenant admins
   const tenantAdmins = [];
+  const tenantAdminEmails = ['admin@acme.com', 'admin@techstart.com'];
   for (let i = 0; i < tenants.length; i++) {
     const [tenantAdmin] = await knex('users').insert({
       tenant_id: tenants[i].id,
-      email: `admin-${i+1}@example.com`,
+      email: tenantAdminEmails[i],
       password_hash: passwordHash,
       first_name: 'Tenant',
       last_name: 'Admin',
@@ -330,140 +332,100 @@ exports.seed = async function(knex) {
     tenantAdmins.push(tenantAdmin);
   }
   
-  // Create test customers (only for ACME Corporation - tenant 2)
-  const acmeTenant = tenants.find(t => t.name === 'ACME Corporation');
-  if (acmeTenant) {
-    console.log('5a. Creating test customers for ACME Corporation...');
-    const customerPasswordHash = await bcrypt.hash('Admin@123', 10);
-    
-    const testCustomersData = [
-      {
-        email: 'juan.delacruz@test.com',
-        firstName: 'Juan',
-        middleName: 'Santos',
-        lastName: 'Dela Cruz',
-        customerCode: 'CUST-2025-001',
-        phone: '+639171234567',
-        dateOfBirth: '1990-05-15',
-        gender: 'male',
-        civilStatus: 'married',
-        idType: 'national_id',
-        idNumber: 'NID-TEST-001',
-        employer: 'ABC Corporation',
-        occupation: 'Software Engineer',
-        monthlyIncome: 45000,
-        yearsEmployed: 3,
-        creditScore: 720,
-        riskLevel: 'low'
-      },
-      {
-        email: 'maria.santos@test.com',
-        firstName: 'Maria',
-        middleName: 'Garcia',
-        lastName: 'Santos',
-        customerCode: 'CUST-2025-002',
-        phone: '+639181234567',
-        dateOfBirth: '1985-08-22',
-        gender: 'female',
-        civilStatus: 'single',
-        idType: 'drivers_license',
-        idNumber: 'DL-TEST-002',
-        employer: 'Maria\'s Catering Services',
-        occupation: 'Business Owner',
-        monthlyIncome: 35000,
-        yearsEmployed: 2,
-        creditScore: 680,
-        riskLevel: 'medium'
-      },
-      {
-        email: 'pedro.gonzales@test.com',
-        firstName: 'Pedro',
-        middleName: 'Reyes',
-        lastName: 'Gonzales',
-        customerCode: 'CUST-2025-003',
-        phone: '+639191234567',
-        dateOfBirth: '1995-03-10',
-        gender: 'male',
-        civilStatus: 'single',
-        idType: 'umid',
-        idNumber: 'UMID-TEST-003',
-        employer: 'XYZ Manufacturing Inc.',
-        occupation: 'Factory Supervisor',
-        monthlyIncome: 28000,
-        yearsEmployed: 1,
-        creditScore: 620,
-        riskLevel: 'medium'
-      }
-    ];
-    
-    for (const testCustomer of testCustomersData) {
-      // Create user account for customer
-      const [customerUser] = await knex('users').insert({
-        tenant_id: acmeTenant.id,
-        email: testCustomer.email,
-        password_hash: customerPasswordHash,
-        first_name: testCustomer.firstName,
-        last_name: testCustomer.lastName,
-        status: 'active',
-        email_verified: true
-      }).returning('*');
-      
-      // Create customer record (only shared personal info)
-      const [customer] = await knex('customers').insert({
-        tenant_id: acmeTenant.id,
-        user_id: customerUser.id,
-        customer_code: testCustomer.customerCode,
-        customer_type: 'individual',
-        first_name: testCustomer.firstName,
-        middle_name: testCustomer.middleName,
-        last_name: testCustomer.lastName,
-        date_of_birth: testCustomer.dateOfBirth,
-        gender: testCustomer.gender,
-        civil_status: testCustomer.civilStatus,
-        email: testCustomer.email,
-        phone: testCustomer.phone,
-        id_type: testCustomer.idType,
-        id_number: testCustomer.idNumber,
-        employment_status: 'employed',
-        employer_name: testCustomer.employer,
-        occupation: testCustomer.occupation,
-        monthly_income: testCustomer.monthlyIncome,
-        source_of_income: 'Salary',
-        years_employed: testCustomer.yearsEmployed,
-        status: 'active',
-        emergency_contact_name: 'Emergency Contact',
-        emergency_contact_relationship: 'Family',
-        emergency_contact_phone: testCustomer.phone.replace('9', '8')
-      }).returning('*');
-
-      // Create Money Loan profile with business-specific data
-      await knex('money_loan_customer_profiles').insert({
-        customer_id: customer.id,
-        tenant_id: acmeTenant.id,
-        credit_score: testCustomer.creditScore,
-        risk_level: testCustomer.riskLevel,
-        kyc_status: 'verified',
-        kyc_verified_at: new Date(),
-        status: 'active'
-      });
-    }
-    console.log(`✅ Created ${testCustomersData.length} test customers with Money Loan profiles`);
-  }
-  
-  // Create employees and additional customers for both tenants
-  console.log('5b. Creating employees and customers for all tenants...');
-  const employeePasswordHash = await bcrypt.hash('Admin@123', 10);
-  const additionalCustomerPasswordHash = await bcrypt.hash('Admin@123', 10);
+  // Create test customers - 1 per tenant (ACME & TechStart)
+  console.log('5a. Creating test customers for all tenants...');
+  const customerPasswordHash = await bcrypt.hash('Admin@123', 10);
   
   for (const tenant of tenants) {
     const tenantSubdomain = tenant.name === 'ACME Corporation' ? 'acme' : 
                             tenant.name === 'TechStart Solutions' ? 'techstart' : null;
     
-    if (!tenantSubdomain) continue; // Skip if subdomain not found
+    if (!tenantSubdomain) continue;
     
-    // Use tenantId (camelCase) because Knex converts it
-    const employeeRoleForTenant = employeeRoles.find(r => r.tenantId === tenant.id);
     const customerRoleForTenant = customerRoles.find(r => r.tenantId === tenant.id);
+    const customerCode = `CUST-${tenantSubdomain.toUpperCase()}-0001`;
+    const customerEmail = `customer1@${tenantSubdomain}.com`;
+    
+    // Create user account for customer
+    const [customerUser] = await knex('users').insert({
+      tenant_id: tenant.id,
+      email: customerEmail,
+      password_hash: customerPasswordHash,
+      first_name: tenantSubdomain === 'acme' ? 'Maria' : 'Juan',
+      last_name: tenantSubdomain === 'acme' ? 'Santos' : 'Dela Cruz',
+      status: 'active',
+      email_verified: true
+    }).returning('*');
+    
+    // Assign customer role
+    await knex('user_roles').insert({
+      user_id: customerUser.id,
+      role_id: customerRoleForTenant.id
+    });
+    
+    // Create customer record
+    const [customer] = await knex('customers').insert({
+      tenant_id: tenant.id,
+      user_id: customerUser.id,
+      customer_code: customerCode,
+      customer_type: 'individual',
+      first_name: tenantSubdomain === 'acme' ? 'Maria' : 'Juan',
+      middle_name: tenantSubdomain === 'acme' ? 'Reyes' : 'Pedro',
+      last_name: tenantSubdomain === 'acme' ? 'Santos' : 'Dela Cruz',
+      date_of_birth: tenantSubdomain === 'acme' ? '1990-05-15' : '1988-08-22',
+      gender: tenantSubdomain === 'acme' ? 'female' : 'male',
+      civil_status: tenantSubdomain === 'acme' ? 'single' : 'married',
+      email: customerEmail,
+      phone: tenantSubdomain === 'acme' ? '+639171234567' : '+639189876543',
+      id_type: 'umid',
+      id_number: tenantSubdomain === 'acme' ? 'UMID-001-ACME' : 'UMID-001-TECH',
+      employment_status: 'employed',
+      employer_name: tenantSubdomain === 'acme' ? 'ABC Corporation' : 'XYZ Industries',
+      occupation: tenantSubdomain === 'acme' ? 'Software Engineer' : 'Sales Manager',
+      monthly_income: tenantSubdomain === 'acme' ? 55000 : 48000,
+      source_of_income: 'Salary',
+      years_employed: tenantSubdomain === 'acme' ? 3 : 5,
+      nationality: 'Filipino',
+      status: 'active',
+      preferred_language: 'en',
+      preferred_contact_method: 'sms',
+      emergency_contact_name: tenantSubdomain === 'acme' ? 'Rosa Santos' : 'Ana Dela Cruz',
+      emergency_contact_relationship: tenantSubdomain === 'acme' ? 'Mother' : 'Wife',
+      emergency_contact_phone: tenantSubdomain === 'acme' ? '+639171234568' : '+639189876544',
+      platform_tags: JSON.stringify(['moneyloan'])
+    }).returning('*');
+    
+    // Create Money Loan customer profile
+    await knex('money_loan_customer_profiles').insert({
+      customer_id: customer.id,
+      tenant_id: tenant.id,
+      credit_score: tenantSubdomain === 'acme' ? 720 : 680,
+      risk_level: tenantSubdomain === 'acme' ? 'low' : 'medium',
+      kyc_status: 'verified',
+      kyc_verified_at: new Date(),
+      max_loan_amount: 100000,
+      current_loan_limit: 100000,
+      outstanding_balance: 0,
+      on_time_payment_rate: 100,
+      auto_debit_enabled: false,
+      preferred_payment_day: 15,
+      status: 'active'
+    });
+  }
+  
+  console.log(`✅ Created 1 customer for ACME and 1 for TechStart with Money Loan profiles`);
+  
+  // Create employees for both tenants
+  console.log('5b. Creating employees for all tenants...');
+  const employeePasswordHash = await bcrypt.hash('Admin@123', 10);
+  
+  for (const tenant of tenants) {
+    const tenantSubdomain = tenant.name === 'ACME Corporation' ? 'acme' : 
+                            tenant.name === 'TechStart Solutions' ? 'techstart' : null;
+    
+    if (!tenantSubdomain) continue;
+    
+    const employeeRoleForTenant = employeeRoles.find(r => r.tenantId === tenant.id);
     
     // Create 2 employees
     for (let i = 1; i <= 2; i++) {
@@ -516,72 +478,9 @@ exports.seed = async function(knex) {
         assigned_date: new Date()
       });
     }
-    
-    // Create 2 additional customers (with user accounts for portal access)
-    for (let i = 1; i <= 2; i++) {
-      const customerCode = `CUST-${tenantSubdomain.toUpperCase()}-${String(i).padStart(4, '0')}`;
-      const customerEmail = `customer${i}@${tenantSubdomain}.com`;
-      
-      // Create user account for customer
-      const [customerUser] = await knex('users').insert({
-        tenant_id: tenant.id,
-        email: customerEmail,
-        password_hash: additionalCustomerPasswordHash,
-        first_name: `Customer${i}`,
-        last_name: tenant.name.split(' ')[0],
-        status: 'active',
-        email_verified: true
-      }).returning('*');
-      
-      // Assign customer role
-      await knex('user_roles').insert({
-        user_id: customerUser.id,
-        role_id: customerRoleForTenant.id
-      });
-      
-      // Create customer record (only shared personal info)
-      const [customer] = await knex('customers').insert({
-        tenant_id: tenant.id,
-        user_id: customerUser.id, // With login access
-        customer_code: customerCode,
-        customer_type: 'individual',
-        first_name: `Customer${i}`,
-        last_name: tenant.name.split(' ')[0],
-        email: customerEmail,
-        phone: `+63 917 ${String(tenant.id * 100000 + i).padStart(7, '0')}`,
-        date_of_birth: i === 1 ? '1985-05-15' : '1990-08-22',
-        gender: i === 1 ? 'male' : 'female',
-        nationality: 'Filipino',
-        civil_status: i === 1 ? 'single' : 'married',
-        employment_status: 'employed',
-        employer_name: i === 1 ? 'ABC Company' : 'XYZ Corporation',
-        occupation: i === 1 ? 'Software Engineer' : 'Sales Manager',
-        monthly_income: 50000 + (i * 10000),
-        status: 'active',
-        preferred_language: 'en',
-        preferred_contact_method: 'sms',
-        platform_tags: JSON.stringify(['moneyloan'])
-      }).returning('*');
-      
-      // Create Money Loan customer profile with business-specific data
-      await knex('money_loan_customer_profiles').insert({
-        customer_id: customer.id,
-        tenant_id: tenant.id,
-        credit_score: 700 + (i * 50),
-        risk_level: 'low',
-        kyc_status: 'verified',
-        max_loan_amount: 100000,
-        current_loan_limit: 100000,
-        outstanding_balance: 0,
-        on_time_payment_rate: 100,
-        auto_debit_enabled: false,
-        preferred_payment_day: 15,
-        status: 'active'
-      });
-    }
   }
   
-  console.log(`✅ Employees and customers created for all tenants`);
+  console.log(`✅ Employees created for all tenants`);
   
   console.log(`✅ 1 system user + ${tenantAdmins.length} tenant users created`);
 
@@ -718,6 +617,8 @@ exports.seed = async function(knex) {
   
   console.log('\n🔑 Login credentials:');
   console.log('   System Admin: admin@exitsaas.com / Admin@123');
-  console.log('   Tenant Admin 1: admin-1@example.com / Admin@123');
-  console.log('   Tenant Admin 2: admin-2@example.com / Admin@123');
+  console.log('   ACME Tenant Admin: admin@acme.com / Admin@123');
+  console.log('   TechStart Tenant Admin: admin@techstart.com / Admin@123');
+  console.log('   ACME Customer: customer1@acme.com / Admin@123');
+  console.log('   TechStart Customer: customer1@techstart.com / Admin@123');
 };

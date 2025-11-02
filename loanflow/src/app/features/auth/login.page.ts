@@ -167,13 +167,13 @@ import { ThemeService } from '../../core/services/theme.service';
             </div>
           </div>
 
-          <!-- Collector Quick Logins -->
+          <!-- Employee Quick Logins -->
           <div 
-            class="quick-login-card collector-card"
+            class="quick-login-card employee-card"
             (click)="quickLogin(testUsers[2])"
           >
             <div class="quick-card-content">
-              <div class="user-avatar collector-avatar">
+              <div class="user-avatar employee-avatar">
                 <span class="avatar-text">{{ testUsers[2].initials }}</span>
               </div>
               <div class="user-info">
@@ -185,11 +185,11 @@ import { ThemeService } from '../../core/services/theme.service';
           </div>
 
           <div 
-            class="quick-login-card collector-card"
+            class="quick-login-card employee-card"
             (click)="quickLogin(testUsers[3])"
           >
             <div class="quick-card-content">
-              <div class="user-avatar collector-avatar">
+              <div class="user-avatar employee-avatar">
                 <span class="avatar-text">{{ testUsers[3].initials }}</span>
               </div>
               <div class="user-info">
@@ -421,12 +421,12 @@ import { ThemeService } from '../../core/services/theme.service';
       background: rgba(45, 211, 111, 0.1);
     }
 
-    .collector-card {
+    .employee-card {
       border-color: var(--ion-color-primary);
       background: rgba(56, 128, 255, 0.05);
     }
 
-    .collector-card:hover {
+    .employee-card:hover {
       background: rgba(56, 128, 255, 0.1);
     }
 
@@ -450,7 +450,7 @@ import { ThemeService } from '../../core/services/theme.service';
       background: linear-gradient(135deg, #2dd36f, #1ab759);
     }
 
-    .collector-avatar {
+    .employee-avatar {
       background: linear-gradient(135deg, #3880ff, #2563eb);
     }
 
@@ -553,13 +553,13 @@ import { ThemeService } from '../../core/services/theme.service';
       background: rgba(45, 211, 111, 0.15);
     }
 
-    body.dark .collector-card,
-    .dark .collector-card {
+    body.dark .employee-card,
+    .dark .employee-card {
       background: rgba(66, 140, 255, 0.08);
     }
 
-    body.dark .collector-card:hover,
-    .dark .collector-card:hover {
+    body.dark .employee-card:hover,
+    .dark .employee-card:hover {
       background: rgba(66, 140, 255, 0.15);
     }
   `]
@@ -571,10 +571,10 @@ export class LoginPage {
 
   // Quick login test users (matching database seed)
   testUsers = [
-    { email: 'customer1@test.com', password: 'Admin@123', name: 'Maria Santos', role: 'Customer', initials: 'MS' },
-    { email: 'customer2@test.com', password: 'Admin@123', name: 'Juan Dela Cruz', role: 'Customer', initials: 'JD' },
-    { email: 'collector1@test.com', password: 'Admin@123', name: 'Pedro Reyes', role: 'Collector', initials: 'PR' },
-    { email: 'collector2@test.com', password: 'Admin@123', name: 'Ana Garcia', role: 'Collector', initials: 'AG' }
+    { email: 'customer1@acme.com', password: 'Admin@123', name: 'Maria Santos', role: 'Customer (ACME)', initials: 'MS' },
+    { email: 'customer1@techstart.com', password: 'Admin@123', name: 'Juan Dela Cruz', role: 'Customer (TechStart)', initials: 'JD' },
+    { email: 'employee1@acme.com', password: 'Admin@123', name: 'Employee 1', role: 'Employee (ACME)', initials: 'E1' },
+    { email: 'employee1@techstart.com', password: 'Admin@123', name: 'Employee 1', role: 'Employee (TechStart)', initials: 'E1' }
   ];
 
   constructor(
@@ -613,7 +613,7 @@ export class LoginPage {
       
       // Navigate based on role (case-insensitive comparison)
       const role = user?.role?.toLowerCase();
-      if (role === 'collector') {
+      if (role === 'employee' || role === 'collector') {
         console.log('Navigating to collector route...');
         await this.router.navigate(['/collector/route']);
       } else {

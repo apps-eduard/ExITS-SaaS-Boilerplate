@@ -242,7 +242,7 @@ interface RecentLoan {
             </button>
 
             <button
-              routerLink="/customer/products"
+              routerLink="/customer/apply"
               class="action-btn action-warning"
             >
               <div class="action-icon-wrapper action-icon-warning">
@@ -1070,23 +1070,93 @@ export class CustomerDashboardPage implements OnInit {
   async loadDashboardData() {
     this.loading.set(true);
     try {
-      const customerId = this.authService.getCurrentUserId();
-      if (customerId) {
-        // Load dashboard stats
-        const dashboardData = await this.apiService.getCustomerDashboard(customerId).toPromise();
-        this.stats.set(dashboardData.stats);
-        
-        // Load recent loans
-        const loans = await this.apiService.getCustomerLoans(customerId).toPromise();
-        this.recentLoans.set(loans || []);
+      const user = this.authService.currentUser();
+      console.log('Current user:', user);
+      
+      // For customer portal, use the customerId from the user object
+      const customerId = (user as any)?.customerId || user?.id || this.authService.getCurrentUserId();
+      
+      console.log('Customer ID:', customerId);
+      
+      if (!customerId) {
+        console.warn('No customer ID found');
+        this.setMockData();
+        return;
       }
+
+      console.log('Fetching dashboard data for customer:', customerId);
+
+      // Fetch dashboard data and loans in parallel
+      const [dashboardData, loansData] = await Promise.all([
+        this.apiService.getCustomerDashboard(customerId).toPromise(),
+        this.apiService.getCustomerLoans(customerId).toPromise()
+      ]);
+
+      console.log('Dashboard data received:', dashboardData);
+      console.log('Loans data received:', loansData);
+
+      // Update stats from dashboard data
+      if (dashboardData) {
+        this.stats.set({
+          totalLoans: dashboardData.totalLoans || 0,
+          activeLoans: dashboardData.activeLoans || 0,
+          totalBorrowed: dashboardData.totalBorrowed || 0,
+          totalPaid: dashboardData.totalPaid || 0,
+          remainingBalance: dashboardData.remainingBalance || 0,
+          nextPaymentAmount: dashboardData.nextPaymentAmount || 0,
+          nextPaymentDate: dashboardData.nextPaymentDate || 'N/A'
+        });
+      }
+
+      // Update loans list
+      if (loansData && Array.isArray(loansData)) {
+        // Map API response to our loan interface
+        const mappedLoans = loansData.slice(0, 5).map((loan: any) => ({
+          id: loan.id,
+          loanNumber: loan.loanNumber || loan.loan_number || `LN-${loan.id}`,
+          amount: loan.amount || loan.principal_amount || 0,
+          balance: loan.balance || loan.remaining_balance || loan.outstanding_balance || 0,
+          status: this.mapLoanStatus(loan.status),
+          dueDate: loan.dueDate || loan.next_payment_date || loan.due_date || 'N/A'
+        }));
+        console.log('Mapped loans:', mappedLoans);
+        this.recentLoans.set(mappedLoans);
+      }
+
+      console.log('Dashboard data loaded successfully');
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      // Set mock data for development
-      this.setMockData();
+      // Only show mock data in development
+      if (window.location.hostname === 'localhost') {
+        console.warn('Using mock data for development');
+        this.setMockData();
+      } else {
+        // Show error toast in production
+        const toast = await this.toastController.create({
+          message: 'Failed to load dashboard data',
+          duration: 3000,
+          position: 'bottom',
+          color: 'danger'
+        });
+        await toast.present();
+      }
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Map API loan status to display status
+   */
+  private mapLoanStatus(apiStatus: string): 'active' | 'completed' | 'overdue' {
+    const status = (apiStatus || '').toLowerCase();
+    if (status === 'paid' || status === 'completed' || status === 'closed') {
+      return 'completed';
+    }
+    if (status === 'overdue' || status === 'late' || status === 'delinquent') {
+      return 'overdue';
+    }
+    return 'active';
   }
 
   setMockData() {

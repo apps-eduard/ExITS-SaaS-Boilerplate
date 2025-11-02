@@ -69,6 +69,7 @@ export class ApiService {
    * Loan-specific API calls
    */
   getCustomerLoans(customerId: number | string): Observable<any[]> {
+    console.log(`🔵 API Call: GET ${this.apiUrl}/loans/customer/${customerId}`);
     return this.get<any[]>(`loans/customer/${customerId}`);
   }
 

@@ -8,6 +8,9 @@ const bcrypt = require('bcryptjs');
 
 exports.seed = async function(knex) {
   console.log('\n🔧 Seeding LoanFlow Mobile App Test Users...\n');
+  console.log('⏭️  SKIPPED - Customers are now created in 01_initial_data.js');
+  console.log('   Using customer1@acme.com and customer1@techstart.com instead\n');
+  return; // Skip this entire seed file
 
   // Get ACME Corporation tenant
   const tenant = await knex('tenants').where('subdomain', 'acme').first();

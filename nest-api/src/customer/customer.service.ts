@@ -132,6 +132,39 @@ export class CustomerService {
       .orderBy('money_loan_loans.created_at', 'desc');
   }
 
+  async getLoansById(customerId: number) {
+    const knex = this.knexService.instance;
+
+    // Get user's tenant_id (customerId is actually userId from the mobile app)
+    const user = await knex('users')
+      .select('tenant_id')
+      .where({ id: customerId })
+      .first();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    console.log(`🔍 getLoansById - Querying loans for customer_id=${customerId}, tenant_id=${user.tenantId}`);
+
+    const loans = await knex('money_loan_loans')
+      .select(
+        'money_loan_loans.*',
+        'money_loan_products.name as productName',
+        'money_loan_products.interest_rate as productInterestRate'
+      )
+      .leftJoin('money_loan_products', 'money_loan_loans.loan_product_id', 'money_loan_products.id')
+      .where({
+        'money_loan_loans.customer_id': customerId,
+        'money_loan_loans.tenant_id': user.tenantId,
+      })
+      .orderBy('money_loan_loans.created_at', 'desc');
+
+    console.log(`📊 getLoansById - Found ${loans.length} loans`);
+    
+    return loans;
+  }
+
   async getApplications(customerId: number, tenantId: number) {
     const knex = this.knexService.instance;
 
@@ -165,5 +198,113 @@ export class CustomerService {
     }
 
     return await query;
+  }
+
+  async getDashboard(customerId: number) {
+    const knex = this.knexService.instance;
+
+    // Get user info to find tenant_id (customerId is actually userId from the mobile app)
+    const user = await knex('users')
+      .select('users.*', 'users.tenant_id')
+      .where({ 'users.id': customerId })
+      .first();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const tenantId = user.tenantId;
+
+    console.log(`🔍 getDashboard - Querying for customer_id=${customerId}, tenant_id=${tenantId}`);
+
+    // Get all loans for this user (money_loan_loans.customer_id refers to users.id)
+    const loans = await knex('money_loan_loans')
+      .where({
+        'customer_id': customerId,
+        'tenant_id': tenantId,
+      });
+
+    console.log(`📊 getDashboard - Found ${loans.length} loans for customer ${customerId}`);
+
+    // Calculate dashboard stats
+    const totalLoans = loans.length;
+    const activeLoans = loans.filter(loan => 
+      ['active', 'approved', 'disbursed'].includes(loan.status)
+    ).length;
+    
+    const totalBorrowed = loans.reduce((sum, loan) => {
+      const principal = loan.principal_amount ?? loan.principalAmount ?? 0;
+      return sum + parseFloat(principal);
+    }, 0);
+    const totalPaid = loans.reduce((sum, loan) => {
+      const paid = loan.total_paid ?? loan.totalPaid ?? loan.amount_paid ?? loan.amountPaid ?? 0;
+      return sum + parseFloat(paid);
+    }, 0);
+    const remainingBalance = loans.reduce((sum, loan) => {
+      const balance = loan.outstanding_balance ?? loan.outstandingBalance ?? 0;
+      return sum + parseFloat(balance);
+    }, 0);
+
+    // Get next payment info
+    const nextPayment = await knex('money_loan_repayment_schedules as schedule')
+      .join('money_loan_loans as loans', 'schedule.loan_id', 'loans.id')
+      .select(
+        'schedule.due_date',
+        'schedule.total_amount',
+        'schedule.outstanding_amount'
+      )
+      .where('loans.customer_id', customerId)
+      .andWhere('loans.tenant_id', tenantId)
+      .andWhere(builder =>
+        builder.whereIn('schedule.status', ['pending', 'partially_paid'])
+      )
+      .orderBy('schedule.due_date', 'asc')
+      .first();
+
+    // Get recent loans
+    const recentLoans = await knex('money_loan_loans')
+      .select(
+        'money_loan_loans.*',
+        'money_loan_products.name as productName'
+      )
+      .leftJoin('money_loan_products', 'money_loan_loans.loan_product_id', 'money_loan_products.id')
+      .where({
+  'money_loan_loans.customer_id': customerId,
+  'money_loan_loans.tenant_id': tenantId,
+      })
+      .orderBy('money_loan_loans.created_at', 'desc')
+      .limit(5);
+
+    return {
+      totalLoans,
+      activeLoans,
+      totalBorrowed,
+      totalPaid,
+      remainingBalance,
+      nextPaymentAmount: nextPayment
+        ? parseFloat(
+            (nextPayment.outstanding_amount ??
+              nextPayment.outstandingAmount ??
+              nextPayment.total_amount ??
+              nextPayment.totalAmount ??
+              0) as any,
+          )
+        : 0,
+      nextPaymentDate:
+        nextPayment?.due_date ?? nextPayment?.dueDate ?? null,
+      recentLoans: recentLoans.map(loan => ({
+        id: loan.id,
+        loanNumber: loan.loan_number ?? loan.loanNumber,
+        amount: loan.principal_amount ?? loan.principalAmount,
+        balance: loan.outstanding_balance ?? loan.outstandingBalance,
+        status: loan.status,
+        productName: loan.productName,
+        dueDate:
+          loan.next_payment_date ??
+          loan.nextPaymentDate ??
+          loan.maturity_date ??
+          loan.maturityDate,
+      })),
+    };
   }
 }

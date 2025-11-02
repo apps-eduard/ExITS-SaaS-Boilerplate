@@ -243,13 +243,8 @@ export class CustomerLoginComponent {
   error = '';
 
   testAccounts = [
-    { email: 'juan.delacruz@test.com', password: 'Admin@123', label: 'ACME - Juan Dela Cruz' },
-    { email: 'maria.santos@test.com', password: 'Admin@123', label: 'ACME - Maria Santos' },
-    { email: 'pedro.gonzales@test.com', password: 'Admin@123', label: 'ACME - Pedro Gonzales' },
-    { email: 'customer1@acme.com', password: 'Admin@123', label: 'ACME - Customer 1' },
-    { email: 'customer2@acme.com', password: 'Admin@123', label: 'ACME - Customer 2' },
-    { email: 'customer1@techstart.com', password: 'Admin@123', label: 'TechStart - Customer 1' },
-    { email: 'customer2@techstart.com', password: 'Admin@123', label: 'TechStart - Customer 2' }
+    { email: 'customer1@acme.com', password: 'Admin@123', label: 'Maria Santos (ACME)' },
+    { email: 'customer1@techstart.com', password: 'Admin@123', label: 'Juan Dela Cruz (TechStart)' },
   ];
 
   fillCredentials(account: { email: string; password: string }) {
@@ -279,8 +274,8 @@ export class CustomerLoginComponent {
     this.loading.set(true);
     this.error = '';
 
-    // Customer login endpoint
-    this.http.post<any>(`${this.apiUrl}/customer/auth/login`, {
+    // Customer login endpoint (plural: /customers/)
+    this.http.post<any>(`${this.apiUrl}/customers/auth/login`, {
       identifier: this.identifier,
       password: this.password,
       rememberMe: this.rememberMe

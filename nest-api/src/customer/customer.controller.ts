@@ -3,16 +3,23 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CustomerService } from './customer.service';
 import { CustomerLoginDto } from './dto/customer-auth.dto';
 
-@Controller('customer/auth')
+@Controller('customers')
 export class CustomerController {
   constructor(private customerService: CustomerService) {}
 
-  @Post('login')
+  // Dashboard endpoint for mobile app
+  @Get(':id/dashboard')
+  async getDashboard(@Param('id') id: string) {
+    return await this.customerService.getDashboard(parseInt(id));
+  }
+
+  // Legacy customer/auth routes
+  @Post('auth/login')
   async login(@Body() loginDto: CustomerLoginDto) {
     return await this.customerService.login(loginDto);
   }
 
-  @Get('profile')
+  @Get('auth/profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: any) {
     const customer = await this.customerService.getProfile(req.user.customerId, req.user.tenantId);
@@ -22,9 +29,9 @@ export class CustomerController {
     };
   }
 
-  @Get('loans')
+  @Get('auth/loans')
   @UseGuards(JwtAuthGuard)
-  async getLoans(@Req() req: any) {
+  async getAuthLoans(@Req() req: any) {
     const loans = await this.customerService.getLoans(req.user.customerId, req.user.tenantId);
     return {
       success: true,
@@ -32,7 +39,7 @@ export class CustomerController {
     };
   }
 
-  @Get('applications')
+  @Get('auth/applications')
   @UseGuards(JwtAuthGuard)
   async getApplications(@Req() req: any) {
     const applications = await this.customerService.getApplications(req.user.customerId, req.user.tenantId);
@@ -42,7 +49,7 @@ export class CustomerController {
     };
   }
 
-  @Get('payments')
+  @Get('auth/payments')
   @UseGuards(JwtAuthGuard)
   async getPayments(@Req() req: any, @Query('loanId') loanId?: string) {
     const payments = await this.customerService.getPayments(

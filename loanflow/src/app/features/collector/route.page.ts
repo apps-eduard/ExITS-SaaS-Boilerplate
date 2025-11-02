@@ -884,18 +884,73 @@ export class CollectorRoutePage implements OnInit {
     this.loading.set(true);
     try {
       const collectorId = this.authService.getCurrentUserId();
-      if (collectorId) {
-        const routeData = await this.apiService.getCollectorRoute(collectorId).toPromise();
-        this.customers.set(routeData || []);
-        this.calculateStats();
+      
+      if (!collectorId) {
+        console.warn('No collector ID found');
+        this.setMockData();
+        return;
       }
+
+      const routeData = await this.apiService.getCollectorRoute(collectorId).toPromise();
+      
+      if (routeData && Array.isArray(routeData)) {
+        // Map API response to our customer interface
+        const mappedCustomers = routeData.map((customer: any) => ({
+          id: customer.id,
+          name: customer.name || customer.customer_name || 'Unknown',
+          address: customer.address || customer.customer_address || 'N/A',
+          phone: customer.phone || customer.contact_number || customer.phone_number || 'N/A',
+          loanBalance: customer.loanBalance || customer.loan_balance || customer.remaining_balance || 0,
+          amountDue: customer.amountDue || customer.amount_due || customer.payment_amount || 0,
+          dueDate: customer.dueDate || customer.due_date || 'N/A',
+          status: this.mapCustomerStatus(customer.status || customer.visit_status),
+          distance: customer.distance || 'N/A'
+        }));
+        this.customers.set(mappedCustomers);
+      } else {
+        this.customers.set([]);
+      }
+      
+      this.calculateStats();
+      console.log('Route data loaded successfully');
     } catch (error) {
       console.error('Failed to load route data:', error);
-      // Set mock data for development
-      this.setMockData();
+      // Only show mock data in development
+      if (window.location.hostname === 'localhost') {
+        console.warn('Using mock data for development');
+        this.setMockData();
+      } else {
+        // Show error toast in production
+        const toast = await this.toastController.create({
+          message: 'Failed to load route data',
+          duration: 3000,
+          position: 'bottom',
+          color: 'danger'
+        });
+        await toast.present();
+        this.customers.set([]);
+        this.calculateStats();
+      }
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Map API customer status to display status
+   */
+  private mapCustomerStatus(apiStatus: string): 'not-visited' | 'visited' | 'collected' | 'missed' {
+    const status = (apiStatus || '').toLowerCase();
+    if (status === 'collected' || status === 'paid') {
+      return 'collected';
+    }
+    if (status === 'visited' || status === 'visit-complete') {
+      return 'visited';
+    }
+    if (status === 'missed' || status === 'failed') {
+      return 'missed';
+    }
+    return 'not-visited';
   }
 
   setMockData() {

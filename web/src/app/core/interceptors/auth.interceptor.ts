@@ -15,8 +15,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     (req.url.includes('/api/auth/refresh') && req.method === 'POST') ||
     (req.url.includes('/api/auth/forgot-password')) ||
     (req.url.includes('/api/auth/check-email')) ||
-    (req.url.includes('/api/customer/auth/login') && req.method === 'POST') ||
-    (req.url.includes('/api/customer/auth/refresh') && req.method === 'POST') ||
+    (req.url.includes('/api/customers/auth/login') && req.method === 'POST') ||
+    (req.url.includes('/api/customers/auth/refresh') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/create') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/by-subdomain') && req.method === 'GET') ||
     (req.url.match(/\/api\/subscriptions\/plans$/) && req.method === 'GET') || // Only GET all plans is public
@@ -30,7 +30,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const customerToken = localStorage.getItem('customerToken');
     const adminToken = authService.getAccessToken();
 
-    const isCustomerApi = req.url.includes('/api/customer/');
+    const isCustomerApi = req.url.includes('/api/customers/');
 
     // Prefer the token that matches the target API surface to avoid cross-contamination
     const token = isCustomerApi

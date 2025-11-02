@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CustomerController } from './customer.controller';
+import { LoansController, LoanProductsController } from './loans.controller';
 import { CustomerService } from './customer.service';
 import { KnexModule } from '../database/knex.module';
 
@@ -19,7 +20,7 @@ import { KnexModule } from '../database/knex.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [CustomerController],
+  controllers: [CustomerController, LoansController, LoanProductsController],
   providers: [CustomerService],
   exports: [CustomerService],
 })

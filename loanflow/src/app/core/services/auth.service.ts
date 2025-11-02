@@ -51,12 +51,16 @@ export class AuthService {
     return this.http.post<any>(`${this.apiUrl}/login`, body).pipe(
       map((response) => {
         console.log('Raw API response:', response);
-        // Handle API response structure: { success, message, data: { accessToken, refreshToken, user } }
+        // Handle API response structure: { success, message, data: { accessToken, refreshToken, user/customer } }
         if (response.data) {
+          // Handle both user and customer response structures
+          const userData = response.data.user || response.data.customer;
+          const tokens = response.data.tokens || response.data;
+          
           const mapped = {
-            accessToken: response.data.accessToken || response.data.access_token,
-            refreshToken: response.data.refreshToken || response.data.refresh_token,
-            user: response.data.user,
+            accessToken: tokens.accessToken || tokens.access_token,
+            refreshToken: tokens.refreshToken || tokens.refresh_token,
+            user: userData,
             expiresIn: response.data.expiresIn || response.data.expires_in || 3600
           } as AuthResponse;
           console.log('Mapped to AuthResponse:', mapped);
