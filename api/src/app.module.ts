@@ -10,6 +10,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { MoneyLoanModule } from './money-loan/money-loan.module';
 import { CustomerModule } from './customer/customer.module';
 import { BillingModule } from './billing/billing.module';
+import { AddressesModule } from './addresses/addresses.module';
 
 @Module({
   imports: [
@@ -23,8 +24,9 @@ import { BillingModule } from './billing/billing.module';
     UsersModule,
     TenantsModule,
     MoneyLoanModule,
-  CustomerModule,
-  BillingModule,
+    CustomerModule,
+    BillingModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

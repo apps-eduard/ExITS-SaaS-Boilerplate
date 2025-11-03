@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { KnexService } from '../database/knex.service';
 import { CustomerLoginDto } from './dto/customer-auth.dto';
 import bcrypt from 'bcrypt';
+import { Knex } from 'knex';
 
 @Injectable()
 export class CustomerService {
@@ -10,6 +11,615 @@ export class CustomerService {
     private knexService: KnexService,
     private jwtService: JwtService,
   ) {}
+
+  async listCustomers(
+    tenantId: number,
+    filters: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      kycStatus?: string;
+      search?: string;
+    },
+  ): Promise<{ data: any[]; pagination: { page: number; limit: number; total: number; pages: number } }> {
+    const knex = this.knexService.instance;
+    const page = filters.page && filters.page > 0 ? filters.page : 1;
+    const limit = filters.limit && filters.limit > 0 ? Math.min(filters.limit, 100) : 25;
+    const offset = (page - 1) * limit;
+
+    const baseQuery = knex('customers as c')
+      .leftJoin('money_loan_customer_profiles as mlcp', function join() {
+        this.on('c.id', '=', 'mlcp.customer_id').andOn('c.tenant_id', '=', 'mlcp.tenant_id');
+      })
+      .where('c.tenant_id', tenantId);
+
+    if (filters.status) {
+      baseQuery.andWhere('c.status', filters.status);
+    }
+
+    if (filters.kycStatus) {
+      baseQuery.andWhere('mlcp.kyc_status', filters.kycStatus);
+    }
+
+    if (filters.search && filters.search.trim().length > 0) {
+      const term = `%${filters.search.trim().toLowerCase()}%`;
+      baseQuery.andWhere((qb) => {
+        qb.whereRaw('LOWER(c.first_name) LIKE ?', [term])
+          .orWhereRaw('LOWER(c.last_name) LIKE ?', [term])
+          .orWhereRaw('LOWER(c.email) LIKE ?', [term])
+          .orWhereRaw('LOWER(c.phone) LIKE ?', [term])
+          .orWhereRaw('LOWER(c.customer_code) LIKE ?', [term]);
+      });
+    }
+
+    const countRow = await baseQuery
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .countDistinct<{ total: string }>('c.id as total')
+      .first();
+
+    const total = countRow?.total ? Number(countRow.total) : 0;
+
+    const rows = await baseQuery
+      .clone()
+      .select(
+        'c.id',
+        'c.tenant_id as tenantId',
+        'c.customer_code as customerCode',
+        'c.first_name as firstName',
+        'c.last_name as lastName',
+        'c.email',
+        'c.phone',
+        'c.date_of_birth as dateOfBirth',
+        'c.status',
+        'mlcp.kyc_status as kycStatus',
+        'mlcp.credit_score as creditScore',
+        'c.created_at as createdAt',
+        'c.updated_at as updatedAt',
+      )
+      .orderBy('c.created_at', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: rows.map((row) => this.mapCustomerListRow(row)),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: total > 0 ? Math.max(1, Math.ceil(total / limit)) : 1,
+      },
+    };
+  }
+
+  async getCustomerDetails(
+    tenantId: number,
+    customerId: number,
+    connection?: Knex | Knex.Transaction,
+  ): Promise<any | null> {
+    const db = connection ?? this.knexService.instance;
+
+    const customer = await db('customers as c')
+      .leftJoin('tenants as t', 'c.tenant_id', 't.id')
+      .leftJoin('money_loan_customer_profiles as mlcp', function join() {
+        this.on('c.id', '=', 'mlcp.customer_id').andOn('c.tenant_id', '=', 'mlcp.tenant_id');
+      })
+      .select(
+        'c.id',
+        'c.tenant_id as tenantId',
+        'c.customer_code as customerCode',
+        'c.customer_type as customerType',
+        'c.first_name as firstName',
+        'c.middle_name as middleName',
+        'c.last_name as lastName',
+        'c.suffix',
+        'c.date_of_birth as dateOfBirth',
+        'c.gender',
+        'c.nationality as nationality',
+        'c.civil_status as civilStatus',
+        'c.email',
+        'c.phone',
+        'c.alternate_phone as alternatePhone',
+        'c.employment_status as employmentStatus',
+        'c.employer_name as employerName',
+        'c.monthly_income as monthlyIncome',
+        'c.source_of_income as sourceOfIncome',
+        'c.id_type as idType',
+        'c.id_number as idNumber',
+        'c.status',
+        'c.notes',
+        'c.created_at as createdAt',
+        'c.updated_at as updatedAt',
+  'mlcp.kyc_status as kycStatus',
+  'mlcp.credit_score as creditScore',
+  'mlcp.risk_level as riskLevel',
+        't.name as tenantName',
+      )
+      .where({ 'c.id': customerId, 'c.tenant_id': tenantId })
+      .first();
+
+    if (!customer) {
+      return null;
+    }
+
+    const addressRow = await db('addresses')
+      .where({
+        tenant_id: tenantId,
+        addressable_type: 'customer',
+        addressable_id: customerId,
+      })
+      .whereNot('status', 'deleted')
+      .orderBy([{ column: 'is_primary', order: 'desc' }, { column: 'created_at', order: 'desc' }])
+      .first();
+
+    const address = addressRow ? this.mapAddressRow(addressRow, customerId) : null;
+
+    return this.composeCustomerDetail(customer, address);
+  }
+
+  async createTenantCustomer(tenantId: number, payload: any, actorId?: number) {
+    if (!payload?.firstName || !payload?.lastName) {
+      throw new BadRequestException('First name and last name are required');
+    }
+
+    if (!payload?.phone) {
+      throw new BadRequestException('Phone number is required');
+    }
+
+    return this.knexService.transaction(async (trx) => {
+      const customerCode = this.generateCustomerCode(tenantId, payload.customerCode);
+      const monthlyIncomeValue = this.toNullableNumber(payload.monthlyIncome);
+      const creditScoreValue = this.toNullableNumber(payload.creditScore);
+
+      const [customer] = await trx('customers')
+        .insert({
+          tenant_id: tenantId,
+          user_id: payload.userId ?? null,
+          customer_code: customerCode,
+          customer_type: payload.customerType ?? 'individual',
+          first_name: payload.firstName,
+          middle_name: payload.middleName ?? null,
+          last_name: payload.lastName,
+          suffix: payload.suffix ?? null,
+          date_of_birth: payload.dateOfBirth ?? null,
+          gender: payload.gender ?? null,
+          nationality: payload.nationality ?? null,
+          civil_status: payload.civilStatus ?? null,
+          email: payload.email ?? null,
+          phone: payload.phone,
+          alternate_phone: payload.alternatePhone ?? null,
+          id_type: payload.idType ?? null,
+          id_number: payload.idNumber ?? null,
+          employment_status: payload.employmentStatus ?? null,
+          employer_name: payload.employerName ?? null,
+          monthly_income: monthlyIncomeValue,
+          source_of_income: payload.sourceOfIncome ?? null,
+          status: payload.status ?? 'active',
+          notes: payload.notes ?? null,
+          created_by: actorId ?? null,
+          updated_by: actorId ?? null,
+        })
+        .returning('*');
+
+      await this.upsertMoneyLoanProfile(trx, tenantId, customer.id, {
+        kycStatus: payload.kycStatus ?? 'pending',
+        creditScore: creditScoreValue,
+        riskLevel: payload.riskLevel ?? null,
+      });
+
+      await this.upsertCustomerAddress(trx, {
+        tenantId,
+        customerId: customer.id,
+        addressType: payload.addressType,
+        streetAddress: payload.streetAddress,
+        houseNumber: payload.houseNumber,
+        streetName: payload.streetName,
+        subdivision: payload.subdivision,
+        barangay: payload.barangay,
+        cityMunicipality: payload.cityMunicipality,
+        province: payload.province,
+        region: payload.region,
+        zipCode: payload.zipCode,
+        country: payload.country,
+        isPrimary: payload.isPrimary,
+        actorId,
+      });
+
+      const detailed = await this.getCustomerDetails(tenantId, customer.id, trx);
+      if (!detailed) {
+        throw new NotFoundException('Customer not found after creation');
+      }
+
+      return detailed;
+    });
+  }
+
+  async updateTenantCustomer(tenantId: number, customerId: number, payload: any, actorId?: number) {
+    return this.knexService.transaction(async (trx) => {
+      const existing = await trx('customers')
+        .where({ id: customerId, tenant_id: tenantId })
+        .first();
+
+      if (!existing) {
+        throw new NotFoundException('Customer not found');
+      }
+
+      const monthlyIncomeValue =
+        payload.monthlyIncome !== undefined
+          ? this.toNullableNumber(payload.monthlyIncome)
+          : undefined;
+      const creditScoreValue =
+        payload.creditScore !== undefined
+          ? this.toNullableNumber(payload.creditScore)
+          : undefined;
+
+      await trx('customers')
+        .where({ id: customerId })
+        .update({
+          first_name: payload.firstName ?? existing.first_name,
+          middle_name: payload.middleName ?? existing.middle_name,
+          last_name: payload.lastName ?? existing.last_name,
+          suffix: payload.suffix ?? existing.suffix,
+          date_of_birth: payload.dateOfBirth ?? existing.date_of_birth,
+          gender: payload.gender ?? existing.gender,
+          nationality: payload.nationality ?? existing.nationality,
+          civil_status: payload.civilStatus ?? existing.civil_status,
+          email: payload.email ?? existing.email,
+          phone: payload.phone ?? existing.phone,
+          alternate_phone: payload.alternatePhone ?? existing.alternate_phone,
+          id_type: payload.idType ?? existing.id_type,
+          id_number: payload.idNumber ?? existing.id_number,
+          employment_status: payload.employmentStatus ?? existing.employment_status,
+          employer_name: payload.employerName ?? existing.employer_name,
+          monthly_income:
+            monthlyIncomeValue !== undefined
+              ? monthlyIncomeValue
+              : existing.monthly_income,
+          source_of_income: payload.sourceOfIncome ?? existing.source_of_income,
+          status: payload.status ?? existing.status,
+          notes: payload.notes ?? existing.notes,
+          updated_by: actorId ?? null,
+          updated_at: trx.fn.now(),
+        });
+
+      await this.upsertMoneyLoanProfile(trx, tenantId, customerId, {
+        kycStatus: payload.kycStatus,
+        creditScore: creditScoreValue,
+        riskLevel: payload.riskLevel,
+      });
+
+      await this.upsertCustomerAddress(trx, {
+        tenantId,
+        customerId,
+        addressType: payload.addressType,
+        streetAddress: payload.streetAddress,
+        houseNumber: payload.houseNumber,
+        streetName: payload.streetName,
+        subdivision: payload.subdivision,
+        barangay: payload.barangay,
+        cityMunicipality: payload.cityMunicipality,
+        province: payload.province,
+        region: payload.region,
+        zipCode: payload.zipCode,
+        country: payload.country,
+        isPrimary: payload.isPrimary,
+        actorId,
+      });
+
+      const detailed = await this.getCustomerDetails(tenantId, customerId, trx);
+      if (!detailed) {
+        throw new NotFoundException('Customer not found after update');
+      }
+
+      return detailed;
+    });
+  }
+
+  private mapCustomerListRow(row: any) {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      customerCode: row.customerCode,
+      firstName: row.firstName ?? '',
+      lastName: row.lastName ?? '',
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+      dateOfBirth: this.formatDateString(row.dateOfBirth) ?? '',
+      status: row.status ?? 'active',
+      kycStatus: row.kycStatus ?? 'pending',
+  creditScore: row.creditScore !== undefined && row.creditScore !== null ? Number(row.creditScore) : 650,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  private composeCustomerDetail(customer: any, address: any | null) {
+    const creditScore = customer.creditScore !== undefined && customer.creditScore !== null
+      ? Number(customer.creditScore)
+      : 650;
+
+  const monthlyIncomeSource = customer.monthlyIncome ?? null;
+    const monthlyIncome = monthlyIncomeSource !== undefined && monthlyIncomeSource !== null
+      ? Number(monthlyIncomeSource)
+      : null;
+
+    const streetFromAddress = address?.street ?? this.buildStreetFromParts(address?.houseNumber, address?.streetName, address?.streetAddress);
+
+    return {
+      id: customer.id,
+      tenantId: customer.tenantId,
+      tenantName: customer.tenantName ?? undefined,
+      customerCode: customer.customerCode,
+      customerType: customer.customerType ?? 'individual',
+      firstName: customer.firstName ?? '',
+      middleName: customer.middleName ?? '',
+      lastName: customer.lastName ?? '',
+      suffix: customer.suffix ?? '',
+      dateOfBirth: this.formatDateString(customer.dateOfBirth),
+      gender: customer.gender ?? '',
+      nationality: customer.nationality ?? '',
+      civilStatus: customer.civilStatus ?? '',
+      email: customer.email ?? '',
+      phone: customer.phone ?? '',
+      alternatePhone: customer.alternatePhone ?? '',
+  employmentStatus: customer.employmentStatus ?? '',
+      employerName: customer.employerName ?? '',
+      monthlyIncome,
+      sourceOfIncome: customer.sourceOfIncome ?? '',
+      idType: customer.idType ?? '',
+      idNumber: customer.idNumber ?? '',
+      kycStatus: customer.kycStatus ?? 'pending',
+      creditScore,
+      riskLevel: customer.riskLevel ?? 'medium',
+      status: customer.status ?? 'active',
+      streetAddress: streetFromAddress ?? '',
+      houseNumber: address?.houseNumber ?? '',
+      streetName: address?.streetName ?? '',
+      subdivision: address?.subdivision ?? '',
+      barangay: address?.barangay ?? '',
+      cityMunicipality: address?.cityMunicipality ?? '',
+      province: address?.province ?? '',
+      region: address?.region ?? '',
+      zipCode: address?.zipCode ?? '',
+      country: address?.country ?? 'Philippines',
+      addressType: address?.addressType ?? 'home',
+      isPrimary: address?.isPrimary ?? true,
+      addressId: address?.id ?? undefined,
+      notes: customer.notes ?? undefined,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+    };
+  }
+
+  private formatDateString(value: any): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toISOString();
+  }
+
+  private buildStreetFromParts(houseNumber?: string, streetName?: string, streetAddress?: string): string {
+    if (streetAddress && streetAddress.trim().length > 0) {
+      return streetAddress.trim();
+    }
+
+    const parts = [houseNumber, streetName]
+      .map((value) => (value ? `${value}`.trim() : ''))
+      .filter((value) => value.length > 0);
+
+    return parts.join(' ').trim();
+  }
+
+  private mapAddressRow(row: any, fallbackCustomerId: number) {
+    if (!row) {
+      return null;
+    }
+
+    const streetParts = [row.houseNumber, row.streetName]
+      .map((value) => (value ? `${value}`.trim() : ''))
+      .filter((value) => value.length > 0);
+
+  const fallbackStreet = streetParts.join(' ').trim();
+  const street = row.street ?? (fallbackStreet || row.streetName || '');
+
+    return {
+      id: row.id !== undefined && row.id !== null ? String(row.id) : undefined,
+      customerId: String(fallbackCustomerId),
+      tenantId: row.tenantId !== undefined && row.tenantId !== null ? String(row.tenantId) : undefined,
+      addressType: row.addressType ?? 'home',
+      label: row.label ?? undefined,
+      street,
+      streetAddress: street,
+      houseNumber: row.houseNumber ?? undefined,
+      streetName: row.streetName ?? undefined,
+      subdivision: row.subdivision ?? undefined,
+      barangay: row.barangay ?? '',
+      cityMunicipality: row.cityMunicipality ?? '',
+      province: row.province ?? '',
+      region: row.region ?? '',
+      zipCode: row.zipCode ?? undefined,
+      country: row.country ?? 'Philippines',
+      landmark: row.landmark ?? undefined,
+      isPrimary: !!row.isPrimary,
+      isVerified: !!row.isVerified,
+      contactPhone: row.contactPhone ?? undefined,
+      contactName: row.contactPerson ?? undefined,
+      notes: row.deliveryInstructions ?? undefined,
+    };
+  }
+
+  private hasAddressPayload(payload: any): boolean {
+    if (!payload) {
+      return false;
+    }
+
+    const fields = [
+      payload.streetAddress,
+      payload.streetName,
+      payload.houseNumber,
+      payload.subdivision,
+      payload.barangay,
+      payload.cityMunicipality,
+      payload.province,
+      payload.region,
+      payload.zipCode,
+    ];
+
+    return fields.some((value) => value !== undefined && value !== null && `${value}`.trim().length > 0);
+  }
+
+  private async upsertMoneyLoanProfile(
+    trx: Knex.Transaction,
+    tenantId: number,
+    customerId: number,
+    payload: {
+      kycStatus?: string;
+      creditScore?: number | null;
+      riskLevel?: string | null;
+    },
+  ): Promise<void> {
+    const existing = await trx('money_loan_customer_profiles')
+      .where({ customer_id: customerId, tenant_id: tenantId })
+      .first();
+
+    const updatePayload: Record<string, any> = {
+      updated_at: trx.fn.now(),
+    };
+
+    if (payload.kycStatus !== undefined) updatePayload.kyc_status = payload.kycStatus;
+    if (payload.creditScore !== undefined) {
+      updatePayload.credit_score = payload.creditScore === null ? null : Number(payload.creditScore);
+    }
+    if (payload.riskLevel !== undefined) updatePayload.risk_level = payload.riskLevel;
+
+    if (existing) {
+      if (Object.keys(updatePayload).length > 1) {
+        await trx('money_loan_customer_profiles')
+          .where({ customer_id: customerId, tenant_id: tenantId })
+          .update(updatePayload);
+      }
+      return;
+    }
+
+    await trx('money_loan_customer_profiles').insert({
+      customer_id: customerId,
+      tenant_id: tenantId,
+      credit_score: payload.creditScore === null || payload.creditScore === undefined ? 650 : Number(payload.creditScore),
+      risk_level: payload.riskLevel ?? 'medium',
+      kyc_status: payload.kycStatus ?? 'pending',
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+  }
+
+  private async upsertCustomerAddress(
+    trx: Knex.Transaction,
+    input: {
+      tenantId: number;
+      customerId: number;
+      addressType?: string;
+      streetAddress?: string;
+      houseNumber?: string;
+      streetName?: string;
+      subdivision?: string;
+      barangay?: string;
+      cityMunicipality?: string;
+      province?: string;
+      region?: string;
+      zipCode?: string;
+      country?: string;
+      isPrimary?: boolean;
+      actorId?: number | null;
+    },
+  ): Promise<void> {
+    if (!this.hasAddressPayload(input)) {
+      return;
+    }
+
+    const existing = await trx('addresses')
+      .where({
+        tenant_id: input.tenantId,
+        addressable_type: 'customer',
+        addressable_id: input.customerId,
+      })
+      .whereNot('status', 'deleted')
+      .orderBy([{ column: 'is_primary', order: 'desc' }, { column: 'created_at', order: 'desc' }])
+      .first();
+
+    const streetName = input.streetName || input.streetAddress || null;
+    const payload: Record<string, any> = {
+      address_type: input.addressType ?? 'home',
+      label: this.defaultAddressLabel(input.addressType),
+      house_number: input.houseNumber ?? null,
+      street_name: streetName ?? null,
+      subdivision: input.subdivision ?? null,
+      barangay: input.barangay ?? null,
+      city_municipality: input.cityMunicipality ?? null,
+      province: input.province ?? null,
+      region: input.region ?? null,
+      zip_code: input.zipCode ?? null,
+      country: input.country ?? 'Philippines',
+      is_primary: input.isPrimary ?? true,
+      updated_by: input.actorId ?? null,
+      updated_at: trx.fn.now(),
+      status: 'active',
+    };
+
+    if (existing) {
+      await trx('addresses').where({ id: existing.id }).update(payload);
+      return;
+    }
+
+    await trx('addresses').insert({
+      tenant_id: input.tenantId,
+      addressable_type: 'customer',
+      addressable_id: input.customerId,
+      ...payload,
+      created_by: input.actorId ?? null,
+      created_at: trx.fn.now(),
+    });
+  }
+
+  private defaultAddressLabel(addressType?: string) {
+    switch (addressType) {
+      case 'work':
+        return 'Work Address';
+      case 'billing':
+        return 'Billing Address';
+      case 'shipping':
+        return 'Shipping Address';
+      case 'business':
+        return 'Business Address';
+      case 'home':
+        return 'Home Address';
+      default:
+        return 'Primary Address';
+    }
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  private generateCustomerCode(tenantId: number, provided?: string): string {
+    if (provided && provided.trim().length > 0) {
+      return provided.trim();
+    }
+
+    return `CUST-${tenantId}-${Date.now()}`;
+  }
 
   async login(loginDto: CustomerLoginDto) {
     const knex = this.knexService.instance;
@@ -118,9 +728,7 @@ export class CustomerService {
         // Loan-specific profile fields
         'money_loan_customer_profiles.kyc_status as loanProfileKycStatus',
         'money_loan_customer_profiles.credit_score as loanProfileCreditScore',
-        'money_loan_customer_profiles.risk_level as loanProfileRiskLevel',
-        'money_loan_customer_profiles.employment_status as loanProfileEmploymentStatus',
-        'money_loan_customer_profiles.monthly_income as loanProfileMonthlyIncome'
+        'money_loan_customer_profiles.risk_level as loanProfileRiskLevel'
       )
       .leftJoin('money_loan_customer_profiles', 'customers.id', 'money_loan_customer_profiles.customer_id')
       .where({ 'customers.id': customerId, 'customers.tenant_id': tenantId })

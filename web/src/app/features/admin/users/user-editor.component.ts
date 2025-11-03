@@ -750,6 +750,10 @@ interface Tenant {
               </div>
             </div>
 
+            <div *ngIf="!hasEmployeeProfile" class="mb-3 rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+              ⚠️ No existing employee profile was found for this user. Fill in the form below to capture their employment details.
+            </div>
+
             <div class="space-y-4">
               <!-- Employment Information -->
               <div>
@@ -761,6 +765,8 @@ interface Tenant {
                       Employee ID
                     </label>
                     <input
+                      name="employeeCode"
+                      [(ngModel)]="employeeProfileData.employeeCode"
                       type="text"
                       placeholder="EMP-001"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -773,6 +779,8 @@ interface Tenant {
                       Job Title
                     </label>
                     <input
+                      name="jobTitle"
+                      [(ngModel)]="employeeProfileData.position"
                       type="text"
                       placeholder="Software Engineer"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -785,15 +793,19 @@ interface Tenant {
                       Department
                     </label>
                     <select
+                      name="department"
+                      [(ngModel)]="employeeProfileData.department"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Select Department</option>
-                      <option value="it">IT</option>
-                      <option value="hr">Human Resources</option>
-                      <option value="finance">Finance</option>
-                      <option value="operations">Operations</option>
-                      <option value="sales">Sales</option>
-                      <option value="marketing">Marketing</option>
+                      <option value="IT">IT</option>
+                      <option value="Human Resources">Human Resources</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Operations">Operations</option>
+                      <option value="Sales">Sales</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Collections">Collections</option>
+                      <option value="Customer Success">Customer Success</option>
                     </select>
                   </div>
 
@@ -803,12 +815,15 @@ interface Tenant {
                       Employment Type
                     </label>
                     <select
+                      name="employmentType"
+                      [(ngModel)]="employeeProfileData.employmentType"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Select Type</option>
                       <option value="full-time">Full-time</option>
                       <option value="part-time">Part-time</option>
                       <option value="contract">Contract</option>
+                      <option value="probationary">Probationary</option>
                       <option value="intern">Intern</option>
                     </select>
                   </div>
@@ -819,22 +834,29 @@ interface Tenant {
                       Hire Date
                     </label>
                     <input
+                      name="hireDate"
+                      [(ngModel)]="employeeProfileData.hireDate"
                       type="date"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     />
                   </div>
 
-                  <!-- Manager -->
+                  <!-- Employment Status -->
                   <div>
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Reports To (Manager)
+                      Employment Status
                     </label>
                     <select
+                      name="employmentStatus"
+                      [(ngModel)]="employeeProfileData.employmentStatus"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="">Select Manager</option>
-                      <option value="1">John Doe</option>
-                      <option value="2">Jane Smith</option>
+                      <option value="">Select Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="on_leave">On Leave</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="terminated">Terminated</option>
                     </select>
                   </div>
                 </div>
@@ -850,6 +872,8 @@ interface Tenant {
                       Work Phone
                     </label>
                     <input
+                      name="workPhone"
+                      [(ngModel)]="employeeProfileData.workPhone"
                       type="tel"
                       placeholder="+1 (555) 000-0000"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -862,6 +886,8 @@ interface Tenant {
                       Extension
                     </label>
                     <input
+                      name="phoneExtension"
+                      [(ngModel)]="employeeProfileData.phoneExtension"
                       type="text"
                       placeholder="1234"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -874,6 +900,8 @@ interface Tenant {
                       Emergency Contact Name
                     </label>
                     <input
+                      name="emergencyContactName"
+                      [(ngModel)]="employeeProfileData.emergencyContactName"
                       type="text"
                       placeholder="Contact name"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -886,6 +914,8 @@ interface Tenant {
                       Emergency Contact Phone
                     </label>
                     <input
+                      name="emergencyContactPhone"
+                      [(ngModel)]="employeeProfileData.emergencyContactPhone"
                       type="tel"
                       placeholder="+1 (555) 000-0000"
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -904,6 +934,8 @@ interface Tenant {
                       Notes
                     </label>
                     <textarea
+                      name="employeeNotes"
+                      [(ngModel)]="employeeProfileData.notes"
                       rows="3"
                       placeholder="Additional employee notes..."
                       class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -1159,6 +1191,10 @@ export class UserEditorComponent implements OnInit {
     notes: ''
   };
 
+  // Employee profile fields
+  hasEmployeeProfile = false;
+  employeeProfileData: any = this.createDefaultEmployeeProfile();
+
   // Reset Password fields
   resetPasswordData = {
     newPassword: '',
@@ -1245,7 +1281,10 @@ export class UserEditorComponent implements OnInit {
 
           // Set selected roles
           if (user.roles && Array.isArray(user.roles)) {
-            const roleIds = user.roles.map(r => typeof r === 'object' ? r.id : r);
+            const roleIds = user.roles
+              .map(r => typeof r === 'object' ? r?.id : r)
+              .filter(id => id !== null && id !== undefined)
+              .map(id => String(id));
             this.selectedRoles.set(new Set(roleIds));
             console.log('👥 Selected roles:', Array.from(this.selectedRoles()));
           }
@@ -1257,6 +1296,12 @@ export class UserEditorComponent implements OnInit {
             // Load user's current product access
             await this.loadUserProducts(this.userId);
           }
+
+          // Populate employee profile tab
+          this.populateEmployeeProfile(user.employeeProfile);
+
+          // Populate address tab from user payload if available
+          this.populateAddressFromUser(user.addresses as any[] | undefined);
 
           // Load user's address
           await this.loadUserAddress(this.userId);
@@ -1426,16 +1471,23 @@ export class UserEditorComponent implements OnInit {
     return 'Loading...';
   }
 
-  isRoleSelected(roleId: string): boolean {
-    return this.selectedRoles().has(roleId);
+  isRoleSelected(roleId: string | number | null | undefined): boolean {
+    if (roleId === null || roleId === undefined) {
+      return false;
+    }
+    return this.selectedRoles().has(roleId.toString());
   }
 
-  toggleRole(roleId: string) {
+  toggleRole(roleId: string | number | null | undefined) {
+    if (roleId === null || roleId === undefined) {
+      return;
+    }
+    const key = roleId.toString();
     const roles = new Set(this.selectedRoles());
-    if (roles.has(roleId)) {
-      roles.delete(roleId);
+    if (roles.has(key)) {
+      roles.delete(key);
     } else {
-      roles.add(roleId);
+      roles.add(key);
     }
     this.selectedRoles.set(roles);
   }
@@ -1562,6 +1614,7 @@ export class UserEditorComponent implements OnInit {
         });
 
         console.log('📦 Loaded product access:', products.length, 'products');
+        this.cdr.markForCheck();
       }
     } catch (error) {
       console.error('❌ Error loading user products:', error);
@@ -1580,26 +1633,7 @@ export class UserEditorComponent implements OnInit {
         // Get the primary address or first address
         const address = addresses.find((a: any) => a.isPrimary) || addresses[0];
 
-        // Populate address form
-        this.addressData.addressType = address.addressType || 'home';
-        this.addressData.street = address.street || '';
-        this.addressData.barangay = address.barangay || '';
-        this.addressData.cityMunicipality = address.cityMunicipality || '';
-        this.addressData.province = address.province || '';
-        this.addressData.region = address.region || '';
-        this.addressData.zipCode = address.zipCode || '';
-        this.addressData.landmark = address.landmark || '';
-        this.addressData.isPrimary = address.isPrimary || false;
-        this.addressData.contactPhone = address.contactPhone || '';
-        this.addressData.contactName = address.contactName || '';
-        this.addressData.notes = address.notes || '';
-
-        // Store address ID for updates
-        this.userAddressId = address.id?.toString() || null;
-
-        // Enable address section if address exists
-        this.includeAddress = true;
-
+        this.applyAddressToForm(address);
         console.log('📍 Loaded user address:', address.id);
       } else {
         console.log('📍 No address found for user');
@@ -1608,7 +1642,44 @@ export class UserEditorComponent implements OnInit {
       console.error('❌ Error loading user address:', error);
       // Don't throw - just log the error
     }
-  }  /**
+  }
+
+  private populateAddressFromUser(addresses: any[] | undefined): void {
+    if (!Array.isArray(addresses) || addresses.length === 0) {
+      return;
+    }
+
+    const address = addresses.find(addressRecord => addressRecord?.isPrimary) || addresses[0];
+    if (!address) {
+      return;
+    }
+
+    this.applyAddressToForm(address);
+  }
+
+  private applyAddressToForm(address: any): void {
+    if (!address) {
+      return;
+    }
+
+    this.addressData.addressType = address.addressType || 'home';
+    this.addressData.street = address.street || address.streetAddress || '';
+    this.addressData.barangay = address.barangay || '';
+    this.addressData.cityMunicipality = address.cityMunicipality || '';
+    this.addressData.province = address.province || '';
+    this.addressData.region = address.region || '';
+    this.addressData.zipCode = address.zipCode || '';
+    this.addressData.landmark = address.landmark || '';
+    this.addressData.isPrimary = address.isPrimary ?? true;
+    this.addressData.contactPhone = address.contactPhone || '';
+    this.addressData.contactName = address.contactName || '';
+    this.addressData.notes = address.notes || '';
+
+    this.userAddressId = address.id ? String(address.id) : null;
+    this.includeAddress = true;
+  }
+
+  /**
    * Reset product access to default state
    */
   resetProductAccess(): void {
@@ -1633,6 +1704,78 @@ export class UserEditorComponent implements OnInit {
         isPrimary: false
       }
     };
+  }
+
+  private createDefaultEmployeeProfile() {
+    return {
+      employeeCode: '',
+      position: '',
+      department: '',
+      employmentType: '',
+      employmentStatus: '',
+      hireDate: '',
+      managerName: '',
+      supervisorName: '',
+      workEmail: '',
+      workPhone: '',
+      phoneExtension: '',
+      emergencyContactName: '',
+      emergencyContactPhone: '',
+      notes: ''
+    };
+  }
+
+  private populateEmployeeProfile(profile: any): void {
+    if (!profile) {
+      this.hasEmployeeProfile = false;
+      this.employeeProfileData = this.createDefaultEmployeeProfile();
+      return;
+    }
+
+    const data = this.createDefaultEmployeeProfile();
+    this.hasEmployeeProfile = true;
+
+    data.employeeCode = profile.employeeCode || profile.employeeId || '';
+    data.position = profile.position || '';
+    data.department = profile.department || '';
+    data.employmentType = profile.employmentType || '';
+    data.employmentStatus = profile.employmentStatus || profile.status || '';
+    data.hireDate = this.formatDateForInput(profile.hireDate);
+    data.workPhone = profile.workPhone || '';
+    data.workEmail = profile.workEmail || '';
+    data.phoneExtension = profile.phoneExtension || '';
+    data.emergencyContactName = profile.emergencyContactName || '';
+    data.emergencyContactPhone = profile.emergencyContactPhone || '';
+    data.notes = profile.notes || profile.remarks || '';
+
+    this.employeeProfileData = data;
+  }
+
+  private formatDateForInput(value: string | Date | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
+      }
+      const [datePart] = value.split('T');
+      if (datePart && /^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        return datePart;
+      }
+      const parsed = new Date(value);
+      if (Number.isFinite(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+      return '';
+    }
+
+    const parsed = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(parsed.getTime())) {
+      return '';
+    }
+    return parsed.toISOString().split('T')[0];
   }
 
   isFormValid(): boolean {
@@ -1770,7 +1913,12 @@ export class UserEditorComponent implements OnInit {
         if (this.isEditMode() && this.userId) {
           // Get current roles from loaded user data
           const currentUser = await this.userService.getUser(this.userId);
-          const currentRoleIds = new Set(currentUser?.roles?.map(r => r.id) || []);
+          const currentRoleIds = new Set(
+            (currentUser?.roles || [])
+              .map(r => r?.id)
+              .filter(id => id !== null && id !== undefined)
+              .map(id => String(id))
+          );
           const selectedRoleIds = this.selectedRoles();
 
           console.log('🔄 Updating roles:', {

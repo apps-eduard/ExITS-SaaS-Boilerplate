@@ -303,6 +303,103 @@ exports.seed = async function(knex) {
   // 5. Create users
   console.log('5. Creating users...');
   const passwordHash = await bcrypt.hash('Admin@123', 10);
+
+  const locationPresets = {
+    acme: [
+      {
+        houseNumber: '128',
+        streetName: 'Ayala Avenue',
+        barangay: 'San Lorenzo',
+        city: 'Makati City',
+        province: 'Metro Manila',
+        region: 'NCR',
+        zipCode: '1223',
+        landmark: 'Near Greenbelt'
+      },
+      {
+        houseNumber: '77',
+        streetName: 'Legazpi Street',
+        barangay: 'Legazpi Village',
+        city: 'Makati City',
+        province: 'Metro Manila',
+        region: 'NCR',
+        zipCode: '1229',
+        landmark: 'Washington SyCip Park'
+      }
+    ],
+    techstart: [
+      {
+        houseNumber: '18',
+        streetName: 'Bonifacio High Street',
+        barangay: 'Fort Bonifacio',
+        city: 'Taguig City',
+        province: 'Metro Manila',
+        region: 'NCR',
+        zipCode: '1630',
+        landmark: 'Bonifacio High Street Central'
+      },
+      {
+        houseNumber: '35',
+        streetName: 'McKinley Parkway',
+        barangay: 'Fort Bonifacio',
+        city: 'Taguig City',
+        province: 'Metro Manila',
+        region: 'NCR',
+        zipCode: '1634',
+        landmark: 'SM Aura Premier'
+      }
+    ]
+  };
+
+  const pickLocation = (subdomain = 'acme', sequence = 0) => {
+    const presets = locationPresets[subdomain] || locationPresets.acme;
+    return presets[sequence % presets.length];
+  };
+
+  const createAddressPayload = (
+    tenantId,
+    addressableType,
+    addressableId,
+    {
+      subdomain = 'acme',
+      sequence = 0,
+      addressType = 'home',
+      label = 'Primary Residence',
+      isPrimary = true,
+      houseNumber,
+      streetName,
+      barangay,
+      city,
+      province,
+      region,
+      zipCode,
+      country = 'Philippines',
+      contactPerson,
+      contactPhone,
+      landmark,
+    } = {}
+  ) => {
+    const preset = pickLocation(subdomain, sequence);
+    return {
+      tenant_id: tenantId,
+      addressable_type: addressableType,
+      addressable_id: addressableId,
+      address_type: addressType,
+      label,
+      is_primary: isPrimary,
+      house_number: houseNumber || preset.houseNumber,
+      street_name: streetName || preset.streetName,
+      barangay: barangay || preset.barangay,
+      city_municipality: city || preset.city,
+      province: province || preset.province,
+      region: region || preset.region,
+      zip_code: zipCode || preset.zipCode,
+      country,
+      contact_person: contactPerson || null,
+      contact_phone: contactPhone || null,
+      landmark: landmark || preset.landmark,
+    };
+  };
   
   // System admin
   const [systemAdmin] = await knex('users').insert({
@@ -396,7 +493,7 @@ exports.seed = async function(knex) {
       }
     ];
     
-    for (const testCustomer of testCustomersData) {
+    for (const [index, testCustomer] of testCustomersData.entries()) {
       // Create user account for customer
       const [customerUser] = await knex('users').insert({
         tenant_id: acmeTenant.id,
@@ -446,6 +543,30 @@ exports.seed = async function(knex) {
         kyc_verified_at: new Date(),
         status: 'active'
       });
+
+      const customerFullName = `${testCustomer.firstName} ${testCustomer.lastName}`.trim();
+      const primaryAddress = createAddressPayload(acmeTenant.id, 'customer', customer.id, {
+        subdomain: 'acme',
+        sequence: index,
+        addressType: 'home',
+        label: 'Home Address',
+        isPrimary: true,
+        contactPerson: customerFullName,
+        contactPhone: testCustomer.phone,
+      });
+
+      const billingAddress = createAddressPayload(acmeTenant.id, 'customer', customer.id, {
+        subdomain: 'acme',
+        sequence: index + 1,
+        addressType: 'billing',
+        label: 'Billing Address',
+        isPrimary: false,
+        contactPerson: customerFullName,
+        contactPhone: testCustomer.phone,
+        landmark: 'ACME Finance Center',
+      });
+
+      await knex('addresses').insert([primaryAddress, billingAddress]);
     }
     console.log(`✅ Created ${testCustomersData.length} test customers with Money Loan profiles`);
   }
@@ -515,6 +636,34 @@ exports.seed = async function(knex) {
         status: 'active',
         assigned_date: new Date()
       });
+
+      const employeeFirstName = employee.first_name || employee.firstName || `Employee${i}`;
+      const employeeLastName = employee.last_name || employee.lastName || tenant.name.split(' ')[0];
+      const employeeContactPhone = `+63 917 ${String(5000000 + tenant.id * 100 + i).padStart(7, '0')}`;
+      const employeeContactName = `${employeeFirstName} ${employeeLastName}`.trim();
+
+      const employeeHomeAddress = createAddressPayload(tenant.id, 'employee_profile', profile.id, {
+        subdomain: tenantSubdomain,
+        sequence: i - 1,
+        addressType: 'home',
+        label: 'Home Address',
+        isPrimary: true,
+        contactPerson: employeeContactName,
+        contactPhone: employeeContactPhone,
+      });
+
+      const employeeWorkAddress = createAddressPayload(tenant.id, 'employee_profile', profile.id, {
+        subdomain: tenantSubdomain,
+        sequence: i,
+        addressType: 'work',
+        label: 'Office Address',
+        isPrimary: false,
+        contactPerson: employeeContactName,
+        contactPhone: employeeContactPhone,
+        landmark: tenantSubdomain === 'acme' ? 'ACME Corporate Center' : 'TechStart Innovation Hub',
+      });
+
+      await knex('addresses').insert([employeeHomeAddress, employeeWorkAddress]);
     }
     
     // Create 2 additional customers (with user accounts for portal access)
@@ -578,6 +727,30 @@ exports.seed = async function(knex) {
         preferred_payment_day: 15,
         status: 'active'
       });
+
+      const additionalCustomerName = `Customer${i} ${tenant.name.split(' ')[0]}`.trim();
+      const customerHomeAddress = createAddressPayload(tenant.id, 'customer', customer.id, {
+        subdomain: tenantSubdomain,
+        sequence: i - 1,
+        addressType: 'home',
+        label: 'Home Address',
+        isPrimary: true,
+        contactPerson: additionalCustomerName,
+        contactPhone: `+63 917 ${String(tenant.id * 100000 + i).padStart(7, '0')}`,
+      });
+
+      const customerWorkAddress = createAddressPayload(tenant.id, 'customer', customer.id, {
+        subdomain: tenantSubdomain,
+        sequence: i,
+        addressType: 'billing',
+        label: 'Billing Address',
+        isPrimary: false,
+        contactPerson: additionalCustomerName,
+        contactPhone: `+63 917 ${String(tenant.id * 100000 + i).padStart(7, '0')}`,
+        landmark: tenantSubdomain === 'acme' ? 'Glorietta Mall' : 'Central Square',
+      });
+
+      await knex('addresses').insert([customerHomeAddress, customerWorkAddress]);
     }
   }
   

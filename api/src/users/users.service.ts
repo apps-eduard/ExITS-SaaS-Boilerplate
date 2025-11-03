@@ -1,7 +1,9 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Knex } from 'knex';
 import * as bcrypt from 'bcrypt';
 import { KnexService } from '../database/knex.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { UserProductAssignmentDto } from './dto/user-products.dto';
 
 @Injectable()
 export class UsersService {
@@ -223,27 +225,400 @@ export class UsersService {
   async findOne(id: number) {
     const knex = this.knexService.instance;
 
-    const user = await knex('users')
+    const userRecord = await knex('users as u')
+      .leftJoin('tenants as t', 'u.tenant_id', 't.id')
       .select(
-        'users.id',
-        'users.email',
-        'users.first_name',
-        'users.last_name',
-        'users.tenant_id',
-        'users.status',
-        'users.email_verified',
-        'users.mfa_enabled',
-        'users.last_login',
-        'users.created_at',
+        'u.id',
+        'u.email',
+        'u.first_name',
+        'u.last_name',
+        'u.tenant_id',
+        'u.status',
+        'u.email_verified',
+        'u.mfa_enabled',
+        'u.last_login',
+        'u.created_at',
+        'u.updated_at',
+        't.name as tenant_name',
       )
-      .where({ 'users.id': id })
+      .where('u.id', id)
       .first();
 
-    if (!user) {
+    if (!userRecord) {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    const [roles, employeeProfile, productAssignments] = await Promise.all([
+      this.getUserRoles(id, knex),
+      this.getEmployeeProfile(id, knex),
+      this.getUserProducts(id, knex),
+    ]);
+
+    const addresses = await this.getAddressesForUser(
+      id,
+      userRecord.tenantId ?? null,
+      employeeProfile?.id ?? null,
+      knex,
+    );
+
+    const fullNameParts = [userRecord.firstName, userRecord.lastName].filter(
+      (part) => !!part && `${part}`.trim().length > 0,
+    );
+
+    const activePlatforms = productAssignments
+      .filter((assignment) => (assignment.status ?? 'active') === 'active' && assignment.productType)
+      .map((assignment) => assignment.productType as string);
+
+    const platforms = Array.from(new Set(activePlatforms));
+
+    return {
+      id: userRecord.id,
+      email: userRecord.email,
+      firstName: userRecord.firstName ?? undefined,
+      lastName: userRecord.lastName ?? undefined,
+      fullName: fullNameParts.length > 0 ? fullNameParts.join(' ') : undefined,
+      status: userRecord.status,
+      tenantId: userRecord.tenantId ?? null,
+      tenant: userRecord.tenantId
+        ? {
+            id: userRecord.tenantId,
+            name: userRecord.tenantName ?? undefined,
+          }
+        : undefined,
+      emailVerified: userRecord.emailVerified,
+      mfaEnabled: userRecord.mfaEnabled ?? false,
+      lastLoginAt: userRecord.lastLogin ?? undefined,
+      createdAt: userRecord.createdAt,
+      updatedAt: userRecord.updatedAt ?? undefined,
+      roles,
+      employeeProfile: employeeProfile ?? undefined,
+      productAccess: productAssignments,
+      platforms,
+      addresses,
+    };
+  }
+
+  async getUserProducts(userId: number, connection?: Knex | Knex.Transaction) {
+    const db = connection ?? this.knexService.instance;
+
+    try {
+      const rows = await db('employee_product_access as epa')
+        .select(
+          'epa.id',
+          'epa.tenant_id',
+          'epa.user_id',
+          'epa.employee_id',
+          'epa.platform_type',
+          'epa.access_level',
+          'epa.is_primary',
+          'epa.can_approve_loans',
+          'epa.can_disburse_funds',
+          'epa.can_view_reports',
+          'epa.can_modify_interest',
+          'epa.can_waive_penalties',
+          'epa.max_approval_amount',
+          'epa.daily_transaction_limit',
+          'epa.monthly_transaction_limit',
+          'epa.max_daily_transactions',
+          'epa.assignment_notes',
+          'epa.assigned_date',
+          'epa.status',
+        )
+        .where('epa.user_id', userId)
+        .whereNull('epa.deleted_at');
+
+      return rows.map((row) => this.mapProductRow(row));
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async setUserProducts(userId: number, assignments: UserProductAssignmentDto[]) {
+    const products = Array.isArray(assignments) ? assignments : [];
+
+    return this.knexService.transaction(async (trx) => {
+      const user = await trx('users')
+        .select('id', 'tenant_id')
+        .where({ id: userId })
+        .first();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (!user.tenantId) {
+        throw new BadRequestException('Tenant context is required to assign product access');
+      }
+
+      const employeeProfile = await this.getEmployeeProfile(userId, trx);
+      if (!employeeProfile) {
+        throw new BadRequestException('Employee profile is required before assigning product access');
+      }
+
+      await trx('employee_product_access')
+        .where({ user_id: userId })
+        .del();
+
+      for (const assignment of products) {
+        const normalizedType = this.normalizePlatformType(assignment.productType);
+        if (!normalizedType) {
+          continue;
+        }
+
+        const payload: Record<string, any> = {
+          tenant_id: user.tenantId,
+          employee_id: employeeProfile.id,
+          user_id: userId,
+          platform_type: normalizedType,
+          access_level: assignment.accessLevel ?? 'view',
+          is_primary: !!assignment.isPrimary,
+          can_approve_loans: !!assignment.canApproveLoans,
+          can_disburse_funds: !!assignment.canDisburseFunds,
+          can_view_reports: !!assignment.canViewReports,
+          can_modify_interest: !!assignment.canModifyInterest,
+          can_waive_penalties: !!assignment.canWaivePenalties,
+          max_approval_amount: this.toNullableNumber(assignment.maxApprovalAmount),
+          daily_transaction_limit: this.toNullableNumber(assignment.dailyTransactionLimit),
+          monthly_transaction_limit: this.toNullableNumber(assignment.monthlyTransactionLimit),
+          max_daily_transactions: this.toNullableNumber(assignment.maxDailyTransactions),
+          assignment_notes: assignment.notes ?? null,
+          status: 'active',
+          assigned_date: trx.fn.now(),
+        };
+
+        await trx('employee_product_access').insert(payload);
+      }
+
+      return this.getUserProducts(userId, trx);
+    });
+  }
+
+  private async getUserRoles(userId: number, connection: Knex | Knex.Transaction) {
+    try {
+      const rows = await connection('user_roles as ur')
+        .leftJoin('roles as r', 'ur.role_id', 'r.id')
+        .select('r.id as role_id', 'r.name', 'r.space', 'r.status')
+        .where('ur.user_id', userId)
+        .andWhere('r.status', 'active');
+
+      return rows
+        .filter((row) => !!row.roleId)
+        .map((row) => ({
+          id: row.roleId,
+          name: row.name,
+          space: row.space,
+        }));
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async getEmployeeProfile(userId: number, connection: Knex | Knex.Transaction) {
+    try {
+      const profile = await connection('employee_profiles')
+        .select(
+          'id',
+          'tenant_id',
+          'user_id',
+          'employee_code',
+          'department',
+          'position',
+          'employment_type',
+          'employment_status',
+          'hire_date',
+          'status',
+          'created_at',
+          'updated_at',
+        )
+        .where({ user_id: userId })
+        .whereNull('deleted_at')
+        .first();
+
+      return profile ?? null;
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async getAddressesForUser(
+    userId: number,
+    tenantId: number | null,
+    employeeProfileId: number | null,
+    connection: Knex | Knex.Transaction,
+  ) {
+    try {
+      const rows = await connection('addresses')
+        .select(
+          'id',
+          'tenant_id',
+          'addressable_type',
+          'addressable_id',
+          'address_type',
+          'label',
+          'is_primary',
+          'unit_number',
+          'house_number',
+          'street_name',
+          'subdivision',
+          'barangay',
+          'city_municipality',
+          'province',
+          'region',
+          'zip_code',
+          'country',
+          'landmark',
+          'delivery_instructions',
+          'contact_person',
+          'contact_phone',
+          'is_verified',
+          'verified_at',
+          'status',
+          'created_at',
+          'updated_at',
+        )
+        .whereNull('deleted_at')
+        .modify((qb) => {
+          qb.where((nested) => {
+            nested.where({ addressable_type: 'user', addressable_id: userId });
+            if (employeeProfileId) {
+              nested.orWhere({ addressable_type: 'employee_profile', addressable_id: employeeProfileId });
+            }
+          });
+          if (tenantId) {
+            qb.andWhere('tenant_id', tenantId);
+          }
+        })
+        .orderBy([{ column: 'is_primary', order: 'desc' }, { column: 'created_at', order: 'desc' }]);
+
+      return rows.map((row) => this.mapAddressRow(row, userId));
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private mapProductRow(row: any) {
+    return {
+      id: row.id,
+      tenantId: row.tenantId ?? undefined,
+      userId: row.userId ?? undefined,
+      employeeId: row.employeeId ?? undefined,
+      productType: row.platformType,
+      accessLevel: row.accessLevel ?? 'view',
+      isPrimary: !!row.isPrimary,
+      canApproveLoans: !!row.canApproveLoans,
+      canDisburseFunds: !!row.canDisburseFunds,
+      canViewReports: !!row.canViewReports,
+      canModifyInterest: !!row.canModifyInterest,
+      canWaivePenalties: !!row.canWaivePenalties,
+      maxApprovalAmount: this.toNullableNumber(row.maxApprovalAmount),
+      dailyTransactionLimit: this.toNullableNumber(row.dailyTransactionLimit),
+      monthlyTransactionLimit: this.toNullableNumber(row.monthlyTransactionLimit),
+      maxDailyTransactions: this.toNullableNumber(row.maxDailyTransactions),
+      notes: row.assignmentNotes ?? undefined,
+      assignedDate: row.assignedDate ?? undefined,
+      status: row.status ?? undefined,
+    };
+  }
+
+  private mapAddressRow(row: any, fallbackUserId: number) {
+    if (!row) {
+      return null;
+    }
+
+    const streetParts = [row.houseNumber, row.streetName]
+      .map((value) => (value ? `${value}`.trim() : ''))
+      .filter((value) => value.length > 0);
+
+    const street = streetParts.join(' ').trim() || row.streetName || '';
+
+    return {
+      id: row.id !== undefined && row.id !== null ? String(row.id) : undefined,
+      userId: row.addressableType === 'user'
+        ? String(row.addressableId)
+        : String(fallbackUserId),
+      tenantId:
+        row.tenantId !== undefined && row.tenantId !== null ? String(row.tenantId) : undefined,
+      addressType: row.addressType,
+      label: row.label ?? undefined,
+      street,
+      houseNumber: row.houseNumber ?? undefined,
+      streetName: row.streetName ?? undefined,
+      barangay: row.barangay ?? '',
+      cityMunicipality: row.cityMunicipality ?? '',
+      province: row.province ?? '',
+      region: row.region ?? '',
+      zipCode: row.zipCode ?? undefined,
+      country: row.country ?? 'Philippines',
+      landmark: row.landmark ?? undefined,
+      isPrimary: !!row.isPrimary,
+      isVerified: !!row.isVerified,
+      contactPhone: row.contactPhone ?? undefined,
+      contactName: row.contactPerson ?? undefined,
+      notes: row.deliveryInstructions ?? undefined,
+      addressableType: row.addressableType,
+      addressableId: row.addressableId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      verifiedAt: row.verifiedAt ?? undefined,
+      status: row.status ?? undefined,
+    };
+  }
+
+  private normalizePlatformType(value: string | undefined | null) {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.toString().trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const collapsed = normalized.replace(/\s+/g, '_').replace(/-+/g, '_');
+    const lower = collapsed.toLowerCase();
+
+    switch (lower) {
+      case 'money_loan':
+      case 'moneyloan':
+        return 'money_loan';
+      case 'bnpl':
+        return 'bnpl';
+      case 'pawnshop':
+        return 'pawnshop';
+      case 'platform':
+        return 'platform';
+      default:
+        return normalized
+          .replace(/([a-z])([A-Z])/g, '$1_$2')
+          .replace(/\s+/g, '_')
+          .replace(/-+/g, '_')
+          .toLowerCase();
+    }
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+
+    return numeric;
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {

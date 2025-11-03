@@ -19,6 +19,26 @@ export interface User {
     name: string;
     space: string;
   }>;
+  employeeProfile?: {
+    id?: string;
+    employeeCode?: string;
+    department?: string;
+    position?: string;
+    employmentType?: string;
+    employmentStatus?: string;
+    hireDate?: string;
+    status?: string;
+    workPhone?: string;
+    workEmail?: string;
+    phoneExtension?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    notes?: string;
+    [key: string]: any;
+  };
+  productAccess?: any[];
+  addresses?: any[];
+  platforms?: string[];
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;

@@ -1,11 +1,122 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Req, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { Permissions } from '../common/decorators/permissions.decorator';
 import { CustomerService } from './customer.service';
 import { CustomerLoginDto } from './dto/customer-auth.dto';
 
 @Controller('customers')
 export class CustomerController {
   constructor(private customerService: CustomerService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-customers:read', 'money-loan:customers:read')
+  async listCustomers(
+    @Req() req: any,
+    @Query('tenantId') tenantIdParam?: string,
+    @Query('page') pageParam?: string,
+    @Query('limit') limitParam?: string,
+    @Query('status') status?: string,
+    @Query('kycStatus') kycStatus?: string,
+    @Query('search') search?: string,
+  ) {
+    const tenantId = this.resolveTenantContext(req.user, tenantIdParam, true);
+    const page = pageParam ? parseInt(pageParam, 10) : undefined;
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+
+    const result = await this.customerService.listCustomers(tenantId, {
+      page,
+      limit,
+      status,
+      kycStatus,
+      search,
+    });
+
+    return {
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+    };
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-customers:create', 'money-loan:customers:create')
+  async createCustomer(
+    @Req() req: any,
+    @Body() payload: any,
+    @Query('tenantId') tenantIdParam?: string,
+  ) {
+    const tenantId = this.resolveTenantContext(req.user, tenantIdParam, true);
+    const customer = await this.customerService.createTenantCustomer(tenantId, payload, req.user?.id);
+    return {
+      success: true,
+      message: 'Customer created successfully',
+      data: customer,
+    };
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-customers:read', 'money-loan:customers:read')
+  async getCustomer(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('tenantId') tenantIdParam?: string,
+  ) {
+    const tenantId = this.resolveTenantContext(req.user, tenantIdParam, true);
+    const customerId = parseInt(id, 10);
+    if (!Number.isFinite(customerId)) {
+      throw new BadRequestException('Customer ID must be a valid number');
+    }
+
+    const customer = await this.customerService.getCustomerDetails(tenantId, customerId);
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    return {
+      success: true,
+      data: customer,
+    };
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-customers:update', 'money-loan:customers:update')
+  async updateCustomer(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() payload: any,
+    @Query('tenantId') tenantIdParam?: string,
+  ) {
+    const tenantId = this.resolveTenantContext(req.user, tenantIdParam, true);
+    const customerId = parseInt(id, 10);
+    if (!Number.isFinite(customerId)) {
+      throw new BadRequestException('Customer ID must be a valid number');
+    }
+
+    const updated = await this.customerService.updateTenantCustomer(tenantId, customerId, payload, req.user?.id);
+    return {
+      success: true,
+      message: 'Customer updated successfully',
+      data: updated,
+    };
+  }
 
   // Dashboard endpoint for mobile app
   @Get(':id/dashboard')
@@ -119,5 +230,35 @@ export class CustomerController {
       success: true,
       data: loanDetails,
     };
+  }
+
+  private resolveTenantContext(user: any, tenantIdParam?: string, allowOverride = false): number {
+    const permissions: string[] = user?.permissions || [];
+    const hasSystemAccess = permissions.includes('money-loan:customers:read') || permissions.includes('users:read');
+
+    let tenantId: number | undefined = user?.tenantId !== undefined && user?.tenantId !== null
+      ? Number(user.tenantId)
+      : undefined;
+
+    if (tenantIdParam !== undefined) {
+      const parsed = Number(tenantIdParam);
+      if (!Number.isFinite(parsed)) {
+        throw new BadRequestException('tenantId must be a valid number');
+      }
+
+      if (allowOverride || hasSystemAccess || tenantId === undefined) {
+        tenantId = parsed;
+      }
+    }
+
+    if (tenantId === undefined || Number.isNaN(tenantId)) {
+      throw new BadRequestException('Tenant context is required');
+    }
+
+    if (!hasSystemAccess && user?.tenantId !== undefined && Number(user.tenantId) !== tenantId) {
+      throw new ForbiddenException('Access to this tenant is not allowed');
+    }
+
+    return tenantId;
   }
 }

@@ -6,10 +6,12 @@ import { CustomerController } from './customer.controller';
 import { LoansController, LoanProductsController } from './loans.controller';
 import { CustomerService } from './customer.service';
 import { KnexModule } from '../database/knex.module';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [
-    KnexModule,
+  KnexModule,
+  RbacModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

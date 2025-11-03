@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { UpdateUserProductsDto } from './dto/user-products.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -114,6 +115,57 @@ export class UsersController {
     return {
       success: true,
       data: user,
+    };
+  }
+
+  @Get(':id/products')
+  @Permissions('users:read', 'tenant-users:read')
+  async getProducts(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    const requester = req.user;
+    const permissions: string[] = requester?.permissions || [];
+    const hasSystemAccess = permissions.includes('users:read');
+
+    const existing = await this.usersService.findOne(id);
+
+    if (!hasSystemAccess) {
+      if (!requester?.tenantId || requester.tenantId !== existing.tenantId) {
+        throw new ForbiddenException('Access to this user is not allowed');
+      }
+    }
+
+    const products = await this.usersService.getUserProducts(id);
+    return {
+      success: true,
+      data: products,
+    };
+  }
+
+  @Post(':id/products')
+  @Permissions('users:update', 'tenant-users:update')
+  async setProducts(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() payload: UpdateUserProductsDto,
+  ) {
+    const requester = req.user;
+    const permissions: string[] = requester?.permissions || [];
+    const hasSystemAccess = permissions.includes('users:update');
+
+    const existing = await this.usersService.findOne(id);
+
+    if (!hasSystemAccess) {
+      if (!requester?.tenantId || requester.tenantId !== existing.tenantId) {
+        throw new ForbiddenException('Access to this user is not allowed');
+      }
+    }
+
+    const assignments = payload?.products ?? [];
+    const result = await this.usersService.setUserProducts(id, assignments);
+
+    return {
+      success: true,
+      message: 'Product access updated successfully',
+      data: result,
     };
   }
 

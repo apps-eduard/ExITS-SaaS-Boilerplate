@@ -1221,9 +1221,7 @@ export class MoneyLoanService {
         'c.*',
         'mlcp.kyc_status as kycStatus',
         'mlcp.credit_score as creditScore',
-        'mlcp.risk_level as riskLevel',
-        'mlcp.employment_status as employmentStatus',
-        'mlcp.monthly_income as monthlyIncome'
+        'mlcp.risk_level as riskLevel'
       )
       .where({ 'c.id': customerId, 'c.tenant_id': tenantId })
       .first();
@@ -1260,8 +1258,6 @@ export class MoneyLoanService {
         kyc_status: customerData.kycStatus || 'pending',
         credit_score: customerData.creditScore || null,
         risk_level: customerData.riskLevel || 'medium',
-        employment_status: customerData.employmentStatus || null,
-        monthly_income: customerData.monthlyIncome || null,
       });
 
       return customer;
@@ -1301,8 +1297,6 @@ export class MoneyLoanService {
           kyc_status: updateData.kycStatus,
           credit_score: updateData.creditScore,
           risk_level: updateData.riskLevel,
-          employment_status: updateData.employmentStatus,
-          monthly_income: updateData.monthlyIncome,
         });
 
       return this.getCustomerById(tenantId, customerId);
