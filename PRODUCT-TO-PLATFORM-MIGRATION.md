@@ -12,25 +12,31 @@
 
 ### 2. Backend Seeds
 **File**: `api/src/seeds/02_subscription_plans_and_products.js`
+
 - ✅ Updated all `product_type` references to `platform_type`
 - ✅ Updated table name from `product_subscriptions` to `platform_subscriptions`
 - ✅ Updated variable names and log messages
+- ✅ Consolidated professional plan templates and feature toggles
 
 **File**: `api/src/seeds/09_professional_plan_templates.js`
-- ⚠️ Partially updated (line 55) - needs completion
+
+- ✅ Converted to deprecation stub (all logic migrated into `02_subscription_plans_and_products.js`)
 
 ## 🔄 Remaining Backend Changes Needed
 
 ### Seed Files
-- [ ] `api/src/seeds/09_professional_plan_templates.js` - Update all remaining `product_type` → `platform_type` (lines 82, 115, 151, 192, 218, 245)
+
+- [x] `api/src/seeds/09_professional_plan_templates.js` - Deprecated stub (no further updates required)
 
 ### Test/Utility Scripts
+
 - [ ] `api/check-active-subs.js` - Update queries from `product_subscriptions` to `platform_subscriptions`
 - [ ] `api/check-plan-data.js` - Update `product_type` references
 - [ ] `api/test-combined-subscriptions.js` - Update table/column names
 - [ ] `api/test-api-response.js` - Update `product_type` references
 
 ### Backend Controllers/Routes (if they exist)
+
 - [ ] Search for any `productSubscriptions` or `product_subscriptions` in controllers
 - [ ] Search for any `productType` or `product_type` in API responses
 - [ ] Update route names from `/products` to `/platforms` (if applicable)
@@ -41,6 +47,7 @@
 **Directory**: `web/src/app/features/admin/products/` → `web/src/app/features/admin/platforms/`
 
 Files to rename:
+
 - [ ] `products-list.component.ts` → `platforms-list.component.ts`
 - [ ] `product-new.component.ts` → `platform-new.component.ts`
 - [ ] `product-mapping.component.ts` → `platform-mapping.component.ts`
@@ -49,18 +56,21 @@ Files to rename:
 **Directory**: `web/src/app/features/tenant/products/` → `web/src/app/features/tenant/platforms/`
 
 Files to rename:
+
 - [ ] `tenant-products.component.ts` → `tenant-platforms.component.ts`
 - [ ] `tenant-product-settings.component.ts` → `tenant-platform-settings.component.ts`
 - [ ] `tenant-product-config.component.ts` → `tenant-platform-config.component.ts`
 
 ### Routes Update
 **File**: `web/src/app/app.routes.ts`
+
 - [ ] Update route path: `/admin/products` → `/admin/platforms`
 - [ ] Update import paths for renamed components
 - [ ] Update lazy-loaded module references
 
 ### Sidebar Menu
 **File**: `web/src/app/shared/components/sidebar/sidebar.component.ts`
+
 - [ ] Update menu label: "Products" → "Platforms"
 - [ ] Update icon (optional)
 - [ ] Update permission names if needed
@@ -68,6 +78,7 @@ Files to rename:
 
 ### Component Content Updates
 For each component:
+
 - [ ] Update selector: `app-product-*` → `app-platform-*`
 - [ ] Update template text: "Product" → "Platform"
 - [ ] Update variable names: `product` → `platform`, `productList` → `platformList`, etc.
@@ -76,6 +87,7 @@ For each component:
 - [ ] Update TypeScript types and properties
 
 ### Service Files
+
 - [ ] Search for `ProductService` → rename to `PlatformService`
 - [ ] Update API endpoints in services
 - [ ] Update method names: `getProducts()` → `getPlatforms()`
@@ -83,6 +95,7 @@ For each component:
 ## 📝 Database Schema Reference
 
 ### New Schema
+
 ```sql
 -- Enum types
 CREATE TYPE platform_type AS ENUM ('money_loan', 'bnpl', 'pawnshop', 'platform');
@@ -117,6 +130,7 @@ CREATE TABLE subscription_plans (
 Use these patterns to find remaining occurrences:
 
 ### Backend (API)
+
 ```bash
 # In api directory
 grep -r "product_type" --include="*.js"
@@ -126,6 +140,7 @@ grep -r "productSubscriptions" --include="*.js"
 ```
 
 ### Frontend (Web)
+
 ```bash
 # In web/src directory
 grep -r "product" --include="*.ts" --include="*.html"
@@ -143,7 +158,7 @@ grep -r "Product" --include="*.ts" --include="*.html"
 
 ### Phase 2: Backend
 - [x] Update main seed file (02_subscription_plans_and_products.js)
-- [ ] Update professional plans seed (09_professional_plan_templates.js)
+- [x] Update professional plans seed (09_professional_plan_templates.js)
 - [ ] Update test/utility scripts
 - [ ] Update controllers (if any exist)
 - [ ] Update API routes

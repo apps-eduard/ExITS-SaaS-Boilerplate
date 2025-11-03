@@ -72,13 +72,12 @@ Knex runs seed files in alphabetical order:
    - Assigns permissions to roles & users
 
 2. `02_subscription_plans_and_products.js`
-   - Creates core subscription plans and embedded features
+   - Creates core subscription plans, professional templates, and plan feature toggles
 
 3. `05_money_loan_seed.js`
    - Seeds money loan-specific data
 
-4. `09_professional_plan_templates.js`
-   - Adds production-ready subscription plan templates and feature gates
+> NOTE: `09_professional_plan_templates.js` now logs a deprecation message (logic merged into `02_subscription_plans_and_products.js`).
 
 ## Expected Results After Seeding
 

@@ -3,6 +3,8 @@
 ## Overview
 Successfully implemented professional subscription plan templates with user limits, trial days, featured plans, and custom pricing support using proper Knex migrations and seeds.
 
+> NOTE: The original `09_professional_plan_templates.js` seed has been reduced to a deprecation stub. All plan data now seeds through `02_subscription_plans_and_products.js`.
+
 ---
 
 ## ✅ Completed Tasks
@@ -72,7 +74,7 @@ if (!limitCheck.allowed) {
 ---
 
 ### 3. **Professional Plan Templates** ✅
-**Seed**: `09_professional_plan_templates.js`
+**Seed**: `02_subscription_plans_and_products.js` (logic consolidated from the former `09_professional_plan_templates.js`)
 
 **Platform Plans Created (4 tiers):**
 
@@ -87,11 +89,11 @@ if (!limitCheck.allowed) {
 
 | Plan | Price | Active Loans | Features | Featured | Custom |
 |------|-------|--------------|----------|----------|--------|
-| **Money Loan - Basic** | $79.99/mo | 100 | Basic underwriting | - | - |
-| **Money Loan - Professional** | $149.99/mo | 500 | Advanced + Automation | ⭐ FEATURED | - |
-| **Money Loan - Enterprise** | $299.99/mo | Unlimited | Custom + ML | - | 💼 CUSTOM |
+| **Money Loan - Starter** | $29.99/mo | 50 | Core lending workflows | - | - |
+| **Money Loan - Pro** | $79.99/mo | 500 | Automation + analytics | ⭐ FEATURED | - |
+| **Money Loan - Enterprise** | $199.99/mo | Unlimited | Custom workflows + API | - | 💼 CUSTOM |
 
-**Total Plans**: 14 plans (includes existing product plans)
+**Total Plans**: 11 plans (includes existing product plans)
 
 **Status**: ✅ Plans exist in database with proper configuration
 
@@ -213,7 +215,7 @@ hasAdvancedReporting = computed(() => this.hasFeature('advanced_reporting'));
 
 ### **New Files Created:**
 1. ✅ `api/src/migrations/20251025090000_enhance_subscription_plans.js` (210 lines)
-2. ✅ `api/src/seeds/09_professional_plan_templates.js` (366 lines)
+2. ✅ `api/src/seeds/02_subscription_plans_and_products.js` (updated with professional templates)
 3. ✅ `web/src/app/core/services/feature-gate.service.ts` (235 lines)
 4. ✅ `PROFESSIONAL-PLAN-TEMPLATES-GUIDE.md` (700+ lines)
 5. ✅ `api/verify-plans.js` (Verification utility)
@@ -238,10 +240,11 @@ hasAdvancedReporting = computed(() => this.hasFeature('advanced_reporting'));
 
 ### **Database Verification:**
 ```
-✅ 14 Total Plans
+✅ 11 Total Plans
    - 4 Platform plans (Trial, Starter, Professional, Enterprise)
-   - 3 Money Loan plans (Basic, Professional, Enterprise)
-   - 7 Product-specific plans (existing)
+   - 3 Money Loan plans (Starter, Pro, Enterprise)
+   - 2 BNPL plans (Starter, Pro)
+   - 2 Pawnshop plans (Starter, Pro)
 
 ⭐ Featured Plans: 5 plans
 💼 Custom Pricing: 2 plans (Enterprise tiers)
