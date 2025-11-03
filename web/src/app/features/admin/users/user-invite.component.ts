@@ -249,6 +249,7 @@ export class UserInviteComponent {
   sending = signal(false);
   successMessage = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
+  private returnRoute = '/admin/users';
 
   singleInvite = {
     email: '',
@@ -270,6 +271,10 @@ export class UserInviteComponent {
     public roleService: RoleService
   ) {
     this.roleService.loadRoles();
+    const currentUrl = this.router.url || '';
+    if (currentUrl.startsWith('/tenant')) {
+      this.returnRoute = '/tenant/users';
+    }
   }
 
   getAvailableRoles(userType: string) {
@@ -346,7 +351,7 @@ export class UserInviteComponent {
 
       // Navigate back after 2 seconds
       setTimeout(() => {
-        this.router.navigate(['/admin/users']);
+        this.router.navigateByUrl(this.returnRoute);
       }, 2000);
 
     } catch (error) {
@@ -358,6 +363,6 @@ export class UserInviteComponent {
   }
 
   goBack() {
-    this.router.navigate(['/admin/users']);
+    this.router.navigateByUrl(this.returnRoute);
   }
 }

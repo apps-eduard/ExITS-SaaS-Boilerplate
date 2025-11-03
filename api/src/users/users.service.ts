@@ -626,19 +626,61 @@ export class UsersService {
 
     const user = await this.findOne(id);
 
-    const updateData: any = {};
-    if (updateUserDto.firstName) updateData.first_name = updateUserDto.firstName;
-    if (updateUserDto.lastName) updateData.last_name = updateUserDto.lastName;
-    if (updateUserDto.status) updateData.status = updateUserDto.status;
+    const updateData: Record<string, any> = {};
 
-    await knex('users').where({ id }).update(updateData);
+    if (updateUserDto.email !== undefined) {
+      const candidateEmail = updateUserDto.email ? updateUserDto.email.trim() : '';
+      if (!candidateEmail) {
+        throw new BadRequestException('Email cannot be empty');
+      }
 
-    if (updateUserDto.roleId) {
+      const currentEmailNormalized = (user.email ?? '').trim().toLowerCase();
+      const candidateEmailNormalized = candidateEmail.toLowerCase();
+
+      if (candidateEmailNormalized !== currentEmailNormalized) {
+        const existing = await knex('users')
+          .whereRaw('LOWER(email) = ?', [candidateEmailNormalized])
+          .andWhereNot({ id })
+          .first();
+
+        if (existing) {
+          throw new ConflictException('User with this email already exists');
+        }
+      }
+
+      updateData.email = candidateEmail;
+    }
+
+    if (updateUserDto.firstName !== undefined) {
+      const firstName = updateUserDto.firstName?.trim();
+      updateData.first_name = firstName && firstName.length > 0 ? firstName : null;
+    }
+
+    if (updateUserDto.lastName !== undefined) {
+      const lastName = updateUserDto.lastName?.trim();
+      updateData.last_name = lastName && lastName.length > 0 ? lastName : null;
+    }
+
+    if (updateUserDto.status !== undefined) {
+      const status = updateUserDto.status?.trim();
+      if (status) {
+        updateData.status = status;
+      }
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      updateData.updated_at = knex.fn.now();
+      await knex('users').where({ id }).update(updateData);
+    }
+
+    if (updateUserDto.roleId !== undefined) {
       await knex('user_roles').where({ user_id: id }).delete();
-      await knex('user_roles').insert({
-        user_id: id,
-        role_id: updateUserDto.roleId,
-      });
+      if (updateUserDto.roleId !== null) {
+        await knex('user_roles').insert({
+          user_id: id,
+          role_id: updateUserDto.roleId,
+        });
+      }
     }
 
     return this.findOne(id);

@@ -136,6 +136,9 @@ export class AddressesService {
         throw new NotFoundException('Address not found');
       }
 
+      const addressableType = existing.addressableType ?? existing.addressable_type;
+      const addressableId = existing.addressableId ?? existing.addressable_id;
+
       const updates: Record<string, any> = {};
 
       if (dto.addressType !== undefined) updates.address_type = dto.addressType;
@@ -162,14 +165,14 @@ export class AddressesService {
 
       if (dto.isPrimary !== undefined) {
         await trx('addresses')
-          .where({ addressable_type: existing.addressable_type, addressable_id: existing.addressable_id })
+          .where({ addressable_type: addressableType, addressable_id: addressableId })
           .andWhereNot({ id })
           .update({ is_primary: false, updated_at: trx.fn.now(), updated_by: actorId ?? null });
         updates.is_primary = !!dto.isPrimary;
       }
 
       if (Object.keys(updates).length === 0) {
-        return this.mapAddress(existing, existing.addressable_id);
+        return this.mapAddress(existing, addressableId);
       }
 
       updates.updated_at = trx.fn.now();
@@ -178,7 +181,7 @@ export class AddressesService {
       await trx('addresses').where({ id }).update(updates);
 
       const refreshed = await this.getAddressRecord(id, trx);
-      return this.mapAddress(refreshed, existing.addressable_id);
+      return this.mapAddress(refreshed, addressableId);
     });
   }
 
@@ -211,8 +214,11 @@ export class AddressesService {
         throw new NotFoundException('Address not found');
       }
 
+      const addressableType = existing.addressableType ?? existing.addressable_type;
+      const addressableId = existing.addressableId ?? existing.addressable_id;
+
       await trx('addresses')
-        .where({ addressable_type: existing.addressable_type, addressable_id: existing.addressable_id })
+        .where({ addressable_type: addressableType, addressable_id: addressableId })
         .update({ is_primary: false, updated_at: trx.fn.now(), updated_by: actorId ?? null });
 
       await trx('addresses')
@@ -224,7 +230,7 @@ export class AddressesService {
         });
 
       const refreshed = await this.getAddressRecord(id, trx);
-      return this.mapAddress(refreshed, existing.addressable_id);
+      return this.mapAddress(refreshed, addressableId);
     });
   }
 

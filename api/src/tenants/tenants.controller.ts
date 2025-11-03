@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto/tenant.dto';
+import { CreateTenantSubscriptionDto } from './dto/create-tenant-subscription.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -60,6 +61,54 @@ export class TenantsController {
     return {
       success: true,
       data: tenant,
+    };
+  }
+
+  @Get('current/subscriptions')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-billing:read', 'tenant-dashboard:view')
+  async getCurrentTenantSubscriptions(@Req() req: any) {
+    const rawTenantId = req.user?.tenantId;
+    const tenantId = Number(rawTenantId);
+
+    if (!Number.isFinite(tenantId)) {
+      throw new ForbiddenException('Tenant context not available');
+    }
+
+    const data = await this.tenantsService.getCurrentTenantSubscriptions(tenantId);
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Post('current/subscribe')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('tenant-billing:update', 'tenant-billing:read')
+  async subscribeCurrentTenant(
+    @Req() req: any,
+    @Body() dto: CreateTenantSubscriptionDto,
+  ) {
+    const rawTenantId = req.user?.tenantId;
+    const tenantId = Number(rawTenantId);
+
+    if (!Number.isFinite(tenantId)) {
+      throw new ForbiddenException('Tenant context not available');
+    }
+
+    const userId = req.user?.id ? Number(req.user.id) : null;
+
+    const result = await this.tenantsService.createOrUpdateSubscription(
+      tenantId,
+      userId,
+      dto,
+    );
+
+    return {
+      success: true,
+      message: 'Subscription created successfully',
+      data: result,
     };
   }
 

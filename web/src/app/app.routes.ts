@@ -633,6 +633,10 @@ export const routes: Routes = [
             loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
           },
           {
+            path: 'invite',
+            loadComponent: () => import('./features/admin/users/user-invite.component').then(m => m.UserInviteComponent)
+          },
+          {
             path: ':id',
             loadComponent: () => import('./features/admin/users/user-editor.component').then(m => m.UserEditorComponent)
           }
@@ -644,6 +648,10 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () => import('./features/tenant/customers/customers-list.component').then(m => m.CustomersListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
           },
           {
             path: ':id',

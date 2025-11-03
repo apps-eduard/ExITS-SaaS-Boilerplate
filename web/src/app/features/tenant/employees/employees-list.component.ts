@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectorRef, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { RBACService } from '../../../core/services/rbac.service';
 
 interface Employee {
   id: number;
@@ -33,15 +34,28 @@ interface Employee {
     <div class="p-4">
       <!-- Header with Icon -->
       <div class="mb-4">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xl">👤</span>
-          <h1 class="text-lg font-bold text-gray-900 dark:text-white">
-            All Employees
-          </h1>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">👤</span>
+              <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                All Employees
+              </h1>
+            </div>
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              Manage your employee accounts
+            </p>
+          </div>
+          @if (canCreateEmployees()) {
+            <button
+              (click)="createEmployee()"
+              class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"
+            >
+              <span class="w-3.5 h-3.5">➕</span>
+              Add Employee
+            </button>
+          }
         </div>
-        <p class="text-xs text-gray-600 dark:text-gray-400">
-          Manage your employee accounts
-        </p>
       </div>
 
       <!-- Filters Card -->
@@ -156,6 +170,16 @@ interface Employee {
               <span class="w-3.5 h-3.5">📊</span>
               Export All
             </button>
+
+            @if (canCreateEmployees()) {
+              <button
+                (click)="createEmployee()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded shadow-sm hover:bg-blue-700 transition"
+              >
+                <span class="w-3.5 h-3.5">➕</span>
+                Add Employee
+              </button>
+            }
 
             <span class="text-xs text-gray-600 dark:text-gray-400">
               Showing {{ paginatedEmployees().length }} of {{ filteredEmployees().length }}
@@ -430,6 +454,14 @@ interface Employee {
               <span class="w-3.5 h-3.5">🔄</span>
               Clear Filters
             </button>
+          } @else if (canCreateEmployees()) {
+            <button
+              (click)="createEmployee()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded shadow-sm hover:bg-blue-700 transition"
+            >
+              <span class="w-3.5 h-3.5">➕</span>
+              Add Employee
+            </button>
           }
         </div>
       }
@@ -443,6 +475,7 @@ export class EmployeesListComponent implements OnInit {
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
   themeService = inject(ThemeService);
+  private rbacService = inject(RBACService);
 
   employees = signal<Employee[]>([]);
   filteredEmployees = signal<Employee[]>([]);
@@ -456,12 +489,20 @@ export class EmployeesListComponent implements OnInit {
   currentPage = 1;
   totalPages = signal(1);
 
+  canCreateEmployees = computed(() =>
+    this.rbacService.canAny(['tenant-users:create', 'tenant-users:invite'])
+  );
+
   // Selection state
   selectedEmployees = new Set<number>();
   selectAll = false;
 
   ngOnInit() {
     this.loadEmployees();
+  }
+
+  createEmployee() {
+    this.router.navigate(['/tenant/users/new']);
   }
 
   loadEmployees() {

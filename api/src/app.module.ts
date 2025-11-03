@@ -11,6 +11,7 @@ import { MoneyLoanModule } from './money-loan/money-loan.module';
 import { CustomerModule } from './customer/customer.module';
 import { BillingModule } from './billing/billing.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AddressesModule } from './addresses/addresses.module';
     CustomerModule,
     BillingModule,
     AddressesModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

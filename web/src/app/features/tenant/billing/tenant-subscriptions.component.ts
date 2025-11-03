@@ -384,23 +384,42 @@ export class TenantSubscriptionsComponent implements OnInit {
     const cycle = this.billingCycle();
     const currentSubscriptionNames = this.currentSubscriptions().map(s => s.name);
     const activeProductTypes = this.currentSubscriptions().map(s => s.productType);
-    const enabled = this.enabledProducts();
+    const enabled = this.enabledProducts().filter(Boolean);
+    const enabledSet = new Set(enabled);
+    const shouldFilterByEnabled = enabledSet.size > 0;
 
     // Filter plans: show only plans for enabled products
     return this.allPlans()
       .filter(apiPlan => {
-        // Show product plans only if the product is enabled
-        return enabled.includes(apiPlan.productType || '');
+        const productType = apiPlan.productType || null;
+
+        // Always show platform-wide or unspecified product plans
+        if (!productType) {
+          return true;
+        }
+
+        // If no enabled products returned from API, show everything by default
+        if (!shouldFilterByEnabled) {
+          return true;
+        }
+
+        return enabledSet.has(productType);
       })
       .map(apiPlan => {
-        const isCurrentPlan = currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name);
-        const hasActiveSubscription = activeProductTypes.includes(apiPlan.productType);
+  const isCurrentPlan = currentSubscriptionNames.includes(apiPlan.displayName) || currentSubscriptionNames.includes(apiPlan.name);
+  const productType = apiPlan.productType ?? undefined;
+  const hasActiveSubscription = productType ? activeProductTypes.includes(productType) : false;
+        const productEnabled = !shouldFilterByEnabled
+          ? true
+          : !productType
+            ? true
+            : enabledSet.has(productType);
 
         // Determine subscription status
         let subscriptionStatus: 'available' | 'active' | 'pending' = 'available';
         if (hasActiveSubscription && isCurrentPlan) {
           subscriptionStatus = 'active';
-        } else if (enabled.includes(apiPlan.productType || '') && !hasActiveSubscription) {
+        } else if (productEnabled && !hasActiveSubscription) {
           subscriptionStatus = 'available';
         }
 
@@ -413,7 +432,7 @@ export class TenantSubscriptionsComponent implements OnInit {
           currency: 'PHP',
           billingCycle: cycle,
           features: apiPlan.features || [],
-          productType: apiPlan.productType,
+          productType,
           trialDays: 0,
           current: isCurrentPlan,
           hasActiveSubscription: hasActiveSubscription,

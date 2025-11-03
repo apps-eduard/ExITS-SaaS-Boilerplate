@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { RBACService } from '../../../core/services/rbac.service';
 
 interface Customer {
   id: number;
@@ -30,15 +31,28 @@ interface Customer {
     <div class="p-4">
       <!-- Header with Icon -->
       <div class="mb-4">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xl">👥</span>
-          <h1 class="text-lg font-bold text-gray-900 dark:text-white">
-            All Customers
-          </h1>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">👥</span>
+              <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                All Customers
+              </h1>
+            </div>
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              Manage your customer accounts
+            </p>
+          </div>
+          @if (canCreateCustomers()) {
+            <button
+              (click)="createCustomer()"
+              class="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"
+            >
+              <span class="w-3.5 h-3.5">➕</span>
+              Add Customer
+            </button>
+          }
         </div>
-        <p class="text-xs text-gray-600 dark:text-gray-400">
-          Manage your customer accounts
-        </p>
       </div>
 
       <!-- Filters Card -->
@@ -151,6 +165,16 @@ interface Customer {
               <span class="w-3.5 h-3.5">📊</span>
               Export All
             </button>
+
+            @if (canCreateCustomers()) {
+              <button
+                (click)="createCustomer()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded shadow-sm hover:bg-blue-700 transition"
+              >
+                <span class="w-3.5 h-3.5">➕</span>
+                Add Customer
+              </button>
+            }
 
             <span class="text-xs text-gray-600 dark:text-gray-400">
               Showing {{ paginatedCustomers().length }} of {{ filteredCustomers().length }}
@@ -388,6 +412,14 @@ interface Customer {
               <span class="w-3.5 h-3.5">🔄</span>
               Clear Filters
             </button>
+          } @else if (canCreateCustomers()) {
+            <button
+              (click)="createCustomer()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded shadow-sm hover:bg-blue-700 transition"
+            >
+              <span class="w-3.5 h-3.5">➕</span>
+              Add Customer
+            </button>
           }
         </div>
       }
@@ -400,6 +432,7 @@ export class CustomersListComponent implements OnInit {
   private toastService: ToastService;
   private router: Router;
   public themeService: ThemeService;
+  private rbacService = inject(RBACService);
 
   customers = signal<Customer[]>([]);
   filteredCustomers = signal<Customer[]>([]);
@@ -412,6 +445,10 @@ export class CustomersListComponent implements OnInit {
   pageSize = 25;
   currentPage = 1;
   totalPages = signal(1);
+
+  canCreateCustomers = computed(() =>
+    this.rbacService.canAny(['tenant-customers:create', 'money-loan:customers:create'])
+  );
 
   // Selection state
   selectedCustomers = new Set<number>();
@@ -428,6 +465,10 @@ export class CustomersListComponent implements OnInit {
     console.log('CustomersListComponent ngOnInit called');
     console.log('HttpClient instance:', this.http);
     this.loadCustomers();
+  }
+
+  createCustomer() {
+    this.router.navigate(['/tenant/customers/new']);
   }
 
   loadCustomers() {

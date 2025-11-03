@@ -1893,6 +1893,7 @@ export class UserEditorComponent implements OnInit {
       }
 
       if (user) {
+        const isUpdate = this.isEditMode();
         // Reset password if requested (edit mode only)
         // Reset password if provided
         if (this.isEditMode() && this.resetPasswordData.newPassword && this.isPasswordResetValid()) {
@@ -2017,6 +2018,7 @@ export class UserEditorComponent implements OnInit {
         }
 
         console.log('✅ User saved successfully');
+        this.toastService.success(isUpdate ? 'User updated successfully' : 'User created successfully');
         // Detect context and navigate accordingly
         const url = this.router.url;
         if (url.startsWith('/tenant/')) {
@@ -2026,10 +2028,12 @@ export class UserEditorComponent implements OnInit {
         }
       } else {
         this.errorMessage.set('Failed to save user. Please try again.');
+        this.toastService.error('Failed to save user. Please try again.');
       }
     } catch (error) {
       console.error('❌ Error saving user:', error);
       this.errorMessage.set(error instanceof Error ? error.message : 'An error occurred');
+      this.toastService.error('Something went wrong while saving. Please try again.');
     } finally {
       this.saving.set(false);
     }

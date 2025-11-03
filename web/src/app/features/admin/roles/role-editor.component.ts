@@ -721,25 +721,27 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'tenant-billing', displayName: '💳 Tenant Billing', description: 'Tenant billing and subscriptions', actions: ['read', 'view-subscriptions', 'view-invoices', 'manage-renewals', 'view-overview', 'update'], category: 'tenant', product: 'core' },
     { resource: 'tenant-reports', displayName: '📋 Tenant Reports', description: 'Tenant reports and analytics', actions: ['view', 'platform-usage', 'user-activity', 'billing-summary', 'transactions', 'export'], category: 'tenant', product: 'core' },
     { resource: 'tenant-recycle-bin', displayName: '♻️ Tenant Recycle Bin', description: 'Tenant deleted items recovery', actions: ['view', 'restore', 'view-history'], category: 'tenant', product: 'core' },
-    { resource: 'tenant-settings', displayName: '🔧 Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant', product: 'core' },
+  { resource: 'tenant-settings', displayName: '🔧 Tenant Settings', description: 'Tenant configuration', actions: ['read', 'update'], category: 'tenant', product: 'core' },
+  { resource: 'tenant-customers', displayName: '🧾 Tenant Customers', description: 'Manage tenant customer records', actions: ['read', 'create', 'update', 'delete', 'export'], category: 'tenant', product: 'core' },
 
     // Business modules (treated as tenant-level)
     // Money Loan - Granular Permissions (61 permissions)
         // Business modules (treated as tenant-level)
     // Money Loan - Granular Permissions (matching DB structure with nested colons)
-    { resource: 'money-loan:overview', displayName: '💰 Money Loan: Overview', description: 'Overview dashboard metrics', actions: ['view', 'total-loans', 'collection-rate', 'overdue-percentage', 'outstanding-amount', 'default-rate'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:customers', displayName: '💰 Money Loan: Customers', description: 'Customer management', actions: ['read', 'create', 'update', 'delete', 'view-high-risk'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:loans', displayName: '💰 Money Loan: Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse', 'view-overdue', 'close', 'use-calculator'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:payments', displayName: '💰 Money Loan: Payments', description: 'Payment processing', actions: ['read', 'create', 'view-today', 'bulk-import', 'refund', 'view-failed', 'configure-gateway'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:interest', displayName: '💰 Money Loan: Interest & Rules', description: 'Interest rate management', actions: ['read', 'update', 'manage-auto-rules', 'manual-override', 'use-calculator'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:collections', displayName: '💰 Money Loan: Collections', description: 'Collections management', actions: ['read', 'manage-workflow', 'manage-strategies', 'legal-actions', 'view-recovery'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:kyc', displayName: '💰 Money Loan: KYC', description: 'KYC verification', actions: ['read', 'review', 'approve', 'view-audit-logs', 'view-webhook-logs', 'configure'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:reports', displayName: '💰 Money Loan: Reports', description: 'Reporting and analytics', actions: ['read', 'generate-periodic', 'tax-summary', 'export', 'custom-queries'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:settings', displayName: '💰 Money Loan: Settings', description: 'Product settings', actions: ['read', 'manage-roles', 'manage-loan-products', 'manage-templates', 'manage-branding', 'manage-api-keys', 'view-audit-log'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:audit', displayName: '💰 Money Loan: Audit', description: 'Audit trail', actions: ['read', 'view-data-changes', 'export'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:notifications', displayName: '💰 Money Loan: Notifications', description: 'System notifications', actions: ['read'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan:integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:overview', displayName: '💰 Money Loan: Overview', description: 'Overview dashboard metrics', actions: ['view', 'total-loans', 'collection-rate', 'overdue-percentage', 'outstanding-amount', 'default-rate'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan', displayName: '💰 Money Loan: Core', description: 'Base money loan module access', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:customers', displayName: '💰 Money Loan: Customers', description: 'Customer management', actions: ['read', 'create', 'update', 'delete', 'view-high-risk'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:loans', displayName: '💰 Money Loan: Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse', 'view-overdue', 'close', 'use-calculator'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:payments', displayName: '💰 Money Loan: Payments', description: 'Payment processing', actions: ['read', 'create', 'view-today', 'bulk-import', 'refund', 'view-failed', 'configure-gateway'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:interest', displayName: '💰 Money Loan: Interest & Rules', description: 'Interest rate management', actions: ['read', 'update', 'manage-auto-rules', 'manual-override', 'use-calculator'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:collections', displayName: '💰 Money Loan: Collections', description: 'Collections management', actions: ['read', 'manage-workflow', 'manage-strategies', 'legal-actions', 'view-recovery'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:kyc', displayName: '💰 Money Loan: KYC', description: 'KYC verification', actions: ['read', 'review', 'approve', 'view-audit-logs', 'view-webhook-logs', 'configure'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:reports', displayName: '💰 Money Loan: Reports', description: 'Reporting and analytics', actions: ['read', 'generate-periodic', 'tax-summary', 'export', 'custom-queries'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:settings', displayName: '💰 Money Loan: Settings', description: 'Product settings', actions: ['read', 'manage-roles', 'manage-loan-products', 'manage-templates', 'manage-branding', 'manage-api-keys', 'view-audit-log'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:audit', displayName: '💰 Money Loan: Audit', description: 'Audit trail', actions: ['read', 'view-data-changes', 'export'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:notifications', displayName: '💰 Money Loan: Notifications', description: 'System notifications', actions: ['read'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
 
     // BNPL & Pawnshop
     { resource: 'bnpl', displayName: 'ðŸ›’ Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'bnpl' },
@@ -754,6 +756,7 @@ export class RoleEditorComponent implements OnInit {
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
   selectedPermissions = signal<Set<string>>(new Set());
+  private readonly essentialTenantPermissions: string[] = ['tenant-dashboard:view', 'tenant-users:read'];
 
   private parsePermissionKey(permKey: string): { resource: string; action: string } {
     if (!permKey) {
@@ -942,9 +945,10 @@ export class RoleEditorComponent implements OnInit {
         console.warn('âš ï¸ Permissions is not an array or is null:', role.permissions);
       }
 
-      console.log('âœ… Loaded permissions set:', Array.from(permSet));
-      console.log('âœ… Total permissions loaded:', permSet.size);
-      this.selectedPermissions.set(permSet);
+  console.log('âœ… Loaded permissions set:', Array.from(permSet));
+  console.log('âœ… Total permissions loaded:', permSet.size);
+  this.ensureEssentialTenantPermissions(permSet);
+  this.selectedPermissions.set(permSet);
       this.cdr.detectChanges();
       console.log('âœ… Selected permissions signal updated');
     } else {
@@ -990,7 +994,9 @@ export class RoleEditorComponent implements OnInit {
   toggleSelectAll(): void {
     if (this.areAllSelected()) {
       // Unselect all
-      this.selectedPermissions.set(new Set());
+      const perms = new Set<string>();
+      this.ensureEssentialTenantPermissions(perms);
+      this.selectedPermissions.set(perms);
     } else {
       // Select all visible permissions
       const perms = new Set<string>();
@@ -999,6 +1005,7 @@ export class RoleEditorComponent implements OnInit {
           perms.add(`${group.resource}:${action}`);
         });
       });
+      this.ensureEssentialTenantPermissions(perms);
       this.selectedPermissions.set(perms);
     }
   }
@@ -1033,6 +1040,7 @@ export class RoleEditorComponent implements OnInit {
       });
     }
 
+    this.ensureEssentialTenantPermissions(perms);
     this.selectedPermissions.set(perms);
 
     // Apply system filter to show what was just selected/unselected
@@ -1069,6 +1077,7 @@ export class RoleEditorComponent implements OnInit {
       });
     }
 
+    this.ensureEssentialTenantPermissions(perms);
     this.selectedPermissions.set(perms);
 
     // Apply tenant filter with core product to show what was just selected/unselected
@@ -1098,6 +1107,7 @@ export class RoleEditorComponent implements OnInit {
       });
     }
 
+    this.ensureEssentialTenantPermissions(perms);
     this.selectedPermissions.set(perms);
 
     // Focus filters on the selected product for immediate visibility
@@ -1132,6 +1142,7 @@ export class RoleEditorComponent implements OnInit {
       });
     }
 
+    this.ensureEssentialTenantPermissions(perms);
     this.selectedPermissions.set(perms);
     this.setSpaceFilter('customer');
   }
@@ -1227,7 +1238,17 @@ export class RoleEditorComponent implements OnInit {
   }
 
   clearAllPermissions(): void {
-    this.selectedPermissions.set(new Set());
+    const perms = new Set<string>();
+    this.ensureEssentialTenantPermissions(perms);
+    this.selectedPermissions.set(perms);
+  }
+
+  private ensureEssentialTenantPermissions(perms: Set<string>): void {
+    if (this.roleSpace !== 'tenant') {
+      return;
+    }
+
+    this.essentialTenantPermissions.forEach(key => perms.add(key));
   }
 
   getTotalSelectedPermissions(): number {

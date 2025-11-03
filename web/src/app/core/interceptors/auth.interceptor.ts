@@ -19,8 +19,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     (req.url.includes('/api/customers/auth/refresh') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/create') && req.method === 'POST') ||
     (req.url.includes('/api/tenants/by-subdomain') && req.method === 'GET') ||
-    (req.url.match(/\/api\/subscriptions\/plans$/) && req.method === 'GET') || // Only GET all plans is public
-    (req.url.match(/\/api\/subscriptions\/plans\/\d+$/) && req.method === 'GET') || // Only GET single plan is public
     (req.url.match(/\/api\/subscription-plans$/) && req.method === 'GET') || // New endpoint - only GET is public
     (req.url.match(/\/api\/subscription-plans\/[^/]+$/) && req.method === 'GET') // New endpoint - only GET is public
   );
