@@ -37,6 +37,8 @@ import {
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 interface Payment {
   id: number;
@@ -80,6 +82,7 @@ interface Payment {
     IonSegment,
     IonSegmentButton,
     IonNote,
+    DevInfoComponent
   ],
   templateUrl: './payments.page.html',
   styleUrls: ['./payments.page.scss'],

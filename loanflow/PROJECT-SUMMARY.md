@@ -251,7 +251,7 @@ cd loanflow
 .\setup.ps1
 
 # 3. Start NestJS API (in parent project)
-cd ..\nest-api
+cd ..\api
 npm run start:dev
 
 # 4. Generate API client (back in loanflow/)
@@ -280,7 +280,7 @@ npm run ios
 ### **Shared Resources**
 | Resource | Location | Usage |
 |----------|----------|-------|
-| NestJS API | `../nest-api/` | All backend logic |
+| NestJS API | `../api/` | All backend logic |
 | PostgreSQL | Docker container | Main database |
 | JWT Tokens | API `/auth/login` | Authentication |
 | OpenAPI Spec | `http://localhost:3000/api-json` | API client generation |

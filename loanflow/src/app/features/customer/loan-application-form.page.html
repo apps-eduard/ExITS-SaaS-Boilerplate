@@ -1,0 +1,205 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="custom-toolbar">
+    <div class="toolbar-content">
+      <div class="toolbar-left">
+        <ion-button routerLink="/customer/apply-loan" class="icon-btn" fill="clear">
+          <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+      
+      <div class="toolbar-center">
+        <span class="title-text">Apply for Loan</span>
+      </div>
+      
+      <div class="toolbar-right">
+        <!-- Dev Info (Development Only) -->
+        <app-dev-info />
+        
+        <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
+          <ion-icon 
+            [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
+            slot="icon-only"
+            class="theme-icon"
+          ></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading()) {
+    <div class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Loading product details...</p>
+    </div>
+  } @else if (product()) {
+    <!-- Product Summary -->
+    <ion-card class="product-summary">
+      <ion-card-header>
+        <ion-card-title>{{ product()!.name }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="product-info">
+          <div class="info-item">
+            <ion-icon name="cash-outline"></ion-icon>
+            <span>₱{{ formatCurrency(product()!.minAmount) }} - ₱{{ formatCurrency(product()!.maxAmount) }}</span>
+          </div>
+          <div class="info-item">
+            <ion-icon name="calendar-outline"></ion-icon>
+            @if (product()!.loanTermType === 'fixed') {
+              <span>🔒 {{ Math.round((product()!.fixedTermDays || 90) / 30) }} Months (Fixed)</span>
+            } @else {
+              <span>{{ Math.round(product()!.minTerm / 30) }} - {{ Math.round(product()!.maxTerm / 30) }} Months</span>
+            }
+          </div>
+          <div class="info-item">
+            <span class="rate-label">Interest Rate:</span>
+            <span class="rate-value">{{ product()!.interestRate }}% / month</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Application Form -->
+    <ion-card class="application-form">
+      <ion-card-header>
+        <ion-card-title>Loan Details</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <!-- Amount Slider -->
+        <div class="form-section">
+          <ion-label class="section-label">
+            <ion-icon name="cash-outline"></ion-icon>
+            Requested Amount
+          </ion-label>
+          <div class="amount-display">
+            ₱{{ formatCurrency(requestedAmount()) }}
+          </div>
+          <ion-range
+            [min]="product()!.minAmount"
+            [max]="product()!.maxAmount"
+            [step]="100"
+            [value]="requestedAmount()"
+            (ionChange)="onAmountChange($event)"
+            [pin]="true"
+            [pinFormatter]="formatCurrency"
+          >
+            <ion-label slot="start">₱{{ formatCurrency(product()!.minAmount) }}</ion-label>
+            <ion-label slot="end">₱{{ formatCurrency(product()!.maxAmount) }}</ion-label>
+          </ion-range>
+        </div>
+
+        <!-- Term Slider -->
+        <div class="form-section">
+          <ion-label class="section-label">
+            <ion-icon name="calendar-outline"></ion-icon>
+            Loan Term @if (product()!.loanTermType === 'fixed') {<span class="fixed-badge">🔒 Fixed</span>}
+          </ion-label>
+          <div class="term-display">
+            {{ requestedTermMonths() }} Months
+          </div>
+          @if (product()!.loanTermType === 'fixed') {
+            <!-- Fixed term: Show slider but DISABLED -->
+            <ion-range
+              [min]="Math.round((product()!.fixedTermDays || 90) / 30)"
+              [max]="Math.round((product()!.fixedTermDays || 90) / 30)"
+              [step]="1"
+              [value]="requestedTermMonths()"
+              [disabled]="true"
+              [pin]="false"
+            >
+              <ion-label slot="start">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
+              <ion-label slot="end">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
+            </ion-range>
+            <ion-note class="fixed-term-note">
+              ⚠️ This product has a fixed loan term. The term cannot be changed.
+            </ion-note>
+          } @else {
+            <!-- Flexible term: Show slider ENABLED -->
+            <ion-range
+              [min]="Math.round(product()!.minTerm / 30)"
+              [max]="Math.round(product()!.maxTerm / 30)"
+              [step]="1"
+              [value]="requestedTermMonths()"
+              (ionChange)="onTermChange($event)"
+              [pin]="true"
+            >
+              <ion-label slot="start">{{ Math.round(product()!.minTerm / 30) }}m</ion-label>
+              <ion-label slot="end">{{ Math.round(product()!.maxTerm / 30) }}m</ion-label>
+            </ion-range>
+          }
+        </div>
+
+        <!-- Purpose -->
+        <div class="form-section">
+          <ion-item lines="none">
+            <ion-label position="stacked">
+              <ion-icon name="document-text-outline"></ion-icon>
+              Purpose (Optional)
+            </ion-label>
+            <ion-textarea
+              placeholder="E.g., Business expansion, Medical expenses, etc."
+              rows="3"
+              [(ngModel)]="purpose"
+            ></ion-textarea>
+          </ion-item>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Repayment Summary -->
+    <ion-card class="repayment-summary">
+      <ion-card-header>
+        <ion-card-title>Repayment Summary</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="summary-item">
+          <span class="label">Principal Amount:</span>
+          <span class="value">₱{{ formatCurrency(requestedAmount()) }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Processing Fee ({{ product()!.processingFee }}%):</span>
+          <span class="value">₱{{ formatCurrency(getProcessingFeeAmount()) }}</span>
+        </div>
+        @if (hasPlatformFee()) {
+          <div class="summary-item">
+            <span class="label">Platform Fee:</span>
+            <span class="value">₱{{ formatCurrency(getPlatformFee()) }}/month</span>
+          </div>
+        }
+        <div class="summary-item">
+          <span class="label">Loan Term:</span>
+          <span class="value">{{ requestedTermMonths() }} months</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Interest Rate:</span>
+          <span class="value">{{ product()!.interestRate }}% per month</span>
+        </div>
+        <div class="summary-item highlight">
+          <span class="label">Total Repayment:</span>
+          <span class="value">₱{{ formatCurrency(getTotalRepayment()) }}</span>
+        </div>
+        <div class="summary-item highlight">
+          <span class="label">Monthly Payment:</span>
+          <span class="value">₱{{ formatCurrency(getEstimatedMonthlyPayment()) }}</span>
+        </div>
+        <ion-note class="disclaimer">
+          *Estimated amounts. Final terms will be confirmed upon approval.
+        </ion-note>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Submit Button -->
+    <ion-button
+      expand="block"
+      size="large"
+      class="submit-button"
+      (click)="submitApplication()"
+      [disabled]="submitting()"
+    >
+      <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+      {{ submitting() ? 'Submitting...' : 'Submit Application' }}
+    </ion-button>
+  }
+</ion-content>

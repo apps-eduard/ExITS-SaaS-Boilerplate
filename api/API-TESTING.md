@@ -400,7 +400,7 @@ pm.request.headers.add({
 
 ### Using Jest (Unit Tests)
 ```bash
-cd nest-api
+cd api
 npm test
 ```
 

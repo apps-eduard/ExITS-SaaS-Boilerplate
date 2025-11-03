@@ -216,7 +216,7 @@ Each Tenant Admin has access to all tenant-level permissions including:
 **Tenant Users:**
 - tenant-users:view, tenant-users:create, tenant-users:edit, tenant-users:delete, tenant-users:invite
 
-**Money Loan (66 permissions):**
+**Money Loan (61 permissions):**
 - money-loan:overview:view, money-loan:overview:export
 - money-loan:applications:view, money-loan:applications:create, money-loan:applications:edit, money-loan:applications:delete
 - money-loan:approvals:view, money-loan:approvals:approve, money-loan:approvals:reject

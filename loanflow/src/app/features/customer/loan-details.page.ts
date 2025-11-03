@@ -30,6 +30,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 interface LoanDetails {
   id: number;
@@ -91,7 +92,8 @@ interface Payment {
     IonIcon,
     IonBadge,
     IonSkeletonText,
-    IonProgressBar
+    IonProgressBar,
+    DevInfoComponent
   ],
   template: `
     <ion-header class="ion-no-border">
@@ -106,10 +108,14 @@ interface Payment {
           </div>
           
           <div class="toolbar-right">
+            <!-- Dev Info (Development Only) -->
+            <app-dev-info />
+            
             <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
               <ion-icon 
                 [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
                 slot="icon-only"
+                class="theme-icon"
               ></ion-icon>
             </ion-button>
           </div>

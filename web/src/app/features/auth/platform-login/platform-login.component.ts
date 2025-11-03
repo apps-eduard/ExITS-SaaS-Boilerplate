@@ -6,11 +6,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { PlatformSelectorModalComponent } from '../../../shared/components/platform-selector-modal/platform-selector-modal.component';
+import { DevInfoComponent } from '../../../shared/components/dev-info/dev-info.component';
 
 @Component({
   selector: 'app-platform-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PlatformSelectorModalComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PlatformSelectorModalComponent, DevInfoComponent],
   templateUrl: './platform-login.component.html',
   styles: []
 })

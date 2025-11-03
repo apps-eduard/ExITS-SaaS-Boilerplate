@@ -289,14 +289,7 @@ Each permission follows the format: `{resource}:{action}`
 | `money-loan:user-management:manage` | money-loan-user-management | manage | Manage staff accounts and access |
 | `money-loan:integrations:configure` | money-loan-integrations | configure | Configure external integrations |
 
-### **Legacy Money Loan Permissions (5)** *(Deprecated - use granular permissions above)*
-| Permission Key | Resource | Action | Description |
-|----------------|----------|--------|-------------|
-| `money-loan:read` | money-loan | read | View loan information *(Use specific permissions instead)* |
-| `money-loan:create` | money-loan | create | Create new loans *(Use money-loan:loans:create)* |
-| `money-loan:update` | money-loan | update | Update loan details *(Use money-loan:loans:update)* |
-| `money-loan:approve` | money-loan | approve | Approve/reject loans *(Use money-loan:loans:approve)* |
-| `money-loan:payments` | money-loan | payments | Manage loan payments *(Use money-loan:payments:create)* |
+> **Removed Legacy Keys:** The broad tenant permissions `loans:*` and `payments:*` (including `money-loan:read/create/update/approve/payments`) were retired in November 2025. They are no longer present in the database and should not be assigned going forward.
 
 ---
 
@@ -346,7 +339,7 @@ Each permission follows the format: `{resource}:{action}`
 | • Billing | 5 |
 | • Reports | 6 |
 | • Recycle Bin | 3 |
-| **Money Loan Product** | 66 permissions |
+| **Money Loan Product** | 61 permissions *(legacy keys removed)* |
 | • Overview | 6 |
 | • Customers | 5 |
 | • Loans | 9 |
@@ -361,7 +354,7 @@ Each permission follows the format: `{resource}:{action}`
 | • Legacy (Deprecated) | 5 |
 | **BNPL Product** | 4 permissions |
 | **Pawnshop Product** | 4 permissions |
-| **TOTAL** | **127 permissions** |
+| **TOTAL** | **122 permissions** *(active keys)* |
 
 ---
 

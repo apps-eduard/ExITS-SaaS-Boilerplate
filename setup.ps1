@@ -4,7 +4,9 @@
 param(
     [switch]$ResetDb,
     [switch]$SkipInstall,
-    [switch]$NoStart
+    [switch]$NoStart,
+    [switch]$ForceSeed,
+    [string]$PsqlPath
 )
 
 # Color codes
@@ -37,6 +39,98 @@ function Write-Error-Custom {
 function Write-Step { 
     $timestamp = Get-Date -Format "HH:mm:ss"
     Write-Host "$($Gray)[$timestamp]$($Reset) $($Blue)=>$($Reset) $args" 
+}
+
+$script:DatabaseSeedStatus = 'Skipped'
+$script:PasswordResetStatus = 'Skipped'
+
+function Resolve-PsqlPath {
+    if ($PsqlPath) {
+        if (Test-Path $PsqlPath) { return $PsqlPath }
+        Write-Warning "Provided psql path '$PsqlPath' not found."
+    }
+
+    if ($env:PSQL_PATH -and (Test-Path $env:PSQL_PATH)) {
+        return $env:PSQL_PATH
+    }
+
+    $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
+    if ($psqlCommand) {
+        return $psqlCommand.Source
+    }
+
+    $defaultCandidates = @(
+        'C:\Program Files\PostgreSQL\18\bin\psql.exe',
+        'C:\Program Files\PostgreSQL\17\bin\psql.exe',
+        'C:\Program Files\PostgreSQL\16\bin\psql.exe'
+    )
+
+    foreach ($candidate in $defaultCandidates) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    Write-Error-Custom "Unable to locate psql. Pass -PsqlPath or ensure psql is on PATH."
+    return $null
+}
+
+function Reset-UserPasswords {
+    Write-Header "Resetting User Passwords"
+
+    $dbPassword = 'admin'
+    if (Test-Path "api\.env") {
+        $envContent = Get-Content "api\.env"
+        $passwordLine = $envContent | Where-Object { $_ -match '^DB_PASSWORD=' }
+        if ($passwordLine) {
+            $dbPassword = ($passwordLine -split '=',2)[1].Trim()
+            Write-Info "Using DB password from api\\.env"
+        }
+    }
+
+    $resolvedPsqlPath = Resolve-PsqlPath
+    if (-not $resolvedPsqlPath) {
+        Write-Error-Custom "Cannot locate psql.exe for password reset"
+        return $false
+    }
+
+    Push-Location api
+    $nodeCommand = "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('Admin@123', 10));"
+    $hashOutput = & node -e $nodeCommand 2>&1
+    $nodeSuccess = $LASTEXITCODE -eq 0
+    Pop-Location
+
+    if (-not $nodeSuccess) {
+        Write-Error-Custom "Unable to generate bcrypt hash via Node.js"
+        $hashOutput | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+        return $false
+    }
+
+    $passwordHash = ($hashOutput | Select-Object -Last 1).Trim()
+    if (-not $passwordHash) {
+        Write-Error-Custom "Generated password hash is empty"
+        return $false
+    }
+
+    $env:PGPASSWORD = $dbPassword
+
+    $updateCmd = "UPDATE users SET password_hash = '$passwordHash', status = 'active', email_verified = true, updated_at = NOW();"
+    Write-Step "Resetting passwords for all users..."
+    $result = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -d exits_saas_db -c $updateCmd 2>&1
+    $resetSuccess = $LASTEXITCODE -eq 0
+
+    if ($resetSuccess) {
+        Write-Success "All user passwords reset to default (Admin@123)"
+        $script:PasswordResetStatus = 'Completed'
+    } else {
+        Write-Error-Custom "Password reset failed"
+        $result | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+        Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+        return $false
+    }
+
+    Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+    return $true
 }
 
 function Show-Banner {
@@ -75,7 +169,7 @@ function Install-Dependencies {
     
     # NestJS API
     Write-Step "Checking NestJS API dependencies..."
-    Push-Location nest-api
+    Push-Location api
     if (!(Test-Path "node_modules")) {
         Write-Info "Installing NestJS API dependencies (this may take a few minutes)..."
         $output = npm install 2>&1
@@ -138,18 +232,18 @@ function Install-Dependencies {
 }
 
 # Setup database
-function Setup-Database {
+function Initialize-Database {
     Write-Header "Setting Up Database"
     
     Write-Step "Reading database credentials from .env file..."
     # Read DB password from .env file
     $dbPassword = 'admin'  # Default
-    if (Test-Path "nest-api\.env") {
-        $envContent = Get-Content "nest-api\.env"
+    if (Test-Path "api\.env") {
+        $envContent = Get-Content "api\.env"
         $passwordLine = $envContent | Where-Object { $_ -match '^DB_PASSWORD=' }
         if ($passwordLine) {
             $dbPassword = ($passwordLine -split '=',2)[1].Trim()
-            Write-Info "Found DB password in nest-api\.env"
+            Write-Info "Found DB password in api\.env"
         }
     }
     
@@ -157,13 +251,21 @@ function Setup-Database {
     $env:PGPASSWORD = $dbPassword
     
     # Test connection first
-    $testResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c 'SELECT version();' 2>&1
+    $resolvedPsqlPath = Resolve-PsqlPath
+    if (-not $resolvedPsqlPath) {
+        Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+        return $false
+    }
+
+    Write-Info "Using psql at: $resolvedPsqlPath"
+
+    $testResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c 'SELECT version();' 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Cannot connect to PostgreSQL. Make sure PostgreSQL is running."
         Write-Host "$($Red)Connection details:$($Reset)"
         Write-Host "  Host: localhost:5432"
         Write-Host "  User: postgres"
-        Write-Host "  Password: $dbPassword (from nest-api\.env)"
+        Write-Host "  Password: $dbPassword (from api\.env)"
         Write-Host "$($Red)Error: $testResult$($Reset)"
         Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
         return $false
@@ -173,46 +275,89 @@ function Setup-Database {
     
     Write-Step "Terminating existing database connections..."
     $terminateCmd = 'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ''exits_saas_db'' AND pid <> pg_backend_pid();'
-    $terminateResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $terminateCmd 2>&1
+    & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $terminateCmd 2>&1 | Out-Null
     Write-Info "Connection termination completed"
     
     Start-Sleep -Seconds 1
-    
-    Write-Step "Dropping existing database (if exists)..."
-    $dropCmd = 'DROP DATABASE IF EXISTS exits_saas_db;'
-    $dropResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $dropCmd 2>&1 | Out-String
-    
-    if ($LASTEXITCODE -ne 0) {
-        if ($dropResult -match "does not exist") {
-            Write-Info "Database does not exist (this is fine, creating fresh)"
-        } else {
+
+    $dbExistsCmd = "SELECT 1 FROM pg_database WHERE datname = 'exits_saas_db';"
+    $dbExists = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -tAc $dbExistsCmd 2>&1
+    $hasDatabase = ($LASTEXITCODE -eq 0 -and $dbExists.Trim() -eq '1')
+    $createdFreshDatabase = $false
+
+    if ($ResetDb -and $hasDatabase) {
+        Write-Step "Dropping existing database (ResetDb flag set)..."
+        $dropCmd = 'DROP DATABASE IF EXISTS exits_saas_db;'
+        $dropResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $dropCmd 2>&1 | Out-String
+
+        if ($LASTEXITCODE -ne 0) {
             Write-Error-Custom "Failed to drop database"
             Write-Host "$($Red)$dropResult$($Reset)"
             Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
             return $false
         }
+
+    Write-Success "Existing database dropped successfully"
+        $hasDatabase = $false
+        $createdFreshDatabase = $true
+    } elseif ($hasDatabase) {
+        Write-Info "Database already exists; will re-use unless migrations require reset."
     } else {
-        Write-Success "Existing database dropped successfully"
+        Write-Info "Database not found; will create a fresh instance."
+        $createdFreshDatabase = $true
     }
     
-    Write-Step "Creating fresh database 'exits_saas_db'..."
-    $createCmd = 'CREATE DATABASE exits_saas_db;'
-    $createResult = & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -h localhost -p 5432 -c $createCmd 2>&1
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Failed to create database"
-        Write-Host "$($Red)$createResult$($Reset)"
-        Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
-        return $false
+    if (-not $hasDatabase) {
+        Write-Step "Creating database 'exits_saas_db'..."
+        $createCmd = 'CREATE DATABASE exits_saas_db;'
+        $createResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $createCmd 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error-Custom "Failed to create database"
+            Write-Host "$($Red)$createResult$($Reset)"
+            Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+            return $false
+        }
+
+        Write-Success "Database 'exits_saas_db' created successfully"
+        $createdFreshDatabase = $true
     }
-    
-    Write-Success "Database 'exits_saas_db' created successfully"
+
+    # Remove legacy migration records that no longer have matching files
+    $legacyMigrations = @(
+        '20251024084941_add_tenant_permissions.js',
+        '20251024131100_add_missing_tenant_permissions.js',
+        '20251024140000_add_tenant_permissions_v2.js',
+        '20251025121000_add_billing_permissions.js',
+        '20251026150000_create_payment_method_types.js',
+        '20251026150001_add_tenant_billing_update_permission.js'
+    )
+
+    if ($legacyMigrations.Count -gt 0) {
+        Write-Step "Cleaning legacy migration history entries..."
+        $checkResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -d exits_saas_db -tAc "SELECT to_regclass('public.knex_migrations') IS NOT NULL;" 2>&1
+        $hasKnexTable = ($LASTEXITCODE -eq 0 -and $checkResult.Trim() -eq 't')
+
+        if ($hasKnexTable) {
+            $legacyList = ($legacyMigrations | ForEach-Object { "'$_'" }) -join ', '
+            $cleanupSql = "DELETE FROM knex_migrations WHERE name IN ($legacyList);"
+            $cleanupResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -d exits_saas_db -c $cleanupSql 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "Legacy migration entries cleaned up"
+            } else {
+                Write-Warning "Unable to clean legacy migration entries automatically"
+                $cleanupResult | Select-Object -Last 10 | ForEach-Object { Write-Host "  $_" }
+            }
+        } else {
+            Write-Info "Knex migration history table not found; skipping cleanup."
+        }
+    }
     
     Start-Sleep -Seconds 2
     
     Write-Step "Running NestJS database migrations using Knex..."
     Write-Host "$($Bright)$($Yellow)  📦 Using NestJS Knex Migration System$($Reset)"
-    Push-Location nest-api
+    Push-Location api
     
     $env:PGPASSWORD = $dbPassword
     
@@ -240,7 +385,7 @@ CORS_ORIGIN=http://localhost:4200
     }
     
     # Run Knex migrations
-    Write-Info "Running Knex migrations to create database schema..."
+    Write-Info "Running Knex migrations to apply database schema..."
     Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
     Write-Host "$($Bright)$($Cyan)|  NESTJS KNEX MIGRATION - Creating Database Schema       |$($Reset)"
     Write-Host "$($Bright)$($Cyan)|  Command: npx knex migrate:latest                       |$($Reset)"
@@ -256,25 +401,38 @@ CORS_ORIGIN=http://localhost:4200
         return $false
     }
     
-    Write-Success "Database schema created successfully (34 migrations)"
-    
-    Write-Step "Seeding database with initial data using Knex..."
-    Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
-    Write-Host "$($Bright)$($Cyan)|  NESTJS KNEX SEED - Populating Initial Data             |$($Reset)"
-    Write-Host "$($Bright)$($Cyan)|  Command: npx knex seed:run                              |$($Reset)"
-    Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
-    Write-Host "$($Gray)  Seed output:$($Reset)"
-    $seedOutput = npx knex seed:run 2>&1
-    $seedOutput | ForEach-Object { Write-Host "$($Gray)  |$($Reset) $_" }
-    $seedSuccess = $LASTEXITCODE -eq 0
-    
-    if (!$seedSuccess) {
-        Pop-Location
-        Write-Error-Custom "Database seeding failed"
-        return $false
+    if ($migrateSuccess) {
+        Write-Success "Database schema migrated successfully"
     }
     
-    Write-Success "Database seeded successfully"
+    $shouldSeed = $ForceSeed -or $createdFreshDatabase
+    if ($shouldSeed) {
+        Write-Step "Seeding database with initial data using Knex..."
+        Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
+        Write-Host "$($Bright)$($Cyan)|  NESTJS KNEX SEED - Populating Initial Data             |$($Reset)"
+        Write-Host "$($Bright)$($Cyan)|  Command: npx knex seed:run                              |$($Reset)"
+        Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
+        Write-Host "$($Gray)  Seed output:$($Reset)"
+        $seedOutput = npx knex seed:run 2>&1
+        $seedOutput | ForEach-Object { Write-Host "$($Gray)  |$($Reset) $_" }
+        $seedSuccess = $LASTEXITCODE -eq 0
+
+        if (!$seedSuccess) {
+            Pop-Location
+            Write-Error-Custom "Database seeding failed"
+            return $false
+        }
+
+        Write-Success "Database seeded successfully"
+        if ($ForceSeed) {
+            $script:DatabaseSeedStatus = 'Forced'
+        } else {
+            $script:DatabaseSeedStatus = 'Fresh'
+        }
+    } else {
+        Write-Info "Skipping seeds (existing database detected; use -ForceSeed to override)."
+        $script:DatabaseSeedStatus = 'Skipped'
+    }
     
     Pop-Location
     Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
@@ -283,7 +441,7 @@ CORS_ORIGIN=http://localhost:4200
 }
 
 # Build web
-function Build-Web {
+function Invoke-WebBuild {
     Write-Header "Building Web Application"
     
     Write-Step "Ensuring proxy configuration exists..."
@@ -340,14 +498,23 @@ function Main {
         }
     }
     
-    if (!(Setup-Database)) { 
+    if (!(Initialize-Database)) { 
         Write-Error-Custom "Database setup failed"
         return 
     }
-    
-    if (!(Build-Web)) { 
-        Write-Error-Custom "Web build failed"
-        return 
+
+    if (!(Reset-UserPasswords)) {
+        Write-Error-Custom "Password reset failed"
+        return
+    }
+
+    if (-not $NoStart) {
+        if (!(Invoke-WebBuild)) { 
+            Write-Error-Custom "Web build failed"
+            return 
+        }
+    } else {
+        Write-Info "NoStart flag set; skipping web build."
     }
     
     Write-Header "Setup Complete"
@@ -358,23 +525,41 @@ function Main {
     Write-Host "$($Green)✓ Database: exits_saas_db (PostgreSQL - Fresh)$($Reset)"
     Write-Host "$($Green)✓ Migrations: 34 migrations completed$($Reset)"
     Write-Host "$($Green)✓ Seeds: All data populated$($Reset)"
-    Write-Host "$($Green)✓ Web Build: Complete$($Reset)"
+    if (-not $NoStart) {
+        Write-Host "$($Green)✓ Web Build: Complete$($Reset)"
+    } else {
+        Write-Host "$($Yellow)⚠ Web Build: Skipped (-NoStart)$($Reset)"
+    }
+
+    switch ($script:DatabaseSeedStatus) {
+        'Fresh'   { Write-Host "$($Green)✓ Database Seeds: Fresh database seeded$($Reset)" }
+        'Forced'  { Write-Host "$($Green)✓ Database Seeds: Forced refresh$($Reset)" }
+        default   { Write-Host "$($Yellow)⚠ Database Seeds: Skipped (existing data reused)$($Reset)" }
+    }
+
+    if ($script:PasswordResetStatus -eq 'Completed') {
+        Write-Host "$($Green)✓ User Passwords: Reset to default (Admin@123)$($Reset)"
+    } else {
+        Write-Host "$($Yellow)⚠ User Passwords: Not reset$($Reset)"
+    }
     Write-Host "$($Bright)$($Green)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$($Reset)"
     Write-Host ""
     Write-Host "$($Bright)$($Cyan)📦 NestJS Backend:$($Reset)"
-    Write-Host "  • Location: nest-api/"
+    Write-Host "  • Location: api/"
     Write-Host "  • Migrations: npx knex migrate:latest"
     Write-Host "  • Seeds: npx knex seed:run"
     Write-Host "  • Start: npm run start:dev"
     Write-Host ""
     Write-Host "$($Cyan)To start the servers:$($Reset)"
-    Write-Host "  $($Yellow)cd nest-api ; npm run start:dev$($Reset)"
+    Write-Host "  $($Yellow)cd api ; npm run start:dev$($Reset)"
     Write-Host "  $($Yellow)cd web ; npm start$($Reset)"
     Write-Host ""
     Write-Host "$($Bright)$($Cyan)🔐 Default Login Credentials:$($Reset)"
     Write-Host "  System Admin: admin@exitsaas.com / Admin@123"
-    Write-Host "  Tenant Admin (ACME): admin-1@example.com / Admin@123"
-    Write-Host "  Customer Portal: juan.delacruz@test.com / Admin@123"
+    Write-Host "  Tenant Admin (ACME): admin@acme.com / Admin@123"
+    Write-Host "  Tenant Admin (TechStart): admin@techstart.com / Admin@123"
+    Write-Host "  Customer Portal (ACME): customer1@acme.com / Admin@123"
+    Write-Host "  Customer Portal (TechStart): customer1@techstart.com / Admin@123"
     Write-Host ""
     Write-Host "$($Bright)$($Magenta)🚀 Access Points:$($Reset)"
     Write-Host "  • Staff Portal: http://localhost:4200/platform/login"

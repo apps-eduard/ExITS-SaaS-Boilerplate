@@ -7,7 +7,7 @@ The Express.js API has been fully migrated to NestJS with TypeScript.
 ## 📁 Project Structure
 
 ```
-nest-api/
+api/
 ├── src/
 │   ├── auth/                 # Authentication module (JWT, Passport)
 │   │   ├── dto/
@@ -57,7 +57,7 @@ nest-api/
 
 ### 1. Install Dependencies
 ```bash
-cd C:\Users\speed\Desktop\ExITS-SaaS-Boilerplate\nest-api
+cd C:\Users\speed\Desktop\ExITS-SaaS-Boilerplate\api
 npm install
 ```
 

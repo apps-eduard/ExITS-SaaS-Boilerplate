@@ -7,7 +7,7 @@ This is the complete NestJS migration of the Express.js API. The application use
 ## Project Structure
 
 ```
-nest-api/
+api/
 ├── src/
 │   ├── auth/                    # Authentication module
 │   │   ├── dto/                 # DTOs for login, refresh, etc.
@@ -162,7 +162,7 @@ CORS_ORIGIN=http://localhost:4200
 
 ### Development Mode
 ```bash
-cd nest-api
+cd api
 npm install
 npm run start:dev
 ```

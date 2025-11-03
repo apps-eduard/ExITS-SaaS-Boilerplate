@@ -2,7 +2,7 @@
  * Table State Service
  * Manages table state (sorting, pagination, filtering, search) for reusable data tables
  * Supports both local (client-side) and API (server-side) modes
- * 
+ *
  * Optimizations:
  * - Proper RxJS debouncing with switchMap
  * - Single refresh trigger to avoid duplicate API calls
@@ -11,15 +11,15 @@
  * - Memoized sorting/filtering for performance
  */
 
-import { Injectable, signal, computed, Signal } from '@angular/core';
+import { Injectable, signal, computed, Signal, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-import { 
-  TableQueryParams, 
-  TableResponse, 
-  TableState, 
-  TableConfig, 
+import {
+  TableQueryParams,
+  TableResponse,
+  TableState,
+  TableConfig,
   PaginationInfo,
   SortComparator,
   FilterSerializer
@@ -32,7 +32,7 @@ export interface TableStateManager<T> {
   error: Signal<string | null>;
   state: Signal<TableState>;
   pagination: Signal<PaginationInfo>;
-  
+
   // Actions
   setPage(page: number): void;
   setPageSize(size: number): void;
@@ -42,7 +42,7 @@ export interface TableStateManager<T> {
   setFilters(filters: Record<string, any>): void;
   clearFilters(): void;
   refresh(): void;
-  
+
   // Lifecycle
   destroy(): void;  // Cleanup subscriptions
 }
@@ -51,7 +51,7 @@ export interface TableStateManager<T> {
   providedIn: 'root'
 })
 export class TableStateService {
-  private http = HttpClient;
+  private http = inject(HttpClient);
 
   constructor() {}
 
@@ -66,7 +66,7 @@ export class TableStateService {
     dataSource: T[] | string
   ): TableStateManager<T> {
     const mode = config.mode || (typeof dataSource === 'string' ? 'api' : 'local');
-    
+
     if (mode === 'local') {
       return this.createLocalTableManager(config, dataSource as T[]);
     } else {
@@ -86,7 +86,7 @@ export class TableStateService {
     const loading = signal(false);
     const error = signal<string | null>(null);
     const allData = signal<T[]>(sourceData);
-    
+
     const state = signal<TableState>({
       page: 1,
       pageSize: config.defaultPageSize || 10,
@@ -110,22 +110,22 @@ export class TableStateService {
       const aVal = (a as any)[column];
       const bVal = (b as any)[column];
       const modifier = direction === 'asc' ? 1 : -1;
-      
+
       // Handle null/undefined values
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1 * modifier;
       if (bVal == null) return -1 * modifier;
-      
+
       // Handle different types
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return aVal.localeCompare(bVal) * modifier;
       }
-      
+
       // Handle dates
       if (aVal instanceof Date && bVal instanceof Date) {
         return (aVal.getTime() - bVal.getTime()) * modifier;
       }
-      
+
       if (aVal < bVal) return -1 * modifier;
       if (aVal > bVal) return 1 * modifier;
       return 0;
@@ -154,7 +154,7 @@ export class TableStateService {
               return Object.entries(currentState.filters).every(([key, value]) => {
                 if (value === null || value === undefined || value === '') return true;
                 const itemValue = (item as any)[key];
-                
+
                 // Support array filters (multi-select)
                 if (Array.isArray(value)) {
                   return value.includes(itemValue);
@@ -183,13 +183,13 @@ export class TableStateService {
       // Apply sorting (always applied fresh to allow sort direction changes)
       if (currentState.sortColumn) {
         const customComparator = getComparator(currentState.sortColumn);
-        
+
         result = [...result].sort((a, b) => {
           // Use custom comparator if provided
           if (customComparator) {
             return customComparator(a, b, currentState.sortDirection);
           }
-          
+
           // Use default sorting logic
           return defaultSort(a, b, currentState.sortColumn!, currentState.sortDirection);
         });
@@ -307,7 +307,7 @@ export class TableStateService {
     const loading = signal(false);
     const error = signal<string | null>(null);
     const data = signal<T[]>([]);
-    
+
     const state = signal<TableState>({
       page: 1,
       pageSize: config.defaultPageSize || 10,
@@ -326,7 +326,7 @@ export class TableStateService {
 
     // Subject for triggering API calls - centralized refresh trigger
     const refresh$ = new Subject<void>();
-    
+
     // Subject for debounced search
     const search$ = new Subject<string>();
 
@@ -407,7 +407,7 @@ export class TableStateService {
       if (abortController) {
         abortController.abort();
       }
-      
+
       abortController = new AbortController();
       loading.set(true);
       error.set(null);
@@ -415,22 +415,25 @@ export class TableStateService {
       try {
         const currentState = state();
         const queryString = buildQueryParams(currentState);
-        
-        const response = await fetch(`${apiUrl}?${queryString}`, {
-          signal: abortController.signal
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
 
-        const result: TableResponse<T> = await response.json();
+        // Use HttpClient instead of fetch to go through interceptors
+        const result: TableResponse<T> = await new Promise((resolve, reject) => {
+          const params = new HttpParams({ fromString: queryString });
+          const subscription = this.http.get<TableResponse<T>>(apiUrl, { params })
+            .subscribe({
+              next: (response) => resolve(response),
+              error: (err) => reject(err)
+            });
+
+          // Store subscription for cleanup
+          subscriptions.push(subscription);
+        });
 
         data.set(result.data);
-        
+
         // Compute totalPages on client to avoid backend redundancy
         const totalPages = Math.ceil(result.pagination.total / result.pagination.pageSize);
-        
+
         pagination.set({
           ...result.pagination,
           totalPages
@@ -440,7 +443,7 @@ export class TableStateService {
         if (err instanceof Error && err.name === 'AbortError') {
           return;
         }
-        
+
         error.set(err instanceof Error ? err.message : 'Unknown error occurred');
         data.set([]);
       } finally {
@@ -538,11 +541,11 @@ export class TableStateService {
       destroy() {
         // Unsubscribe all subscriptions
         subscriptions.forEach(sub => sub.unsubscribe());
-        
+
         // Complete subjects
         search$.complete();
         refresh$.complete();
-        
+
         // Cancel pending request
         if (abortController) {
           abortController.abort();

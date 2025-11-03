@@ -224,6 +224,11 @@ export const routes: Routes = [
         path: 'notifications',
         loadComponent: () => import('./features/platforms/money-loan/admin/notifications.component').then(m => m.NotificationsComponent)
       },
+      // User Management
+      {
+        path: 'users',
+        loadComponent: () => import('./features/platforms/money-loan/admin/users-management.component').then(m => m.UsersManagementComponent)
+      },
       {
         path: 'customers/:id',
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)

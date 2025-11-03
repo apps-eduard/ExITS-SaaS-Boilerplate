@@ -136,7 +136,7 @@ api/
 
 ### NestJS (New)
 ```
-nest-api/
+api/
 ├── src/
 │   ├── auth/
 │   │   ├── dto/
@@ -225,7 +225,7 @@ describe('AuthController (e2e)', () => {
 cd api && npm start
 
 # New
-cd nest-api && npm run start:dev
+cd api && npm run start:dev
 ```
 
 ### Production
@@ -234,7 +234,7 @@ cd nest-api && npm run start:dev
 cd api && NODE_ENV=production npm start
 
 # New
-cd nest-api && npm run build && npm run start:prod
+cd api && npm run build && npm run start:prod
 ```
 
 ### Docker (No changes needed)

@@ -30,6 +30,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 interface LoanProduct {
   id: number;
@@ -38,11 +39,14 @@ interface LoanProduct {
   minAmount: number;
   maxAmount: number;
   interestRate: number;
-  minTerm: number;
-  maxTerm: number;
+  minTerm: number;  // Now stores days, not months
+  maxTerm: number;  // Now stores days, not months
   processingFee: number;
+  platformFee?: number;
   requirements: string[];
   features: string[];
+  loanTermType?: string;  // 'fixed' or 'flexible' (lowercase from DB)
+  fixedTermDays?: number;
 }
 
 @Component({
@@ -57,7 +61,8 @@ interface LoanProduct {
     IonIcon,
     IonRefresher,
     IonRefresherContent,
-    IonSkeletonText
+    IonSkeletonText,
+    DevInfoComponent
   ],
   template: `
     <ion-header class="ion-no-border">
@@ -75,10 +80,14 @@ interface LoanProduct {
           </div>
           
           <div class="toolbar-right">
+            <!-- Dev Info (Development Only) -->
+            <app-dev-info />
+            
             <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
               <ion-icon 
                 [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
                 slot="icon-only"
+                class="theme-icon"
               ></ion-icon>
             </ion-button>
           </div>
@@ -165,7 +174,15 @@ interface LoanProduct {
                       <ion-icon name="calendar-outline" class="detail-icon"></ion-icon>
                       <div class="detail-content">
                         <p class="detail-label">Loan Term</p>
-                        <p class="detail-value">{{ product.minTerm }} - {{ product.maxTerm }} months</p>
+                        <p class="detail-value">
+                          @if (product.loanTermType === 'fixed') {
+                            <span class="fixed-term-badge">
+                              🔒 {{ Math.round((product.fixedTermDays || 90) / 30) }}mo
+                            </span>
+                          } @else {
+                            {{ Math.round(product.minTerm / 30) }}-{{ Math.round(product.maxTerm / 30) }} Months
+                          }
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -174,7 +191,15 @@ interface LoanProduct {
                   @if (product.processingFee > 0) {
                     <div class="processing-fee-badge">
                       <ion-icon name="information-circle-outline"></ion-icon>
-                      <span>Processing Fee: ₱{{ formatCurrency(product.processingFee) }}</span>
+                      <span>Processing Fee: {{ product.processingFee }}%</span>
+                    </div>
+                  }
+
+                  <!-- Platform Fee -->
+                  @if (product.platformFee && product.platformFee > 0) {
+                    <div class="platform-fee-badge">
+                      <ion-icon name="business-outline"></ion-icon>
+                      <span>₱{{ formatCurrency(product.platformFee) }}/mo <span class="fee-note">Only while loan is active</span></span>
                     </div>
                   }
 
@@ -392,34 +417,34 @@ interface LoanProduct {
     .products-list {
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: 0.75rem; /* Reduced from 1.25rem */
     }
 
     .product-card {
       background: var(--ion-card-background);
       border: 1px solid var(--ion-border-color, #e5e7eb);
-      border-radius: 18px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      border-radius: 12px; /* Reduced from 18px */
+      padding: 1rem; /* Reduced from 1.5rem */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); /* Lighter shadow */
       transition: all 0.3s ease;
     }
 
     .product-card:hover {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Lighter hover shadow */
+      transform: translateY(-1px); /* Less movement */
     }
 
     /* ===== PRODUCT HEADER ===== */
     .product-header {
       display: flex;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
+      gap: 0.75rem; /* Reduced from 1rem */
+      margin-bottom: 1rem; /* Reduced from 1.25rem */
     }
 
     .product-icon-wrapper {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
+      width: 44px; /* Reduced from 56px */
+      height: 44px; /* Reduced from 56px */
+      border-radius: 10px; /* Reduced from 14px */
       background: linear-gradient(135deg, #667eea, #764ba2);
       display: flex;
       align-items: center;
@@ -428,7 +453,7 @@ interface LoanProduct {
     }
 
     .product-icon {
-      font-size: 2rem;
+      font-size: 1.5rem; /* Reduced from 2rem */
       color: white;
     }
 
@@ -438,30 +463,30 @@ interface LoanProduct {
     }
 
     .product-name {
-      font-size: 1.25rem;
+      font-size: 1.0625rem; /* Reduced from 1.25rem */
       font-weight: 700;
       color: var(--ion-text-color);
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.25rem 0; /* Reduced bottom margin */
     }
 
     .product-description {
-      font-size: 0.875rem;
+      font-size: 0.8125rem; /* Reduced from 0.875rem */
       color: var(--ion-color-medium);
       margin: 0;
-      line-height: 1.5;
+      line-height: 1.4; /* Tighter line height */
     }
 
     /* ===== PRODUCT DETAILS ===== */
     .product-details {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem; /* Reduced from 1rem */
     }
 
     .detail-row {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 1rem;
+      gap: 0.75rem; /* Reduced from 1rem */
     }
 
     .detail-row:has(.detail-item:nth-child(2)) {
@@ -470,12 +495,12 @@ interface LoanProduct {
 
     .detail-item {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.5rem; /* Reduced from 0.75rem */
       align-items: flex-start;
     }
 
     .detail-icon {
-      font-size: 1.25rem;
+      font-size: 1.125rem; /* Reduced from 1.25rem */
       color: #667eea;
       flex-shrink: 0;
       margin-top: 0.125rem;
@@ -487,34 +512,70 @@ interface LoanProduct {
     }
 
     .detail-label {
-      font-size: 0.75rem;
+      font-size: 0.6875rem; /* Reduced from 0.75rem */
       color: var(--ion-color-medium);
-      margin: 0 0 0.25rem 0;
+      margin: 0 0 0.1875rem 0; /* Reduced bottom margin */
       font-weight: 500;
     }
 
     .detail-value {
-      font-size: 0.9375rem;
+      font-size: 0.875rem; /* Reduced from 0.9375rem */
       font-weight: 600;
       color: var(--ion-text-color);
       margin: 0;
+      
+      .fixed-term-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.2rem 0.4rem; /* Slightly reduced */
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+        border-radius: 4px; /* Reduced from 6px */
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
     }
 
     /* ===== PROCESSING FEE ===== */
     .processing-fee-badge {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem;
+      gap: 0.375rem; /* Reduced from 0.5rem */
+      padding: 0.5rem; /* Reduced from 0.75rem */
       background: rgba(102, 126, 234, 0.1);
-      border-radius: 10px;
-      font-size: 0.875rem;
+      border-radius: 8px; /* Reduced from 10px */
+      font-size: 0.8125rem; /* Reduced from 0.875rem */
       color: #667eea;
       font-weight: 600;
     }
 
     .processing-fee-badge ion-icon {
-      font-size: 1.125rem;
+      font-size: 1rem; /* Reduced from 1.125rem */
+    }
+
+    /* ===== PLATFORM FEE ===== */
+    .platform-fee-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem; /* Reduced from 0.5rem */
+      padding: 0.5rem; /* Reduced from 0.75rem */
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 8px; /* Reduced from 10px */
+      font-size: 0.8125rem; /* Reduced from 0.875rem */
+      color: #10b981;
+      font-weight: 600;
+      margin-top: 0.375rem; /* Reduced from 0.5rem */
+      
+      .fee-note {
+        font-size: 0.6875rem; /* Reduced from 0.75rem */
+        opacity: 0.8;
+        font-weight: 400;
+      }
+    }
+
+    .platform-fee-badge ion-icon {
+      font-size: 1rem; /* Reduced from 1.125rem */
     }
 
     /* ===== FEATURES SECTION ===== */
@@ -523,32 +584,32 @@ interface LoanProduct {
     }
 
     .features-title {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 600;
       color: var(--ion-text-color);
-      margin: 0 0 0.75rem 0;
+      margin: 0 0 0.5rem 0;
     }
 
     .features-list {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .feature-item {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .feature-icon {
-      font-size: 1.125rem;
+      font-size: 1rem;
       color: #10b981;
       flex-shrink: 0;
     }
 
     .feature-text {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: var(--ion-text-color);
       line-height: 1.4;
     }
@@ -613,16 +674,28 @@ interface LoanProduct {
     .dark .processing-fee-badge {
       background: rgba(102, 126, 234, 0.2);
     }
+    
+    body.dark .platform-fee-badge,
+    .dark .platform-fee-badge {
+      background: rgba(16, 185, 129, 0.2);
+    }
 
     body.dark .product-footer,
     .dark .product-footer {
       border-top-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    body.dark .fixed-term-badge,
+    .dark .fixed-term-badge {
+      background: rgba(139, 92, 246, 0.3) !important;
+      color: #c4b5fd !important;
     }
   `]
 })
 export class ApplyLoanPage implements OnInit {
   loading = signal(false);
   products = signal<LoanProduct[]>([]);
+  Math = Math; // Expose Math to template
 
   constructor(
     private apiService: ApiService,
@@ -663,21 +736,35 @@ export class ApplyLoanPage implements OnInit {
       
       const productsData = await this.apiService.getLoanProducts(tenantId).toPromise();
       
+      console.log('📦 Raw products from API:', productsData);
+      
       if (productsData && Array.isArray(productsData)) {
-        const mappedProducts = productsData.map((product: any) => ({
-          id: product.id,
-          name: product.name || product.product_name || 'Loan Product',
-          description: product.description || product.product_description || '',
-          minAmount: product.minAmount || product.min_amount || product.minimum_amount || 0,
-          maxAmount: product.maxAmount || product.max_amount || product.maximum_amount || 0,
-          interestRate: product.interestRate || product.interest_rate || product.rate || 0,
-          minTerm: product.minTerm || product.min_term || product.minimum_term || 1,
-          maxTerm: product.maxTerm || product.max_term || product.maximum_term || 12,
-          processingFee: product.processingFee || product.processing_fee || 0,
-          requirements: product.requirements || [],
-          features: product.features || product.benefits || []
-        }));
+        const mappedProducts = productsData.map((product: any) => {
+          // API now returns camelCase fields - use them directly like web version
+          console.log('🔍 Mapping product:', product);
+          
+          const mapped = {
+            id: product.id,
+            name: product.name || 'Loan Product',
+            description: product.description || '',
+            minAmount: product.minAmount || 0,
+            maxAmount: product.maxAmount || 0,
+            interestRate: product.interestRate || 0,
+            minTerm: product.minTermDays || 30,  // Store as days, convert in template
+            maxTerm: product.maxTermDays || 360, // Store as days, convert in template
+            processingFee: product.processingFeePercent || 0,
+            platformFee: product.platformFee || 0,
+            requirements: product.requirements || [],
+            features: product.features || [],
+            loanTermType: product.loanTermType || 'flexible',
+            fixedTermDays: product.fixedTermDays || 90
+          };
+          
+          console.log('✅ Mapped product:', mapped);
+          return mapped;
+        });
         this.products.set(mappedProducts);
+        console.log('📊 Total products loaded:', mappedProducts.length);
       }
     } catch (error) {
       console.error('Failed to load loan products:', error);
@@ -698,19 +785,10 @@ export class ApplyLoanPage implements OnInit {
   }
 
   async applyForProduct(product: LoanProduct) {
-    // Navigate to loan application form with product pre-selected
-    const toast = await this.toastController.create({
-      message: `Applying for ${product.name}...`,
-      duration: 2000,
-      position: 'bottom',
-      color: 'primary'
+    // Navigate to loan application form with product data passed via state
+    this.router.navigate(['/customer/apply-loan/form'], { 
+      state: { product: product }
     });
-    await toast.present();
-    
-    // TODO: Navigate to application form or open modal
-    // this.router.navigate(['/customer/apply-loan/form'], { 
-    //   queryParams: { productId: product.id } 
-    // });
   }
 
   goBack() {

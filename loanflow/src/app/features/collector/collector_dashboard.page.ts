@@ -16,6 +16,7 @@ import { AuthService } from '@app/core/services/auth.service';
 import { NotificationService } from '@app/core/services/notification.service';
 import { ThemeService } from '@app/core/services/theme.service';
 import { Observable } from 'rxjs';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -30,7 +31,8 @@ import { Observable } from 'rxjs';
     IonButton,
     IonIcon,
     IonContent,
-    IonBadge
+    IonBadge,
+    DevInfoComponent
   ],
   template: `
     <ion-header>
@@ -47,6 +49,9 @@ import { Observable } from 'rxjs';
         </ion-title>
         
         <ion-buttons slot="end">
+          <!-- Dev Info (Development Only) -->
+          <app-dev-info />
+          
           <ion-button class="header-btn" (click)="themeService.toggleTheme()">
             <ion-icon slot="icon-only" [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'"></ion-icon>
           </ion-button>

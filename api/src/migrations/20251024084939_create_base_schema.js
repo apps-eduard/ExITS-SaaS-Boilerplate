@@ -106,6 +106,16 @@ exports.up = async function(knex) {
     table.timestamps(true, true);
   });
 
+  // Create payment_method_types table
+  await knex.schema.createTable('payment_method_types', function (table) {
+    table.increments('id').primary();
+    table.string('name', 100).notNullable().unique();
+    table.string('display_name', 255).notNullable();
+    table.text('description');
+    table.boolean('is_active').defaultTo(true);
+    table.timestamps(true, true);
+  });
+
   // Create permissions table (Standard RBAC)
   await knex.schema.createTable('permissions', function (table) {
     table.increments('id').primary();
@@ -177,6 +187,42 @@ exports.up = async function(knex) {
   await knex.schema.raw('CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)');
   await knex.schema.raw('CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id)');
   await knex.schema.raw('CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token_hash)');
+
+  // Seed default payment method types
+  const paymentMethodTypes = [
+    {
+      name: 'stripe',
+      display_name: 'Stripe',
+      description: 'Credit/Debit Card via Stripe',
+      is_active: true
+    },
+    {
+      name: 'paypal',
+      display_name: 'PayPal',
+      description: 'PayPal Account',
+      is_active: true
+    },
+    {
+      name: 'gcash',
+      display_name: 'GCash',
+      description: 'GCash Mobile Wallet',
+      is_active: true
+    },
+    {
+      name: 'bank_transfer',
+      display_name: 'Bank Transfer',
+      description: 'Direct Bank Transfer',
+      is_active: true
+    },
+    {
+      name: 'manual',
+      display_name: 'Manual Payment',
+      description: 'Offline/Manual Payment Entry',
+      is_active: true
+    }
+  ];
+
+  await knex('payment_method_types').insert(paymentMethodTypes);
 };
 
 /**
@@ -191,6 +237,7 @@ exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('user_roles');
   await knex.schema.dropTableIfExists('permissions');
   await knex.schema.dropTableIfExists('modules');
+  await knex.schema.dropTableIfExists('payment_method_types');
   await knex.schema.dropTableIfExists('roles');
   await knex.schema.dropTableIfExists('users');
   await knex.schema.dropTableIfExists('tenants');

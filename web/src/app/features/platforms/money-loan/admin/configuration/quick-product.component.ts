@@ -951,10 +951,11 @@ export class QuickProductComponent {
       this.maxAmount = 0;
     }
 
-    // Ensure max is not less than min
-    if (this.maxAmount > 0 && this.maxAmount < this.minAmount) {
-      this.maxAmount = this.minAmount;
-    }
+    // Only set max to min if max is explicitly less than min (not when it's being increased)
+    // This was causing the bug where increasing max would reset it to min
+    // if (this.maxAmount > 0 && this.maxAmount < this.minAmount) {
+    //   this.maxAmount = this.minAmount;
+    // }
 
     // Trigger preview calculation
     this.calculatePreview();
@@ -1160,7 +1161,25 @@ export class QuickProductComponent {
     this.loanService.getLoanProducts(tenantId).subscribe({
       next: (response) => {
         if (response.success && response.data) {
-          this.products.set(response.data);
+          console.log('📦 Raw products from API:', response.data);
+
+          // Ensure all numeric fields have defaults to prevent NaN
+          const normalizedProducts = response.data.map((p: any) => ({
+            ...p,
+            minAmount: p.minAmount || 0,
+            maxAmount: p.maxAmount || 0,
+            interestRate: p.interestRate || 0,
+            minTermDays: p.minTermDays || 30,
+            maxTermDays: p.maxTermDays || 360,
+            fixedTermDays: p.fixedTermDays || 90,
+            processingFeePercent: p.processingFeePercent || 0,
+            platformFee: p.platformFee || 0,
+            latePaymentPenaltyPercent: p.latePaymentPenaltyPercent || 0,
+            gracePeriodDays: p.gracePeriodDays || 0
+          }));
+
+          console.log('✅ Normalized products:', normalizedProducts);
+          this.products.set(normalizedProducts);
           this.filterProducts(); // Update filtered list
         }
         this.loading.set(false);

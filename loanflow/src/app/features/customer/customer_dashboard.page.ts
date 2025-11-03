@@ -36,6 +36,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 interface DashboardStats {
   totalLoans: number;
@@ -70,7 +71,8 @@ interface RecentLoan {
     IonButton,
     IonIcon,
     IonBadge,
-    IonSkeletonText
+    IonSkeletonText,
+    DevInfoComponent
   ],
   template: `
     <ion-header class="ion-no-border">
@@ -82,6 +84,9 @@ interface RecentLoan {
           </div>
           
           <div class="toolbar-right">
+            <!-- Dev Info (Development Only) -->
+            <app-dev-info />
+            
             <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
               <ion-icon 
                 [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 

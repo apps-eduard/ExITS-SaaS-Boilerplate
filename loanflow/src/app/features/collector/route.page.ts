@@ -39,6 +39,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 interface RouteCustomer {
   id: number;
@@ -77,7 +78,8 @@ interface CollectionStats {
     IonBadge,
     IonSkeletonText,
     IonButtons,
-    IonChip
+    IonChip,
+    DevInfoComponent
   ],
   template: `
     <ion-header class="ion-no-border">
@@ -94,8 +96,11 @@ interface CollectionStats {
           </div>
         </ion-title>
         <ion-buttons slot="end">
+          <!-- Dev Info (Development Only) -->
+          <app-dev-info />
+          
           <ion-button (click)="themeService.toggleTheme()" class="header-btn">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only"></ion-icon>
+            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only" class="theme-icon"></ion-icon>
           </ion-button>
           <ion-button (click)="syncNow()" class="header-btn">
             <ion-icon [name]="syncing() ? 'sync-outline' : 'sync-outline'" slot="icon-only" [class.animate-spin]="syncing()"></ion-icon>

@@ -367,3 +367,38 @@ body.dark .modern-confirmation-alert,
     transform: translateY(0) scale(1);
   }
 }
+
+/* ===== THEME-ADAPTIVE ICONS ===== */
+/* Make all icons in toolbars and nav elements adapt to theme */
+.theme-icon {
+  color: var(--ion-color-medium) !important;
+  transition: color 0.3s ease;
+}
+
+body.dark .theme-icon,
+.dark .theme-icon {
+  color: var(--ion-color-medium) !important;
+}
+
+/* Ensure toolbar icons adapt to theme */
+ion-toolbar ion-icon {
+  color: var(--ion-text-color);
+}
+
+ion-toolbar ion-button ion-icon {
+  color: var(--ion-text-color);
+}
+
+/* Make sure header buttons adapt */
+.header-btn ion-icon,
+.icon-btn ion-icon {
+  color: var(--ion-text-color);
+  transition: color 0.3s ease;
+}
+
+/* Title icons */
+.title-icon {
+  color: var(--ion-color-primary);
+  transition: color 0.3s ease;
+}
+

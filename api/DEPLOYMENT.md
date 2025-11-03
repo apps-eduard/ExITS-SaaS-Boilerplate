@@ -39,7 +39,7 @@ openssl rand -hex 64  # For JWT_REFRESH_SECRET
 ### 2. Build Application
 
 ```bash
-cd nest-api
+cd api
 npm install --production
 npm run build
 ```
@@ -89,9 +89,9 @@ After=network.target postgresql.service
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/var/www/nest-api
+WorkingDirectory=/var/www/api
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node /var/www/nest-api/dist/main.js
+ExecStart=/usr/bin/node /var/www/api/dist/main.js
 Restart=on-failure
 RestartSec=10
 
@@ -219,7 +219,7 @@ pm2 info nestjs-api
 Create `/etc/logrotate.d/nestjs-api`:
 
 ```
-/var/www/nest-api/logs/*.log {
+/var/www/api/logs/*.log {
     daily
     rotate 14
     compress
@@ -277,9 +277,9 @@ Add to crontab:
 ```bash
 # Backup application files and .env
 tar -czf nestjs-api-backup-$(date +%Y%m%d).tar.gz \
-  /var/www/nest-api \
-  --exclude=/var/www/nest-api/node_modules \
-  --exclude=/var/www/nest-api/dist
+  /var/www/api \
+  --exclude=/var/www/api/node_modules \
+  --exclude=/var/www/api/dist
 ```
 
 ## Docker Deployment (Alternative)
@@ -318,7 +318,7 @@ version: '3.8'
 
 services:
   api:
-    build: ./nest-api
+    build: ./api
     ports:
       - "3000:3000"
     environment:
@@ -376,17 +376,17 @@ jobs:
       
       - name: Install dependencies
         run: |
-          cd nest-api
+          cd api
           npm ci
       
       - name: Run tests
         run: |
-          cd nest-api
+          cd api
           npm test
       
       - name: Build
         run: |
-          cd nest-api
+          cd api
           npm run build
       
       - name: Deploy to server
@@ -395,7 +395,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "nest-api/dist,nest-api/package*.json"
+          source: "api/dist,api/package*.json"
           target: "/var/www/"
       
       - name: Restart application
@@ -405,7 +405,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/nest-api
+            cd /var/www/api
             npm ci --production
             pm2 restart nestjs-api
 ```
@@ -515,7 +515,7 @@ If deployment fails:
 pm2 stop nestjs-api
 
 # 2. Restore previous version
-cd /var/www/nest-api
+cd /var/www/api
 git checkout <previous-commit>
 npm ci --production
 npm run build

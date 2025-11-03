@@ -132,7 +132,7 @@ npm run ios
 ### **Make Sure API is Running**
 ```powershell
 # In another terminal
-cd k:\speed-space\ExITS-SaaS-Boilerplate\nest-api
+cd k:\speed-space\ExITS-SaaS-Boilerplate\api
 npm run start:dev
 ```
 

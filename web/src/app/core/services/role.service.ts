@@ -383,10 +383,21 @@ export class RoleService {
         await this.getRole(roleId);
         return true;
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to bulk assign permissions';
+    } catch (error: any) {
+      let message = 'Failed to bulk assign permissions';
+
+      // Extract detailed error information
+      if (error?.error?.message) {
+        message = error.error.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
+
       this.errorSignal.set(message);
-      console.error('❌ Error bulk assigning permissions:', message);
+      console.error('❌ Error bulk assigning permissions:', error);
+      console.error('❌ Error status:', error?.status);
+      console.error('❌ Error message:', message);
+      console.error('❌ Error response:', error?.error);
     } finally {
       this.loadingSignal.set(false);
     }

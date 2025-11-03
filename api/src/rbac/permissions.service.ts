@@ -184,4 +184,126 @@ export class PermissionsService {
     const modules = await query;
     return modules;
   }
+
+  async createRole(data: { name: string; description?: string | null; space: string; tenantId?: number | null }) {
+    const knex = this.knexService.instance;
+
+    const [role] = await knex('roles')
+      .insert({
+        name: data.name,
+        description: data.description,
+        space: data.space,
+        tenant_id: data.tenantId,
+        status: 'active',
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      })
+      .returning('*');
+
+    return role;
+  }
+
+  async updateRole(roleId: number, data: { name?: string; description?: string }) {
+    const knex = this.knexService.instance;
+
+    const updateData: any = {
+      updated_at: knex.fn.now(),
+    };
+
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+
+    const [updatedRole] = await knex('roles')
+      .where('id', roleId)
+      .update(updateData)
+      .returning('*');
+
+    return updatedRole;
+  }
+
+  async deleteRole(roleId: number) {
+    const knex = this.knexService.instance;
+
+    // Soft delete by setting status to 'deleted'
+    await knex('roles')
+      .where('id', roleId)
+      .update({
+        status: 'deleted',
+        updated_at: knex.fn.now(),
+      });
+
+    // Optionally, also remove role permissions
+    await knex('role_permissions')
+      .where('role_id', roleId)
+      .delete();
+
+    return { message: 'Role deleted successfully' };
+  }
+
+  /**
+   * Bulk assign permissions to a role
+   * Replaces all existing permissions with the new list
+   */
+  async bulkAssignPermissions(
+    roleId: number,
+    permissions: Array<{ permissionKey: string }>,
+  ): Promise<{ count: number; message: string }> {
+    const knex = this.knexService.instance;
+
+    // Extract permission keys
+    const permissionKeys = permissions.map(p => p.permissionKey);
+
+    if (permissionKeys.length === 0) {
+      // If empty array, just clear all permissions
+      await knex('role_permissions')
+        .where('role_id', roleId)
+        .delete();
+
+      return {
+        count: 0,
+        message: 'All permissions removed from role',
+      };
+    }
+
+    // Get permission IDs from keys
+    const permissionRecords = await knex('permissions')
+      .whereIn('permission_key', permissionKeys)
+      .select('id', 'permission_key');
+
+    const permissionMap = new Map(
+      permissionRecords.map(p => [p.permissionKey, p.id])
+    );
+
+    // Validate all permission keys exist
+    const missingKeys = permissionKeys.filter(key => !permissionMap.has(key));
+    if (missingKeys.length > 0) {
+      throw new Error(`Invalid permission keys: ${missingKeys.join(', ')}`);
+    }
+
+    // Use transaction to ensure atomicity
+    await knex.transaction(async (trx) => {
+      // Remove all existing permissions
+      await trx('role_permissions')
+        .where('role_id', roleId)
+        .delete();
+
+      // Insert new permissions
+      const rolePermissions = permissionKeys.map(key => ({
+        role_id: roleId,
+        permission_id: permissionMap.get(key),
+        created_at: new Date(),
+      }));
+
+      await trx('role_permissions').insert(rolePermissions);
+    });
+
+    return {
+      count: permissionKeys.length,
+      message: `Successfully assigned ${permissionKeys.length} permissions to role`,
+    };
+  }
 }

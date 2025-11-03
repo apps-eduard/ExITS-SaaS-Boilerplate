@@ -8,6 +8,7 @@ import {
   IonButtons,
   IonBackButton
 } from '@ionic/angular/standalone';
+import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
 @Component({
   selector: 'app-visit',
@@ -19,7 +20,8 @@ import {
     IonTitle,
     IonContent,
     IonButtons,
-    IonBackButton
+    IonBackButton,
+    DevInfoComponent
   ],
   template: `
     <ion-header>
@@ -28,6 +30,10 @@ import {
           <ion-back-button defaultHref="/collector/route"></ion-back-button>
         </ion-buttons>
         <ion-title>Customer Visit</ion-title>
+        <ion-buttons slot="end">
+          <!-- Dev Info (Development Only) -->
+          <app-dev-info />
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 

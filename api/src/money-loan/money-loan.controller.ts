@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -228,6 +228,48 @@ export class MoneyLoanController {
     return {
       success: true,
       data: products,
+    };
+  }
+
+  @Get('products/:id')
+  @Permissions('money-loan:read')
+  async getProductById(@Param('id') id: string, @Req() req: any) {
+    const product = await this.moneyLoanService.getProductById(req.user.tenantId, parseInt(id));
+    return {
+      success: true,
+      data: product,
+    };
+  }
+
+  @Post('products')
+  @Permissions('money-loan:create')
+  async createProduct(@Body() productData: any, @Req() req: any) {
+    const product = await this.moneyLoanService.createProduct(req.user.tenantId, productData);
+    return {
+      success: true,
+      message: 'Loan product created successfully',
+      data: product,
+    };
+  }
+
+  @Put('products/:id')
+  @Permissions('money-loan:update')
+  async updateProduct(@Param('id') id: string, @Body() productData: any, @Req() req: any) {
+    const product = await this.moneyLoanService.updateProduct(req.user.tenantId, parseInt(id), productData);
+    return {
+      success: true,
+      message: 'Loan product updated successfully',
+      data: product,
+    };
+  }
+
+  @Delete('products/:id')
+  @Permissions('money-loan:delete')
+  async deleteProduct(@Param('id') id: string, @Req() req: any) {
+    await this.moneyLoanService.deleteProduct(req.user.tenantId, parseInt(id));
+    return {
+      success: true,
+      message: 'Loan product deleted successfully',
     };
   }
 

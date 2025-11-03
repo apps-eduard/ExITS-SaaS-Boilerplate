@@ -74,7 +74,7 @@
 ## 📁 Project Structure
 
 ```
-nest-api/
+api/
 ├── src/
 │   ├── auth/                     ✅ JWT + Passport + Sessions
 │   ├── rbac/                     ✅ Permissions + Roles
@@ -155,9 +155,9 @@ nest-api/
 
 | Document | Location | Status |
 |----------|----------|--------|
-| **Main README** | `/nest-api/README.md` | ✅ Complete |
-| **Quick Start** | `/nest-api/QUICK_START.md` | ✅ Complete |
-| **Deployment Guide** | `/nest-api/DEPLOYMENT.md` | ✅ Complete |
+| **Main README** | `/api/README.md` | ✅ Complete |
+| **Quick Start** | `/api/QUICK_START.md` | ✅ Complete |
+| **Deployment Guide** | `/api/DEPLOYMENT.md` | ✅ Complete |
 | **Migration Summary** | `/NESTJS-MIGRATION-SUMMARY.md` | ✅ Complete |
 | **API Endpoints** | Documented in README | ✅ Complete |
 
@@ -193,7 +193,7 @@ nest-api/
 
 ```bash
 # Navigate to project
-cd nest-api
+cd api
 
 # Install dependencies
 npm install
@@ -281,9 +281,10 @@ curl http://localhost:3000/api/health
 ## 📞 Support
 
 For issues or questions:
-- Review `/nest-api/README.md`
-- Check `/nest-api/QUICK_START.md`
-- See `/nest-api/DEPLOYMENT.md` for production
+
+- Review `/api/README.md`
+- Check `/api/QUICK_START.md`
+- See `/api/DEPLOYMENT.md` for production
 
 ---
 

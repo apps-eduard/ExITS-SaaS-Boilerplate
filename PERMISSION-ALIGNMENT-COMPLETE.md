@@ -86,8 +86,8 @@ All compiled assets now contain the corrected permission keys.
 
 ## Database Verification
 
-### Money Loan Permissions (66 total)
-All use hyphenated format with nested colons:
+### Money Loan Permissions (61 total)
+All use hyphenated format with nested colons and exclude the retired `loans:*` / `payments:*` tenant keys:
 - `money-loan:approve`
 - `money-loan:create`
 - `money-loan:read`

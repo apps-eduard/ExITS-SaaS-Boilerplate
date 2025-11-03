@@ -5,11 +5,12 @@ import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { DevInfoComponent } from '../../../shared/components/dev-info/dev-info.component';
 
 @Component({
   selector: 'app-customer-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, DevInfoComponent],
   template: `
     <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <!-- Background Pattern -->
@@ -206,7 +207,10 @@ import { ThemeService } from '../../../core/services/theme.service';
         </div>
 
         <!-- Theme Toggle -->
-        <div class="mt-4 flex justify-center">
+        <div class="mt-4 flex justify-center gap-2">
+          <!-- Dev Info (Development Only) -->
+          <app-dev-info />
+
           <button
             (click)="toggleTheme()"
             class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"

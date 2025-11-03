@@ -13,26 +13,12 @@ All user passwords have been standardized to **`Admin@123`** across the entire a
 **Purpose:** Main seed file creating all users (system admin, tenant admins, employees, customers)
 
 **Changes:**
-- ✅ Line 304: System/Tenant Admin password → `Admin@123`
-- ✅ Line 336: Initial 3 customers password → `Admin@123`
-- ✅ Line 450: Employee password → `Admin@123`
-- ✅ Line 451: Additional customers password → `Admin@123`
+- ✅ System/Tenant Admin password → `Admin@123`
+- ✅ Default customers password → `Admin@123`
+- ✅ Employee password → `Admin@123`
+- ✅ Consolidated customer access, platform user, and permission resets into this single seed
 
-#### 2. `api/src/seeds/06_customer_portal_access.js`
-**Purpose:** Reset customer passwords for portal access
-
-**Changes:**
-- ✅ Line 4: Comment updated to "reset to Admin@123"
-- ✅ Line 18: `defaultPassword = 'Admin@123'`
-
-#### 3. `api/src/seeds/13_platform_users.js`
-**Purpose:** Create additional employee accounts (employee1@tenant1.com, employee2@tenant1.com)
-
-**Changes:**
-- ✅ Line 44: Employee password hash → `bcrypt.hash('Admin@123', 10)`
-- ✅ Line 179: Display message → "Password: Admin@123"
-
-#### 4. `setup.ps1`
+#### 2. `setup.ps1`
 **Purpose:** Automated setup script
 
 **Changes:**
@@ -122,19 +108,19 @@ Role: Money Loan Manage + BNPL View
 
 ### 💰 Customer Portal (http://localhost:4200/customer/login)
 
-**ACME Customers:**
+**ACME Customer:**
 ```
-Email: juan.delacruz@test.com
-Password: Admin@123
-Name: Juan Dela Cruz
-
-Email: maria.santos@test.com
+Email: customer1@acme.com
 Password: Admin@123
 Name: Maria Santos
 
-Email: pedro.gonzales@test.com
+```
+
+**TechStart Customer:**
+```
+Email: customer1@techstart.com
 Password: Admin@123
-Name: Pedro Gonzales
+Name: Juan Dela Cruz
 ```
 
 ---
@@ -142,9 +128,7 @@ Name: Pedro Gonzales
 ## Testing Checklist
 
 ### ✅ Backend Seeds
-- [x] `01_initial_data.js` - All passwords = Admin@123
-- [x] `06_customer_portal_access.js` - Customer reset = Admin@123
-- [x] `13_platform_users.js` - Employee passwords = Admin@123
+- [x] `01_initial_data.js` - All base users use Admin@123
 - [x] `setup.ps1` - Display messages updated
 
 ### ✅ Frontend Login Pages

@@ -5,6 +5,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { RoleService, Role, Permission } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 interface ResourceGroup {
   resource: string;
@@ -207,16 +208,13 @@ interface ResourceGroup {
                 {{ areAllTenantSelected() ? '❌ Unselect Tenant Core' : '🏠 Select Tenant Core' }}
               </button>
 
-              <!-- Toggle Money Loan Button - Show if filter is 'all' or 'tenant' -->
-              <button
-                *ngIf="filterState().space === 'all' || filterState().space === 'tenant'"
-                (click)="toggleSelectMoneyLoan()"
-                [class]="areAllMoneyLoanSelected()
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition'"
-              >
-                {{ areAllMoneyLoanSelected() ? '❌ Unselect Money Loan' : '💰 Select Money Loan' }}
-              </button>
+              <!-- Clear All Permissions Button -->
+            <button
+              (click)="clearAllPermissions()"
+              class="w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition"
+            >
+              🗑️ Clear All Permissions
+            </button>
             </div>
 
             <!-- Validation -->
@@ -355,7 +353,7 @@ interface ResourceGroup {
                     type="button"
                     [class]="filterState().product === 'core'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-green-100 text-green-700 border-l-4 border-green-600 dark:bg-green-900/30 dark:text-green-300 transition-all'
-                      : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
+                      : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
                   >
                     <div class="text-center">
                       <div class="text-base mb-0.5">🏠</div>
@@ -370,7 +368,7 @@ interface ResourceGroup {
                     type="button"
                     [class]="filterState().product === 'money-loan'
                       ? 'px-3 py-2 rounded text-xs font-medium bg-amber-100 text-amber-700 border-l-4 border-amber-600 dark:bg-amber-900/30 dark:text-amber-300 transition-all'
-                      : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-amber-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
+                      : 'px-3 py-2 rounded text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-amber-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'"
                   >
                     <div class="text-center">
                       <div class="text-base mb-0.5">💰</div>
@@ -446,7 +444,7 @@ interface ResourceGroup {
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
 
               <!-- Each Resource Group -->
-              <div *ngFor="let group of filteredResourceGroups" class="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+              <div *ngFor="let group of filteredResourceGroups()" class="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
 
                 <!-- Resource Header -->
                 <div class="px-3 py-3">
@@ -587,7 +585,7 @@ export class RoleEditorComponent implements OnInit {
   });
 
   filteredPermissionCount = computed(() => {
-    return this.filteredResourceGroups.length;
+    return this.filteredResourceGroups().length;
   });
 
   // Resource groups with available permissions
@@ -642,24 +640,6 @@ export class RoleEditorComponent implements OnInit {
     { resource: 'money-loan:user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
     { resource: 'money-loan:integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
 
-    // Legacy Money Loan (for backward compatibility - deprecated)
-    { resource: 'money-loan', displayName: '💰 Money Loan (Legacy)', description: 'Deprecated - use granular permissions above', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-customers', displayName: '💰 Money Loan: Customers', description: 'Customer management', actions: ['read', 'create', 'update', 'delete', 'view-high-risk'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-loans', displayName: '💰 Money Loan: Loans', description: 'Loan management', actions: ['read', 'create', 'update', 'delete', 'approve', 'disburse', 'view-overdue', 'close', 'use-calculator'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-payments', displayName: '💰 Money Loan: Payments', description: 'Payment processing', actions: ['read', 'create', 'view-today-collections', 'bulk-import', 'refund', 'view-failed', 'configure-gateway'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-interest', displayName: '💰 Money Loan: Interest & Rules', description: 'Interest rate management', actions: ['read', 'update', 'manage-auto-rules', 'manual-override', 'use-calculator'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-collections', displayName: '💰 Money Loan: Collections', description: 'Collections management', actions: ['read', 'manage-workflow', 'manage-strategies', 'manage-legal-actions', 'view-recovery'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-kyc', displayName: '💰 Money Loan: KYC', description: 'KYC verification', actions: ['read', 'review', 'approve', 'view-audit-logs', 'view-webhook-logs', 'configure'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-reports', displayName: '💰 Money Loan: Reports', description: 'Reporting and analytics', actions: ['read', 'generate-periodic', 'generate-tax-summary', 'export', 'run-custom-queries'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-settings', displayName: '💰 Money Loan: Settings', description: 'Product settings', actions: ['read', 'manage-roles-permissions', 'manage-loan-products', 'manage-templates', 'manage-branding', 'manage-api-keys', 'view-audit-log'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-audit', displayName: '💰 Money Loan: Audit', description: 'Audit trail', actions: ['read', 'view-data-changes', 'export'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-notifications', displayName: '💰 Money Loan: Notifications', description: 'System notifications', actions: ['read'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
-    { resource: 'money-loan-integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
-
-    // Legacy Money Loan (for backward compatibility - deprecated)
-    { resource: 'money-loan', displayName: '💰 Money Loan (Legacy)', description: 'Deprecated - use granular permissions above', actions: ['read', 'create', 'update', 'approve', 'payments'], category: 'tenant', product: 'money-loan' },
-
     // BNPL & Pawnshop
     { resource: 'bnpl', displayName: 'ðŸ›’ Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'bnpl' },
     { resource: 'pawnshop', displayName: 'ðŸª Pawnshop', description: 'Pawnshop operations', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'pawnshop' },
@@ -688,7 +668,7 @@ export class RoleEditorComponent implements OnInit {
   readOnlyReason = signal('');
 
   // Filtered resource groups based on selected space and space filter
-  get filteredResourceGroups(): ResourceGroup[] {
+  filteredResourceGroups = computed(() => {
     let groups = this.resourceGroups;
     const state = this.filterState();
 
@@ -716,10 +696,10 @@ export class RoleEditorComponent implements OnInit {
     }
 
     return groups;
-  }
+  });
 
   getFilteredCount(): number {
-    return this.filteredResourceGroups.length;
+    return this.filteredResourceGroups().length;
   }
 
   // Filter control methods
@@ -762,7 +742,8 @@ export class RoleEditorComponent implements OnInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -900,8 +881,8 @@ export class RoleEditorComponent implements OnInit {
     } else {
       // Select all visible permissions
       const perms = new Set<string>();
-      this.filteredResourceGroups.forEach(group => {
-        group.actions.forEach(action => {
+      this.filteredResourceGroups().forEach((group: ResourceGroup) => {
+        group.actions.forEach((action: string) => {
           perms.add(`${group.resource}:${action}`);
         });
       });
@@ -1024,7 +1005,7 @@ export class RoleEditorComponent implements OnInit {
   // Check if all permissions are selected
   areAllSelected(): boolean {
     let totalAvailable = 0;
-    this.filteredResourceGroups.forEach(group => {
+    this.filteredResourceGroups().forEach((group: ResourceGroup) => {
       totalAvailable += group.actions.length;
     });
     return totalAvailable > 0 && this.selectedPermissions().size === totalAvailable;
@@ -1093,7 +1074,7 @@ export class RoleEditorComponent implements OnInit {
     this.toggleSelectAll();
   }
 
-  clearAll(): void {
+  clearAllPermissions(): void {
     this.selectedPermissions.set(new Set());
   }
 
@@ -1146,6 +1127,10 @@ export class RoleEditorComponent implements OnInit {
     const hasName = this.roleName.trim().length > 0;
     const hasPermissions = this.getTotalSelectedPermissions() > 0;
 
+    // For editing: allow saving with 0 permissions (to clear all)
+    // For creating: require at least one permission
+    const hasPermissionsIfNeeded = this.isEditing() ? true : hasPermissions;
+
     // For editing: tenant roles already have tenant_id from DB
     // For creating: tenant roles need at least one tenant selected
     let hasTenantIfNeeded = true;
@@ -1153,7 +1138,7 @@ export class RoleEditorComponent implements OnInit {
       hasTenantIfNeeded = this.selectedTenantIds().length > 0;
     }
 
-    return hasName && hasPermissions && hasTenantIfNeeded;
+    return hasName && hasPermissionsIfNeeded && hasTenantIfNeeded;
   }
 
   async saveRole(): Promise<void> {
@@ -1188,9 +1173,23 @@ export class RoleEditorComponent implements OnInit {
         });
         if (updated) {
           console.log('âœ… Role updated, now assigning permissions...');
-          await this.roleService.bulkAssignPermissions(this.roleId, permissionsArray);
-          console.log('âœ… Permissions assigned, navigating...');
-          this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
+          const bulkResult = await this.roleService.bulkAssignPermissions(this.roleId, permissionsArray);
+          console.log('âœ… Bulk assign returned:', bulkResult);
+
+          if (bulkResult) {
+            console.log('âœ… Permissions assigned successfully, navigating...');
+
+            // Show success toast
+            this.toastService.success(
+              `✅ Role "${this.roleName}" updated successfully with ${permissionsArray.length} permissions`
+            );
+
+            this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
+          } else {
+            const errorMsg = this.roleService.errorSignal() || 'Failed to assign permissions';
+            console.error('❌ Bulk assign failed:', errorMsg);
+            this.toastService.error(`❌ ${errorMsg}`);
+          }
         } else {
           const errorMsg = this.roleService.errorSignal() || 'Failed to update role';
           console.error('âŒ Update failed:', errorMsg);
@@ -1225,9 +1224,12 @@ export class RoleEditorComponent implements OnInit {
 
           if (successCount > 0) {
             console.log(`âœ… Successfully created ${successCount} role(s)`);
+            this.toastService.success(
+              `✅ Successfully created ${successCount} role(s) with ${permissionsArray.length} permissions each`
+            );
             this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
           } else {
-            alert('Failed to create roles for selected tenants');
+            this.toastService.error('❌ Failed to create roles for selected tenants');
           }
         } else {
           // System role - no tenant ID needed
@@ -1243,6 +1245,9 @@ export class RoleEditorComponent implements OnInit {
           if (created) {
             console.log('âœ… Role created with ID:', created.id);
             await this.roleService.bulkAssignPermissions(created.id, permissionsArray);
+            this.toastService.success(
+              `✅ Role "${this.roleName}" created successfully with ${permissionsArray.length} permissions`
+            );
             this.router.navigate([this.isTenantContext() ? '/tenant/roles' : '/admin/roles']);
           } else {
             const errorMsg = this.roleService.errorSignal() || 'Failed to create role';

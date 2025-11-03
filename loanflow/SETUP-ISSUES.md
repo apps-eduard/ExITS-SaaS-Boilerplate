@@ -20,9 +20,9 @@ The loanflow mobile app has **architectural inconsistency** between standalone c
 
 ## ✅ What Was Successfully Created:
 
-1. **Database Seed** (`nest-api/src/database/seeds/14_loanflow_test_users.js`)
-   - 2 test customers: customer1@test.com, customer2@test.com
-   - 2 test collectors: collector1@test.com, collector2@test.com
+1. **Default Accounts** (seeded via `api/src/database/seeds/01_initial_data.js`)
+   - 1 test customer per tenant (customer1@acme.com, customer1@techstart.com)
+   - 2 employees per tenant with Money Loan access (employee1/employee2)
    - All passwords: `Admin@123`
 
 2. **Login Page** (`features/auth/login.page.ts`)
@@ -94,7 +94,7 @@ schemas: [CUSTOM_ELEMENTS_SCHEMA]
 
 4. **Run Database Seed:**
    ```powershell
-   cd nest-api
+   cd api
    npm run db:seed
    ```
 

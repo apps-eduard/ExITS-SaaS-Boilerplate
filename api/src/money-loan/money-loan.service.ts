@@ -854,7 +854,16 @@ export class MoneyLoanService {
       query.andWhere('is_active', true);
     }
 
-    return await query;
+    const products = await query;
+    
+    console.log('🔍 [GET PRODUCTS] Raw products from DB:', products);
+    
+    // Transform database fields to camelCase with proper formatting
+    const transformed = products.map(product => this.transformProductFields(product));
+    
+    console.log('✅ [GET PRODUCTS] Transformed products:', transformed);
+    
+    return transformed;
   }
 
   async getProductById(tenantId: number, productId: number) {
@@ -868,7 +877,36 @@ export class MoneyLoanService {
       throw new NotFoundException('Loan product not found');
     }
 
-    return product;
+    // Transform database fields to camelCase with proper formatting
+    return this.transformProductFields(product);
+  }
+
+  private transformProductFields(product: any) {
+    // Knex already converts snake_case to camelCase via postProcessResponse
+    // So we just return the product with proper field selection
+    return {
+      id: product.id,
+      tenantId: product.tenantId,
+      productCode: product.productCode,
+      name: product.name,
+      description: product.description,
+      minAmount: product.minAmount,
+      maxAmount: product.maxAmount,
+      interestRate: product.interestRate,
+      interestType: product.interestType,
+      loanTermType: product.loanTermType,
+      fixedTermDays: product.fixedTermDays,
+      minTermDays: product.minTermDays,
+      maxTermDays: product.maxTermDays,
+      processingFeePercent: product.processingFeePercent,
+      platformFee: product.platformFee,
+      latePaymentPenaltyPercent: product.latePaymentPenaltyPercent,
+      gracePeriodDays: product.gracePeriodDays,
+      paymentFrequency: product.paymentFrequency,
+      isActive: product.isActive,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
   }
 
   async createProduct(tenantId: number, dto: CreateLoanProductDto) {
@@ -934,8 +972,8 @@ export class MoneyLoanService {
     const knex = this.knexService.instance;
     const existing = await this.getProductById(tenantId, productId);
 
-    const existingMinAmount = Number(existing.minAmount ?? existing.min_amount ?? 0);
-    const existingMaxAmount = Number(existing.maxAmount ?? existing.max_amount ?? 0);
+    const existingMinAmount = Number(existing.minAmount ?? 0);
+    const existingMaxAmount = Number(existing.maxAmount ?? 0);
     const minAmount = dto.minAmount ?? existingMinAmount;
     const maxAmount = dto.maxAmount ?? existingMaxAmount;
 
@@ -943,17 +981,17 @@ export class MoneyLoanService {
       throw new BadRequestException('Minimum amount cannot be greater than maximum amount');
     }
 
-    const existingLoanTermType = existing.loanTermType ?? existing.loan_term_type ?? LoanTermType.FLEXIBLE;
+    const existingLoanTermType = existing.loanTermType ?? LoanTermType.FLEXIBLE;
     const targetLoanTermType = dto.loanTermType ?? existingLoanTermType;
 
     if (targetLoanTermType === LoanTermType.FIXED) {
-      const fixedTermDays = dto.fixedTermDays ?? existing.fixedTermDays ?? existing.fixed_term_days;
+      const fixedTermDays = dto.fixedTermDays ?? existing.fixedTermDays;
       if (!fixedTermDays || fixedTermDays <= 0) {
         throw new BadRequestException('fixedTermDays is required for fixed term products');
       }
     } else {
-      const minTermDays = dto.minTermDays ?? existing.minTermDays ?? existing.min_term_days;
-      const maxTermDays = dto.maxTermDays ?? existing.maxTermDays ?? existing.max_term_days;
+      const minTermDays = dto.minTermDays ?? existing.minTermDays;
+      const maxTermDays = dto.maxTermDays ?? existing.maxTermDays;
       if (minTermDays !== undefined && maxTermDays !== undefined && minTermDays !== null && maxTermDays !== null) {
         if (minTermDays > maxTermDays) {
           throw new BadRequestException('minTermDays cannot be greater than maxTermDays');
@@ -1015,18 +1053,18 @@ export class MoneyLoanService {
     }
 
     if (targetLoanTermType === LoanTermType.FIXED) {
-      updates.fixed_term_days = dto.fixedTermDays ?? existing.fixedTermDays ?? existing.fixed_term_days;
+      updates.fixed_term_days = dto.fixedTermDays ?? existing.fixedTermDays;
       updates.min_term_days = null;
       updates.max_term_days = null;
     } else {
       updates.fixed_term_days = null;
 
       if (dto.minTermDays !== undefined || existingLoanTermType === LoanTermType.FIXED) {
-        updates.min_term_days = dto.minTermDays ?? existing.minTermDays ?? existing.min_term_days ?? null;
+        updates.min_term_days = dto.minTermDays ?? existing.minTermDays ?? null;
       }
 
       if (dto.maxTermDays !== undefined || existingLoanTermType === LoanTermType.FIXED) {
-        updates.max_term_days = dto.maxTermDays ?? existing.maxTermDays ?? existing.max_term_days ?? null;
+        updates.max_term_days = dto.maxTermDays ?? existing.maxTermDays ?? null;
       }
 
       if (updates.loan_term_type === undefined && existingLoanTermType === LoanTermType.FIXED && targetLoanTermType === LoanTermType.FLEXIBLE) {

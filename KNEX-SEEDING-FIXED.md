@@ -66,24 +66,19 @@ Knex runs seed files in alphabetical order:
 1. `01_initial_data.js` - **Main seed file**
    - Creates tenants (ExITS Platform, ACME Corporation)
    - Creates modules
-   - Creates core permissions (if not from migrations)
-   - Creates roles (Super Admin, Tenant Admins)
-   - Creates users (admin@exitsaas.com, tenant admins)
-   - **Assigns permissions to roles (SPACE-SEPARATED)**
-   - Assigns roles to users
+   - Creates core permissions (system + tenant, including logging/backup/security)
+   - Creates roles (Super Admin, Tenant Admins, Employees, Customers)
+   - Creates users (system admin, tenant admins, baseline employees/customers)
+   - Assigns permissions to roles & users
 
 2. `02_subscription_plans_and_products.js`
-   - Creates subscription plans and products
+   - Creates core subscription plans and embedded features
 
 3. `05_money_loan_seed.js`
    - Seeds money loan-specific data
 
-4. `06_customer_portal_access.js`
-   - Seeds customer portal configurations
-
-5. `08_money_loan_permissions.js` - **Additional permissions**
-   - Adds 66 comprehensive money loan permissions
-   - All are `space: 'tenant'`
+4. `09_professional_plan_templates.js`
+   - Adds production-ready subscription plan templates and feature gates
 
 ## Expected Results After Seeding
 
@@ -91,9 +86,9 @@ Knex runs seed files in alphabetical order:
 
 | Role | Space | Tenant | Permissions |
 |------|-------|--------|-------------|
-| Super Admin | system | NULL (global) | 45 system permissions |
-| Tenant Admin | tenant | ExITS Platform | 114 tenant permissions |
-| Tenant Admin | tenant | ACME Corporation | 114 tenant permissions |
+| Super Admin | system | NULL (global) | All system-level permissions |
+| Tenant Admin | tenant | ExITS Platform | All tenant-level permissions |
+| Tenant Admin | tenant | ACME Corporation | All tenant-level permissions |
 
 ### Users Created
 
@@ -105,27 +100,25 @@ Knex runs seed files in alphabetical order:
 
 ### Permission Distribution
 
-**System Permissions (45 total):**
+**System Permissions (comprehensive):**
 - Tenants management (create, read, update, delete, manage-subscriptions)
-- Users management (system-level)
-- Roles management (system-level)
-- Products management (create, read, update, delete, manage-catalog)
-- Subscriptions management (create, read, update, delete, manage-plans)
-- Reports (view, export, tenant-usage, revenue)
-- Analytics (view)
-- Recycle Bin (view, restore, permanent-delete)
-- Modules, Permissions, Settings, Audit, Dashboard
+- Users & roles management (system-level)
+- Products & subscriptions management (create, read, update, delete, manage-plans)
+- Reports & analytics (view/export, tenant usage, revenue)
+- Recycle bin controls (view, restore, permanent-delete)
+- Modules, permissions, settings, audit, and dashboard access
+- **New:** system logs, audit logs (view/export/manage), activity dashboard controls
+- **New:** backup lifecycle (view/create/delete/restore) and security policy management
 
-**Tenant Permissions (114+ total):**
-- Tenant users (create, read, update, delete, invite, assign-roles)
-- Tenant roles (create, read, update, delete)
-- Money Loan (66 permissions - overview, customers, loans, payments, interest, collections, KYC, reports, settings, audit)
-- Tenant billing (read, view-subscriptions, view-invoices, manage-renewals)
-- Tenant reports (view, product-usage, user-activity, billing-summary, transactions, export)
-- Tenant recycle bin (view, restore, view-history)
-- Tenant products (read, configure, manage-settings)
-- Tenant settings, dashboard, audit
-- BNPL, Pawnshop (read, create, update, manage)
+**Tenant Permissions:**
+- Tenant users/roles (create, read, update, delete, export)
+- Money Loan (full lifecycle: overview, customers, loans, payments, interest, collections, KYC, reports, audit, settings)
+- Tenant billing (read, subscriptions, invoices, renewals, overview)
+- Tenant reports (product usage, user activity, billing summary, transactions, export)
+- Tenant recycle bin (view, restore, view history)
+- Tenant products (read, configure, manage settings)
+- Tenant settings, dashboard, audit, platform catalogue controls
+- BNPL & Pawnshop placeholders (read/manage where applicable)
 
 ## Verification Queries
 
@@ -260,7 +253,7 @@ for (const tenantAdminRole of tenantAdminRoles) {
 3. **Test Role Editor:**
    - As Super Admin: Create/edit roles, verify "System Space" filter shows 45 permissions
    - As Tenant Admin: Create/edit roles, verify "Tenant Space" filter shows 114 permissions
-   - Verify product filters work (Money Loan shows 66 permissions)
+   - Verify product filters work (Money Loan shows 61 permissions)
 
 ## Conclusion
 

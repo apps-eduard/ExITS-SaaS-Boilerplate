@@ -21,6 +21,34 @@ export class LoansController {
 export class LoanProductsController {
   constructor(private knexService: KnexService) {}
 
+  private transformProductFields(product: any) {
+    // Knex already converts snake_case to camelCase via postProcessResponse
+    // So we just return the product with proper field selection
+    return {
+      id: product.id,
+      tenantId: product.tenantId,
+      productCode: product.productCode,
+      name: product.name,
+      description: product.description,
+      minAmount: product.minAmount,
+      maxAmount: product.maxAmount,
+      interestRate: product.interestRate,
+      interestType: product.interestType,
+      loanTermType: product.loanTermType,
+      fixedTermDays: product.fixedTermDays,
+      minTermDays: product.minTermDays,
+      maxTermDays: product.maxTermDays,
+      processingFeePercent: product.processingFeePercent,
+      platformFee: product.platformFee,
+      latePaymentPenaltyPercent: product.latePaymentPenaltyPercent,
+      gracePeriodDays: product.gracePeriodDays,
+      paymentFrequency: product.paymentFrequency,
+      isActive: product.isActive,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
+  }
+
   @Get()
   async getLoanProducts() {
     const knex = this.knexService.instance;
@@ -31,8 +59,12 @@ export class LoanProductsController {
       .where({ is_active: true })
       .orderBy('created_at', 'desc');
 
-    console.log(`📦 Fetched ${products.length} loan products`);
-    return products;
+    console.log(`📦 Fetched ${products.length} loan products (all tenants)`);
+    
+    // Transform database fields to camelCase
+    const transformed = products.map(product => this.transformProductFields(product));
+    
+    return transformed;
   }
 
   @Get('tenant/:tenantId')
@@ -48,6 +80,12 @@ export class LoanProductsController {
       .orderBy('created_at', 'desc');
 
     console.log(`📦 Fetched ${products.length} loan products for tenant ${tenantId}`);
-    return products;
+    
+    // Transform database fields to camelCase with proper formatting
+    const transformed = products.map(product => this.transformProductFields(product));
+    
+    console.log('✅ Transformed products:', transformed);
+    
+    return transformed;
   }
 }

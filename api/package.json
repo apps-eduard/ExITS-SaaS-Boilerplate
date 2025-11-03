@@ -1,5 +1,5 @@
 {
-  "name": "exits-saas-nest-api",
+  "name": "exits-saas-api",
   "version": "1.0.0",
   "description": "NestJS REST API for ExITS-SaaS-Boilerplate with RBAC and multi-tenancy",
   "author": "Eduard",

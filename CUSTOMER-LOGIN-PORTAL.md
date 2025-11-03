@@ -160,11 +160,13 @@ customers
 
 ## 🔑 Creating New Customer Portal Accounts
 
-### Method 1: Via Seed Script
+### Method 1: Re-run Initial Seed (Dev Reset)
 ```bash
 cd api
-npx knex seed:run --specific=06_customer_portal_access.js
+npx knex seed:run --specific=01_initial_data.js
 ```
+
+> ⚠️ This resets tenants, users, roles, and default customers. Only use on local/dev data sets.
 
 ### Method 2: Manual SQL
 ```sql

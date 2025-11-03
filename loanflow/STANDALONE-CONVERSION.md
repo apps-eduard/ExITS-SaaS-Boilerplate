@@ -190,4 +190,4 @@ features/
 - Standalone architecture is correctly implemented
 - Ionic 8 components properly imported from `@ionic/angular/standalone`
 - Quick login feature ready for testing once compilation succeeds
-- Database seed (14_loanflow_test_users.js) ready to run
+- Default accounts available via `01_initial_data.js` seed

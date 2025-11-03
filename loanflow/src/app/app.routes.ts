@@ -10,7 +10,7 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
+    loadComponent: () => import('./auth/login.page').then((m) => m.LoginPage),
   },
   
   // Customer routes
@@ -20,7 +20,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/customer/dashboard.page').then((m) => m.CustomerDashboardPage),
+        loadComponent: () => import('./features/customer/customer_dashboard.page').then((m) => m.CustomerDashboardPage),
       },
       {
         path: 'loans',
@@ -37,6 +37,10 @@ export const routes: Routes = [
       {
         path: 'apply',
         loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
+      },
+      {
+        path: 'apply-loan/form',
+        loadComponent: () => import('./features/customer/loan-application-form.page').then((m) => m.LoanApplicationFormPage),
       },
       {
         path: '',

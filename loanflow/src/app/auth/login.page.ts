@@ -19,9 +19,9 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline } from 'ionicons/icons';
-import { AuthService } from '../../core/services/auth.service';
-import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { AuthService } from '../core/services/auth.service';
+import { ThemeService } from '../core/services/theme.service';
+import { DevInfoComponent } from '../shared/components/dev-info.component';
 
 @Component({
   selector: 'app-login',
@@ -520,32 +520,10 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
 
     /* Quick Login Grid */
     .quick-login-grid {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 0.75rem;
       margin-bottom: 2rem;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .quick-login-grid::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    .quick-login-grid::-webkit-scrollbar-track {
-      background: rgba(var(--ion-color-medium-rgb), 0.1);
-      border-radius: 3px;
-    }
-
-    .quick-login-grid::-webkit-scrollbar-thumb {
-      background: rgba(var(--ion-color-medium-rgb), 0.3);
-      border-radius: 3px;
-    }
-
-    .quick-login-grid::-webkit-scrollbar-thumb:hover {
-      background: rgba(var(--ion-color-medium-rgb), 0.5);
     }
 
     .quick-login-card {
@@ -555,9 +533,6 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       cursor: pointer;
       transition: all 0.3s ease;
       border: 2px solid transparent;
-      min-width: 280px;
-      flex-shrink: 0;
-      scroll-snap-align: start;
     }
 
     .quick-login-card:hover {

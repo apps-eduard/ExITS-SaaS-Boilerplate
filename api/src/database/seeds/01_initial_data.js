@@ -112,6 +112,12 @@ exports.seed = async function(knex) {
     { permission_key: 'reports:tenant-usage', resource: 'reports', action: 'tenant-usage', description: 'View tenant usage reports', space: 'system' },
     { permission_key: 'reports:revenue', resource: 'reports', action: 'revenue', description: 'View revenue reports', space: 'system' },
     { permission_key: 'analytics:view', resource: 'analytics', action: 'view', description: 'View analytics dashboard', space: 'system' },
+
+  // System Billing Management
+  { permission_key: 'billing:create', resource: 'billing', action: 'create', description: 'Create billing records and subscription plans', space: 'system' },
+  { permission_key: 'billing:read', resource: 'billing', action: 'read', description: 'View billing records and subscription plans', space: 'system' },
+  { permission_key: 'billing:edit', resource: 'billing', action: 'edit', description: 'Edit billing records and subscription plans', space: 'system' },
+  { permission_key: 'billing:delete', resource: 'billing', action: 'delete', description: 'Delete billing records and subscription plans', space: 'system' },
     
     // System Recycle Bin
     { permission_key: 'recycle-bin:view', resource: 'recycle-bin', action: 'view', description: 'View recycle bin', space: 'system' },
@@ -126,6 +132,29 @@ exports.seed = async function(knex) {
     { permission_key: 'audit:read', resource: 'audit', action: 'read', description: 'View system audit logs', space: 'system' },
     { permission_key: 'audit:export', resource: 'audit', action: 'export', description: 'Export system audit logs', space: 'system' },
     
+  // System Logs & Activity Monitoring
+  { permission_key: 'system-logs:view', resource: 'system-logs', action: 'view', description: 'View system logs and error tracking', space: 'system' },
+  { permission_key: 'system-logs:export', resource: 'system-logs', action: 'export', description: 'Export system logs to CSV/PDF', space: 'system' },
+  { permission_key: 'system-logs:delete', resource: 'system-logs', action: 'delete', description: 'Delete system logs', space: 'system' },
+  { permission_key: 'system-logs:manage', resource: 'system-logs', action: 'manage', description: 'Manage system log retention and cleanup policies', space: 'system' },
+  { permission_key: 'audit-logs:view', resource: 'audit-logs', action: 'view', description: 'View detailed audit trail and user activity logs', space: 'system' },
+  { permission_key: 'audit-logs:export', resource: 'audit-logs', action: 'export', description: 'Export audit logs to CSV/PDF', space: 'system' },
+  { permission_key: 'audit-logs:delete', resource: 'audit-logs', action: 'delete', description: 'Delete audit logs', space: 'system' },
+  { permission_key: 'audit-logs:manage', resource: 'audit-logs', action: 'manage', description: 'Manage audit log retention and compliance reports', space: 'system' },
+  { permission_key: 'activity-dashboard:view', resource: 'activity-dashboard', action: 'view', description: 'View system activity dashboard statistics', space: 'system' },
+  { permission_key: 'activity-dashboard:manage', resource: 'activity-dashboard', action: 'manage', description: 'Manage activity dashboard settings and filters', space: 'system' },
+
+    // System Backup Management
+    { permission_key: 'backup:view', resource: 'backup', action: 'view', description: 'View backup history and schedules', space: 'system' },
+    { permission_key: 'backup:create', resource: 'backup', action: 'create', description: 'Create manual backups', space: 'system' },
+    { permission_key: 'backup:delete', resource: 'backup', action: 'delete', description: 'Delete backup files', space: 'system' },
+    { permission_key: 'backup:restore', resource: 'backup', action: 'restore', description: 'Restore from backups', space: 'system' },
+
+    // Security Policy Management
+    { permission_key: 'security-policy:view', resource: 'security-policy', action: 'view', description: 'View security policies', space: 'system' },
+    { permission_key: 'security-policy:update', resource: 'security-policy', action: 'update', description: 'Update security policies', space: 'system' },
+    { permission_key: 'security-policy:manage', resource: 'security-policy', action: 'manage', description: 'Manage IP allow/deny lists and security rules', space: 'system' },
+
     // System-level User Management (for Super Admin to manage all users)
     { permission_key: 'users:create', resource: 'users', action: 'create', description: 'Create users (system-wide)', space: 'system' },
     { permission_key: 'users:read', resource: 'users', action: 'read', description: 'View users (system-wide)', space: 'system' },
@@ -175,6 +204,7 @@ exports.seed = async function(knex) {
     { permission_key: 'tenant-billing:view-subscriptions', resource: 'tenant-billing', action: 'view-subscriptions', description: 'View tenant subscriptions', space: 'tenant' },
     { permission_key: 'tenant-billing:view-invoices', resource: 'tenant-billing', action: 'view-invoices', description: 'View tenant invoices', space: 'tenant' },
     { permission_key: 'tenant-billing:manage-renewals', resource: 'tenant-billing', action: 'manage-renewals', description: 'Manage subscription renewals', space: 'tenant' },
+  { permission_key: 'tenant-billing:update', resource: 'tenant-billing', action: 'update', description: 'Update tenant billing information and payment methods', space: 'tenant' },
     { permission_key: 'tenant-billing:view-overview', resource: 'tenant-billing', action: 'view-overview', description: 'View billing overview', space: 'tenant' },
     
     // Tenant Reports
@@ -190,12 +220,111 @@ exports.seed = async function(knex) {
     { permission_key: 'tenant-recycle-bin:restore', resource: 'tenant-recycle-bin', action: 'restore', description: 'Restore deleted tenant items', space: 'tenant' },
     { permission_key: 'tenant-recycle-bin:view-history', resource: 'tenant-recycle-bin', action: 'view-history', description: 'View recovery history', space: 'tenant' },
     
-    // Money Loan permissions (Tenant Level)
-    { permission_key: 'money-loan:read', resource: 'money-loan', action: 'read', description: 'View loan information', space: 'tenant' },
-    { permission_key: 'money-loan:create', resource: 'money-loan', action: 'create', description: 'Create new loans', space: 'tenant' },
-    { permission_key: 'money-loan:update', resource: 'money-loan', action: 'update', description: 'Update loan details', space: 'tenant' },
-    { permission_key: 'money-loan:approve', resource: 'money-loan', action: 'approve', description: 'Approve/reject loans', space: 'tenant' },
-    { permission_key: 'money-loan:payments', resource: 'money-loan', action: 'payments', description: 'Manage loan payments', space: 'tenant' },
+    // Money Loan permissions (Tenant Level) - Granular permissions
+    // ============================================
+    // 1. OVERVIEW DASHBOARD (6 permissions)
+    // ============================================
+    { permission_key: 'money-loan:overview:view', resource: 'money-loan-overview', action: 'view', description: 'View overview dashboard with metrics', space: 'tenant' },
+    { permission_key: 'money-loan:overview:total-loans', resource: 'money-loan-overview', action: 'view-total-loans', description: 'View total loans disbursed metric', space: 'tenant' },
+    { permission_key: 'money-loan:overview:collection-rate', resource: 'money-loan-overview', action: 'view-collection-rate', description: 'View collection rate metric', space: 'tenant' },
+    { permission_key: 'money-loan:overview:overdue-percentage', resource: 'money-loan-overview', action: 'view-overdue-percentage', description: 'View overdue percentage metric', space: 'tenant' },
+    { permission_key: 'money-loan:overview:outstanding-amount', resource: 'money-loan-overview', action: 'view-outstanding-amount', description: 'View outstanding amount metric', space: 'tenant' },
+    { permission_key: 'money-loan:overview:default-rate', resource: 'money-loan-overview', action: 'view-default-rate', description: 'View default rate metric', space: 'tenant' },
+
+    // ============================================
+    // 2. CUSTOMERS (5 permissions)
+    // ============================================
+    { permission_key: 'money-loan:customers:read', resource: 'money-loan-customers', action: 'read', description: 'View all customers', space: 'tenant' },
+    { permission_key: 'money-loan:customers:create', resource: 'money-loan-customers', action: 'create', description: 'Create new customers', space: 'tenant' },
+    { permission_key: 'money-loan:customers:update', resource: 'money-loan-customers', action: 'update', description: 'Update customer information', space: 'tenant' },
+    { permission_key: 'money-loan:customers:delete', resource: 'money-loan-customers', action: 'delete', description: 'Delete or deactivate customers', space: 'tenant' },
+    { permission_key: 'money-loan:customers:view-high-risk', resource: 'money-loan-customers', action: 'view-high-risk', description: 'View high-risk flagged customers', space: 'tenant' },
+
+    // ============================================
+    // 3. LOANS (9 permissions)
+    // ============================================
+    { permission_key: 'money-loan:loans:read', resource: 'money-loan-loans', action: 'read', description: 'View all loans', space: 'tenant' },
+    { permission_key: 'money-loan:loans:create', resource: 'money-loan-loans', action: 'create', description: 'Create new loan applications', space: 'tenant' },
+    { permission_key: 'money-loan:loans:update', resource: 'money-loan-loans', action: 'update', description: 'Update loan details', space: 'tenant' },
+    { permission_key: 'money-loan:loans:delete', resource: 'money-loan-loans', action: 'delete', description: 'Delete or cancel loans', space: 'tenant' },
+    { permission_key: 'money-loan:loans:approve', resource: 'money-loan-loans', action: 'approve', description: 'Approve or reject loan applications', space: 'tenant' },
+    { permission_key: 'money-loan:loans:disburse', resource: 'money-loan-loans', action: 'disburse', description: 'Disburse approved loans', space: 'tenant' },
+    { permission_key: 'money-loan:loans:view-overdue', resource: 'money-loan-loans', action: 'view-overdue', description: 'View overdue loans', space: 'tenant' },
+    { permission_key: 'money-loan:loans:close', resource: 'money-loan-loans', action: 'close', description: 'Close or mark loans as paid off', space: 'tenant' },
+    { permission_key: 'money-loan:loans:use-calculator', resource: 'money-loan-loans', action: 'use-calculator', description: 'Use loan calculator tool', space: 'tenant' },
+
+    // ============================================
+    // 4. PAYMENTS (7 permissions)
+    // ============================================
+    { permission_key: 'money-loan:payments:read', resource: 'money-loan-payments', action: 'read', description: 'View payment history', space: 'tenant' },
+    { permission_key: 'money-loan:payments:create', resource: 'money-loan-payments', action: 'create', description: 'Record new payments', space: 'tenant' },
+    { permission_key: 'money-loan:payments:view-today', resource: 'money-loan-payments', action: 'view-today-collections', description: "View today's collections", space: 'tenant' },
+    { permission_key: 'money-loan:payments:bulk-import', resource: 'money-loan-payments', action: 'bulk-import', description: 'Import payments in bulk via CSV', space: 'tenant' },
+    { permission_key: 'money-loan:payments:refund', resource: 'money-loan-payments', action: 'refund', description: 'Process refunds and waivers', space: 'tenant' },
+    { permission_key: 'money-loan:payments:view-failed', resource: 'money-loan-payments', action: 'view-failed', description: 'View failed payment transactions', space: 'tenant' },
+    { permission_key: 'money-loan:payments:configure-gateway', resource: 'money-loan-payments', action: 'configure-gateway', description: 'Configure payment gateway settings', space: 'tenant' },
+
+    // ============================================
+    // 5. INTEREST & RULES (5 permissions)
+    // ============================================
+    { permission_key: 'money-loan:interest:read', resource: 'money-loan-interest', action: 'read', description: 'View interest rates', space: 'tenant' },
+    { permission_key: 'money-loan:interest:update', resource: 'money-loan-interest', action: 'update', description: 'Update interest rates', space: 'tenant' },
+    { permission_key: 'money-loan:interest:manage-auto-rules', resource: 'money-loan-interest', action: 'manage-auto-rules', description: 'Manage automated interest rate rules', space: 'tenant' },
+    { permission_key: 'money-loan:interest:manual-override', resource: 'money-loan-interest', action: 'manual-override', description: 'Manually override interest rates for specific loans', space: 'tenant' },
+    { permission_key: 'money-loan:interest:use-calculator', resource: 'money-loan-interest', action: 'use-calculator', description: 'Use interest calculator', space: 'tenant' },
+
+    // ============================================
+    // 6. COLLECTIONS (5 permissions)
+    // ============================================
+    { permission_key: 'money-loan:collections:read', resource: 'money-loan-collections', action: 'read', description: 'View collection workflows', space: 'tenant' },
+    { permission_key: 'money-loan:collections:manage-workflow', resource: 'money-loan-collections', action: 'manage-workflow', description: 'Manage overdue collection workflows', space: 'tenant' },
+    { permission_key: 'money-loan:collections:manage-strategies', resource: 'money-loan-collections', action: 'manage-strategies', description: 'Manage collection strategies (calls, emails, etc.)', space: 'tenant' },
+    { permission_key: 'money-loan:collections:legal-actions', resource: 'money-loan-collections', action: 'manage-legal-actions', description: 'Manage legal actions for defaulting customers', space: 'tenant' },
+    { permission_key: 'money-loan:collections:view-recovery', resource: 'money-loan-collections', action: 'view-recovery', description: 'View recovery dashboard and status', space: 'tenant' },
+
+    // ============================================
+    // 7. KYC VERIFICATION (6 permissions)
+    // ============================================
+    { permission_key: 'money-loan:kyc:read', resource: 'money-loan-kyc', action: 'read', description: 'View KYC verification status', space: 'tenant' },
+    { permission_key: 'money-loan:kyc:review', resource: 'money-loan-kyc', action: 'review', description: 'Review pending KYC submissions', space: 'tenant' },
+    { permission_key: 'money-loan:kyc:approve', resource: 'money-loan-kyc', action: 'approve', description: 'Approve or reject KYC verifications', space: 'tenant' },
+    { permission_key: 'money-loan:kyc:view-audit-logs', resource: 'money-loan-kyc', action: 'view-audit-logs', description: 'View KYC audit logs', space: 'tenant' },
+    { permission_key: 'money-loan:kyc:view-webhook-logs', resource: 'money-loan-kyc', action: 'view-webhook-logs', description: 'View third-party KYC webhook logs (e.g., Onfido)', space: 'tenant' },
+    { permission_key: 'money-loan:kyc:configure', resource: 'money-loan-kyc', action: 'configure', description: 'Configure KYC verification settings', space: 'tenant' },
+
+    // ============================================
+    // 8. REPORTS (5 permissions)
+    // ============================================
+    { permission_key: 'money-loan:reports:read', resource: 'money-loan-reports', action: 'read', description: 'View reports', space: 'tenant' },
+    { permission_key: 'money-loan:reports:generate-periodic', resource: 'money-loan-reports', action: 'generate-periodic', description: 'Generate daily/weekly/monthly reports', space: 'tenant' },
+    { permission_key: 'money-loan:reports:tax-summary', resource: 'money-loan-reports', action: 'generate-tax-summary', description: 'Generate tax summary reports', space: 'tenant' },
+    { permission_key: 'money-loan:reports:export', resource: 'money-loan-reports', action: 'export', description: 'Export reports to CSV/PDF', space: 'tenant' },
+    { permission_key: 'money-loan:reports:custom-queries', resource: 'money-loan-reports', action: 'run-custom-queries', description: 'Run custom queries and reports', space: 'tenant' },
+
+    // ============================================
+    // 9. SETTINGS (7 permissions)
+    // ============================================
+    { permission_key: 'money-loan:settings:read', resource: 'money-loan-settings', action: 'read', description: 'View settings', space: 'tenant' },
+    { permission_key: 'money-loan:settings:manage-roles', resource: 'money-loan-settings', action: 'manage-roles-permissions', description: 'Manage roles and permissions', space: 'tenant' },
+    { permission_key: 'money-loan:settings:manage-loan-products', resource: 'money-loan-settings', action: 'manage-loan-products', description: 'Manage loan product settings', space: 'tenant' },
+    { permission_key: 'money-loan:settings:manage-templates', resource: 'money-loan-settings', action: 'manage-templates', description: 'Manage SMS/Email templates', space: 'tenant' },
+    { permission_key: 'money-loan:settings:manage-branding', resource: 'money-loan-settings', action: 'manage-branding', description: 'Manage company branding', space: 'tenant' },
+    { permission_key: 'money-loan:settings:manage-api-keys', resource: 'money-loan-settings', action: 'manage-api-keys', description: 'Manage API keys for integrations', space: 'tenant' },
+    { permission_key: 'money-loan:settings:view-audit-log', resource: 'money-loan-settings', action: 'view-audit-log', description: 'View system audit log', space: 'tenant' },
+
+    // ============================================
+    // 10. AUDIT LOG (3 permissions)
+    // ============================================
+    { permission_key: 'money-loan:audit:read', resource: 'money-loan-audit', action: 'read', description: 'View system activity logs', space: 'tenant' },
+    { permission_key: 'money-loan:audit:view-data-changes', resource: 'money-loan-audit', action: 'view-data-changes', description: 'Track changes to sensitive data', space: 'tenant' },
+    { permission_key: 'money-loan:audit:export', resource: 'money-loan-audit', action: 'export', description: 'Export audit logs', space: 'tenant' },
+
+    // ============================================
+    // ADDITIONAL FEATURES (3 permissions)
+    // ============================================
+    { permission_key: 'money-loan:notifications:read', resource: 'money-loan-notifications', action: 'read', description: 'View notifications and alerts', space: 'tenant' },
+    { permission_key: 'money-loan:user-management:manage', resource: 'money-loan-user-management', action: 'manage', description: 'Manage staff accounts and access', space: 'tenant' },
+    { permission_key: 'money-loan:integrations:configure', resource: 'money-loan-integrations', action: 'configure', description: 'Configure external integrations', space: 'tenant' },
     
     // BNPL permissions (Tenant Level)
     { permission_key: 'bnpl:read', resource: 'bnpl', action: 'read', description: 'View BNPL information', space: 'tenant' },
