@@ -2,7 +2,6 @@
 # This script sets up the development environment using NestJS backend
 
 param(
-    [switch]$ResetDb,
     [switch]$SkipInstall,
     [switch]$NoStart,
     [switch]$ForceSeed,
@@ -283,10 +282,10 @@ function Initialize-Database {
     $dbExistsCmd = "SELECT 1 FROM pg_database WHERE datname = 'exits_saas_db';"
     $dbExists = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -tAc $dbExistsCmd 2>&1
     $hasDatabase = ($LASTEXITCODE -eq 0 -and $dbExists.Trim() -eq '1')
-    $createdFreshDatabase = $false
+    $createdFreshDatabase = $true
 
-    if ($ResetDb -and $hasDatabase) {
-        Write-Step "Dropping existing database (ResetDb flag set)..."
+    if ($hasDatabase) {
+        Write-Step "Dropping existing database for a clean rebuild..."
         $dropCmd = 'DROP DATABASE IF EXISTS exits_saas_db;'
         $dropResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $dropCmd 2>&1 | Out-String
 
@@ -297,61 +296,24 @@ function Initialize-Database {
             return $false
         }
 
-    Write-Success "Existing database dropped successfully"
-        $hasDatabase = $false
-        $createdFreshDatabase = $true
-    } elseif ($hasDatabase) {
-        Write-Info "Database already exists; will re-use unless migrations require reset."
+        Write-Success "Existing database dropped successfully"
+        Start-Sleep -Seconds 2
     } else {
-        Write-Info "Database not found; will create a fresh instance."
-        $createdFreshDatabase = $true
-    }
-    
-    if (-not $hasDatabase) {
-        Write-Step "Creating database 'exits_saas_db'..."
-        $createCmd = 'CREATE DATABASE exits_saas_db;'
-        $createResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $createCmd 2>&1
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error-Custom "Failed to create database"
-            Write-Host "$($Red)$createResult$($Reset)"
-            Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
-            return $false
-        }
-
-        Write-Success "Database 'exits_saas_db' created successfully"
-        $createdFreshDatabase = $true
+        Write-Info "Database not found; creating a fresh instance."
     }
 
-    # Remove legacy migration records that no longer have matching files
-    $legacyMigrations = @(
-        '20251024084941_add_tenant_permissions.js',
-        '20251024131100_add_missing_tenant_permissions.js',
-        '20251024140000_add_tenant_permissions_v2.js',
-        '20251025121000_add_billing_permissions.js',
-        '20251026150000_create_payment_method_types.js',
-        '20251026150001_add_tenant_billing_update_permission.js'
-    )
+    Write-Step "Creating database 'exits_saas_db'..."
+    $createCmd = 'CREATE DATABASE exits_saas_db;'
+    $createResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -c $createCmd 2>&1
 
-    if ($legacyMigrations.Count -gt 0) {
-        Write-Step "Cleaning legacy migration history entries..."
-        $checkResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -d exits_saas_db -tAc "SELECT to_regclass('public.knex_migrations') IS NOT NULL;" 2>&1
-        $hasKnexTable = ($LASTEXITCODE -eq 0 -and $checkResult.Trim() -eq 't')
-
-        if ($hasKnexTable) {
-            $legacyList = ($legacyMigrations | ForEach-Object { "'$_'" }) -join ', '
-            $cleanupSql = "DELETE FROM knex_migrations WHERE name IN ($legacyList);"
-            $cleanupResult = & $resolvedPsqlPath -U postgres -h localhost -p 5432 -d exits_saas_db -c $cleanupSql 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "Legacy migration entries cleaned up"
-            } else {
-                Write-Warning "Unable to clean legacy migration entries automatically"
-                $cleanupResult | Select-Object -Last 10 | ForEach-Object { Write-Host "  $_" }
-            }
-        } else {
-            Write-Info "Knex migration history table not found; skipping cleanup."
-        }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error-Custom "Failed to create database"
+        Write-Host "$($Red)$createResult$($Reset)"
+        Remove-Item env:PGPASSWORD -ErrorAction SilentlyContinue
+        return $false
     }
+
+    Write-Success "Database 'exits_saas_db' created successfully"
     
     Start-Sleep -Seconds 2
     
@@ -405,13 +367,18 @@ CORS_ORIGIN=http://localhost:4200
         Write-Success "Database schema migrated successfully"
     }
     
-    $shouldSeed = $ForceSeed -or $createdFreshDatabase
-    if ($shouldSeed) {
-        Write-Step "Seeding database with initial data using Knex..."
+    $shouldRunSeeds = $ForceSeed -or $createdFreshDatabase
+
+    if ($shouldRunSeeds) {
+        if ($ForceSeed -and -not $createdFreshDatabase) {
+            Write-Warning "Force seeding enabled; seeding will run against existing data."
+        }
+
+        Write-Step "Running Knex seeds to populate baseline data..."
         Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
-        Write-Host "$($Bright)$($Cyan)|  NESTJS KNEX SEED - Populating Initial Data             |$($Reset)"
+        Write-Host "$($Bright)$($Cyan)|  NESTJS KNEX SEED - Populating Initial Data              |$($Reset)"
         Write-Host "$($Bright)$($Cyan)|  Command: npx knex seed:run                              |$($Reset)"
-        Write-Host "$($Bright)$($Cyan)+============================================================+$($Reset)"
+        Write-Host "$($Bright)$($Cyan)+=========================================================+$($Reset)"
         Write-Host "$($Gray)  Seed output:$($Reset)"
         $seedOutput = npx knex seed:run 2>&1
         $seedOutput | ForEach-Object { Write-Host "$($Gray)  |$($Reset) $_" }
@@ -419,18 +386,19 @@ CORS_ORIGIN=http://localhost:4200
 
         if (!$seedSuccess) {
             Pop-Location
-            Write-Error-Custom "Database seeding failed"
+            Write-Error-Custom "Knex seeds failed"
             return $false
         }
 
-        Write-Success "Database seeded successfully"
-        if ($ForceSeed) {
+        if ($ForceSeed -and -not $createdFreshDatabase) {
             $script:DatabaseSeedStatus = 'Forced'
+            Write-Success "Database reseeded successfully (force seed)"
         } else {
             $script:DatabaseSeedStatus = 'Fresh'
+            Write-Success "Initial data seeded successfully"
         }
     } else {
-        Write-Info "Skipping seeds (existing database detected; use -ForceSeed to override)."
+        Write-Info "Skipping seed run; use -ForceSeed for a manual reseed."
         $script:DatabaseSeedStatus = 'Skipped'
     }
     

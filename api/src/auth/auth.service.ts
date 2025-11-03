@@ -77,11 +77,11 @@ export class AuthService {
     if (user.tenantId) {
       try {
         platforms = await knex('employee_product_access')
-          .select('product_type as productType', 'access_level as accessLevel', 'is_primary as isPrimary')
+          .select('platform_type as productType', 'access_level as accessLevel', 'is_primary as isPrimary')
           .where({ user_id: user.id, status: 'active' })
           .orderBy([
             { column: 'is_primary', order: 'desc' },
-            { column: 'product_type', order: 'asc' }
+            { column: 'platform_type', order: 'asc' }
           ]);
       } catch (platformErr) {
         // employee_product_access table might not exist - okay for admin logins

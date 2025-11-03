@@ -1,753 +1,363 @@
-const bcrypt = require('bcryptjs');
+'use strict';
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
- */
-exports.seed = async function(knex) {
-  console.log('🌱 Starting comprehensive seed...\n');
+const path = require('path');
+const Module = require('module');
 
-  // Clean up existing data (but preserve permissions from migrations)
-  await knex('role_permissions').del();
-  await knex('user_roles').del();
-  // Note: NOT deleting permissions - they come from migrations
-  await knex('users').del();
-  await knex('roles').del();
-  await knex('modules').del();
-  await knex('tenants').del();
+// Allow legacy seed modules to resolve dependencies bundled with the NestJS API.
+const additionalNodePaths = [
+  path.join(__dirname, '../../../node_modules'),
+  path.join(__dirname, '../../../../node_modules'),
+];
 
-  // 1. Create tenants
-  console.log('1. Creating tenants...');
-  const tenants = await knex('tenants').insert([
-    {
-      name: 'ACME Corporation',
-      subdomain: 'acme',
-      plan: 'enterprise',
-      status: 'active',
-      max_users: 1000,
-      contact_person: 'John Doe',
-      contact_email: 'admin@acme.com',
-      contact_phone: '+63-917-123-4567',
-      money_loan_enabled: true,
-      bnpl_enabled: true,
-      pawnshop_enabled: false
-    },
-    {
-      name: 'TechStart Solutions',
-      subdomain: 'techstart',
-      plan: 'pro',
-      status: 'active',
-      max_users: 100,
-      contact_person: 'Jane Smith',
-      contact_email: 'admin@techstart.com',
-      contact_phone: '+63-917-987-6543',
-      money_loan_enabled: true,
-      bnpl_enabled: false,
-      pawnshop_enabled: false
-    }
-  ]).returning(['id', 'name']);
-  console.log(`✅ ${tenants.length} tenants created`);
+const existingNodePath = process.env.NODE_PATH
+  ? process.env.NODE_PATH.split(path.delimiter)
+  : [];
 
-  // 2. Create modules
-  console.log('2. Creating modules...');
-  const modules = await knex('modules').insert([
-    { menu_key: 'dashboard', display_name: 'Dashboard', icon: 'dashboard', space: 'tenant', menu_order: 1, status: 'active' },
-    { menu_key: 'users', display_name: 'User Management', icon: 'people', space: 'tenant', menu_order: 2, status: 'active' },
-    { menu_key: 'roles', display_name: 'Roles & Permissions', icon: 'shield-check', space: 'tenant', menu_order: 3, status: 'active' },
-    { menu_key: 'tenant-products', display_name: 'Products', icon: 'cube', space: 'tenant', menu_order: 4, status: 'active' },
-    { menu_key: 'tenants', display_name: 'Tenants', icon: 'office-building', space: 'system', menu_order: 5, status: 'active' },
-    { menu_key: 'permissions', display_name: 'Permissions', icon: 'key', space: 'system', menu_order: 6, status: 'active' },
-    { menu_key: 'audit', display_name: 'Audit Logs', icon: 'document-text', space: 'tenant', menu_order: 7, status: 'active' },
-    { menu_key: 'settings', display_name: 'Settings', icon: 'cog', space: 'tenant', menu_order: 8, status: 'active' }
-  ]).returning(['id', 'menu_key']);
-  console.log(`✅ ${modules.length} modules created`);
+const mergedNodePaths = [...existingNodePath];
 
-  // 3. Create comprehensive permissions (only if they don't exist from migrations)
-  console.log('3. Creating comprehensive permissions...');
-  
-  // First check if permissions already exist from migrations
-  const existingPermissions = await knex('permissions').select('permission_key');
-  const existingKeys = existingPermissions.map(p => p.permissionKey); // Knex returns camelCase
-  console.log(`Found ${existingKeys.length} existing permissions in database`);
-  
-  const permissionsToAdd = [
-    // System permissions
-    { permission_key: 'dashboard:view', resource: 'dashboard', action: 'view', description: 'System dashboard access', space: 'system' },
-    
-    { permission_key: 'tenants:create', resource: 'tenants', action: 'create', description: 'Create tenants', space: 'system' },
-    { permission_key: 'tenants:read', resource: 'tenants', action: 'read', description: 'View tenants', space: 'system' },
-    { permission_key: 'tenants:update', resource: 'tenants', action: 'update', description: 'Edit tenants', space: 'system' },
-    { permission_key: 'tenants:delete', resource: 'tenants', action: 'delete', description: 'Delete tenants', space: 'system' },
-    { permission_key: 'tenants:manage-subscriptions', resource: 'tenants', action: 'manage-subscriptions', description: 'Manage tenant subscriptions', space: 'system' },
-    
-    // System modules permissions
-    { permission_key: 'modules:create', resource: 'modules', action: 'create', description: 'Create modules', space: 'system' },
-    { permission_key: 'modules:read', resource: 'modules', action: 'read', description: 'View modules', space: 'system' },
-    { permission_key: 'modules:update', resource: 'modules', action: 'update', description: 'Edit modules', space: 'system' },
-    { permission_key: 'modules:delete', resource: 'modules', action: 'delete', description: 'Delete modules', space: 'system' },
-    
-    // System permissions management
-    { permission_key: 'permissions:create', resource: 'permissions', action: 'create', description: 'Create permissions', space: 'system' },
-    { permission_key: 'permissions:read', resource: 'permissions', action: 'read', description: 'View permissions', space: 'system' },
-    { permission_key: 'permissions:update', resource: 'permissions', action: 'update', description: 'Edit permissions', space: 'system' },
-    { permission_key: 'permissions:delete', resource: 'permissions', action: 'delete', description: 'Delete permissions', space: 'system' },
-    
-    // Platform management (System Level)
-    { permission_key: 'platforms:create', resource: 'platforms', action: 'create', description: 'Create new platforms', space: 'system' },
-    { permission_key: 'platforms:read', resource: 'platforms', action: 'read', description: 'View platforms', space: 'system' },
-    { permission_key: 'platforms:update', resource: 'platforms', action: 'update', description: 'Edit platform details', space: 'system' },
-    { permission_key: 'platforms:delete', resource: 'platforms', action: 'delete', description: 'Delete platforms', space: 'system' },
-    { permission_key: 'platforms:manage-catalog', resource: 'platforms', action: 'manage-catalog', description: 'Manage platform catalog', space: 'system' },
-    
-    // Subscriptions Management (System Level)
-    { permission_key: 'subscriptions:create', resource: 'subscriptions', action: 'create', description: 'Create new subscriptions', space: 'system' },
-    { permission_key: 'subscriptions:read', resource: 'subscriptions', action: 'read', description: 'View subscriptions', space: 'system' },
-    { permission_key: 'subscriptions:update', resource: 'subscriptions', action: 'update', description: 'Edit subscription details', space: 'system' },
-    { permission_key: 'subscriptions:delete', resource: 'subscriptions', action: 'delete', description: 'Delete subscriptions', space: 'system' },
-    { permission_key: 'subscriptions:manage-plans', resource: 'subscriptions', action: 'manage-plans', description: 'Manage subscription plans', space: 'system' },
-    
-    // System Reports & Analytics
-    { permission_key: 'reports:view', resource: 'reports', action: 'view', description: 'View system reports', space: 'system' },
-    { permission_key: 'reports:export', resource: 'reports', action: 'export', description: 'Export reports', space: 'system' },
-    { permission_key: 'reports:tenant-usage', resource: 'reports', action: 'tenant-usage', description: 'View tenant usage reports', space: 'system' },
-    { permission_key: 'reports:revenue', resource: 'reports', action: 'revenue', description: 'View revenue reports', space: 'system' },
-    { permission_key: 'analytics:view', resource: 'analytics', action: 'view', description: 'View analytics dashboard', space: 'system' },
+for (const candidate of additionalNodePaths) {
+  if (candidate && !mergedNodePaths.includes(candidate)) {
+    mergedNodePaths.push(candidate);
+  }
+}
 
-  // System Billing Management
-  { permission_key: 'billing:create', resource: 'billing', action: 'create', description: 'Create billing records and subscription plans', space: 'system' },
-  { permission_key: 'billing:read', resource: 'billing', action: 'read', description: 'View billing records and subscription plans', space: 'system' },
-  { permission_key: 'billing:edit', resource: 'billing', action: 'edit', description: 'Edit billing records and subscription plans', space: 'system' },
-  { permission_key: 'billing:delete', resource: 'billing', action: 'delete', description: 'Delete billing records and subscription plans', space: 'system' },
-    
-    // System Recycle Bin
-    { permission_key: 'recycle-bin:view', resource: 'recycle-bin', action: 'view', description: 'View recycle bin', space: 'system' },
-    { permission_key: 'recycle-bin:restore', resource: 'recycle-bin', action: 'restore', description: 'Restore deleted items', space: 'system' },
-    { permission_key: 'recycle-bin:permanent-delete', resource: 'recycle-bin', action: 'permanent-delete', description: 'Permanently delete items', space: 'system' },
-    
-    // System Settings & Configuration
-    { permission_key: 'settings:read', resource: 'settings', action: 'read', description: 'View system settings', space: 'system' },
-    { permission_key: 'settings:update', resource: 'settings', action: 'update', description: 'Edit system settings', space: 'system' },
-    
-    // System Audit Logs
-    { permission_key: 'audit:read', resource: 'audit', action: 'read', description: 'View system audit logs', space: 'system' },
-    { permission_key: 'audit:export', resource: 'audit', action: 'export', description: 'Export system audit logs', space: 'system' },
-    
-  // System Logs & Activity Monitoring
-  { permission_key: 'system-logs:view', resource: 'system-logs', action: 'view', description: 'View system logs and error tracking', space: 'system' },
-  { permission_key: 'system-logs:export', resource: 'system-logs', action: 'export', description: 'Export system logs to CSV/PDF', space: 'system' },
-  { permission_key: 'system-logs:delete', resource: 'system-logs', action: 'delete', description: 'Delete system logs', space: 'system' },
-  { permission_key: 'system-logs:manage', resource: 'system-logs', action: 'manage', description: 'Manage system log retention and cleanup policies', space: 'system' },
-  { permission_key: 'audit-logs:view', resource: 'audit-logs', action: 'view', description: 'View detailed audit trail and user activity logs', space: 'system' },
-  { permission_key: 'audit-logs:export', resource: 'audit-logs', action: 'export', description: 'Export audit logs to CSV/PDF', space: 'system' },
-  { permission_key: 'audit-logs:delete', resource: 'audit-logs', action: 'delete', description: 'Delete audit logs', space: 'system' },
-  { permission_key: 'audit-logs:manage', resource: 'audit-logs', action: 'manage', description: 'Manage audit log retention and compliance reports', space: 'system' },
-  { permission_key: 'activity-dashboard:view', resource: 'activity-dashboard', action: 'view', description: 'View system activity dashboard statistics', space: 'system' },
-  { permission_key: 'activity-dashboard:manage', resource: 'activity-dashboard', action: 'manage', description: 'Manage activity dashboard settings and filters', space: 'system' },
+  if (mergedNodePaths.length !== existingNodePath.length) {
+  process.env.NODE_PATH = mergedNodePaths.join(path.delimiter);
+  Module._initPaths();
+}
 
-    // System Backup Management
-    { permission_key: 'backup:view', resource: 'backup', action: 'view', description: 'View backup history and schedules', space: 'system' },
-    { permission_key: 'backup:create', resource: 'backup', action: 'create', description: 'Create manual backups', space: 'system' },
-    { permission_key: 'backup:delete', resource: 'backup', action: 'delete', description: 'Delete backup files', space: 'system' },
-    { permission_key: 'backup:restore', resource: 'backup', action: 'restore', description: 'Restore from backups', space: 'system' },
+// Map legacy column names to the renamed columns introduced by the consolidated schema.
+const legacyColumnRename = {
+  employee_product_access: {
+    product_type: 'platform_type',
+  },
+};
 
-    // Security Policy Management
-    { permission_key: 'security-policy:view', resource: 'security-policy', action: 'view', description: 'View security policies', space: 'system' },
-    { permission_key: 'security-policy:update', resource: 'security-policy', action: 'update', description: 'Update security policies', space: 'system' },
-    { permission_key: 'security-policy:manage', resource: 'security-policy', action: 'manage', description: 'Manage IP allow/deny lists and security rules', space: 'system' },
-
-    // System-level User Management (for Super Admin to manage all users)
-    { permission_key: 'users:create', resource: 'users', action: 'create', description: 'Create users (system-wide)', space: 'system' },
-    { permission_key: 'users:read', resource: 'users', action: 'read', description: 'View users (system-wide)', space: 'system' },
-    { permission_key: 'users:update', resource: 'users', action: 'update', description: 'Edit users (system-wide)', space: 'system' },
-    { permission_key: 'users:delete', resource: 'users', action: 'delete', description: 'Delete users (system-wide)', space: 'system' },
-    { permission_key: 'users:export', resource: 'users', action: 'export', description: 'Export user data (system-wide)', space: 'system' },
-    
-    // Tenant-scoped permissions (kept with tenant prefix to avoid conflicts)
-    { permission_key: 'tenant-users:create', resource: 'tenant-users', action: 'create', description: 'Create users within tenant', space: 'tenant' },
-    { permission_key: 'tenant-users:read', resource: 'tenant-users', action: 'read', description: 'View users within tenant', space: 'tenant' },
-    { permission_key: 'tenant-users:update', resource: 'tenant-users', action: 'update', description: 'Edit users within tenant', space: 'tenant' },
-    { permission_key: 'tenant-users:delete', resource: 'tenant-users', action: 'delete', description: 'Delete users within tenant', space: 'tenant' },
-    { permission_key: 'tenant-users:export', resource: 'tenant-users', action: 'export', description: 'Export tenant user data', space: 'tenant' },
-    
-    // Tenant Customers Management
-    { permission_key: 'tenant-customers:create', resource: 'tenant-customers', action: 'create', description: 'Create customers within tenant', space: 'tenant' },
-    { permission_key: 'tenant-customers:read', resource: 'tenant-customers', action: 'read', description: 'View customers within tenant', space: 'tenant' },
-    { permission_key: 'tenant-customers:update', resource: 'tenant-customers', action: 'update', description: 'Edit customers within tenant', space: 'tenant' },
-    { permission_key: 'tenant-customers:delete', resource: 'tenant-customers', action: 'delete', description: 'Delete customers within tenant', space: 'tenant' },
-    { permission_key: 'tenant-customers:export', resource: 'tenant-customers', action: 'export', description: 'Export tenant customer data', space: 'tenant' },
-    
-    // System-level Role Management  
-    { permission_key: 'roles:create', resource: 'roles', action: 'create', description: 'Create roles (system-wide)', space: 'system' },
-    { permission_key: 'roles:read', resource: 'roles', action: 'read', description: 'View roles (system-wide)', space: 'system' },
-    { permission_key: 'roles:update', resource: 'roles', action: 'update', description: 'Edit roles (system-wide)', space: 'system' },
-    { permission_key: 'roles:delete', resource: 'roles', action: 'delete', description: 'Delete roles (system-wide)', space: 'system' },
-    
-    // Tenant-scoped role permissions
-    { permission_key: 'tenant-roles:create', resource: 'tenant-roles', action: 'create', description: 'Create roles within tenant', space: 'tenant' },
-    { permission_key: 'tenant-roles:read', resource: 'tenant-roles', action: 'read', description: 'View roles within tenant', space: 'tenant' },
-    { permission_key: 'tenant-roles:update', resource: 'tenant-roles', action: 'update', description: 'Edit roles within tenant', space: 'tenant' },
-    { permission_key: 'tenant-roles:delete', resource: 'tenant-roles', action: 'delete', description: 'Delete roles within tenant', space: 'tenant' },
-    
-    { permission_key: 'tenant-audit:read', resource: 'tenant-audit', action: 'read', description: 'View tenant audit logs', space: 'tenant' },
-    { permission_key: 'tenant-audit:export', resource: 'tenant-audit', action: 'export', description: 'Export tenant audit logs', space: 'tenant' },
-    
-    { permission_key: 'tenant-settings:read', resource: 'tenant-settings', action: 'read', description: 'View tenant settings', space: 'tenant' },
-    { permission_key: 'tenant-settings:update', resource: 'tenant-settings', action: 'update', description: 'Edit tenant settings', space: 'tenant' },
-    
-    // Tenant Platforms (Tenant Level)
-    { permission_key: 'tenant-platforms:read', resource: 'tenant-platforms', action: 'read', description: 'View tenant platform catalog', space: 'tenant' },
-    { permission_key: 'tenant-platforms:configure', resource: 'tenant-platforms', action: 'configure', description: 'Configure tenant platforms', space: 'tenant' },
-    { permission_key: 'tenant-platforms:manage-settings', resource: 'tenant-platforms', action: 'manage-settings', description: 'Manage platform settings/features', space: 'tenant' },
-    
-    // Tenant Billing
-    { permission_key: 'tenant-billing:read', resource: 'tenant-billing', action: 'read', description: 'View tenant billing information', space: 'tenant' },
-    { permission_key: 'tenant-billing:view-subscriptions', resource: 'tenant-billing', action: 'view-subscriptions', description: 'View tenant subscriptions', space: 'tenant' },
-    { permission_key: 'tenant-billing:view-invoices', resource: 'tenant-billing', action: 'view-invoices', description: 'View tenant invoices', space: 'tenant' },
-    { permission_key: 'tenant-billing:manage-renewals', resource: 'tenant-billing', action: 'manage-renewals', description: 'Manage subscription renewals', space: 'tenant' },
-  { permission_key: 'tenant-billing:update', resource: 'tenant-billing', action: 'update', description: 'Update tenant billing information and payment methods', space: 'tenant' },
-    { permission_key: 'tenant-billing:view-overview', resource: 'tenant-billing', action: 'view-overview', description: 'View billing overview', space: 'tenant' },
-    
-    // Tenant Reports
-    { permission_key: 'tenant-reports:view', resource: 'tenant-reports', action: 'view', description: 'View tenant reports', space: 'tenant' },
-    { permission_key: 'tenant-reports:product-usage', resource: 'tenant-reports', action: 'product-usage', description: 'View product usage reports', space: 'tenant' },
-    { permission_key: 'tenant-reports:user-activity', resource: 'tenant-reports', action: 'user-activity', description: 'View user activity reports', space: 'tenant' },
-    { permission_key: 'tenant-reports:billing-summary', resource: 'tenant-reports', action: 'billing-summary', description: 'View billing/payment summary', space: 'tenant' },
-    { permission_key: 'tenant-reports:transactions', resource: 'tenant-reports', action: 'transactions', description: 'View transaction history', space: 'tenant' },
-    { permission_key: 'tenant-reports:export', resource: 'tenant-reports', action: 'export', description: 'Export tenant reports', space: 'tenant' },
-    
-    // Tenant Recycle Bin
-    { permission_key: 'tenant-recycle-bin:view', resource: 'tenant-recycle-bin', action: 'view', description: 'View tenant recycle bin', space: 'tenant' },
-    { permission_key: 'tenant-recycle-bin:restore', resource: 'tenant-recycle-bin', action: 'restore', description: 'Restore deleted tenant items', space: 'tenant' },
-    { permission_key: 'tenant-recycle-bin:view-history', resource: 'tenant-recycle-bin', action: 'view-history', description: 'View recovery history', space: 'tenant' },
-    
-    // Money Loan permissions (Tenant Level) - Granular permissions
-    // ============================================
-    // 1. OVERVIEW DASHBOARD (6 permissions)
-    // ============================================
-    { permission_key: 'money-loan:overview:view', resource: 'money-loan-overview', action: 'view', description: 'View overview dashboard with metrics', space: 'tenant' },
-    { permission_key: 'money-loan:overview:total-loans', resource: 'money-loan-overview', action: 'view-total-loans', description: 'View total loans disbursed metric', space: 'tenant' },
-    { permission_key: 'money-loan:overview:collection-rate', resource: 'money-loan-overview', action: 'view-collection-rate', description: 'View collection rate metric', space: 'tenant' },
-    { permission_key: 'money-loan:overview:overdue-percentage', resource: 'money-loan-overview', action: 'view-overdue-percentage', description: 'View overdue percentage metric', space: 'tenant' },
-    { permission_key: 'money-loan:overview:outstanding-amount', resource: 'money-loan-overview', action: 'view-outstanding-amount', description: 'View outstanding amount metric', space: 'tenant' },
-    { permission_key: 'money-loan:overview:default-rate', resource: 'money-loan-overview', action: 'view-default-rate', description: 'View default rate metric', space: 'tenant' },
-
-    // ============================================
-    // 2. CUSTOMERS (5 permissions)
-    // ============================================
-    { permission_key: 'money-loan:customers:read', resource: 'money-loan-customers', action: 'read', description: 'View all customers', space: 'tenant' },
-    { permission_key: 'money-loan:customers:create', resource: 'money-loan-customers', action: 'create', description: 'Create new customers', space: 'tenant' },
-    { permission_key: 'money-loan:customers:update', resource: 'money-loan-customers', action: 'update', description: 'Update customer information', space: 'tenant' },
-    { permission_key: 'money-loan:customers:delete', resource: 'money-loan-customers', action: 'delete', description: 'Delete or deactivate customers', space: 'tenant' },
-    { permission_key: 'money-loan:customers:view-high-risk', resource: 'money-loan-customers', action: 'view-high-risk', description: 'View high-risk flagged customers', space: 'tenant' },
-
-    // ============================================
-    // 3. LOANS (9 permissions)
-    // ============================================
-    { permission_key: 'money-loan:loans:read', resource: 'money-loan-loans', action: 'read', description: 'View all loans', space: 'tenant' },
-    { permission_key: 'money-loan:loans:create', resource: 'money-loan-loans', action: 'create', description: 'Create new loan applications', space: 'tenant' },
-    { permission_key: 'money-loan:loans:update', resource: 'money-loan-loans', action: 'update', description: 'Update loan details', space: 'tenant' },
-    { permission_key: 'money-loan:loans:delete', resource: 'money-loan-loans', action: 'delete', description: 'Delete or cancel loans', space: 'tenant' },
-    { permission_key: 'money-loan:loans:approve', resource: 'money-loan-loans', action: 'approve', description: 'Approve or reject loan applications', space: 'tenant' },
-    { permission_key: 'money-loan:loans:disburse', resource: 'money-loan-loans', action: 'disburse', description: 'Disburse approved loans', space: 'tenant' },
-    { permission_key: 'money-loan:loans:view-overdue', resource: 'money-loan-loans', action: 'view-overdue', description: 'View overdue loans', space: 'tenant' },
-    { permission_key: 'money-loan:loans:close', resource: 'money-loan-loans', action: 'close', description: 'Close or mark loans as paid off', space: 'tenant' },
-    { permission_key: 'money-loan:loans:use-calculator', resource: 'money-loan-loans', action: 'use-calculator', description: 'Use loan calculator tool', space: 'tenant' },
-
-    // ============================================
-    // 4. PAYMENTS (7 permissions)
-    // ============================================
-    { permission_key: 'money-loan:payments:read', resource: 'money-loan-payments', action: 'read', description: 'View payment history', space: 'tenant' },
-    { permission_key: 'money-loan:payments:create', resource: 'money-loan-payments', action: 'create', description: 'Record new payments', space: 'tenant' },
-    { permission_key: 'money-loan:payments:view-today', resource: 'money-loan-payments', action: 'view-today-collections', description: "View today's collections", space: 'tenant' },
-    { permission_key: 'money-loan:payments:bulk-import', resource: 'money-loan-payments', action: 'bulk-import', description: 'Import payments in bulk via CSV', space: 'tenant' },
-    { permission_key: 'money-loan:payments:refund', resource: 'money-loan-payments', action: 'refund', description: 'Process refunds and waivers', space: 'tenant' },
-    { permission_key: 'money-loan:payments:view-failed', resource: 'money-loan-payments', action: 'view-failed', description: 'View failed payment transactions', space: 'tenant' },
-    { permission_key: 'money-loan:payments:configure-gateway', resource: 'money-loan-payments', action: 'configure-gateway', description: 'Configure payment gateway settings', space: 'tenant' },
-
-    // ============================================
-    // 5. INTEREST & RULES (5 permissions)
-    // ============================================
-    { permission_key: 'money-loan:interest:read', resource: 'money-loan-interest', action: 'read', description: 'View interest rates', space: 'tenant' },
-    { permission_key: 'money-loan:interest:update', resource: 'money-loan-interest', action: 'update', description: 'Update interest rates', space: 'tenant' },
-    { permission_key: 'money-loan:interest:manage-auto-rules', resource: 'money-loan-interest', action: 'manage-auto-rules', description: 'Manage automated interest rate rules', space: 'tenant' },
-    { permission_key: 'money-loan:interest:manual-override', resource: 'money-loan-interest', action: 'manual-override', description: 'Manually override interest rates for specific loans', space: 'tenant' },
-    { permission_key: 'money-loan:interest:use-calculator', resource: 'money-loan-interest', action: 'use-calculator', description: 'Use interest calculator', space: 'tenant' },
-
-    // ============================================
-    // 6. COLLECTIONS (5 permissions)
-    // ============================================
-    { permission_key: 'money-loan:collections:read', resource: 'money-loan-collections', action: 'read', description: 'View collection workflows', space: 'tenant' },
-    { permission_key: 'money-loan:collections:manage-workflow', resource: 'money-loan-collections', action: 'manage-workflow', description: 'Manage overdue collection workflows', space: 'tenant' },
-    { permission_key: 'money-loan:collections:manage-strategies', resource: 'money-loan-collections', action: 'manage-strategies', description: 'Manage collection strategies (calls, emails, etc.)', space: 'tenant' },
-    { permission_key: 'money-loan:collections:legal-actions', resource: 'money-loan-collections', action: 'manage-legal-actions', description: 'Manage legal actions for defaulting customers', space: 'tenant' },
-    { permission_key: 'money-loan:collections:view-recovery', resource: 'money-loan-collections', action: 'view-recovery', description: 'View recovery dashboard and status', space: 'tenant' },
-
-    // ============================================
-    // 7. KYC VERIFICATION (6 permissions)
-    // ============================================
-    { permission_key: 'money-loan:kyc:read', resource: 'money-loan-kyc', action: 'read', description: 'View KYC verification status', space: 'tenant' },
-    { permission_key: 'money-loan:kyc:review', resource: 'money-loan-kyc', action: 'review', description: 'Review pending KYC submissions', space: 'tenant' },
-    { permission_key: 'money-loan:kyc:approve', resource: 'money-loan-kyc', action: 'approve', description: 'Approve or reject KYC verifications', space: 'tenant' },
-    { permission_key: 'money-loan:kyc:view-audit-logs', resource: 'money-loan-kyc', action: 'view-audit-logs', description: 'View KYC audit logs', space: 'tenant' },
-    { permission_key: 'money-loan:kyc:view-webhook-logs', resource: 'money-loan-kyc', action: 'view-webhook-logs', description: 'View third-party KYC webhook logs (e.g., Onfido)', space: 'tenant' },
-    { permission_key: 'money-loan:kyc:configure', resource: 'money-loan-kyc', action: 'configure', description: 'Configure KYC verification settings', space: 'tenant' },
-
-    // ============================================
-    // 8. REPORTS (5 permissions)
-    // ============================================
-    { permission_key: 'money-loan:reports:read', resource: 'money-loan-reports', action: 'read', description: 'View reports', space: 'tenant' },
-    { permission_key: 'money-loan:reports:generate-periodic', resource: 'money-loan-reports', action: 'generate-periodic', description: 'Generate daily/weekly/monthly reports', space: 'tenant' },
-    { permission_key: 'money-loan:reports:tax-summary', resource: 'money-loan-reports', action: 'generate-tax-summary', description: 'Generate tax summary reports', space: 'tenant' },
-    { permission_key: 'money-loan:reports:export', resource: 'money-loan-reports', action: 'export', description: 'Export reports to CSV/PDF', space: 'tenant' },
-    { permission_key: 'money-loan:reports:custom-queries', resource: 'money-loan-reports', action: 'run-custom-queries', description: 'Run custom queries and reports', space: 'tenant' },
-
-    // ============================================
-    // 9. SETTINGS (7 permissions)
-    // ============================================
-    { permission_key: 'money-loan:settings:read', resource: 'money-loan-settings', action: 'read', description: 'View settings', space: 'tenant' },
-    { permission_key: 'money-loan:settings:manage-roles', resource: 'money-loan-settings', action: 'manage-roles-permissions', description: 'Manage roles and permissions', space: 'tenant' },
-    { permission_key: 'money-loan:settings:manage-loan-products', resource: 'money-loan-settings', action: 'manage-loan-products', description: 'Manage loan product settings', space: 'tenant' },
-    { permission_key: 'money-loan:settings:manage-templates', resource: 'money-loan-settings', action: 'manage-templates', description: 'Manage SMS/Email templates', space: 'tenant' },
-    { permission_key: 'money-loan:settings:manage-branding', resource: 'money-loan-settings', action: 'manage-branding', description: 'Manage company branding', space: 'tenant' },
-    { permission_key: 'money-loan:settings:manage-api-keys', resource: 'money-loan-settings', action: 'manage-api-keys', description: 'Manage API keys for integrations', space: 'tenant' },
-    { permission_key: 'money-loan:settings:view-audit-log', resource: 'money-loan-settings', action: 'view-audit-log', description: 'View system audit log', space: 'tenant' },
-
-    // ============================================
-    // 10. AUDIT LOG (3 permissions)
-    // ============================================
-    { permission_key: 'money-loan:audit:read', resource: 'money-loan-audit', action: 'read', description: 'View system activity logs', space: 'tenant' },
-    { permission_key: 'money-loan:audit:view-data-changes', resource: 'money-loan-audit', action: 'view-data-changes', description: 'Track changes to sensitive data', space: 'tenant' },
-    { permission_key: 'money-loan:audit:export', resource: 'money-loan-audit', action: 'export', description: 'Export audit logs', space: 'tenant' },
-
-    // ============================================
-    // ADDITIONAL FEATURES (3 permissions)
-    // ============================================
-    { permission_key: 'money-loan:notifications:read', resource: 'money-loan-notifications', action: 'read', description: 'View notifications and alerts', space: 'tenant' },
-    { permission_key: 'money-loan:user-management:manage', resource: 'money-loan-user-management', action: 'manage', description: 'Manage staff accounts and access', space: 'tenant' },
-    { permission_key: 'money-loan:integrations:configure', resource: 'money-loan-integrations', action: 'configure', description: 'Configure external integrations', space: 'tenant' },
-    
-    // BNPL permissions (Tenant Level)
-    { permission_key: 'bnpl:read', resource: 'bnpl', action: 'read', description: 'View BNPL information', space: 'tenant' },
-    { permission_key: 'bnpl:create', resource: 'bnpl', action: 'create', description: 'Create BNPL plans', space: 'tenant' },
-    { permission_key: 'bnpl:update', resource: 'bnpl', action: 'update', description: 'Update BNPL plans', space: 'tenant' },
-    { permission_key: 'bnpl:manage', resource: 'bnpl', action: 'manage', description: 'Manage BNPL transactions', space: 'tenant' },
-    
-    // Pawnshop permissions (Tenant Level)
-    { permission_key: 'pawnshop:read', resource: 'pawnshop', action: 'read', description: 'View pawnshop information', space: 'tenant' },
-    { permission_key: 'pawnshop:create', resource: 'pawnshop', action: 'create', description: 'Create pawn tickets', space: 'tenant' },
-    { permission_key: 'pawnshop:update', resource: 'pawnshop', action: 'update', description: 'Update pawn details', space: 'tenant' },
-    { permission_key: 'pawnshop:manage', resource: 'pawnshop', action: 'manage', description: 'Manage pawnshop operations', space: 'tenant' },
-    
-    // Additional missing permissions that were added via migrations/fixes
-    { permission_key: 'loans:read', resource: 'loans', action: 'read', description: 'View loan information', space: 'system' },
-    { permission_key: 'loans:create', resource: 'loans', action: 'create', description: 'Create new loans', space: 'system' },
-    { permission_key: 'loans:update', resource: 'loans', action: 'update', description: 'Update loan details', space: 'system' },
-    { permission_key: 'loans:delete', resource: 'loans', action: 'delete', description: 'Delete loans', space: 'system' },
-    { permission_key: 'loans:approve', resource: 'loans', action: 'approve', description: 'Approve/reject loans', space: 'system' },
-    { permission_key: 'loans:disburse', resource: 'loans', action: 'disburse', description: 'Disburse loan amounts', space: 'system' },
-    
-    { permission_key: 'payments:create', resource: 'payments', action: 'create', description: 'Create payments', space: 'system' },
-    { permission_key: 'payments:read', resource: 'payments', action: 'read', description: 'View payments', space: 'system' },
-    { permission_key: 'payments:update', resource: 'payments', action: 'update', description: 'Update payments', space: 'system' },
-    { permission_key: 'payments:delete', resource: 'payments', action: 'delete', description: 'Delete payments', space: 'system' },
-    
-    // Tenant-level user management (additional permissions) - kept for backward compatibility
-    { permission_key: 'tenant-users:invite', resource: 'tenant-users', action: 'invite', description: 'Invite new users', space: 'tenant' },
-    { permission_key: 'tenant-users:assign-roles', resource: 'tenant-users', action: 'assign-roles', description: 'Assign roles to users', space: 'tenant' },
-    
-    // Tenant dashboard (additional permission)
-    { permission_key: 'tenant-dashboard:view', resource: 'tenant-dashboard', action: 'view', description: 'View tenant dashboard', space: 'tenant' },
-    
-    // Customer-specific permissions (Customer Portal)
-    { permission_key: 'customer-profile:read', resource: 'customer-profile', action: 'read', description: 'View own customer profile', space: 'customer' },
-    { permission_key: 'customer-profile:update', resource: 'customer-profile', action: 'update', description: 'Update own customer profile', space: 'customer' },
-    { permission_key: 'customer-loans:read', resource: 'customer-loans', action: 'read', description: 'View own loans', space: 'customer' },
-    { permission_key: 'customer-loans:apply', resource: 'customer-loans', action: 'apply', description: 'Apply for new loan', space: 'customer' },
-    { permission_key: 'customer-loan-products:read', resource: 'customer-loan-products', action: 'read', description: 'View available loan products', space: 'customer' },
-    { permission_key: 'customer-payments:read', resource: 'customer-payments', action: 'read', description: 'View own payment history', space: 'customer' },
-    { permission_key: 'customer-payments:create', resource: 'customer-payments', action: 'create', description: 'Make loan payments', space: 'customer' },
-    { permission_key: 'customer-dashboard:view', resource: 'customer-dashboard', action: 'view', description: 'View customer dashboard', space: 'customer' }
+async function normalizeTenantAdminEmails(knexInstance) {
+  const desiredMappings = [
+    { tenantSubdomain: 'acme', desiredEmail: 'admin@acme.com' },
+    { tenantSubdomain: 'techstart', desiredEmail: 'admin@techstart.com' },
   ];
-  
-  // Filter out permissions that already exist from migrations
-  const newPermissions = permissionsToAdd.filter(p => !existingKeys.includes(p.permission_key));  // permission_key is correct here (it's from permissionsToAdd, not from DB)
-  
-  let permissions = [];
-  if (newPermissions.length > 0) {
-    permissions = await knex('permissions').insert(newPermissions).returning(['id', 'permission_key']);
-    console.log(`✅ ${newPermissions.length} new permissions created (${existingKeys.length} already existed from migrations)`);
-  } else {
-    // Get all existing permissions for role assignment
-    permissions = await knex('permissions').select(['id', 'permission_key']);
-    console.log(`✅ Using ${permissions.length} existing permissions from migrations`);
-  }
 
-  // 4. Create roles
-  console.log('4. Creating roles...');
-  
-  // System Administrator role
-  const [systemAdminRole] = await knex('roles').insert({
-    tenant_id: null,
-    name: 'Super Admin',
-    description: 'Full system access',
-    space: 'system',
-    status: 'active'
-  }).returning(['id', 'name']);
-  
-  // Tenant Administrator role for each tenant
-  const tenantAdminRoles = [];
-  const customerRoles = [];
-  const employeeRoles = [];
-  for (const tenant of tenants) {
-    const [tenantAdminRole] = await knex('roles').insert({
-      tenant_id: tenant.id,
-      name: 'Tenant Admin',
-      description: 'Full access within tenant scope',
-      space: 'tenant',
-      status: 'active'
-    }).returning(['id', 'name', 'tenant_id']);
-    tenantAdminRoles.push(tenantAdminRole);
-    
-    // Create Employee role for each tenant
-    const [employeeRole] = await knex('roles').insert({
-      tenant_id: tenant.id,
-      name: 'Employee',
-      description: 'Platform access for employees',
-      space: 'tenant',
-      status: 'active'
-    }).returning(['id', 'name', 'tenant_id']);
-    employeeRoles.push(employeeRole);
-    
-    // Create Customer role for each tenant
-    const [customerRole] = await knex('roles').insert({
-      tenant_id: tenant.id,
-      name: 'Customer',
-      description: 'Customer portal access only',
-      space: 'customer',
-      status: 'active'
-    }).returning(['id', 'name', 'tenant_id']);
-    customerRoles.push(customerRole);
-  }
-  console.log(`✅ 1 system role + ${tenantAdminRoles.length} tenant roles + ${employeeRoles.length} employee roles + ${customerRoles.length} customer roles created`);
+  for (const mapping of desiredMappings) {
+    const tenant = await knexInstance('tenants')
+      .select('id')
+      .where({ subdomain: mapping.tenantSubdomain })
+      .first();
 
-  // 5. Create users
-  console.log('5. Creating users...');
-  const passwordHash = await bcrypt.hash('Admin@123', 10);
-  
-  // System admin
-  const [systemAdmin] = await knex('users').insert({
-    tenant_id: null,
-    email: 'admin@exitsaas.com',
-    password_hash: passwordHash,
-    first_name: 'System',
-    last_name: 'Administrator',
-    status: 'active',
-    email_verified: true
-  }).returning(['id', 'email']);
-  
-  // Tenant admins
-  const tenantAdmins = [];
-  const tenantAdminEmails = ['admin@acme.com', 'admin@techstart.com'];
-  for (let i = 0; i < tenants.length; i++) {
-    const [tenantAdmin] = await knex('users').insert({
-      tenant_id: tenants[i].id,
-      email: tenantAdminEmails[i],
-      password_hash: passwordHash,
-      first_name: 'Tenant',
-      last_name: 'Admin',
-      status: 'active',
-      email_verified: true
-    }).returning(['id', 'email', 'tenant_id']);
-    tenantAdmins.push(tenantAdmin);
-  }
-  
-  // Create test customers - 1 per tenant (ACME & TechStart)
-  console.log('5a. Creating test customers for all tenants...');
-  const customerPasswordHash = await bcrypt.hash('Admin@123', 10);
-  
-  for (const tenant of tenants) {
-    const tenantSubdomain = tenant.name === 'ACME Corporation' ? 'acme' : 
-                            tenant.name === 'TechStart Solutions' ? 'techstart' : null;
-    
-    if (!tenantSubdomain) continue;
-    
-    const customerRoleForTenant = customerRoles.find(r => r.tenantId === tenant.id);
-    const customerCode = `CUST-${tenantSubdomain.toUpperCase()}-0001`;
-    const customerEmail = `customer1@${tenantSubdomain}.com`;
-    
-    // Create user account for customer
-    const [customerUser] = await knex('users').insert({
-      tenant_id: tenant.id,
-      email: customerEmail,
-      password_hash: customerPasswordHash,
-      first_name: tenantSubdomain === 'acme' ? 'Maria' : 'Juan',
-      last_name: tenantSubdomain === 'acme' ? 'Santos' : 'Dela Cruz',
-      status: 'active',
-      email_verified: true
-    }).returning('*');
-    
-    // Assign customer role
-    await knex('user_roles').insert({
-      user_id: customerUser.id,
-      role_id: customerRoleForTenant.id
-    });
-    
-    // Create customer record
-    const [customer] = await knex('customers').insert({
-      tenant_id: tenant.id,
-      user_id: customerUser.id,
-      customer_code: customerCode,
-      customer_type: 'individual',
-      first_name: tenantSubdomain === 'acme' ? 'Maria' : 'Juan',
-      middle_name: tenantSubdomain === 'acme' ? 'Reyes' : 'Pedro',
-      last_name: tenantSubdomain === 'acme' ? 'Santos' : 'Dela Cruz',
-      date_of_birth: tenantSubdomain === 'acme' ? '1990-05-15' : '1988-08-22',
-      gender: tenantSubdomain === 'acme' ? 'female' : 'male',
-      civil_status: tenantSubdomain === 'acme' ? 'single' : 'married',
-      email: customerEmail,
-      phone: tenantSubdomain === 'acme' ? '+639171234567' : '+639189876543',
-      id_type: 'umid',
-      id_number: tenantSubdomain === 'acme' ? 'UMID-001-ACME' : 'UMID-001-TECH',
-      employment_status: 'employed',
-      employer_name: tenantSubdomain === 'acme' ? 'ABC Corporation' : 'XYZ Industries',
-      occupation: tenantSubdomain === 'acme' ? 'Software Engineer' : 'Sales Manager',
-      monthly_income: tenantSubdomain === 'acme' ? 55000 : 48000,
-      source_of_income: 'Salary',
-      years_employed: tenantSubdomain === 'acme' ? 3 : 5,
-      nationality: 'Filipino',
-      status: 'active',
-      preferred_language: 'en',
-      preferred_contact_method: 'sms',
-      emergency_contact_name: tenantSubdomain === 'acme' ? 'Rosa Santos' : 'Ana Dela Cruz',
-      emergency_contact_relationship: tenantSubdomain === 'acme' ? 'Mother' : 'Wife',
-      emergency_contact_phone: tenantSubdomain === 'acme' ? '+639171234568' : '+639189876544',
-      platform_tags: JSON.stringify(['moneyloan'])
-    }).returning('*');
-    
-    // Create Money Loan customer profile
-    await knex('money_loan_customer_profiles').insert({
-      customer_id: customer.id,
-      tenant_id: tenant.id,
-      credit_score: tenantSubdomain === 'acme' ? 720 : 680,
-      risk_level: tenantSubdomain === 'acme' ? 'low' : 'medium',
-      kyc_status: 'verified',
-      kyc_verified_at: new Date(),
-      max_loan_amount: 100000,
-      current_loan_limit: 100000,
-      outstanding_balance: 0,
-      on_time_payment_rate: 100,
-      auto_debit_enabled: false,
-      preferred_payment_day: 15,
-      status: 'active'
-    });
-  }
-  
-  console.log(`✅ Created 1 customer for ACME and 1 for TechStart with Money Loan profiles`);
-  
-  // Create employees for both tenants
-  console.log('5b. Creating employees for all tenants...');
-  const employeePasswordHash = await bcrypt.hash('Admin@123', 10);
-  
-  for (const tenant of tenants) {
-    const tenantSubdomain = tenant.name === 'ACME Corporation' ? 'acme' : 
-                            tenant.name === 'TechStart Solutions' ? 'techstart' : null;
-    
-    if (!tenantSubdomain) continue;
-    
-    const employeeRoleForTenant = employeeRoles.find(r => r.tenantId === tenant.id);
-    
-    // Create 2 employees
-    for (let i = 1; i <= 2; i++) {
-      const empEmail = `employee${i}@${tenantSubdomain}.com`;
-      const [employee] = await knex('users').insert({
-        tenant_id: tenant.id,
-        email: empEmail,
-        password_hash: employeePasswordHash,
-        first_name: `Employee${i}`,
-        last_name: tenant.name.split(' ')[0],
-        status: 'active',
-        email_verified: true
-      }).returning('*');
-      
-      // Assign employee role
-      await knex('user_roles').insert({
-        user_id: employee.id,
-        role_id: employeeRoleForTenant.id
+    if (!tenant) {
+      continue;
+    }
+
+    const alreadyUpdated = await knexInstance('users')
+      .where({ tenant_id: tenant.id, email: mapping.desiredEmail })
+      .first();
+
+    if (alreadyUpdated) {
+      continue;
+    }
+
+    const placeholderAdmin = await knexInstance('users')
+      .where({ tenant_id: tenant.id })
+      .andWhere('email', 'like', 'admin-%@example.com')
+      .orderBy('id')
+      .first();
+
+    if (!placeholderAdmin) {
+      console.info(`Tenant admin placeholder not found for tenant '${mapping.tenantSubdomain}'.`);
+      continue;
+    }
+
+    await knexInstance('users')
+      .where({ id: placeholderAdmin.id })
+      .update({
+        email: mapping.desiredEmail,
+        updated_at: knexInstance.fn.now(),
       });
-      
-      // Create employee profile
-      const [profile] = await knex('employee_profiles').insert({
-        tenant_id: tenant.id,
-        user_id: employee.id,
-        employee_code: `EMP-${tenantSubdomain.toUpperCase()}-${String(i).padStart(3, '0')}`,
-        position: i === 1 ? 'Loan Officer' : 'Collections Specialist',
-        department: 'Operations',
-        employment_type: 'full-time',
-        employment_status: 'active',
-        hire_date: i === 1 ? '2024-01-15' : '2024-02-01',
-        basic_salary: 30000 + (i * 5000),
-        status: 'active'
-      }).returning('id');
-      
-      // Assign Money Loan platform access
-      await knex('employee_product_access').insert({
-        tenant_id: tenant.id,
-        user_id: employee.id,
-        employee_id: profile.id,
-        product_type: 'money_loan',
-        access_level: 'manage',
-        is_primary: true,
-        can_approve_loans: i === 1,
-        max_approval_amount: i === 1 ? 100000 : 50000,
-        can_disburse_funds: true,
-        can_view_reports: true,
-        can_modify_interest: false,
-        can_waive_penalties: i === 1,
-        status: 'active',
-        assigned_date: new Date()
-      });
+
+    console.info(`Tenant admin email normalized for '${mapping.tenantSubdomain}' -> ${mapping.desiredEmail}`);
+  }
+}
+
+async function ensureTenantTestUsers(knexInstance) {
+  const tenantUsers = [
+    { subdomain: 'acme', email: 'tenant.admin@acme.com', firstName: 'ACME', lastName: 'Admin' },
+    { subdomain: 'techstart', email: 'tenant.admin@techstart.com', firstName: 'TechStart', lastName: 'Admin' },
+  ];
+
+  for (const userTemplate of tenantUsers) {
+    const tenant = await knexInstance('tenants')
+      .select('id')
+      .where({ subdomain: userTemplate.subdomain })
+      .first();
+
+    if (!tenant) {
+      continue;
+    }
+
+    const existingUser = await knexInstance('users')
+      .where({ tenant_id: tenant.id, email: userTemplate.email })
+      .first();
+
+    const canonicalEmail = `admin@${userTemplate.subdomain}.com`;
+    const aliasEmail = userTemplate.subdomain === 'acme' ? 'admin-1@example.com' : 'admin-2@example.com';
+
+    const canonicalUser = await knexInstance('users')
+      .where({ tenant_id: tenant.id, email: canonicalEmail })
+      .first();
+
+    const aliasUser = await knexInstance('users')
+      .where({ tenant_id: tenant.id, email: aliasEmail })
+      .first();
+
+    const fallbackSystemAdmin = await knexInstance('users')
+      .where({ email: 'admin@exitsaas.com' })
+      .first();
+
+    const resolvedPasswordHash = canonicalUser?.password_hash
+      || aliasUser?.password_hash
+      || fallbackSystemAdmin?.password_hash;
+
+    if (!resolvedPasswordHash) {
+      continue;
+    }
+
+    const basePayload = {
+      tenant_id: tenant.id,
+      email: userTemplate.email,
+      password_hash: resolvedPasswordHash,
+      first_name: userTemplate.firstName,
+      last_name: userTemplate.lastName,
+      status: 'active',
+      email_verified: true,
+      updated_at: knexInstance.fn.now(),
+    };
+
+    let userId = existingUser?.id;
+
+    const upsertResult = await knexInstance('users')
+      .insert(basePayload)
+      .onConflict(['tenant_id', 'email'])
+      .merge(basePayload)
+      .returning(['id']);
+
+    if (Array.isArray(upsertResult) && upsertResult.length > 0) {
+      userId = upsertResult[0].id;
+    }
+
+    if (!userId) {
+      const fetchedUser = await knexInstance('users')
+        .where({ email: userTemplate.email })
+        .first();
+      userId = fetchedUser?.id;
+    }
+
+    if (!userId) {
+      continue;
+    }
+
+    const tenantAdminRole = await knexInstance('roles')
+      .select('id')
+      .where({ tenant_id: tenant.id, name: 'Tenant Admin' })
+      .first();
+
+    if (tenantAdminRole) {
+      const existingAssignment = await knexInstance('user_roles')
+        .where({ user_id: userId, role_id: tenantAdminRole.id })
+        .first();
+
+      if (!existingAssignment) {
+        await knexInstance('user_roles').insert({
+          user_id: userId,
+          role_id: tenantAdminRole.id,
+        });
+      }
+    }
+
+    if (!existingUser) {
+      console.info(`Platform test user created: ${userTemplate.email}`);
     }
   }
-  
-  console.log(`✅ Employees created for all tenants`);
-  
-  console.log(`✅ 1 system user + ${tenantAdmins.length} tenant users created`);
+}
 
-  // 6. Assign roles to users
-  console.log('6. Assigning roles to users...');
-  
-  // Assign Super Admin role to system admin
-  await knex('user_roles').insert({
-    user_id: systemAdmin.id,
-    role_id: systemAdminRole.id
+async function ensureLegacyTenantAdminAliases(knexInstance) {
+  const aliasMappings = [
+    { canonicalEmail: 'admin@acme.com', aliasEmail: 'admin-1@example.com' },
+    { canonicalEmail: 'admin@techstart.com', aliasEmail: 'admin-2@example.com' },
+  ];
+
+  for (const mapping of aliasMappings) {
+    const canonicalUser = await knexInstance('users')
+      .select('id', 'tenant_id', 'password_hash', 'first_name', 'last_name')
+      .where({ email: mapping.canonicalEmail })
+      .first();
+
+    if (!canonicalUser || !canonicalUser.tenant_id) {
+      continue;
+    }
+
+    const aliasUser = await knexInstance('users')
+      .where({ email: mapping.aliasEmail })
+      .first();
+
+    if (!aliasUser) {
+      const [createdAlias] = await knexInstance('users')
+        .insert({
+          tenant_id: canonicalUser.tenant_id,
+          email: mapping.aliasEmail,
+          password_hash: canonicalUser.password_hash,
+          first_name: canonicalUser.first_name ?? 'Tenant',
+          last_name: canonicalUser.last_name ?? 'Admin',
+          status: 'active',
+          email_verified: true,
+        })
+        .returning(['id']);
+
+      const tenantAdminRole = await knexInstance('roles')
+        .select('id')
+        .where({ tenant_id: canonicalUser.tenant_id, name: 'Tenant Admin' })
+        .first();
+
+      if (tenantAdminRole) {
+        await knexInstance('user_roles').insert({
+          user_id: createdAlias.id,
+          role_id: tenantAdminRole.id,
+        });
+      }
+
+      console.info(`Legacy tenant admin alias restored: ${mapping.aliasEmail}`);
+    } else if (aliasUser.status !== 'active') {
+      await knexInstance('users')
+        .where({ id: aliasUser.id })
+        .update({ status: 'active', updated_at: knexInstance.fn.now() });
+    }
+  }
+}
+
+function transformLegacyPayload(tableName, payload) {
+  const renameRules = legacyColumnRename[tableName];
+  if (!renameRules) {
+    return payload;
+  }
+
+  const applyRename = row => {
+    if (!row || typeof row !== 'object') {
+      return row;
+    }
+
+    const nextRow = { ...row };
+
+    for (const [legacyColumn, columnName] of Object.entries(renameRules)) {
+      if (Object.prototype.hasOwnProperty.call(nextRow, legacyColumn)) {
+        if (!Object.prototype.hasOwnProperty.call(nextRow, columnName)) {
+          nextRow[columnName] = nextRow[legacyColumn];
+        }
+        delete nextRow[legacyColumn];
+      }
+    }
+
+    return nextRow;
+  };
+
+  if (Array.isArray(payload)) {
+    return payload.map(applyRename);
+  }
+
+  return applyRename(payload);
+}
+
+function createLegacyCompatibleKnex(knexInstance) {
+  const knexProxy = new Proxy(knexInstance, {
+    apply(target, thisArg, args) {
+      const tableName = args[0];
+      const builder = Reflect.apply(target, thisArg, args);
+
+      if (!tableName || !legacyColumnRename[tableName]) {
+        return builder;
+      }
+
+      const originalInsert = builder.insert;
+      builder.insert = function patchedInsert(payload, returning) {
+        const transformed = transformLegacyPayload(tableName, payload);
+        return originalInsert.call(this, transformed, returning);
+      };
+
+      return builder;
+    },
+    get(target, prop, receiver) {
+      if (prop === 'batchInsert') {
+        return function patchedBatchInsert(tableName, payload, chunkSize) {
+          const transformed = transformLegacyPayload(tableName, payload);
+          return knexInstance.batchInsert(tableName, transformed, chunkSize);
+        };
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
   });
-  
-  // Assign Tenant Admin roles to tenant admins
-  for (let i = 0; i < tenantAdmins.length; i++) {
-    await knex('user_roles').insert({
-      user_id: tenantAdmins[i].id,
-      role_id: tenantAdminRoles[i].id
-    });
-  }
-  console.log(`✅ All users assigned appropriate roles`);
 
-  // 7. Grant permissions to roles (CRITICAL: Must be after all permissions are created)
-  console.log('7. Granting permissions to roles...');
-  
-  // IMPORTANT: Re-fetch ALL permissions to ensure we have the complete data
-  const allPermissions = await knex('permissions').select('*');
-  console.log(`   • Found ${allPermissions.length} total permissions`);
-  
-  // CRITICAL: Separate permissions by space
-  const systemPermissions = allPermissions.filter(p => p.space === 'system');
-  const tenantPermissions = allPermissions.filter(p => p.space === 'tenant');
-  console.log(`   • System permissions: ${systemPermissions.length}`);
-  console.log(`   • Tenant permissions: ${tenantPermissions.length}`);
-  
-  // Grant ONLY system permissions to Super Admin
-  if (systemPermissions.length > 0) {
-    // First clear any existing permissions for Super Admin to avoid duplicates
-    await knex('role_permissions').where('role_id', systemAdminRole.id).del();
-    
-    const systemRolePermissions = systemPermissions.map(perm => ({
-      role_id: systemAdminRole.id,
-      permission_id: perm.id
-    }));
-    await knex('role_permissions').insert(systemRolePermissions);
-    console.log(`   ✅ Granted ${systemRolePermissions.length} SYSTEM permissions to Super Admin`);
-  }
-  
-  // Grant ONLY tenant permissions to Tenant Admins
-  for (const tenantAdminRole of tenantAdminRoles) {
-    if (tenantPermissions.length > 0) {
-      // Clear existing permissions for this role to avoid duplicates
-      await knex('role_permissions').where('role_id', tenantAdminRole.id).del();
-      
-      const tenantRolePermissions = tenantPermissions.map(perm => ({
-        role_id: tenantAdminRole.id,
-        permission_id: perm.id
-      }));
-      await knex('role_permissions').insert(tenantRolePermissions);
-      console.log(`   ✅ Granted ${tenantRolePermissions.length} TENANT permissions to Tenant Admin (tenant_id: ${tenantAdminRole.tenant_id})`);
-    }
-  }
-  
-  // Grant Employee permissions (dashboard + customers + money-loan)
-  console.log(`\n7b. Assigning employee permissions to Employee roles...`);
-  for (const employeeRole of employeeRoles) {
-    // Get dashboard permission
-    const dashboardPerm = allPermissions.find(p => p.permissionKey === 'tenant-dashboard:view');
-    
-    // Get customer permissions
-    const customerPerms = allPermissions.filter(p => p.resource === 'tenant-customers');
-    
-    // Get all money-loan permissions
-    const moneyLoanPerms = allPermissions.filter(p => p.resource === 'money-loan' || p.permissionKey.startsWith('money-loan:'));
-    
-    const employeePermissions = [];
-    if (dashboardPerm) employeePermissions.push(dashboardPerm);
-    employeePermissions.push(...customerPerms);
-    employeePermissions.push(...moneyLoanPerms);
-    
-    if (employeePermissions.length > 0) {
-      await knex('role_permissions').where('role_id', employeeRole.id).del();
-      
-      const employeeRolePermissions = employeePermissions.map(perm => ({
-        role_id: employeeRole.id,
-        permission_id: perm.id
-      }));
-      await knex('role_permissions').insert(employeeRolePermissions);
-      console.log(`   ✅ Granted ${employeeRolePermissions.length} permissions to Employee role (tenant_id: ${employeeRole.tenant_id})`);
-      console.log(`      • Dashboard: 1, Customers: ${customerPerms.length}, Money Loan: ${moneyLoanPerms.length}`);
-    }
-  }
-  
-  // Grant customer permissions to Customer roles
-  const customerPermissions = allPermissions.filter(p => p.permissionKey.startsWith('customer-'));
-  console.log(`\n7c. Assigning customer permissions to Customer roles...`);
-  for (const customerRole of customerRoles) {
-    if (customerPermissions.length > 0) {
-      // Clear existing permissions for this role to avoid duplicates
-      await knex('role_permissions').where('role_id', customerRole.id).del();
-      
-      const customerRolePermissions = customerPermissions.map(perm => ({
-        role_id: customerRole.id,
-        permission_id: perm.id
-      }));
-      await knex('role_permissions').insert(customerRolePermissions);
-      console.log(`   ✅ Granted ${customerRolePermissions.length} CUSTOMER permissions to Customer role (tenant_id: ${customerRole.tenant_id})`);
-    }
-  }
-  console.log(`✅ All roles granted appropriate permissions (space-separated)`);
+  return knexProxy;
+}
 
-  console.log('\n✨ Seed completed successfully!');
-  console.log('\n📋 Summary:');
-  console.log(`   • ${tenants.length} tenants`);
-  console.log(`   • ${modules.length} modules`);
-  console.log(`   • ${allPermissions.length} comprehensive permissions`);
-  console.log(`   • ${1 + tenantAdminRoles.length + customerRoles.length} roles (1 system + ${tenantAdminRoles.length} tenant + ${customerRoles.length} customer)`);
-  console.log(`   • ${1 + tenantAdmins.length} users (1 system + ${tenantAdmins.length} tenant)`);
-  
-  console.log('\n🔐 Permission Assignments:');
-  console.log(`   • Super Admin: ${systemPermissions.length} system permissions (100%)`);
-  console.log(`   • Tenant Admin(s): ${tenantPermissions.length} tenant permissions each (100%)`);
-  console.log(`   • Customer(s): ${allPermissions.filter(p => p.permissionKey.startsWith('customer-')).length} customer permissions each (100%)`);
-  console.log(`   • Total System Permissions: ${systemPermissions.length}`);
-  console.log(`   • Total Tenant Permissions: ${tenantPermissions.length}`);
-  console.log(`   • Total Customer Permissions: ${allPermissions.filter(p => p.permissionKey.startsWith('customer-')).length}`);
-  
-  console.log('\n📦 Permission Breakdown:');
-  console.log('   • User Management, Roles & Permissions');
-  console.log('   • Product Management (Money Loan, BNPL, Pawnshop)');
-  console.log('   • Subscription & Billing Management');
-  console.log('   • Reports & Analytics (System & Tenant)');
-  console.log('   • Tenant Billing, Reports, Recycle Bin');
-  console.log('   • System Administration & Monitoring');
-  
-  console.log('\n🔑 Login credentials:');
-  console.log('   System Admin: admin@exitsaas.com / Admin@123');
-  console.log('   ACME Tenant Admin: admin@acme.com / Admin@123');
-  console.log('   TechStart Tenant Admin: admin@techstart.com / Admin@123');
-  console.log('   ACME Customer: customer1@acme.com / Admin@123');
-  console.log('   TechStart Customer: customer1@techstart.com / Admin@123');
+const legacyInitialSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/01_initial_data'));
+const legacyPlanSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/02_subscription_plans_and_products'));
+const legacyMoneyLoanSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/05_money_loan_seed'));
+const legacyCustomerPortalSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/06_customer_portal_access'));
+const legacyMoneyLoanPermissionSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/08_money_loan_permissions'));
+const legacyPlanTemplatesSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/09_professional_plan_templates'));
+const legacySystemActivitySeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/10_system_activity_logs_permissions'));
+const legacyBackupSecuritySeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/11_backup_security_permissions'));
+const legacyPlatformUsersSeed = require(path.join(__dirname, '../../../../api-legacy-backup/src/seeds/13_platform_users'));
+
+function seedExists(tenant) {
+  return Boolean(tenant);
+}
+
+async function runLegacySeed(seedModule, knex, label) {
+  if (!seedModule || typeof seedModule.seed !== 'function') {
+    console.info(`Skipping legacy seed '${label}': no seed export found.`);
+    return;
+  }
+
+  console.info(`Running legacy seed: ${label}`);
+  await seedModule.seed(knex);
+}
+
+exports.seed = async function seed(knex) {
+  const legacyKnex = createLegacyCompatibleKnex(knex);
+
+  const existingTenant = await knex('tenants').first();
+  if (seedExists(existingTenant)) {
+    console.info('Initial seed skipped: tenants already exist.');
+    return;
+  }
+
+  console.info('Seeding baseline data set (tenants, users, permissions, plans, and money loan fixtures)...');
+
+  await runLegacySeed(legacyInitialSeed, legacyKnex, '01_initial_data (core tenants/modules/users)');
+  await runLegacySeed(legacyPlanSeed, legacyKnex, '02_subscription_plans_and_products');
+  await runLegacySeed(legacyMoneyLoanSeed, legacyKnex, '05_money_loan_seed');
+  await runLegacySeed(legacyCustomerPortalSeed, legacyKnex, '06_customer_portal_access');
+  await runLegacySeed(legacyMoneyLoanPermissionSeed, legacyKnex, '08_money_loan_permissions');
+  await runLegacySeed(legacyPlanTemplatesSeed, legacyKnex, '09_professional_plan_templates');
+  await runLegacySeed(legacySystemActivitySeed, legacyKnex, '10_system_activity_logs_permissions');
+  await runLegacySeed(legacyBackupSecuritySeed, legacyKnex, '11_backup_security_permissions');
+  await runLegacySeed(legacyPlatformUsersSeed, legacyKnex, '13_platform_users');
+
+  await normalizeTenantAdminEmails(knex);
+  await ensureTenantTestUsers(knex);
+  await ensureLegacyTenantAdminAliases(knex);
+
+  console.info('Tenant admin login emails set to:');
+  console.info(' - admin@acme.com / Admin@123');
+  console.info(' - admin@techstart.com / Admin@123');
+  console.info('Platform test accounts available:');
+  console.info(' - tenant.admin@acme.com / Admin@123');
+  console.info(' - tenant.admin@techstart.com / Admin@123');
+  console.info('Legacy login aliases kept for compatibility:');
+  console.info(' - admin-1@example.com / Admin@123');
+  console.info(' - admin-2@example.com / Admin@123');
+
+  console.info('Initial seed completed successfully.');
 };

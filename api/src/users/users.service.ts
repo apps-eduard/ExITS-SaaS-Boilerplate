@@ -139,7 +139,7 @@ export class UsersService {
 
       try {
         const platformRows = await knex('employee_product_access')
-          .select('user_id', 'product_type', 'status')
+          .select('user_id', 'platform_type as platformType', 'status')
           .whereIn('user_id', userIds)
           .andWhere('status', 'active');
 
@@ -151,8 +151,8 @@ export class UsersService {
           if (!acc[userId]) {
             acc[userId] = [];
           }
-          if (row.productType && !acc[userId].includes(row.productType)) {
-            acc[userId].push(row.productType);
+          if (row.platformType && !acc[userId].includes(row.platformType)) {
+            acc[userId].push(row.platformType);
           }
           return acc;
         }, {} as Record<number, string[]>);

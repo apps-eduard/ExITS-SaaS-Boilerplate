@@ -12,8 +12,8 @@ interface ResourceGroup {
   displayName: string;
   description: string;
   actions: string[];
-  category: 'system' | 'tenant' | 'business';
-  product?: 'core' | 'money-loan' | 'bnpl' | 'pawnshop'; // For tenant category, which product it belongs to
+  category: 'system' | 'tenant' | 'business' | 'customer';
+  product?: 'core' | 'money-loan' | 'bnpl' | 'pawnshop' | 'customer'; // For tenant/customer grouping details
 }
 
 @Component({
@@ -188,7 +188,7 @@ interface ResourceGroup {
 
               <!-- Toggle System Only Button - Show if filter is 'all' or 'system' -->
               <button
-                *ngIf="filterState().space === 'all' || filterState().space === 'system'"
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'system')"
                 (click)="toggleSelectSystem()"
                 [class]="areAllSystemSelected()
                   ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
@@ -199,13 +199,61 @@ interface ResourceGroup {
 
               <!-- Toggle Tenant Only Button - Show if filter is 'all' or 'tenant' -->
               <button
-                *ngIf="filterState().space === 'all' || filterState().space === 'tenant'"
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
                 (click)="toggleSelectTenant()"
                 [class]="areAllTenantSelected()
                   ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
                   : 'w-full rounded bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 transition'"
               >
                 {{ areAllTenantSelected() ? '❌ Unselect Tenant Core' : '🏠 Select Tenant Core' }}
+              </button>
+
+              <!-- Toggle Money Loan permissions -->
+              <button
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
+                (click)="toggleSelectProduct('money-loan')"
+                [disabled]="isReadOnlyMode() || isProductDisabled('money-loan')"
+                [class]="areAllProductSelected('money-loan')
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+              >
+                {{ areAllProductSelected('money-loan') ? '❌ Unselect Money Loan' : '💰 Select Money Loan' }}
+              </button>
+
+              <!-- Toggle BNPL permissions -->
+              <button
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
+                (click)="toggleSelectProduct('bnpl')"
+                [disabled]="isReadOnlyMode() || isProductDisabled('bnpl')"
+                [class]="areAllProductSelected('bnpl')
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+              >
+                {{ areAllProductSelected('bnpl') ? '❌ Unselect BNPL' : '🛒 Select BNPL' }}
+              </button>
+
+              <!-- Toggle Pawnshop permissions -->
+              <button
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
+                (click)="toggleSelectProduct('pawnshop')"
+                [disabled]="isReadOnlyMode() || isProductDisabled('pawnshop')"
+                [class]="areAllProductSelected('pawnshop')
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-pink-50 px-3 py-2 text-xs font-medium text-pink-700 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+              >
+                {{ areAllProductSelected('pawnshop') ? '❌ Unselect Pawnshop' : '🪙 Select Pawnshop' }}
+              </button>
+
+              <!-- Toggle Customer portal permissions -->
+              <button
+                *ngIf="spaceTabCounts().customer.permissions > 0"
+                (click)="toggleSelectCustomer()"
+                [disabled]="isReadOnlyMode()"
+                [class]="areAllCustomerSelected()
+                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+              >
+                {{ areAllCustomerSelected() ? '❌ Unselect Customer Portal' : '👤 Select Customer Portal' }}
               </button>
 
               <!-- Clear All Permissions Button -->
@@ -278,7 +326,7 @@ interface ResourceGroup {
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Space
                 </label>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <button
                     (click)="setSpaceFilter('all')"
                     [disabled]="isReadOnlyMode()"
@@ -290,13 +338,13 @@ interface ResourceGroup {
                     <div class="flex flex-col items-center gap-1">
                       <span class="text-lg">📊</span>
                       <span>All</span>
-                      <span class="text-xs opacity-75">({{ spaceTabCounts().all }})</span>
+                      <span class="text-xs opacity-75">{{ spaceTabCounts().all.groups }} groups · {{ spaceTabCounts().all.permissions }} perms</span>
                     </div>
                   </button>
 
                   <button
                     (click)="setSpaceFilter('system')"
-                    [disabled]="isReadOnlyMode() || isTenantContext()"
+                    [disabled]="isReadOnlyMode() || isTenantContext() || roleSpace === 'customer'"
                     type="button"
                     [class]="filterState().space === 'system'
                       ? 'px-4 py-3 rounded-lg text-sm font-medium bg-purple-100 text-purple-700 border-b-4 border-purple-600 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
@@ -305,13 +353,13 @@ interface ResourceGroup {
                     <div class="flex flex-col items-center gap-1">
                       <span class="text-lg">⚡</span>
                       <span>System</span>
-                      <span class="text-xs opacity-75">({{ spaceTabCounts().system }})</span>
+                      <span class="text-xs opacity-75">{{ spaceTabCounts().system.groups }} groups · {{ spaceTabCounts().system.permissions }} perms</span>
                     </div>
                   </button>
 
                   <button
                     (click)="setSpaceFilter('tenant')"
-                    [disabled]="isReadOnlyMode()"
+                    [disabled]="isReadOnlyMode() || roleSpace === 'customer'"
                     type="button"
                     [class]="filterState().space === 'tenant'
                       ? 'px-4 py-3 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 border-b-4 border-blue-600 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
@@ -320,7 +368,22 @@ interface ResourceGroup {
                     <div class="flex flex-col items-center gap-1">
                       <span class="text-lg">🏢</span>
                       <span>Tenant</span>
-                      <span class="text-xs opacity-75">({{ spaceTabCounts().tenant }})</span>
+                      <span class="text-xs opacity-75">{{ spaceTabCounts().tenant.groups }} groups · {{ spaceTabCounts().tenant.permissions }} perms</span>
+                    </div>
+                  </button>
+
+                  <button
+                    (click)="setSpaceFilter('customer')"
+                    [disabled]="isReadOnlyMode()"
+                    type="button"
+                    [class]="filterState().space === 'customer'
+                      ? 'px-4 py-3 rounded-lg text-sm font-medium bg-amber-100 text-amber-700 border-b-4 border-amber-600 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'px-4 py-3 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-amber-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed'"
+                  >
+                    <div class="flex flex-col items-center gap-1">
+                      <span class="text-lg">👤</span>
+                      <span>Customer</span>
+                      <span class="text-xs opacity-75">{{ spaceTabCounts().customer.groups }} groups · {{ spaceTabCounts().customer.permissions }} perms</span>
                     </div>
                   </button>
                 </div>
@@ -343,7 +406,7 @@ interface ResourceGroup {
                     <div class="text-center">
                       <div class="text-base mb-0.5">📋</div>
                       <div>All</div>
-                      <div class="text-xs opacity-75 mt-0.5">({{ productTabCounts().all }})</div>
+                      <div class="text-xs opacity-75 mt-0.5">{{ productTabCounts().all.groups }} groups · {{ productTabCounts().all.permissions }} perms</div>
                     </div>
                   </button>
 
@@ -358,7 +421,7 @@ interface ResourceGroup {
                     <div class="text-center">
                       <div class="text-base mb-0.5">🏠</div>
                       <div>Core</div>
-                      <div class="text-xs opacity-75 mt-0.5">({{ productTabCounts().core }})</div>
+                      <div class="text-xs opacity-75 mt-0.5">{{ productTabCounts().core.groups }} groups · {{ productTabCounts().core.permissions }} perms</div>
                     </div>
                   </button>
 
@@ -373,7 +436,7 @@ interface ResourceGroup {
                     <div class="text-center">
                       <div class="text-base mb-0.5">💰</div>
                       <div class="truncate">Money</div>
-                      <div class="text-xs opacity-75 mt-0.5">({{ productTabCounts()['money-loan'] }})</div>
+                      <div class="text-xs opacity-75 mt-0.5">{{ productTabCounts()['money-loan'].groups }} groups · {{ productTabCounts()['money-loan'].permissions }} perms</div>
                     </div>
                   </button>
 
@@ -388,7 +451,7 @@ interface ResourceGroup {
                     <div class="text-center">
                       <div class="text-base mb-0.5">🛒</div>
                       <div>BNPL</div>
-                      <div class="text-xs opacity-75 mt-0.5">({{ productTabCounts().bnpl }}){{ isProductDisabled('bnpl') ? ' 🔒' : '' }}</div>
+                      <div class="text-xs opacity-75 mt-0.5">{{ productTabCounts().bnpl.groups }} groups · {{ productTabCounts().bnpl.permissions }} perms{{ isProductDisabled('bnpl') ? ' 🔒' : '' }}</div>
                     </div>
                   </button>
 
@@ -403,7 +466,7 @@ interface ResourceGroup {
                     <div class="text-center">
                       <div class="text-base mb-0.5">🪙</div>
                       <div>Pawn</div>
-                      <div class="text-xs opacity-75 mt-0.5">({{ productTabCounts().pawnshop }}){{ isProductDisabled('pawnshop') ? ' 🔒' : '' }}</div>
+                      <div class="text-xs opacity-75 mt-0.5">{{ productTabCounts().pawnshop.groups }} groups · {{ productTabCounts().pawnshop.permissions }} perms{{ isProductDisabled('pawnshop') ? ' 🔒' : '' }}</div>
                     </div>
                   </button>
                 </div>
@@ -527,7 +590,7 @@ export class RoleEditorComponent implements OnInit {
 
   // Enhanced filter state with signals
   filterState = signal<{
-    space: 'all' | 'system' | 'tenant';
+    space: 'all' | 'system' | 'tenant' | 'customer';
     product: 'all' | 'core' | 'money-loan' | 'bnpl' | 'pawnshop';
   }>({
     space: 'all',
@@ -536,21 +599,58 @@ export class RoleEditorComponent implements OnInit {
 
   // Computed properties for filter counts
   spaceTabCounts = computed(() => {
-    const all = this.resourceGroups.length;
-    const system = this.resourceGroups.filter(g => g.category === 'system').length;
-    const tenant = this.resourceGroups.filter(g => g.category === 'tenant' || g.category === 'business').length;
-    return { all, system, tenant };
+    const summary = {
+      all: { groups: 0, permissions: 0 },
+      system: { groups: 0, permissions: 0 },
+      tenant: { groups: 0, permissions: 0 },
+      customer: { groups: 0, permissions: 0 }
+    };
+
+    for (const group of this.resourceGroups) {
+      summary.all.groups += 1;
+      summary.all.permissions += group.actions.length;
+
+      if (group.category === 'system') {
+        summary.system.groups += 1;
+        summary.system.permissions += group.actions.length;
+      } else if (group.category === 'customer') {
+        summary.customer.groups += 1;
+        summary.customer.permissions += group.actions.length;
+      } else {
+        summary.tenant.groups += 1;
+        summary.tenant.permissions += group.actions.length;
+      }
+    }
+
+    return summary;
   });
 
   productTabCounts = computed(() => {
-    const tenantGroups = this.resourceGroups.filter(g => g.category === 'tenant' || g.category === 'business');
-    return {
-      all: tenantGroups.length,
-      core: this.resourceGroups.filter(g => g.product === 'core').length,
-      'money-loan': this.resourceGroups.filter(g => g.product === 'money-loan').length,
-      bnpl: this.resourceGroups.filter(g => g.product === 'bnpl').length,
-      pawnshop: this.resourceGroups.filter(g => g.product === 'pawnshop').length
+    const summary: Record<'all' | 'core' | 'money-loan' | 'bnpl' | 'pawnshop', { groups: number; permissions: number }> = {
+      all: { groups: 0, permissions: 0 },
+      core: { groups: 0, permissions: 0 },
+      'money-loan': { groups: 0, permissions: 0 },
+      bnpl: { groups: 0, permissions: 0 },
+      pawnshop: { groups: 0, permissions: 0 }
     };
+
+    for (const group of this.resourceGroups) {
+      const isTenantCategory = group.category === 'tenant' || group.category === 'business';
+      if (!isTenantCategory) {
+        continue;
+      }
+
+      summary.all.groups += 1;
+      summary.all.permissions += group.actions.length;
+
+      const productKey = (group.product ?? 'core') as 'core' | 'money-loan' | 'bnpl' | 'pawnshop';
+      if (summary[productKey]) {
+        summary[productKey].groups += 1;
+        summary[productKey].permissions += group.actions.length;
+      }
+    }
+
+    return summary;
   });
 
   activeFilters = computed(() => {
@@ -560,8 +660,9 @@ export class RoleEditorComponent implements OnInit {
     if (state.space !== 'all') {
       const spaceLabels = {
         system: { label: 'System', icon: '⚡' },
-        tenant: { label: 'Tenant', icon: '🏢' }
-      };
+        tenant: { label: 'Tenant', icon: '🏢' },
+        customer: { label: 'Customer', icon: '👤' }
+      } as const;
       filters.push({
         id: 'space',
         ...spaceLabels[state.space]
@@ -643,6 +744,12 @@ export class RoleEditorComponent implements OnInit {
     // BNPL & Pawnshop
     { resource: 'bnpl', displayName: 'ðŸ›’ Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'bnpl' },
     { resource: 'pawnshop', displayName: 'ðŸª Pawnshop', description: 'Pawnshop operations', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'pawnshop' },
+
+    // Customer Portal permissions
+    { resource: 'customer-dashboard', displayName: '👤 Customer Portal: Dashboard', description: 'Customer dashboard access', actions: ['view'], category: 'customer' },
+    { resource: 'customer-profile', displayName: '👤 Customer Portal: Profile', description: 'Manage own customer profile', actions: ['read', 'update'], category: 'customer' },
+    { resource: 'customer-loans', displayName: '👤 Customer Portal: Loans', description: 'Customer loan activities', actions: ['read', 'apply'], category: 'customer' },
+    { resource: 'customer-payments', displayName: '👤 Customer Portal: Payments', description: 'Customer payment actions', actions: ['read', 'create'], category: 'customer' },
   ];
 
   // Selected permissions stored as Set<permissionKey> where permissionKey = 'resource:action'
@@ -672,16 +779,16 @@ export class RoleEditorComponent implements OnInit {
     let groups = this.resourceGroups;
     const state = this.filterState();
 
-    // First filter by role space (tenant roles can't see system permissions)
-    if (this.roleSpace === 'tenant') {
-      groups = groups.filter(group => group.category !== 'system');
-    }
+    // Customer-space roles should only see customer permissions regardless of tab selection
+    const effectiveSpace = this.roleSpace === 'customer' ? 'customer' : state.space;
 
-    // Then apply the space filter
-    if (state.space === 'system') {
+    // Apply the effective space filter
+    if (effectiveSpace === 'system') {
       groups = groups.filter(group => group.category === 'system');
-    } else if (state.space === 'tenant') {
+    } else if (effectiveSpace === 'tenant') {
       groups = groups.filter(group => group.category === 'tenant');
+    } else if (effectiveSpace === 'customer') {
+      groups = groups.filter(group => group.category === 'customer');
     }
     // If 'all', show all available groups (already filtered by role space above)
 
@@ -703,12 +810,12 @@ export class RoleEditorComponent implements OnInit {
   }
 
   // Filter control methods
-  setSpaceFilter(space: 'all' | 'system' | 'tenant'): void {
+  setSpaceFilter(space: 'all' | 'system' | 'tenant' | 'customer'): void {
     this.filterState.update(state => ({
       ...state,
       space,
-      // Reset product filter if switching to system
-      product: space === 'system' ? 'all' : state.product
+      // Reset product filter if switching away from tenant context
+      product: space === 'tenant' || space === 'all' ? state.product : 'all'
     }));
   }
 
@@ -733,7 +840,7 @@ export class RoleEditorComponent implements OnInit {
 
   isProductDisabled(product: string): boolean {
     const counts = this.productTabCounts();
-    return counts[product as keyof typeof counts] === 0;
+    return counts[product as keyof typeof counts].permissions === 0;
   }
 
   constructor(
@@ -805,6 +912,10 @@ export class RoleEditorComponent implements OnInit {
       this.roleDescription = role.description || '';
       this.roleSpace = role.space;
 
+      if (this.roleSpace === 'customer') {
+        this.setSpaceFilter('customer');
+      }
+
       // Load tenant ID if this is a tenant role
       if (role.tenantId) {
         this.selectedTenantId = role.tenantId;
@@ -860,13 +971,15 @@ export class RoleEditorComponent implements OnInit {
   }
 
   // Helper method to get the category of a permission
-  getPermissionCategory(permKey: string): 'system' | 'tenant' | null {
+  getPermissionCategory(permKey: string): 'system' | 'tenant' | 'customer' | null {
     const { resource, action } = this.parsePermissionKey(permKey);
 
     for (const group of this.resourceGroups) {
       if (group.resource === resource && action && group.actions.includes(action)) {
-        // Business category is treated as tenant
-        return group.category === 'business' ? 'tenant' : group.category;
+        if (group.category === 'business') {
+          return 'tenant';
+        }
+        return group.category as 'system' | 'tenant' | 'customer';
       }
     }
 
@@ -963,31 +1076,55 @@ export class RoleEditorComponent implements OnInit {
     this.setProductFilter('core');
   }
 
-  toggleSelectMoneyLoan(): void {
+  toggleSelectProduct(product: 'money-loan' | 'bnpl' | 'pawnshop'): void {
+    const perms = new Set<string>();
+    const targetGroups = this.resourceGroups.filter(group => group.product === product);
+    const allSelected = this.areAllProductSelected(product);
+
+    // Preserve permissions outside the selected product scope
+    this.selectedPermissions().forEach(permKey => {
+      const { resource } = this.parsePermissionKey(permKey);
+      const group = resource ? this.resourceGroups.find(g => g.resource === resource) : undefined;
+      if (!group || group.product !== product) {
+        perms.add(permKey);
+      }
+    });
+
+    if (!allSelected) {
+      targetGroups.forEach(group => {
+        group.actions.forEach(action => {
+          perms.add(`${group.resource}:${action}`);
+        });
+      });
+    }
+
+    this.selectedPermissions.set(perms);
+
+    // Focus filters on the selected product for immediate visibility
+    this.setSpaceFilter('tenant');
+    this.setProductFilter(product);
+  }
+
+  toggleSelectCustomer(): void {
     const perms = new Set<string>();
 
-    if (this.areAllMoneyLoanSelected()) {
-      // Unselect all Money Loan permissions only, keep others
+    if (this.areAllCustomerSelected()) {
       this.selectedPermissions().forEach(permKey => {
-        const { resource } = this.parsePermissionKey(permKey);
-        const group = resource ? this.resourceGroups.find(g => g.resource === resource) : undefined;
-        if (!group || group.product !== 'money-loan') {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'customer') {
           perms.add(permKey);
         }
       });
     } else {
-      // Keep all current non-money-loan permissions
       this.selectedPermissions().forEach(permKey => {
-        const { resource } = this.parsePermissionKey(permKey);
-        const group = resource ? this.resourceGroups.find(g => g.resource === resource) : undefined;
-        if (!group || group.product !== 'money-loan') {
+        const category = this.getPermissionCategory(permKey);
+        if (category !== 'customer') {
           perms.add(permKey);
         }
       });
 
-      // Add all Money Loan permissions
       this.resourceGroups.forEach(group => {
-        if (group.product === 'money-loan') {
+        if (group.category === 'customer') {
           group.actions.forEach(action => {
             perms.add(`${group.resource}:${action}`);
           });
@@ -996,10 +1133,7 @@ export class RoleEditorComponent implements OnInit {
     }
 
     this.selectedPermissions.set(perms);
-
-    // Apply tenant filter with money-loan product to show what was just selected/unselected
-    this.setSpaceFilter('tenant');
-    this.setProductFilter('money-loan');
+    this.setSpaceFilter('customer');
   }
 
   // Check if all permissions are selected
@@ -1050,23 +1184,41 @@ export class RoleEditorComponent implements OnInit {
     return totalTenantPerms > 0 && selectedTenantPerms === totalTenantPerms;
   }
 
-  // Check if all Money Loan permissions are selected
-  areAllMoneyLoanSelected(): boolean {
-    let totalMoneyLoanPerms = 0;
-    let selectedMoneyLoanPerms = 0;
+  // Check if all permissions for a specific product are selected
+  areAllProductSelected(product: 'money-loan' | 'bnpl' | 'pawnshop'): boolean {
+    let totalPerms = 0;
+    let selectedPerms = 0;
 
     this.resourceGroups.forEach(group => {
-      if (group.product === 'money-loan') {
-        totalMoneyLoanPerms += group.actions.length;
+      if (group.product === product) {
+        totalPerms += group.actions.length;
         group.actions.forEach(action => {
           if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
-            selectedMoneyLoanPerms++;
+            selectedPerms++;
           }
         });
       }
     });
 
-    return totalMoneyLoanPerms > 0 && selectedMoneyLoanPerms === totalMoneyLoanPerms;
+    return totalPerms > 0 && selectedPerms === totalPerms;
+  }
+
+  areAllCustomerSelected(): boolean {
+    let totalCustomerPerms = 0;
+    let selectedCustomerPerms = 0;
+
+    this.resourceGroups.forEach(group => {
+      if (group.category === 'customer') {
+        totalCustomerPerms += group.actions.length;
+        group.actions.forEach(action => {
+          if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
+            selectedCustomerPerms++;
+          }
+        });
+      }
+    });
+
+    return totalCustomerPerms > 0 && selectedCustomerPerms === totalCustomerPerms;
   }
 
   // Legacy methods (kept for compatibility)
@@ -1340,6 +1492,10 @@ export class RoleEditorComponent implements OnInit {
       return true;
     }
 
+    if (this.roleSpace === 'customer' && permCategory !== 'customer') {
+      return true;
+    }
+
     // If role is system space, tenant permissions are allowed but flagged
     // (system admin can choose to assign tenant permissions if needed)
     // We don't disable them, just show visual indicator
@@ -1364,6 +1520,10 @@ export class RoleEditorComponent implements OnInit {
       return `🚫 Permission Denied\n\nTenant roles cannot have system permissions.\n\nFor security reasons, tenant roles can only access tenant-space and product-specific permissions.\n\nSystem permissions like "${permKey}" are reserved for system administrators only.`;
     }
 
+    if (this.roleSpace === 'customer' && permCategory !== 'customer') {
+      return `🚫 Permission Denied\n\nCustomer roles only support customer portal permissions.\n\nPermissions like "${permKey}" belong to tenant or system spaces and are restricted to internal roles.`;
+    }
+
     return '';
   }
 
@@ -1377,6 +1537,10 @@ export class RoleEditorComponent implements OnInit {
 
     // In tenant role creation/editing (not read-only), hide system permissions
     if (this.roleSpace === 'tenant' && permCategory === 'system' && !this.isReadOnlyMode()) {
+      return false;
+    }
+
+    if (this.roleSpace === 'customer' && permCategory !== 'customer' && !this.isReadOnlyMode()) {
       return false;
     }
 
