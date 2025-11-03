@@ -160,6 +160,70 @@ export const routes: Routes = [
         path: 'customers/high-risk',
         loadComponent: () => import('./features/platforms/money-loan/admin/high-risk-customers.component').then(m => m.HighRiskCustomersComponent)
       },
+      // KYC Verification Routes
+      {
+        path: 'kyc/pending',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-pending.component').then(m => m.KycPendingComponent)
+      },
+      {
+        path: 'kyc/verified',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-verified.component').then(m => m.KycVerifiedComponent)
+      },
+      {
+        path: 'kyc/rejected',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-rejected.component').then(m => m.KycRejectedComponent)
+      },
+      {
+        path: 'kyc/audit-logs',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-audit-logs.component').then(m => m.KycAuditLogsComponent)
+      },
+      {
+        path: 'kyc/webhook-logs',
+        loadComponent: () => import('./features/platforms/money-loan/admin/kyc-webhook-logs.component').then(m => m.KycWebhookLogsComponent)
+      },
+      // Reports
+      {
+        path: 'reports/periodic',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-periodic.component').then(m => m.ReportsPeriodicComponent)
+      },
+      {
+        path: 'reports/tax-summary',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-tax-summary.component').then(m => m.ReportsTaxSummaryComponent)
+      },
+      {
+        path: 'reports/export',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-export.component').then(m => m.ReportsExportComponent)
+      },
+      {
+        path: 'reports/custom-queries',
+        loadComponent: () => import('./features/platforms/money-loan/admin/reports/reports-custom-queries.component').then(m => m.ReportsCustomQueriesComponent)
+      },
+      // Collections
+      {
+        path: 'collections/overdue-workflow',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collections/collections-overdue-workflow.component').then(m => m.CollectionsOverdueWorkflowComponent)
+      },
+      {
+        path: 'collections/strategies',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collections/collections-strategies.component').then(m => m.CollectionsStrategiesComponent)
+      },
+      {
+        path: 'collections/legal-actions',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collections/collections-legal-actions.component').then(m => m.CollectionsLegalActionsComponent)
+      },
+      {
+        path: 'collections/recovery',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collections/collections-recovery.component').then(m => m.CollectionsRecoveryComponent)
+      },
+      // Audit & Notifications
+      {
+        path: 'audit-log',
+        loadComponent: () => import('./features/platforms/money-loan/admin/audit-log.component').then(m => m.AuditLogComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./features/platforms/money-loan/admin/notifications.component').then(m => m.NotificationsComponent)
+      },
       {
         path: 'customers/:id',
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)

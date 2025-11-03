@@ -56,19 +56,19 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().customers) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/customers/all" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/all" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧑‍🤝‍🧑 All Customers
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/customers/new" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/new" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✨ New Customers
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/customers/kyc-pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/kyc-pending" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⏳ KYC Pending
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/customers/high-risk" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/customers/high-risk" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚠️ High-Risk Flags
                 </a>
@@ -90,31 +90,31 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().loans) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/loans/all" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/all" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 All Loans
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/pending" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📝 Pending Approval
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/active" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/active" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Active Loans
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/overdue" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/overdue" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🕔 Overdue Loans
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/closed" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/closed" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✅ Closed/Paid Off
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/disbursement" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/disbursement" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   💸 Loan Disbursement
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/calculator" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧮 Loan Calculator
                 </a>
@@ -136,31 +136,31 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().payments) {
               <div class="ml-8 space-y-1">
-                <a routerLink="payments/record" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="payments/record" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   💵 Record Payment
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/today" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/today" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📅 Today's Collections
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/history" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/history" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 Payment History
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/bulk-import" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/bulk-import" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📤 Bulk Import Payments
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/refunds" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/refunds" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Refunds & Waivers
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/failed" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/failed" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚠️ Failed Payments
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/payments/gateway-settings" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/payments/gateway-settings" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚙️ Payment Gateway Settings
                 </a>
@@ -182,19 +182,19 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().interest) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/interest/rates" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/rates" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📉 Interest Rates
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/interest/auto-rules" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/auto-rules" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Auto Rate Rules
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/interest/manual-overrides" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/manual-overrides" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🖊️ Manual Overrides
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/interest/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/interest/calculator" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧮 Interest Calculator
                 </a>
@@ -216,19 +216,19 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().collections) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/collections/overdue-workflow" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/overdue-workflow" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📈 Overdue Workflow
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/collections/strategies" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/strategies" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📋 Collection Strategies
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/collections/legal-actions" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/legal-actions" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚖️ Legal Actions
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/collections/recovery" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/collections/recovery" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Recovery Dashboard
                 </a>
@@ -250,23 +250,23 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().kyc) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/kyc/pending" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/pending" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⏳ Pending Reviews
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/kyc/verified" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/verified" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✅ Verified Customers
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/kyc/rejected" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/rejected" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ❌ Rejected Customers
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/kyc/audit-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/audit-logs" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📜 KYC Audit Logs
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/kyc/webhook-logs" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/kyc/webhook-logs" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📡 Onfido Webhook Logs
                 </a>
@@ -288,19 +288,19 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().reports) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/reports/periodic" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/periodic" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🗓️ Daily/Weekly/Monthly
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/reports/tax-summary" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/tax-summary" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧾 Tax Summary
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/reports/export" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/export" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📤 Export Data
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/reports/custom-queries" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/reports/custom-queries" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧑‍💻 Custom Queries
                 </a>
@@ -354,31 +354,31 @@ import { AuthService } from '../../../../core/services/auth.service';
             </button>
             @if (expandedSections().settings) {
               <div class="ml-8 space-y-1">
-                <a routerLink="/platforms/money-loan/dashboard/config/quick-product" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/quick-product" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ⚡ Quick Create Product
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/config/loan-products" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/loan-products" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📦 Loan Products
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/config/payment-schedules" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/payment-schedules" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   📅 Payment Schedules
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/config/fees" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/fees" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   💰 Fee Structures
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/config/approval-rules" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/approval-rules" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   ✅ Approval Rules
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/config/modifications" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/config/modifications" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🔄 Loan Modifications
                 </a>
-                <a routerLink="/platforms/money-loan/dashboard/loans/calculator" routerLinkActive="text-blue-600 dark:text-blue-400"
+                <a routerLink="/platforms/money-loan/dashboard/loans/calculator" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
                    class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   🧮 Loan Calculator
                 </a>
@@ -580,3 +580,5 @@ export class MoneyLoanLayoutComponent {
     });
   }
 }
+
+
