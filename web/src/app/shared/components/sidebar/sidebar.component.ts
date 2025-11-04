@@ -156,8 +156,9 @@ export class SidebarComponent {
       icon: '🧑‍🤝‍🧑',
       anyPermission: ['users:read', 'users:create', 'users:update', 'tenant-users:read'],
       children: [
-        { label: 'All Users', icon: '👥', route: '/admin/users', anyPermission: ['users:read', 'tenant-users:read'] },
-        { label: 'Admin Users', icon: '👨‍💼', route: '/admin/users/admins', permission: 'users:read' },
+        { label: 'Tenant Users', icon: '👥', route: '/admin/users/tenants', anyPermission: ['users:read', 'tenant-users:read'] },
+        { label: 'All System Users', icon: '👨‍💼', route: '/admin/users/system', permission: 'users:read' },
+        { label: 'Admin Users', icon: '🔑', route: '/admin/users/admins', permission: 'users:read' },
         { label: 'Invite User', icon: '✉️', route: '/admin/users/invite', anyPermission: ['users:create', 'tenant-users:invite'] },
         { label: 'Roles & Permissions', icon: '🔐', route: '/admin/roles', permission: 'roles:read' },
       ]

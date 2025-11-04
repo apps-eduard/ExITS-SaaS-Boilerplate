@@ -349,6 +349,37 @@ export class MoneyLoanController {
     };
   }
 
+  @Post('assignments')
+  @Permissions('money-loan:customers:update')
+  async assignCustomersToEmployee(@Body() assignmentData: { employeeId: number; customerIds: number[] }, @Req() req: any) {
+    const result = await this.moneyLoanService.assignCustomersToEmployee(
+      req.user.tenantId,
+      assignmentData.employeeId,
+      assignmentData.customerIds,
+      req.user.id
+    );
+    return {
+      success: true,
+      message: `Successfully assigned ${assignmentData.customerIds.length} customer(s) to employee`,
+      data: result,
+    };
+  }
+
+  @Post('unassignments')
+  @Permissions('money-loan:customers:update')
+  async unassignCustomers(@Body() unassignmentData: { customerIds: number[] }, @Req() req: any) {
+    const result = await this.moneyLoanService.unassignCustomers(
+      req.user.tenantId,
+      unassignmentData.customerIds,
+      req.user.id
+    );
+    return {
+      success: true,
+      message: `Successfully unassigned ${unassignmentData.customerIds.length} customer(s)`,
+      data: result,
+    };
+  }
+
   @Get('customers/:id/loans')
   @Permissions('money-loan:read')
   async getCustomerLoans(

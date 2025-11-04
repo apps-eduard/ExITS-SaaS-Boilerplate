@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { CustomerService } from '../shared/services/customer.service';
 import { LoanCustomer } from '../shared/models/loan.models';
 import { ComponentPathService } from '../../../../core/services/component-path.service';
@@ -18,14 +19,24 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Customers</h1>
           <p class="text-sm text-gray-600 dark:text-gray-400">Manage loan customers and KYC verification</p>
         </div>
-        <button
-          (click)="addCustomer()"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Add Customer
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            (click)="navigateToAssignments()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            Manage Assignments
+          </button>
+          <button
+            (click)="addCustomer()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add Customer
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -88,7 +99,7 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
 
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
             <input
@@ -97,6 +108,19 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
               (ngModelChange)="onSearchChange()"
               placeholder="Customer name, code, phone..."
               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Employee</label>
+            <select
+              [(ngModel)]="filterEmployee"
+              (ngModelChange)="onFilterChange()"
+              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">All Employees</option>
+              <option value="unassigned">Unassigned</option>
+              @for (employee of employees(); track employee.id) {
+                <option [value]="employee.id">{{ employee.firstName }} {{ employee.lastName }}</option>
+              }
+            </select>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
@@ -149,6 +173,7 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
                   </div>
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Contact</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Assigned Employee</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">KYC</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Active Loans</th>
@@ -159,7 +184,7 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <div class="flex items-center justify-center gap-2">
                       <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -171,7 +196,7 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
                 </tr>
               } @else if (customers().length === 0) {
                 <tr>
-                  <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No customers found
                   </td>
                 </tr>
@@ -201,6 +226,23 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
                       </div>
                     </td>
                     <td class="px-4 py-3">
+                      @if (customer.assignedEmployeeName) {
+                        <div class="flex items-center gap-2">
+                          <div class="w-7 h-7 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                            {{ getEmployeeInitials(customer.assignedEmployeeName) }}
+                          </div>
+                          <span class="text-sm text-gray-900 dark:text-white">{{ customer.assignedEmployeeName }}</span>
+                        </div>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-full">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                          </svg>
+                          Unassigned
+                        </span>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
                       <span [class]="getStatusClass(customer.status)">
                         {{ customer.status }}
                       </span>
@@ -226,6 +268,14 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center justify-end gap-2">
+                        <button
+                          (click)="navigateToAssignments()"
+                          class="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors"
+                          title="Manage Assignments">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                          </svg>
+                        </button>
                         <button
                           (click)="viewCustomer(customer.id)"
                           class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
@@ -283,14 +333,17 @@ export class CustomersListComponent implements OnInit {
   private customerService = inject(CustomerService);
   private router = inject(Router);
   private componentPathService = inject(ComponentPathService);
+  private http = inject(HttpClient);
 
   customers = signal<LoanCustomer[]>([]);
+  employees = signal<any[]>([]);
   stats = signal<any>(null);
   loading = signal(false);
 
   searchTerm = '';
   filterStatus = '';
   filterKyc = '';
+  filterEmployee = '';
   currentPage = signal(1);
   pageSize = signal(10);
   totalRecords = signal(0);
@@ -309,17 +362,63 @@ export class CustomersListComponent implements OnInit {
 
     this.loadCustomers();
     this.loadStats();
+    this.loadEmployees();
+  }
+
+  loadEmployees() {
+    // Load employees for the filter dropdown
+    // TODO: Replace with dedicated endpoint when backend is ready: /api/platforms/money-loan/employees
+    // For now, use tenant users endpoint and filter for employees only
+    this.http.get<any>('/api/users', {
+      params: {
+        userType: 'tenant',
+        limit: '1000' // Get all users
+      }
+    }).subscribe({
+      next: (response: any) => {
+        // Filter for employees only (not customers)
+        // Assuming employees have platformAccess.money_loan = true
+        const users = response.data || response.users || [];
+        const employees = users.filter((user: any) => {
+          // Filter out customers (userType !== 'customer')
+          // Include users with platform access or role-based employees
+          return user.userType !== 'customer' && user.userType !== 'system';
+        });
+
+        // Map to employee format expected by modal
+        const mappedEmployees = employees.map((user: any) => ({
+          id: user.id,
+          firstName: user.firstName || user.name?.split(' ')[0] || '',
+          lastName: user.lastName || user.name?.split(' ')[1] || '',
+          email: user.email,
+          phone: user.phone || '',
+          roleName: user.roleName || user.role?.name || 'No Role',
+          roleId: user.roleId || user.role?.id,
+          activeAssignments: 0 // Will be populated from assignments API later
+        }));
+
+        this.employees.set(mappedEmployees);
+      },
+      error: (error: any) => {
+        console.error('Error loading employees:', error);
+        // Set empty array on error to prevent UI issues
+        this.employees.set([]);
+      }
+    });
   }
 
   loadCustomers() {
     this.loading.set(true);
-    this.customerService.listCustomers({
+    const filters: any = {
       page: this.currentPage(),
       limit: this.pageSize(),
       search: this.searchTerm,
       status: this.filterStatus,
-      kycStatus: this.filterKyc
-    }).subscribe({
+      kycStatus: this.filterKyc,
+      employeeId: this.filterEmployee
+    };
+
+    this.customerService.listCustomers(filters).subscribe({
       next: (response: any) => {
         this.customers.set(response.data);
         this.totalRecords.set(response.pagination?.total || 0);
@@ -352,6 +451,7 @@ export class CustomersListComponent implements OnInit {
     this.searchTerm = '';
     this.filterStatus = '';
     this.filterKyc = '';
+    this.filterEmployee = '';
     this.currentPage.set(1);
     this.loadCustomers();
   }
@@ -411,6 +511,21 @@ export class CustomersListComponent implements OnInit {
   }
 
   editCustomer(id: number) {
-    this.router.navigate(['/platforms/money-loan/dashboard/customers', id, 'edit']);
+    this.router.navigate(['/platforms/money-loan/admin/customers', id, 'edit']);
+  }
+
+  navigateToAssignments() {
+    this.router.navigate(['/platforms/money-loan/dashboard/customers/assignments']);
+  }
+
+  deleteCustomer(id: number) {
+  }
+
+  getEmployeeInitials(fullName: string): string {
+    const names = fullName.split(' ');
+    if (names.length >= 2) {
+      return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
   }
 }

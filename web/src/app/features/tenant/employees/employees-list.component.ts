@@ -59,6 +59,156 @@ interface Employee {
         </div>
       </div>
 
+      <!-- Stats Cards - Clickable -->
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+        <!-- All Employees Card -->
+        <button
+          (click)="filterByCard('all')"
+          [class]="selectedCard() === 'all'
+            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-600 shadow-lg ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900 transform scale-105'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md'"
+          class="rounded-lg border p-3 text-left transition-all duration-200 cursor-pointer"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-lg">👥</span>
+            </div>
+            <p [class]="selectedCard() === 'all' ? 'text-blue-100' : 'text-xs text-gray-500 dark:text-gray-400'"
+               class="text-xs font-medium">
+              All Employees
+            </p>
+            <p [class]="selectedCard() === 'all' ? 'text-white' : 'text-gray-900 dark:text-white'"
+               class="text-xl font-bold">
+              {{ totalEmployeesCount() }}
+            </p>
+          </div>
+        </button>
+
+        <!-- Active Employees Card -->
+        <button
+          (click)="filterByCard('active')"
+          [class]="selectedCard() === 'active'
+            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-lg ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900 transform scale-105'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-md'"
+          class="rounded-lg border p-3 text-left transition-all duration-200 cursor-pointer"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-lg">✓</span>
+            </div>
+            <p [class]="selectedCard() === 'active' ? 'text-emerald-100' : 'text-xs text-gray-500 dark:text-gray-400'"
+               class="text-xs font-medium">
+              Active
+            </p>
+            <p [class]="selectedCard() === 'active' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'"
+               class="text-xl font-bold">
+              {{ activeEmployeesCount() }}
+            </p>
+          </div>
+        </button>
+
+        <!-- Money Loan Platform Card -->
+        @if (hasMoneyLoanEnabled()) {
+          <button
+            (click)="filterByCard('money_loan')"
+            [class]="selectedCard() === 'money_loan'
+              ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white border-purple-600 shadow-lg ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900 transform scale-105'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md'"
+            class="rounded-lg border p-3 text-left transition-all duration-200 cursor-pointer"
+          >
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-lg">💰</span>
+              </div>
+              <p [class]="selectedCard() === 'money_loan' ? 'text-purple-100' : 'text-xs text-gray-500 dark:text-gray-400'"
+                 class="text-xs font-medium">
+                Money Loan
+              </p>
+              <p [class]="selectedCard() === 'money_loan' ? 'text-white' : 'text-purple-600 dark:text-purple-400'"
+                 class="text-xl font-bold">
+                {{ moneyLoanEmployeesCount() }}
+              </p>
+            </div>
+          </button>
+        }
+
+        <!-- BNPL Platform Card -->
+        @if (hasBnplEnabled()) {
+          <button
+            (click)="filterByCard('bnpl')"
+            [class]="selectedCard() === 'bnpl'
+              ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-indigo-600 shadow-lg ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 transform scale-105'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md'"
+            class="rounded-lg border p-3 text-left transition-all duration-200 cursor-pointer"
+          >
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-lg">🛒</span>
+              </div>
+              <p [class]="selectedCard() === 'bnpl' ? 'text-indigo-100' : 'text-xs text-gray-500 dark:text-gray-400'"
+                 class="text-xs font-medium">
+                BNPL
+              </p>
+              <p [class]="selectedCard() === 'bnpl' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'"
+                 class="text-xl font-bold">
+                {{ bnplEmployeesCount() }}
+              </p>
+            </div>
+          </button>
+        }
+
+        <!-- Pawnshop Platform Card -->
+        @if (hasPawnshopEnabled()) {
+          <button
+            (click)="filterByCard('pawnshop')"
+            [class]="selectedCard() === 'pawnshop'
+              ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-white border-amber-600 shadow-lg ring-2 ring-amber-500 ring-offset-2 dark:ring-offset-gray-900 transform scale-105'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 hover:shadow-md'"
+            class="rounded-lg border p-3 text-left transition-all duration-200 cursor-pointer"
+          >
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-lg">💎</span>
+              </div>
+              <p [class]="selectedCard() === 'pawnshop' ? 'text-amber-100' : 'text-xs text-gray-500 dark:text-gray-400'"
+                 class="text-xs font-medium">
+                Pawnshop
+              </p>
+              <p [class]="selectedCard() === 'pawnshop' ? 'text-white' : 'text-amber-600 dark:text-amber-400'"
+                 class="text-xl font-bold">
+                {{ pawnshopEmployeesCount() }}
+              </p>
+            </div>
+          </button>
+        }
+      </div>
+
+      <!-- Active Filter Indicator -->
+      @if (selectedCard() !== 'all') {
+        <div class="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2 mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+            </svg>
+            <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Showing:
+              <span class="font-bold">
+                @if (selectedCard() === 'active') { Active Employees Only }
+                @if (selectedCard() === 'money_loan') { Money Loan Platform Access }
+                @if (selectedCard() === 'bnpl') { BNPL Platform Access }
+                @if (selectedCard() === 'pawnshop') { Pawnshop Platform Access }
+              </span>
+            </span>
+          </div>
+          <button
+            (click)="filterByCard('all')"
+            class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
+          >
+            Clear Filter
+          </button>
+        </div>
+      }
+
       <!-- Filters Card -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 mb-3">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -494,6 +644,18 @@ export class EmployeesListComponent implements OnInit {
   filteredEmployees = signal<Employee[]>([]);
   paginatedEmployees = signal<Employee[]>([]);
   loading = signal(true);
+  selectedCard = signal<'all' | 'active' | 'money_loan' | 'bnpl' | 'pawnshop'>('all');
+
+  // Platform enabled flags (will be loaded from tenant config)
+  platformsEnabled = signal<{
+    money_loan: boolean;
+    bnpl: boolean;
+    pawnshop: boolean;
+  }>({
+    money_loan: false,
+    bnpl: false,
+    pawnshop: false
+  });
 
   searchQuery = '';
   departmentFilter = '';
@@ -506,12 +668,94 @@ export class EmployeesListComponent implements OnInit {
     this.rbacService.canAny(['tenant-users:create', 'tenant-users:invite'])
   );
 
+  // Stats computed properties - based on ALL employees, not filtered
+  totalEmployeesCount = computed(() => this.employees().length);
+
+  activeEmployeesCount = computed(() =>
+    this.employees().filter(e => e.status === 'active').length
+  );
+
+  moneyLoanEmployeesCount = computed(() =>
+    this.employees().filter(e => e.platforms?.includes('money_loan')).length
+  );
+
+  bnplEmployeesCount = computed(() =>
+    this.employees().filter(e => e.platforms?.includes('bnpl')).length
+  );
+
+  pawnshopEmployeesCount = computed(() =>
+    this.employees().filter(e => e.platforms?.includes('pawnshop')).length
+  );
+
+  // Platform enabled checks
+  hasMoneyLoanEnabled = computed(() => this.platformsEnabled().money_loan);
+  hasBnplEnabled = computed(() => this.platformsEnabled().bnpl);
+  hasPawnshopEnabled = computed(() => this.platformsEnabled().pawnshop);
+
   // Selection state
   selectedEmployees = new Set<number>();
   selectAll = false;
 
   ngOnInit() {
+    this.loadPlatformConfig();
     this.loadEmployees();
+  }
+
+  loadPlatformConfig() {
+    // Load platform configuration from API
+    this.http.get<any>('/api/tenant/platform-config').subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.platformsEnabled.set({
+            money_loan: response.data.moneyLoanEnabled || false,
+            bnpl: response.data.bnplEnabled || false,
+            pawnshop: response.data.pawnshopEnabled || false
+          });
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load platform config:', error);
+        // Default to all enabled if config fails
+        this.platformsEnabled.set({
+          money_loan: true,
+          bnpl: true,
+          pawnshop: true
+        });
+      }
+    });
+  }
+
+  filterByCard(cardType: 'all' | 'active' | 'money_loan' | 'bnpl' | 'pawnshop') {
+    this.selectedCard.set(cardType);
+
+    // Clear other filters
+    this.searchQuery = '';
+    this.departmentFilter = '';
+    this.statusFilter = '';
+
+    let filtered = this.employees();
+
+    switch (cardType) {
+      case 'all':
+        // Show all employees
+        break;
+      case 'active':
+        filtered = filtered.filter(e => e.status === 'active');
+        break;
+      case 'money_loan':
+        filtered = filtered.filter(e => e.platforms?.includes('money_loan'));
+        break;
+      case 'bnpl':
+        filtered = filtered.filter(e => e.platforms?.includes('bnpl'));
+        break;
+      case 'pawnshop':
+        filtered = filtered.filter(e => e.platforms?.includes('pawnshop'));
+        break;
+    }
+
+    this.filteredEmployees.set(filtered);
+    this.currentPage = 1;
+    this.updatePagination();
   }
 
   createEmployee() {

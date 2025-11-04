@@ -1317,4 +1317,67 @@ export class MoneyLoanService {
 
     return stats;
   }
+
+  async assignCustomersToEmployee(
+    tenantId: number,
+    employeeId: number,
+    customerIds: number[],
+    assignedBy: number
+  ) {
+    const knex = this.knexService.instance;
+
+    // Verify employee exists and is in the same tenant
+    const employee = await knex('users')
+      .where({ id: employeeId, tenant_id: tenantId })
+      .first();
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Update customers with assignment
+    const timestamp = knex.fn.now();
+    await knex('customers')
+      .whereIn('id', customerIds)
+      .where({ tenant_id: tenantId })
+      .update({
+        assigned_employee_id: employeeId,
+        assigned_by: assignedBy,
+        assigned_at: timestamp,
+        updated_at: timestamp,
+      });
+
+    return {
+      employeeId,
+      assignedCount: customerIds.length,
+      assignedAt: new Date().toISOString(),
+    };
+  }
+
+  async unassignCustomers(
+    tenantId: number,
+    customerIds: number[],
+    unassignedBy: number
+  ) {
+    const knex = this.knexService.instance;
+
+    // Update customers to remove assignment
+    const timestamp = knex.fn.now();
+    const result = await knex('customers')
+      .whereIn('id', customerIds)
+      .where({ tenant_id: tenantId })
+      .whereNotNull('assigned_employee_id') // Only unassign if they're actually assigned
+      .update({
+        assigned_employee_id: null,
+        assigned_by: null,
+        assigned_at: null,
+        assignment_notes: knex.raw(`CONCAT(COALESCE(assignment_notes, ''), '\n[', NOW(), '] Unassigned by user ', ?, '.')`, [unassignedBy]),
+        updated_at: timestamp,
+      });
+
+    return {
+      unassignedCount: result,
+      unassignedAt: new Date().toISOString(),
+    };
+  }
 }

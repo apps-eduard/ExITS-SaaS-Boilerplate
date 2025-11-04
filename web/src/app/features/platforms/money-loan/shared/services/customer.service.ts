@@ -24,6 +24,7 @@ export class CustomerService {
     kycStatus?: string;
     riskLevel?: string;
     search?: string;
+    employeeId?: string;
   }): Observable<{ success: boolean; message: string; data: LoanCustomer[]; pagination: any }> {
     return this.http.get<{ success: boolean; message: string; data: LoanCustomer[]; pagination: any }>(
       this.apiUrl,

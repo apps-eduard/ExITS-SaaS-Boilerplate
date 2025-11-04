@@ -1205,6 +1205,13 @@ export class UserEditorComponent implements OnInit {
     const isTenantCtx = url.startsWith('/tenant/');
     this.isTenantContext.set(isTenantCtx);
 
+    // Check for query parameter to set default user type
+    const typeParam = this.route.snapshot.queryParamMap.get('type');
+    if (typeParam === 'system' || typeParam === 'tenant') {
+      this.userType = typeParam;
+      console.log('🔧 User type set from query param:', typeParam);
+    }
+
     // For tenant context, force user type to tenant and set tenant ID
     if (isTenantCtx) {
       this.userType = 'tenant';

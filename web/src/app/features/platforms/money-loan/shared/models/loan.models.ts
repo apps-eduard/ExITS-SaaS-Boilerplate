@@ -27,6 +27,8 @@ export interface LoanCustomer {
   kycVerifiedAt?: string;
   kycNotes?: string;
   activeLoans?: number; // Number of active loans
+  assignedEmployeeId?: number; // ID of assigned employee for collections
+  assignedEmployeeName?: string; // Name of assigned employee
   metadata?: any;
   createdAt: string;
   updatedAt: string;

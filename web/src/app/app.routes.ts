@@ -149,6 +149,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/platforms/money-loan/admin/customers-list.component').then(m => m.CustomersListComponent)
       },
       {
+        path: 'customers/assignments',
+        loadComponent: () => import('./features/platforms/money-loan/admin/customer-assignment.component').then(m => m.CustomerAssignmentComponent)
+      },
+      {
         path: 'customers/new',
         loadComponent: () => import('./features/platforms/money-loan/admin/customer-form.component').then(m => m.CustomerFormComponent)
       },
@@ -373,7 +377,16 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            loadComponent: () => import('./features/admin/users/users-list.component').then(m => m.UsersListComponent)
+            redirectTo: 'tenants',
+            pathMatch: 'full'
+          },
+          {
+            path: 'tenants',
+            loadComponent: () => import('./features/admin/users/users-tenant-list.component').then(m => m.UsersTenantListComponent)
+          },
+          {
+            path: 'system',
+            loadComponent: () => import('./features/admin/users/users-system-list.component').then(m => m.UsersSystemListComponent)
           },
           {
             path: 'all',

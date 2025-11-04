@@ -4,6 +4,7 @@ import { LoanOverviewComponent } from '../admin/loan-overview.component';
 import { LoansListComponent } from '../admin/loans-list.component';
 import { CustomersListComponent } from '../admin/customers-list.component';
 import { CustomerFormComponent } from '../admin/customer-form.component';
+import { CustomerAssignmentComponent } from '../admin/customer-assignment.component';
 import { LoanDetailsComponent } from '../admin/loan-details.component';
 import { PaymentFormComponent } from '../admin/payment-form.component';
 
@@ -50,6 +51,11 @@ const routes: Routes = [
     path: 'customers/add',
     component: CustomerFormComponent,
     data: { title: 'Add Customer', permission: 'money_loan:customers:create' }
+  },
+  {
+    path: 'customers/assignments',
+    component: CustomerAssignmentComponent,
+    data: { title: 'Customer Assignments', permission: 'money_loan:customers:update' }
   },
   {
     path: 'customers/:id',
