@@ -261,4 +261,20 @@ export class AuthService {
 
     return permissions;
   }
+
+  async checkEmailExists(email: string, excludeUserId?: number): Promise<boolean> {
+    const knex = this.knexService.instance;
+
+    const query = knex('users')
+      .where({ email })
+      .first();
+
+    // If updating an existing user, exclude their current email from the check
+    if (excludeUserId) {
+      query.whereNot({ id: excludeUserId });
+    }
+
+    const user = await query;
+    return !!user;
+  }
 }

@@ -8,6 +8,8 @@ import {
   Ip,
   UseGuards,
   Request,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RefreshTokenDto } from './dto/auth.dto';
@@ -82,6 +84,24 @@ export class AuthController {
       data: {
         permissions: permissions.map(p => p.permissionKey),
         details: permissions,
+      },
+    };
+  }
+
+  @Get('check-email')
+  @HttpCode(HttpStatus.OK)
+  async checkEmail(@Query('email') email: string, @Query('userId') userId?: string) {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const exists = await this.authService.checkEmailExists(email, userId ? parseInt(userId) : undefined);
+    
+    return {
+      success: true,
+      data: {
+        exists,
+        available: !exists,
       },
     };
   }

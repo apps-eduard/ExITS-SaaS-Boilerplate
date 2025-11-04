@@ -51,7 +51,20 @@ export interface UserCreatePayload {
   password: string;
   firstName?: string;
   lastName?: string;
-  tenantId?: string | null;
+  tenantId?: number | null;
+  roleId?: number | null;
+  // Employee profile fields
+  position?: string;
+  department?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  hireDate?: string;
+  workPhone?: string;
+  workEmail?: string;
+  phoneExtension?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  notes?: string;
 }
 
 export interface UserUpdatePayload {
@@ -59,6 +72,19 @@ export interface UserUpdatePayload {
   lastName?: string;
   email?: string;
   status?: 'active' | 'inactive' | 'suspended' | 'deleted';
+  roleId?: number | null;
+  // Employee profile fields
+  position?: string;
+  department?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  hireDate?: string;
+  workPhone?: string;
+  workEmail?: string;
+  phoneExtension?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  notes?: string;
 }
 
 export interface PaginatedUsers {
@@ -75,7 +101,7 @@ export interface PaginatedUsers {
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'http://localhost:3000/api/users';
+  private apiUrl = '/api/users';
 
   // Signals
   usersSignal = signal<User[]>([]);

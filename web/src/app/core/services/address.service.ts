@@ -25,7 +25,7 @@ export interface Address {
 }
 
 export interface AddressCreatePayload {
-  userId: string;
+  userId: number; // Backend expects number
   addressType: 'home' | 'work' | 'billing' | 'shipping' | 'other';
   street: string;
   barangay: string;
@@ -103,7 +103,7 @@ export class AddressService {
   /**
    * Get all addresses for a specific user
    */
-  async getAddressesByUserId(userId: string): Promise<Address[]> {
+  async getAddressesByUserId(userId: string | number): Promise<Address[]> {
     try {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);

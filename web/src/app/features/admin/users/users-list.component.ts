@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -7,11 +7,12 @@ import { RoleService } from '../../../core/services/role.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmationService } from '../../../core/services/confirmation.service';
 import { RBACService } from '../../../core/services/rbac.service';
+import { ResetPasswordModalComponent } from '../../../shared/components/reset-password-modal/reset-password-modal.component';
 
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule, ResetPasswordModalComponent],
   template: `
     <div class="p-6 space-y-4">
       <!-- Header with Navigation Tabs -->
@@ -432,6 +433,14 @@ import { RBACService } from '../../../core/services/rbac.service';
                       <span class="w-3.5 h-3.5">✏️</span>
                     </button>
                     <button
+                      *ngIf="canUpdateUsers()"
+                      (click)="resetPassword(user)"
+                      class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
+                      title="Reset Password"
+                    >
+                      <span class="w-3.5 h-3.5">🔑</span>
+                    </button>
+                    <button
                       *ngIf="canUpdateUsers() && user.status !== 'deleted'"
                       (click)="toggleUserStatus(user)"
                       [class]="user.status === 'active'
@@ -528,10 +537,15 @@ import { RBACService } from '../../../core/services/rbac.service';
         </div>
       </div>
     </div>
+
+    <!-- Reset Password Modal -->
+    <app-reset-password-modal #resetPasswordModal />
   `,
   styles: []
 })
 export class UsersListComponent implements OnInit {
+  @ViewChild('resetPasswordModal') resetPasswordModal!: ResetPasswordModalComponent;
+
   searchQuery = '';
   Math = Math;
   pageSize = 10; // Page size selector
@@ -556,18 +570,18 @@ export class UsersListComponent implements OnInit {
     const seenIds = new Set();
     const seenNames = new Set();
     const uniqueRoles: any[] = [];
-    
+
     for (const role of roles) {
       // Skip if we've already seen this ID or name
       if (seenIds.has(role.id) || seenNames.has(role.name)) {
         continue;
       }
-      
+
       seenIds.add(role.id);
       seenNames.add(role.name);
       uniqueRoles.push(role);
     }
-    
+
     return uniqueRoles;
   });
 
@@ -585,14 +599,14 @@ export class UsersListComponent implements OnInit {
     }
     return this.authService.hasPermission('users:create');
   });
-  
+
   canUpdateUsers = computed(() => {
     if (this.isTenantContext()) {
       return this.rbacService.can('tenant-users:update');
     }
     return this.authService.hasPermission('users:update');
   });
-  
+
   canDeleteUsers = computed(() => {
     if (this.isTenantContext()) {
       return this.rbacService.can('tenant-users:delete');
@@ -604,9 +618,9 @@ export class UsersListComponent implements OnInit {
     // Detect if we're in tenant context by checking the URL
     const url = this.router.url;
     this.isTenantContext.set(url.startsWith('/tenant/'));
-    
+
     console.log('📋 UsersListComponent initialized - Tenant context:', this.isTenantContext());
-    
+
     this.userService.loadUsers(1, this.pageSize);
     this.roleService.loadRoles(); // Load roles for user creation/editing
   }
@@ -826,7 +840,7 @@ export class UsersListComponent implements OnInit {
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       printWindow.focus();
-      
+
       // Trigger print dialog after content loads
       setTimeout(() => {
         printWindow.print();
@@ -965,5 +979,13 @@ export class UsersListComponent implements OnInit {
         icon: 'error'
       });
     }
+  }
+
+  resetPassword(user: User) {
+    this.resetPasswordModal.open({
+      userId: user.id,
+      userName: user.fullName || `${user.firstName} ${user.lastName}`,
+      userEmail: user.email
+    });
   }
 }

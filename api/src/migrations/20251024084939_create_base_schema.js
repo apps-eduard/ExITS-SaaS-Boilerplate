@@ -514,6 +514,12 @@ exports.up = async function up(knex) {
     table.decimal('sales_target', 15, 2);
     table.decimal('collection_target', 15, 2);
     table.string('status', 20).defaultTo('active');
+    // Contact Information fields
+    table.string('work_phone', 50);
+    table.string('work_email', 255);
+    table.string('phone_extension', 20);
+    table.string('emergency_contact_name', 255);
+    table.string('emergency_contact_phone', 50);
     table.text('notes');
     table.timestamps(true, true);
     table.timestamp('deleted_at');

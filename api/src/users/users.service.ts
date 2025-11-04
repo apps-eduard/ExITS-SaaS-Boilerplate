@@ -22,9 +22,11 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
+    const finalTenantId = tenantId !== undefined ? tenantId : createUserDto.tenantId;
+
     const [user] = await knex('users')
       .insert({
-        tenant_id: tenantId !== undefined ? tenantId : createUserDto.tenantId,
+        tenant_id: finalTenantId,
         email: createUserDto.email,
         password_hash: passwordHash,
         first_name: createUserDto.firstName,
@@ -41,7 +43,88 @@ export class UsersService {
       });
     }
 
+    // Handle employee profile creation if data is provided
+    const hasEmployeeProfileData = 
+      createUserDto.position !== undefined ||
+      createUserDto.department !== undefined ||
+      createUserDto.employmentType !== undefined ||
+      createUserDto.employmentStatus !== undefined ||
+      createUserDto.hireDate !== undefined ||
+      createUserDto.workPhone !== undefined ||
+      createUserDto.workEmail !== undefined ||
+      createUserDto.phoneExtension !== undefined ||
+      createUserDto.emergencyContactName !== undefined ||
+      createUserDto.emergencyContactPhone !== undefined ||
+      createUserDto.notes !== undefined;
+
+    if (hasEmployeeProfileData && finalTenantId) {
+      await this.createEmployeeProfile(user.id, finalTenantId, createUserDto, knex);
+    }
+
     return user;
+  }
+
+  private async createEmployeeProfile(
+    userId: number,
+    tenantId: number,
+    createUserDto: CreateUserDto,
+    connection: Knex | Knex.Transaction,
+  ) {
+    try {
+      const employeeCode = this.buildEmployeeCode(tenantId, userId);
+
+      const profileData: Record<string, any> = {
+        tenant_id: tenantId,
+        user_id: userId,
+        employee_code: employeeCode,
+        position: createUserDto.position?.trim() || 'Employee',
+        hire_date: createUserDto.hireDate || new Date().toISOString().split('T')[0],
+        employment_status: createUserDto.employmentStatus?.trim() || 'active',
+        status: 'active',
+        created_at: connection.fn.now(),
+        updated_at: connection.fn.now(),
+      };
+
+      if (createUserDto.department !== undefined) {
+        profileData.department = createUserDto.department?.trim() || null;
+      }
+
+      if (createUserDto.employmentType !== undefined) {
+        profileData.employment_type = createUserDto.employmentType?.trim() || null;
+      }
+
+      if (createUserDto.workPhone !== undefined) {
+        profileData.work_phone = createUserDto.workPhone?.trim() || null;
+      }
+
+      if (createUserDto.workEmail !== undefined) {
+        profileData.work_email = createUserDto.workEmail?.trim() || null;
+      }
+
+      if (createUserDto.phoneExtension !== undefined) {
+        profileData.phone_extension = createUserDto.phoneExtension?.trim() || null;
+      }
+
+      if (createUserDto.emergencyContactName !== undefined) {
+        profileData.emergency_contact_name = createUserDto.emergencyContactName?.trim() || null;
+      }
+
+      if (createUserDto.emergencyContactPhone !== undefined) {
+        profileData.emergency_contact_phone = createUserDto.emergencyContactPhone?.trim() || null;
+      }
+
+      if (createUserDto.notes !== undefined) {
+        profileData.notes = createUserDto.notes || null;
+      }
+
+      await connection('employee_profiles').insert(profileData);
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        // Table doesn't exist, silently skip
+        return;
+      }
+      throw error;
+    }
   }
 
   async findAll(tenantId?: number, page = 1, limit = 20) {
@@ -349,13 +432,28 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
+      // Note: Knex postProcessResponse converts tenant_id to tenantId
+      console.log('🔍 setUserProducts - User loaded:', { 
+        userId, 
+        tenantId: user.tenantId,
+        fullUser: user 
+      });
+
       if (!user.tenantId) {
-        throw new BadRequestException('Tenant context is required to assign product access');
+        console.error('❌ setUserProducts - Missing tenantId:', { user });
+        throw new BadRequestException('Tenant context is required to assign platform access');
       }
 
-      const employeeProfile = await this.getEmployeeProfile(userId, trx);
+      console.log('🔄 setUserProducts - Ensuring employee profile...');
+      const employeeProfile = await this.ensureEmployeeProfile(
+        { id: userId, tenantId: user.tenantId },
+        trx,
+      );
+
+      console.log('✅ setUserProducts - Employee profile:', employeeProfile);
+
       if (!employeeProfile) {
-        throw new BadRequestException('Employee profile is required before assigning product access');
+        throw new BadRequestException('Unable to create employee profile for platform assignment');
       }
 
       await trx('employee_product_access')
@@ -369,7 +467,7 @@ export class UsersService {
         }
 
         const payload: Record<string, any> = {
-          tenant_id: user.tenantId,
+          tenant_id: user.tenantId, // Use camelCase version from Knex conversion
           employee_id: employeeProfile.id,
           user_id: userId,
           platform_type: normalizedType,
@@ -432,6 +530,12 @@ export class UsersService {
           'employment_type',
           'employment_status',
           'hire_date',
+          'work_phone',
+          'work_email',
+          'phone_extension',
+          'emergency_contact_name',
+          'emergency_contact_phone',
+          'notes',
           'status',
           'created_at',
           'updated_at',
@@ -447,6 +551,47 @@ export class UsersService {
       }
       throw error;
     }
+  }
+
+  private async ensureEmployeeProfile(
+    context: { id: number; tenantId: number | null },
+    connection: Knex | Knex.Transaction,
+  ) {
+    const existingProfile = await this.getEmployeeProfile(context.id, connection);
+    if (existingProfile) {
+      return existingProfile;
+    }
+
+    if (!context.tenantId) {
+      throw new BadRequestException('Tenant context is required to create employee profile');
+    }
+
+    try {
+      await connection('employee_profiles')
+        .insert({
+          tenant_id: context.tenantId,
+          user_id: context.id,
+          employee_code: this.buildEmployeeCode(context.tenantId, context.id),
+          position: 'Employee', // Default position for auto-created profiles
+          hire_date: connection.fn.now(), // Default to current date
+          employment_status: 'active',
+          status: 'active',
+          created_at: connection.fn.now(),
+          updated_at: connection.fn.now(),
+        });
+    } catch (error: any) {
+      if (error?.code !== '42P01') {
+        throw error;
+      }
+      // If the table doesn't exist in the current schema, bubble up the original error path
+      throw new BadRequestException('Employee profiles feature is not available in this environment');
+    }
+
+    return this.getEmployeeProfile(context.id, connection);
+  }
+
+  private buildEmployeeCode(tenantId: number, userId: number): string {
+    return `EMP-${tenantId}-${userId}`;
   }
 
   private async getAddressesForUser(
@@ -683,7 +828,126 @@ export class UsersService {
       }
     }
 
+    // Handle employee profile updates
+    const hasEmployeeProfileData = 
+      updateUserDto.position !== undefined ||
+      updateUserDto.department !== undefined ||
+      updateUserDto.employmentType !== undefined ||
+      updateUserDto.employmentStatus !== undefined ||
+      updateUserDto.hireDate !== undefined ||
+      updateUserDto.workPhone !== undefined ||
+      updateUserDto.workEmail !== undefined ||
+      updateUserDto.phoneExtension !== undefined ||
+      updateUserDto.emergencyContactName !== undefined ||
+      updateUserDto.emergencyContactPhone !== undefined ||
+      updateUserDto.notes !== undefined;
+
+    if (hasEmployeeProfileData) {
+      await this.updateEmployeeProfile(id, user.tenantId, updateUserDto, knex);
+    }
+
     return this.findOne(id);
+  }
+
+  private async updateEmployeeProfile(
+    userId: number,
+    tenantId: number | null,
+    updateUserDto: UpdateUserDto,
+    connection: Knex | Knex.Transaction,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('Tenant context is required to update employee profile');
+    }
+
+    try {
+      // Check if employee profile exists
+      const existingProfile = await this.getEmployeeProfile(userId, connection);
+
+      const profileData: Record<string, any> = {};
+
+      if (updateUserDto.position !== undefined) {
+        profileData.position = updateUserDto.position?.trim() || null;
+      }
+
+      if (updateUserDto.department !== undefined) {
+        profileData.department = updateUserDto.department?.trim() || null;
+      }
+
+      if (updateUserDto.employmentType !== undefined) {
+        profileData.employment_type = updateUserDto.employmentType?.trim() || null;
+      }
+
+      if (updateUserDto.employmentStatus !== undefined) {
+        profileData.employment_status = updateUserDto.employmentStatus?.trim() || 'active';
+      }
+
+      if (updateUserDto.hireDate !== undefined) {
+        profileData.hire_date = updateUserDto.hireDate || null;
+      }
+
+      if (updateUserDto.workPhone !== undefined) {
+        profileData.work_phone = updateUserDto.workPhone?.trim() || null;
+      }
+
+      if (updateUserDto.workEmail !== undefined) {
+        profileData.work_email = updateUserDto.workEmail?.trim() || null;
+      }
+
+      if (updateUserDto.phoneExtension !== undefined) {
+        profileData.phone_extension = updateUserDto.phoneExtension?.trim() || null;
+      }
+
+      if (updateUserDto.emergencyContactName !== undefined) {
+        profileData.emergency_contact_name = updateUserDto.emergencyContactName?.trim() || null;
+      }
+
+      if (updateUserDto.emergencyContactPhone !== undefined) {
+        profileData.emergency_contact_phone = updateUserDto.emergencyContactPhone?.trim() || null;
+      }
+
+      if (updateUserDto.notes !== undefined) {
+        profileData.notes = updateUserDto.notes || null;
+      }
+
+      if (Object.keys(profileData).length === 0) {
+        return;
+      }
+
+      if (existingProfile) {
+        // Update existing profile
+        profileData.updated_at = connection.fn.now();
+        await connection('employee_profiles')
+          .where({ user_id: userId, tenant_id: tenantId })
+          .update(profileData);
+      } else {
+        // Create new profile
+        const employeeCode = this.buildEmployeeCode(tenantId, userId);
+        
+        // Position and hire_date are required fields
+        if (!profileData.position) {
+          profileData.position = 'Employee'; // Default position
+        }
+        if (!profileData.hire_date) {
+          profileData.hire_date = new Date().toISOString().split('T')[0]; // Today
+        }
+
+        await connection('employee_profiles').insert({
+          tenant_id: tenantId,
+          user_id: userId,
+          employee_code: employeeCode,
+          ...profileData,
+          employment_status: profileData.employment_status || 'active',
+          status: 'active',
+          created_at: connection.fn.now(),
+          updated_at: connection.fn.now(),
+        });
+      }
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        throw new BadRequestException('Employee profiles feature is not available in this environment');
+      }
+      throw error;
+    }
   }
 
   async remove(id: number) {
@@ -693,5 +957,25 @@ export class UsersService {
     await knex('users').where({ id }).update({ status: 'deleted' });
 
     return { message: 'User deleted successfully' };
+  }
+
+  async resetPassword(id: number, newPassword: string) {
+    const knex = this.knexService.instance;
+    
+    // Verify user exists
+    await this.findOne(id);
+
+    // Hash the new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update the password
+    await knex('users')
+      .where({ id })
+      .update({
+        password_hash: passwordHash,
+        updated_at: knex.fn.now(),
+      });
+
+    return { message: 'Password reset successfully' };
   }
 }

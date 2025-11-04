@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ChangeDetectorRef, computed } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef, computed, ViewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -11,6 +11,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ProductSubscriptionService, PlatformSubscription } from '../../../core/services/product-subscription.service';
 import { TenantService } from '../../../core/services/tenant.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ResetPasswordModalComponent } from '../../../shared/components/reset-password-modal/reset-password-modal.component';
 
 interface Tenant {
   id: number;
@@ -25,23 +26,36 @@ interface Tenant {
 @Component({
   selector: 'app-user-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ResetPasswordModalComponent],
   template: `
     <div class="p-4 max-w-4xl mx-auto">
       <!-- Header -->
       <div class="mb-4">
-        <div class="flex items-center gap-2 mb-1">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <button
+              (click)="goBack()"
+              class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+              {{ isEditMode() ? 'Edit User' : 'Create New User' }}
+            </h1>
+          </div>
+
+          <!-- Reset Password Button (only in edit mode) -->
           <button
-            (click)="goBack()"
-            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            *ngIf="isEditMode()"
+            (click)="openResetPasswordModal()"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-all shadow-sm hover:shadow"
           >
-            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
+            <span class="text-sm">🔑</span>
+            Reset Password
           </button>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-            {{ isEditMode() ? 'Edit User' : 'Create New User' }}
-          </h1>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 ml-7">
           {{ isEditMode() ? 'Update user information and manage roles' : 'Add a new user to the system' }}
@@ -109,18 +123,6 @@ interface Tenant {
             >
               <span class="text-base">📍</span>
               Address
-            </button>
-            <button
-              *ngIf="isEditMode()"
-              type="button"
-              (click)="activeTab.set('password')"
-              [class]="activeTab() === 'password'
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-800'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors rounded-t"
-            >
-              <span class="text-base">🔐</span>
-              Password
             </button>
             <button
               type="button"
@@ -303,6 +305,9 @@ interface Tenant {
           </div>
 
           <div *ngIf="!roleService.loadingSignal()" class="space-y-2">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Select a single role for this user. Choosing a different role will replace the current assignment.
+            </p>
             <div *ngFor="let role of availableRoles()" class="flex items-center gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
               <input
                 type="checkbox"
@@ -356,7 +361,12 @@ interface Tenant {
 
               <div *ngIf="productAccess.moneyLoan.enabled" class="ml-9 mt-2">
                 <label class="flex items-center gap-2 cursor-pointer text-xs">
-                  <input type="checkbox" [(ngModel)]="productAccess.moneyLoan.isPrimary" class="w-3.5 h-3.5 text-amber-600 rounded" />
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="productAccess.moneyLoan.isPrimary"
+                    (ngModelChange)="onPrimaryPlatformChange('moneyLoan')"
+                    class="w-3.5 h-3.5 text-amber-600 rounded"
+                  />
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
                 </label>
               </div>
@@ -382,7 +392,12 @@ interface Tenant {
 
               <div *ngIf="productAccess.bnpl.enabled" class="ml-9 mt-2 space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer text-xs">
-                  <input type="checkbox" [(ngModel)]="productAccess.bnpl.isPrimary" class="w-3.5 h-3.5 text-blue-600 rounded" />
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="productAccess.bnpl.isPrimary"
+                    (ngModelChange)="onPrimaryPlatformChange('bnpl')"
+                    class="w-3.5 h-3.5 text-blue-600 rounded"
+                  />
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
                 </label>
               </div>
@@ -408,7 +423,12 @@ interface Tenant {
 
               <div *ngIf="productAccess.pawnshop.enabled" class="ml-9 mt-2 space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer text-xs">
-                  <input type="checkbox" [(ngModel)]="productAccess.pawnshop.isPrimary" class="w-3.5 h-3.5 text-green-600 rounded" />
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="productAccess.pawnshop.isPrimary"
+                    (ngModelChange)="onPrimaryPlatformChange('pawnshop')"
+                    class="w-3.5 h-3.5 text-green-600 rounded"
+                  />
                   <span class="text-gray-700 dark:text-gray-300">Set as primary</span>
                 </label>
               </div>
@@ -433,6 +453,10 @@ interface Tenant {
           <div *ngIf="activeTab() === 'address'">
             <div class="mb-4">
               <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Address Information</h2>
+            </div>
+
+            <div *ngIf="isEditMode() && noAddressOnRecord" class="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+              ⚠️ No saved address found for this user. Add a primary address so contact details stay up to date.
             </div>
 
           <div class="space-y-3">
@@ -686,61 +710,6 @@ interface Tenant {
           </div>
           </div>
 
-          <!-- Reset Password Tab (Edit mode only) -->
-          <div *ngIf="activeTab() === 'password'">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">🔐 Reset Password</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Change user's password</p>
-              </div>
-            </div>
-
-          <div class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <!-- New Password -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  New Password (optional)
-                </label>
-                <input
-                  [(ngModel)]="resetPasswordData.newPassword"
-                  type="password"
-                  placeholder="Leave blank to keep current password"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Minimum 8 characters if changing</p>
-              </div>
-
-              <!-- Confirm Password -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  [(ngModel)]="resetPasswordData.confirmPassword"
-                  type="password"
-                  placeholder="Confirm new password"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword !== resetPasswordData.confirmPassword"
-                   class="text-xs text-red-500 dark:text-red-400 mt-0.5">
-                  ⚠️ Passwords do not match
-                </p>
-                <p *ngIf="resetPasswordData.confirmPassword && resetPasswordData.newPassword === resetPasswordData.confirmPassword"
-                   class="text-xs text-green-500 dark:text-green-400 mt-0.5">
-                  ✓ Passwords match
-                </p>
-              </div>
-            </div>
-
-            <div *ngIf="resetPasswordData.newPassword" class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
-              <p class="text-xs text-amber-700 dark:text-amber-300">
-                <strong>⚠️ Warning:</strong> User will need to use this new password on their next login. Consider notifying them about the password change.
-              </p>
-            </div>
-          </div>
-        </div>
-
           <!-- Employee Profile Tab -->
           <div *ngIf="activeTab() === 'employee'">
             <div class="flex items-center justify-between mb-4">
@@ -763,13 +732,16 @@ interface Tenant {
                   <div>
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Employee ID
+                      <span class="text-gray-500 text-xs ml-1">(Auto-generated)</span>
                     </label>
                     <input
                       name="employeeCode"
-                      [(ngModel)]="employeeProfileData.employeeCode"
+                      [value]="employeeProfileData.employeeCode || autoGeneratedEmployeeCode()"
                       type="text"
-                      placeholder="EMP-001"
-                      class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      readonly
+                      placeholder="Will be generated on save"
+                      class="w-full rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-xs text-gray-600 cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                      title="Employee ID is auto-generated and cannot be edited"
                     />
                   </div>
 
@@ -1089,10 +1061,15 @@ interface Tenant {
         </div>
       </div>
     </div>
+
+    <!-- Reset Password Modal -->
+    <app-reset-password-modal #resetPasswordModal />
   `,
   styles: []
 })
 export class UserEditorComponent implements OnInit {
+  @ViewChild('resetPasswordModal') resetPasswordModal!: ResetPasswordModalComponent;
+
   userId: string | null = null;
   isEditMode = signal(false);
   saving = signal(false);
@@ -1131,8 +1108,7 @@ export class UserEditorComponent implements OnInit {
       isPrimary: false,
       canApproveLoans: false,
       canDisburseFunds: false,
-      canViewReports: false,
-      maxApprovalAmount: null
+      canViewReports: false
     },
     bnpl: {
       enabled: false,
@@ -1172,6 +1148,13 @@ export class UserEditorComponent implements OnInit {
     return platforms;
   });
 
+  // Computed property for auto-generated employee code preview
+  autoGeneratedEmployeeCode = computed(() => {
+    const tenantId = this.formData.tenantId || this.loadedUser?.tenantId;
+    const userId = this.userId || 'NEW';
+    return tenantId ? `EMP-${tenantId}-${userId}` : '';
+  });
+
   // Address fields
   includeAddress = false;
   activeAddressTab = signal<string>('location'); // 'location', 'contact', 'additional'
@@ -1190,6 +1173,7 @@ export class UserEditorComponent implements OnInit {
     contactName: '',
     notes: ''
   };
+  noAddressOnRecord = false;
 
   // Employee profile fields
   hasEmployeeProfile = false;
@@ -1224,12 +1208,12 @@ export class UserEditorComponent implements OnInit {
     // For tenant context, force user type to tenant and set tenant ID
     if (isTenantCtx) {
       this.userType = 'tenant';
-      const currentTenantId = this.authService.getTenantId();
-      if (currentTenantId) {
+      const currentTenantId = this.normalizeTenantId(this.authService.getTenantId());
+      if (currentTenantId !== null) {
         this.formData.tenantId = currentTenantId;
         console.log('🏢 Tenant context detected, tenantId set to:', currentTenantId);
         // Load platform subscriptions for this tenant
-        this.loadTenantPlatformSubscriptions(Number(currentTenantId));
+        this.loadTenantPlatformSubscriptions(currentTenantId);
       }
     }
 
@@ -1272,7 +1256,7 @@ export class UserEditorComponent implements OnInit {
           this.formData.email = user.email || '';
           this.formData.password = '';
           this.formData.status = user.status || 'active';
-          this.formData.tenantId = user.tenantId || null;
+          this.formData.tenantId = this.normalizeTenantId(user.tenantId);
 
           console.log('📝 Form data set to:', this.formData);
 
@@ -1292,7 +1276,10 @@ export class UserEditorComponent implements OnInit {
           // Load product access for tenant users
           if (user.tenantId) {
             // Load tenant's platform subscriptions to show available platforms
-            this.loadTenantPlatformSubscriptions(Number(user.tenantId));
+            const tenantIdForLoad = this.normalizeTenantId(user.tenantId);
+            if (tenantIdForLoad !== null) {
+              this.loadTenantPlatformSubscriptions(tenantIdForLoad);
+            }
             // Load user's current product access
             await this.loadUserProducts(this.userId);
           }
@@ -1487,6 +1474,8 @@ export class UserEditorComponent implements OnInit {
     if (roles.has(key)) {
       roles.delete(key);
     } else {
+      // Backend currently accepts a single role; enforce single selection at UI level
+      roles.clear();
       roles.add(key);
     }
     this.selectedRoles.set(roles);
@@ -1536,14 +1525,23 @@ export class UserEditorComponent implements OnInit {
       return;
     }
 
+    // Check if email already exists
     this.emailCheckInProgress.set(true);
     try {
       const params: any = { email };
-      if (this.userType === 'tenant' && this.formData.tenantId) params.tenantId = this.formData.tenantId;
-      // Use public auth endpoint for email check
+      // If editing existing user, exclude their ID from the check
+      if (this.userId) {
+        params.userId = this.userId;
+      }
+
       const resp: any = await firstValueFrom(this.http.get('/api/auth/check-email', { params }));
-      const exists = !!resp?.exists;
+      const exists = !!resp?.data?.exists;
       this.emailExists.set(exists);
+
+      if (exists && !this.userId) {
+        // Show error if email exists (only for new users)
+        this.toastService.show('error', 'Email address already in use');
+      }
     } catch (err: any) {
       console.error('Email check failed', err);
       this.emailCheckError.set(err?.message || 'Failed to validate email');
@@ -1574,6 +1572,18 @@ export class UserEditorComponent implements OnInit {
   }
 
   /**
+   * Handle primary platform selection - ensure only one platform can be primary
+   */
+  onPrimaryPlatformChange(platform: 'moneyLoan' | 'bnpl' | 'pawnshop'): void {
+    // If this platform was just checked as primary, uncheck all others
+    if (this.productAccess[platform].isPrimary) {
+      if (platform !== 'moneyLoan') this.productAccess.moneyLoan.isPrimary = false;
+      if (platform !== 'bnpl') this.productAccess.bnpl.isPrimary = false;
+      if (platform !== 'pawnshop') this.productAccess.pawnshop.isPrimary = false;
+    }
+  }
+
+  /**
    * Load user product access from API
    */
   async loadUserProducts(userId: string): Promise<void> {
@@ -1598,7 +1608,6 @@ export class UserEditorComponent implements OnInit {
               this.productAccess.moneyLoan.canApproveLoans = product.canApproveLoans || false;
               this.productAccess.moneyLoan.canDisburseFunds = product.canDisburseFunds || false;
               this.productAccess.moneyLoan.canViewReports = product.canViewReports || false;
-              this.productAccess.moneyLoan.maxApprovalAmount = product.maxApprovalAmount || null;
               break;
             case 'bnpl':
               this.productAccess.bnpl.enabled = true;
@@ -1633,10 +1642,12 @@ export class UserEditorComponent implements OnInit {
         // Get the primary address or first address
         const address = addresses.find((a: any) => a.isPrimary) || addresses[0];
 
-        this.applyAddressToForm(address);
+        this.applyAddressToForm(address, { isSingle: addresses.length === 1 });
         console.log('📍 Loaded user address:', address.id);
       } else {
         console.log('📍 No address found for user');
+        this.includeAddress = false;
+        this.noAddressOnRecord = true;
       }
     } catch (error) {
       console.error('❌ Error loading user address:', error);
@@ -1646,18 +1657,22 @@ export class UserEditorComponent implements OnInit {
 
   private populateAddressFromUser(addresses: any[] | undefined): void {
     if (!Array.isArray(addresses) || addresses.length === 0) {
+      this.includeAddress = false;
+      this.noAddressOnRecord = true;
       return;
     }
 
     const address = addresses.find(addressRecord => addressRecord?.isPrimary) || addresses[0];
     if (!address) {
+      this.includeAddress = false;
+      this.noAddressOnRecord = true;
       return;
     }
 
-    this.applyAddressToForm(address);
+    this.applyAddressToForm(address, { isSingle: addresses.length === 1 });
   }
 
-  private applyAddressToForm(address: any): void {
+  private applyAddressToForm(address: any, options: { isSingle?: boolean } = {}): void {
     if (!address) {
       return;
     }
@@ -1670,13 +1685,15 @@ export class UserEditorComponent implements OnInit {
     this.addressData.region = address.region || '';
     this.addressData.zipCode = address.zipCode || '';
     this.addressData.landmark = address.landmark || '';
-    this.addressData.isPrimary = address.isPrimary ?? true;
+    const forcedPrimary = options.isSingle ? true : undefined;
+    this.addressData.isPrimary = forcedPrimary ?? (address.isPrimary ?? true);
     this.addressData.contactPhone = address.contactPhone || '';
     this.addressData.contactName = address.contactName || '';
     this.addressData.notes = address.notes || '';
 
     this.userAddressId = address.id ? String(address.id) : null;
     this.includeAddress = true;
+    this.noAddressOnRecord = false;
   }
 
   /**
@@ -1690,8 +1707,7 @@ export class UserEditorComponent implements OnInit {
         isPrimary: false,
         canApproveLoans: false,
         canDisburseFunds: false,
-        canViewReports: false,
-        maxApprovalAmount: null
+        canViewReports: false
       },
       bnpl: {
         enabled: false,
@@ -1707,13 +1723,16 @@ export class UserEditorComponent implements OnInit {
   }
 
   private createDefaultEmployeeProfile() {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
     return {
-      employeeCode: '',
+      employeeCode: '', // Will be auto-generated by backend
       position: '',
       department: '',
-      employmentType: '',
-      employmentStatus: '',
-      hireDate: '',
+      employmentType: 'full-time', // Default to full-time
+      employmentStatus: 'active', // Default to active
+      hireDate: today, // Default to today
       managerName: '',
       supervisorName: '',
       workEmail: '',
@@ -1797,6 +1816,25 @@ export class UserEditorComponent implements OnInit {
   }
 
   /**
+   * Check if employee profile has any meaningful data
+   */
+  hasEmployeeProfileData(): boolean {
+    return !!(
+      this.employeeProfileData.position ||
+      this.employeeProfileData.department ||
+      this.employeeProfileData.employmentType ||
+      this.employeeProfileData.employmentStatus ||
+      this.employeeProfileData.hireDate ||
+      this.employeeProfileData.workPhone ||
+      this.employeeProfileData.workEmail ||
+      this.employeeProfileData.phoneExtension ||
+      this.employeeProfileData.emergencyContactName ||
+      this.employeeProfileData.emergencyContactPhone ||
+      this.employeeProfileData.notes
+    );
+  }
+
+  /**
    * Build product assignment payload from productAccess state
    */
   buildProductAssignments(): any[] {
@@ -1809,8 +1847,7 @@ export class UserEditorComponent implements OnInit {
         isPrimary: this.productAccess.moneyLoan.isPrimary,
         canApproveLoans: this.productAccess.moneyLoan.canApproveLoans,
         canDisburseFunds: this.productAccess.moneyLoan.canDisburseFunds,
-        canViewReports: this.productAccess.moneyLoan.canViewReports,
-        maxApprovalAmount: this.productAccess.moneyLoan.maxApprovalAmount
+        canViewReports: this.productAccess.moneyLoan.canViewReports
       });
     }
 
@@ -1830,6 +1867,7 @@ export class UserEditorComponent implements OnInit {
       });
     }
 
+    console.log('📋 Built platform assignments:', assignments);
     return assignments;
   }
 
@@ -1838,12 +1876,13 @@ export class UserEditorComponent implements OnInit {
    */
   async assignProductAccess(userId: string, assignments: any[]): Promise<void> {
     try {
+      console.log('📦 Assigning platform access:', { userId, assignments });
       const response = await firstValueFrom(
         this.http.post(`/api/users/${userId}/products`, { products: assignments })
       );
-      console.log('📦 Product access response:', response);
+      console.log('✅ Platform access response:', response);
     } catch (error) {
-      console.error('❌ Error assigning product access:', error);
+      console.error('❌ Error assigning platform access:', error);
       throw error;
     }
   }
@@ -1862,6 +1901,7 @@ export class UserEditorComponent implements OnInit {
 
     try {
       let user: User | null = null;
+      const selectedRoleId = this.getSelectedRoleId();
 
       if (this.isEditMode() && this.userId) {
         // Update existing user
@@ -1869,19 +1909,55 @@ export class UserEditorComponent implements OnInit {
           firstName: this.formData.firstName,
           lastName: this.formData.lastName,
           email: this.formData.email,
-          status: this.formData.status
+          status: this.formData.status,
+          roleId: selectedRoleId ?? null
         };
+
+        // Include employee profile data if it has values
+        if (this.hasEmployeeProfileData()) {
+          updatePayload.position = this.employeeProfileData.position || undefined;
+          updatePayload.department = this.employeeProfileData.department || undefined;
+          updatePayload.employmentType = this.employeeProfileData.employmentType || undefined;
+          updatePayload.employmentStatus = this.employeeProfileData.employmentStatus || undefined;
+          updatePayload.hireDate = this.employeeProfileData.hireDate || undefined;
+          updatePayload.workPhone = this.employeeProfileData.workPhone || undefined;
+          updatePayload.workEmail = this.employeeProfileData.workEmail || undefined;
+          updatePayload.phoneExtension = this.employeeProfileData.phoneExtension || undefined;
+          updatePayload.emergencyContactName = this.employeeProfileData.emergencyContactName || undefined;
+          updatePayload.emergencyContactPhone = this.employeeProfileData.emergencyContactPhone || undefined;
+          updatePayload.notes = this.employeeProfileData.notes || undefined;
+        }
+
         user = await this.userService.updateUser(this.userId, updatePayload);
       } else {
         // Create new user
+        const tenantIdValue = this.userType === 'system'
+          ? null
+          : this.normalizeTenantId(this.formData.tenantId);
         const createPayload: UserCreatePayload = {
           email: this.formData.email,
           password: this.formData.password,
           firstName: this.formData.firstName,
           lastName: this.formData.lastName,
           // Use selected tenant ID or null for system admin
-          tenantId: this.userType === 'system' ? null : this.formData.tenantId
+          tenantId: tenantIdValue ?? undefined,
+          roleId: selectedRoleId ?? undefined
         };
+
+        // Include employee profile data if it has values
+        if (this.hasEmployeeProfileData()) {
+          createPayload.position = this.employeeProfileData.position || undefined;
+          createPayload.department = this.employeeProfileData.department || undefined;
+          createPayload.employmentType = this.employeeProfileData.employmentType || undefined;
+          createPayload.employmentStatus = this.employeeProfileData.employmentStatus || undefined;
+          createPayload.hireDate = this.employeeProfileData.hireDate || undefined;
+          createPayload.workPhone = this.employeeProfileData.workPhone || undefined;
+          createPayload.workEmail = this.employeeProfileData.workEmail || undefined;
+          createPayload.phoneExtension = this.employeeProfileData.phoneExtension || undefined;
+          createPayload.emergencyContactName = this.employeeProfileData.emergencyContactName || undefined;
+          createPayload.emergencyContactPhone = this.employeeProfileData.emergencyContactPhone || undefined;
+          createPayload.notes = this.employeeProfileData.notes || undefined;
+        }
 
         console.log('👤 Creating user:', {
           userType: this.userType,
@@ -1894,65 +1970,9 @@ export class UserEditorComponent implements OnInit {
 
       if (user) {
         const isUpdate = this.isEditMode();
-        // Reset password if requested (edit mode only)
-        // Reset password if provided
-        if (this.isEditMode() && this.resetPasswordData.newPassword && this.isPasswordResetValid()) {
-          try {
-            await this.http.put(`/api/users/${user.id}/reset-password`, {
-              newPassword: this.resetPasswordData.newPassword
-            }).toPromise();
-            this.toastService.success('Password reset successfully');
-          } catch (passwordError) {
-            console.error('⚠️ Password reset failed:', passwordError);
-            this.errorMessage.set('User updated but password reset failed. Please try again.');
-            this.saving.set(false);
-            return;
-          }
-        }
 
-        // Update roles (if editing)
-        if (this.isEditMode() && this.userId) {
-          // Get current roles from loaded user data
-          const currentUser = await this.userService.getUser(this.userId);
-          const currentRoleIds = new Set(
-            (currentUser?.roles || [])
-              .map(r => r?.id)
-              .filter(id => id !== null && id !== undefined)
-              .map(id => String(id))
-          );
-          const selectedRoleIds = this.selectedRoles();
-
-          console.log('🔄 Updating roles:', {
-            current: Array.from(currentRoleIds),
-            selected: Array.from(selectedRoleIds)
-          });
-
-          // Remove roles that are no longer selected
-          for (const roleId of currentRoleIds) {
-            if (!selectedRoleIds.has(roleId)) {
-              console.log(`➖ Removing role ${roleId}`);
-              await this.userService.removeRole(user.id, roleId);
-            }
-          }
-
-          // Add newly selected roles
-          for (const roleId of selectedRoleIds) {
-            if (!currentRoleIds.has(roleId)) {
-              console.log(`➕ Adding role ${roleId}`);
-              await this.userService.assignRole(user.id, roleId);
-            }
-          }
-        } else if (!this.isEditMode()) {
-          // For new users, just assign selected roles
-          if (this.selectedRoles().size > 0) {
-            for (const roleId of this.selectedRoles()) {
-              await this.userService.assignRole(user.id, roleId);
-            }
-          }
-        }
-
-        // Create or update address if included
-        if (this.includeAddress && this.isAddressValid()) {
+        // Create or update address if it has meaningful data
+        if (this.isAddressValid()) {
           try {
             if (this.userAddressId) {
               // Update existing address
@@ -1976,7 +1996,7 @@ export class UserEditorComponent implements OnInit {
             } else {
               // Create new address
               const addressPayload: AddressCreatePayload = {
-                userId: user.id,
+                userId: Number(user.id), // Convert string ID to number
                 addressType: this.addressData.addressType,
                 street: this.addressData.street,
                 barangay: this.addressData.barangay,
@@ -2003,17 +2023,27 @@ export class UserEditorComponent implements OnInit {
           }
         }
 
-        // Assign product access (for tenant users only)
+        // Assign platform access (for tenant users only)
         if (this.userType === 'tenant') {
           try {
             const productAssignments = this.buildProductAssignments();
-            if (productAssignments.length > 0) {
-              await this.assignProductAccess(user.id, productAssignments);
-              console.log('✅ Product access assigned successfully');
-            }
-          } catch (productError) {
-            console.error('⚠️ User created but product assignment failed:', productError);
-            // Don't fail the whole operation if product assignment fails
+            console.log('🔄 Attempting to assign platforms...', {
+              userId: user.id,
+              platformCount: productAssignments.length,
+              platforms: productAssignments
+            });
+            // Always call the API to update/remove platform access
+            await this.assignProductAccess(user.id, productAssignments);
+            console.log('✅ Platform access updated successfully');
+          } catch (productError: any) {
+            console.error('⚠️ User saved but platform assignment failed:', productError);
+            console.error('Error details:', {
+              message: productError?.message,
+              status: productError?.status,
+              error: productError?.error
+            });
+            this.toastService.error('User saved, but platform access could not be updated. Please try again.');
+            // Don't fail the whole operation if platform assignment fails
           }
         }
 
@@ -2052,6 +2082,25 @@ export class UserEditorComponent implements OnInit {
     );
   }
 
+  private normalizeTenantId(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  private getSelectedRoleId(): number | null {
+    const [first] = Array.from(this.selectedRoles());
+    if (first === undefined) {
+      return null;
+    }
+
+    const numeric = Number(first);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   isPasswordResetValid(): boolean {
     // If no password entered, it's valid (password is optional)
     if (!this.resetPasswordData.newPassword && !this.resetPasswordData.confirmPassword) {
@@ -2075,5 +2124,18 @@ export class UserEditorComponent implements OnInit {
     } else {
       this.router.navigate(['/admin/users']);
     }
+  }
+
+  openResetPasswordModal() {
+    if (!this.userId || !this.loadedUser) {
+      this.toastService.show('error', 'User data not loaded');
+      return;
+    }
+
+    this.resetPasswordModal.open({
+      userId: this.userId,
+      userName: `${this.formData.firstName} ${this.formData.lastName}`,
+      userEmail: this.formData.email
+    });
   }
 }

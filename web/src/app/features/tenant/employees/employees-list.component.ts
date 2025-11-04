@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, ChangeDetectorRef, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectorRef, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../../core/services/toast.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { RBACService } from '../../../core/services/rbac.service';
+import { ResetPasswordModalComponent } from '../../../shared/components/reset-password-modal/reset-password-modal.component';
 
 interface Employee {
   id: number;
@@ -29,7 +30,7 @@ interface Employee {
 @Component({
   selector: 'app-employees-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ResetPasswordModalComponent],
   template: `
     <div class="p-4">
       <!-- Header with Icon -->
@@ -365,6 +366,13 @@ interface Employee {
                           <span class="w-3.5 h-3.5">✏️</span>
                         </button>
                         <button
+                          (click)="resetPassword(employee)"
+                          class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded shadow-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
+                          title="Reset Password"
+                        >
+                          <span class="w-3.5 h-3.5">🔑</span>
+                        </button>
+                        <button
                           (click)="suspendEmployee(employee.id)"
                           class="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded shadow-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition"
                           title="Suspend Employee"
@@ -466,10 +474,15 @@ interface Employee {
         </div>
       }
     </div>
+
+    <!-- Reset Password Modal -->
+    <app-reset-password-modal #resetPasswordModal />
   `,
   styles: []
 })
 export class EmployeesListComponent implements OnInit {
+  @ViewChild('resetPasswordModal') resetPasswordModal!: ResetPasswordModalComponent;
+
   private http = inject(HttpClient);
   private router = inject(Router);
   private toastService = inject(ToastService);
@@ -508,7 +521,8 @@ export class EmployeesListComponent implements OnInit {
   loadEmployees() {
     this.loading.set(true);
 
-    this.http.get<any>('http://localhost:3000/api/users').subscribe({
+  const params = { page: '1', limit: '250' };
+  this.http.get<any>('/api/users', { params }).subscribe({
       next: (response) => {
         if (response.success || response.data) {
           const users = response.data || [];
@@ -537,11 +551,11 @@ export class EmployeesListComponent implements OnInit {
             return !hasCustomerRole && hasTenantRole;
           });
 
-          console.log('Total users:', users.length);
-          console.log('Filtered employees:', tenantEmployees.length);
-          console.log('Employees:', tenantEmployees);
-          console.log('First employee platforms:', tenantEmployees[0]?.platforms);
-          console.log('Sample employee data:', JSON.stringify(tenantEmployees[0], null, 2));
+          // console.log('Total users:', users.length);
+          // console.log('Filtered employees:', tenantEmployees.length);
+          // console.log('Employees:', tenantEmployees);
+          // console.log('First employee platforms:', tenantEmployees[0]?.platforms);
+          // console.log('Sample employee data:', JSON.stringify(tenantEmployees[0], null, 2));
 
           this.employees.set(tenantEmployees);
           this.filteredEmployees.set(tenantEmployees);
@@ -738,12 +752,30 @@ export class EmployeesListComponent implements OnInit {
     this.router.navigate(['/tenant/users', id]);
   }
 
+  resetPassword(employee: Employee) {
+    // Use employee.id which is the user ID from the users table
+    const userId = employee.userId || employee.id;
+
+    console.log('Reset Password - Employee data:', {
+      id: employee.id,
+      userId: employee.userId,
+      selectedUserId: userId,
+      email: employee.email
+    });
+
+    this.resetPasswordModal.open({
+      userId: userId,
+      userName: `${employee.firstName} ${employee.lastName}`,
+      userEmail: employee.email
+    });
+  }
+
   suspendEmployee(id: number) {
     if (!confirm('Are you sure you want to suspend this employee?')) {
       return;
     }
 
-    this.http.patch(`http://localhost:3000/api/employees/${id}`, { employmentStatus: 'on_leave' }).subscribe({
+  this.http.patch(`/api/employees/${id}`, { employmentStatus: 'on_leave' }).subscribe({
       next: (response: any) => {
         if (response.success) {
           this.toastService.success('Employee suspended successfully');
@@ -764,7 +796,7 @@ export class EmployeesListComponent implements OnInit {
       return;
     }
 
-    this.http.delete(`http://localhost:3000/api/employees/${id}`).subscribe({
+  this.http.delete(`/api/employees/${id}`).subscribe({
       next: (response: any) => {
         if (response.success) {
           this.toastService.success('Employee deleted successfully');

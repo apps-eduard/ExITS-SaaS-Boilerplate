@@ -29,6 +29,51 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  // Employee profile fields
+  @IsString()
+  @IsOptional()
+  position?: string;
+
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @IsString()
+  @IsOptional()
+  employmentType?: string;
+
+  @IsString()
+  @IsOptional()
+  employmentStatus?: string;
+
+  @IsString()
+  @IsOptional()
+  hireDate?: string;
+
+  @IsString()
+  @IsOptional()
+  workPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  workEmail?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneExtension?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactName?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }
 
 export class UpdateUserDto {
@@ -51,4 +96,49 @@ export class UpdateUserDto {
   @IsNumber()
   @IsOptional()
   roleId?: number;
+
+  // Employee profile fields
+  @IsString()
+  @IsOptional()
+  position?: string;
+
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @IsString()
+  @IsOptional()
+  employmentType?: string;
+
+  @IsString()
+  @IsOptional()
+  employmentStatus?: string;
+
+  @IsString()
+  @IsOptional()
+  hireDate?: string;
+
+  @IsString()
+  @IsOptional()
+  workPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  workEmail?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneExtension?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactName?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }

@@ -164,7 +164,7 @@ export class UsersController {
 
     return {
       success: true,
-      message: 'Product access updated successfully',
+      message: 'Platform access updated successfully',
       data: result,
     };
   }
@@ -193,6 +193,32 @@ export class UsersController {
       success: true,
       message: 'User updated successfully',
       data: user,
+    };
+  }
+
+  @Put(':id/reset-password')
+  @Permissions('users:update', 'tenant-users:update')
+  async resetPassword(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { newPassword: string },
+  ) {
+    const requester = req.user;
+    const permissions: string[] = requester?.permissions || [];
+    const hasSystemAccess = permissions.includes('users:update');
+
+    const existing = await this.usersService.findOne(id);
+
+    if (!hasSystemAccess) {
+      if (!requester?.tenantId || requester.tenantId !== existing.tenantId) {
+        throw new ForbiddenException('Access to this user is not allowed');
+      }
+    }
+
+    await this.usersService.resetPassword(id, body.newPassword);
+    return {
+      success: true,
+      message: 'Password reset successfully',
     };
   }
 
