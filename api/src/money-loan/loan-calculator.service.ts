@@ -1,150 +1,368 @@
 import { Injectable } from '@nestjs/common';
 
-export interface LoanCalculationParams {
+export interface LoanParams {
   loanAmount: number;
-  termDays: number;
+  termMonths: number;
+  paymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   interestRate: number;
   interestType: 'flat' | 'reducing' | 'compound';
-  processingFeePercent?: number;
-  platformFee?: number;
+  processingFeePercentage: number;
+  platformFee: number;
+  latePenaltyPercentage?: number;
 }
 
-export interface LoanCalculationResult {
-  principalAmount: number;
+export interface LoanCalculation {
+  // Input values
+  loanAmount: number;
+  termMonths: number;
+  paymentFrequency: string;
+  
+  // Calculated values
   interestAmount: number;
-  processingFee: number;
+  processingFeeAmount: number;
   platformFee: number;
-  totalAmount: number;
-  totalRepayable: number;
   netProceeds: number;
-  outstandingBalance: number;
+  totalRepayable: number;
+  numPayments: number;
+  installmentAmount: number;
+  effectiveInterestRate: number;
+  
+  // Grace period info
+  gracePeriodDays: number;
+  
+  // Summary
+  totalDeductions: number;
+  monthlyEquivalent?: number;
+}
+
+export interface ScheduleItem {
+  paymentNumber: number;
+  dueDate: Date;
+  installmentAmount: number;
+  principal: number;
+  interest: number;
+  remainingBalance: number;
+  cumulativePaid: number;
+}
+
+export interface PenaltyCalculation {
+  installmentAmount: number;
+  daysLate: number;
+  gracePeriod: number;
+  effectiveLateDays: number;
+  penaltyRate: number;
+  penaltyAmount: number;
+  totalDue: number;
 }
 
 @Injectable()
 export class LoanCalculatorService {
+
   /**
-   * Calculate loan amounts based on interest type
+   * Main calculation method implementing all formulas from documentation
+   * THIS IS THE SINGLE SOURCE OF TRUTH FOR ALL LOAN CALCULATIONS
    */
-  calculate(params: LoanCalculationParams): LoanCalculationResult {
+  calculate(params: LoanParams): LoanCalculation {
     const {
       loanAmount,
-      termDays,
+      termMonths,
+      paymentFrequency,
       interestRate,
       interestType,
-      processingFeePercent = 0,
-      platformFee = 0,
+      processingFeePercentage,
+      platformFee,
     } = params;
 
-    // Calculate interest based on type
+    const normalizedTerm = Math.max(1, Math.round(termMonths));
+
+    // Calculate number of payments based on frequency
+    const numPayments = this.calculateNumPayments(normalizedTerm, paymentFrequency);
+
+    // Calculate interest based on type (interest rate assumed per month)
     let interestAmount: number;
     if (interestType === 'flat') {
-      interestAmount = this.calculateFlatInterest(loanAmount, interestRate, termDays);
+      interestAmount = this.calculateFlatInterest(loanAmount, interestRate, normalizedTerm);
     } else if (interestType === 'reducing') {
-      interestAmount = this.calculateReducingInterest(loanAmount, interestRate, termDays);
-    } else if (interestType === 'compound') {
-      interestAmount = this.calculateCompoundInterest(loanAmount, interestRate, termDays);
+      interestAmount = this.calculateReducingInterest(
+        loanAmount,
+        interestRate,
+        normalizedTerm,
+        numPayments,
+        paymentFrequency
+      );
     } else {
-      // Default to flat if unknown type
-      interestAmount = this.calculateFlatInterest(loanAmount, interestRate, termDays);
+      interestAmount = this.calculateCompoundInterest(loanAmount, interestRate, normalizedTerm);
     }
 
-    // Processing fee (percentage of principal)
-    const processingFee = loanAmount * (processingFeePercent / 100);
+    // Processing fee calculation (percent of principal, collected upfront)
+    const processingFeeAmount = loanAmount * (processingFeePercentage / 100);
 
-    // Total amount = principal + interest
-    const totalAmount = loanAmount + interestAmount;
+    // Platform fee is charged per month of the term
+    const platformFeeTotal = platformFee * normalizedTerm;
 
-    // Total repayable = principal + interest + platform fees
-    const totalRepayable = totalAmount + platformFee;
+    // Total repayable = principal + earned interest + total platform fees
+    const totalRepayable = loanAmount + interestAmount + platformFeeTotal;
 
-    // Net proceeds = what borrower receives (principal - upfront fees)
-    const netProceeds = loanAmount - processingFee - platformFee;
+    // Net proceeds = what borrower actually receives after upfront fees
+    const netProceeds = loanAmount - processingFeeAmount - platformFeeTotal;
 
-    // Outstanding balance starts at total amount
-    const outstandingBalance = totalAmount;
+    // Installment amount (guard against divide-by-zero)
+    const installmentAmount = numPayments > 0 ? totalRepayable / numPayments : 0;
+
+    // Effective interest rate (APR approximation)
+    const effectiveInterestRate = this.calculateEffectiveRate(
+      netProceeds,
+      totalRepayable,
+      normalizedTerm
+    );
+
+    // Grace period based on frequency
+    const gracePeriodDays = this.getGracePeriod(paymentFrequency);
+
+    // Total deductions (upfront only)
+    const totalDeductions = processingFeeAmount + platformFeeTotal;
+
+    // Monthly equivalent (for comparison)
+    const monthlyEquivalent = paymentFrequency === 'monthly'
+      ? installmentAmount
+      : this.convertToMonthlyEquivalent(installmentAmount, paymentFrequency);
 
     return {
-      principalAmount: loanAmount,
-      interestAmount: Math.round(interestAmount * 100) / 100, // Round to 2 decimals
-      processingFee: Math.round(processingFee * 100) / 100,
-      platformFee,
-      totalAmount: Math.round(totalAmount * 100) / 100,
-      totalRepayable: Math.round(totalRepayable * 100) / 100,
-      netProceeds: Math.round(netProceeds * 100) / 100,
-      outstandingBalance: Math.round(outstandingBalance * 100) / 100,
+      loanAmount,
+      termMonths: normalizedTerm,
+      paymentFrequency,
+      interestAmount,
+      processingFeeAmount,
+      platformFee: platformFeeTotal,
+      netProceeds,
+      totalRepayable,
+      numPayments,
+      installmentAmount,
+      effectiveInterestRate,
+      gracePeriodDays,
+      totalDeductions,
+      monthlyEquivalent
     };
   }
 
   /**
-   * Flat interest: Simple interest calculated once on principal
-   * Formula: Principal × Rate × (Days / 365) / 100
+   * Calculate number of payments based on term and frequency
    */
-  private calculateFlatInterest(
-    principal: number,
-    ratePercent: number,
-    termDays: number,
-  ): number {
-    return (principal * ratePercent * termDays) / (365 * 100);
+  private calculateNumPayments(termMonths: number, frequency: string): number {
+    const roundedTerm = Math.max(0, Math.round(termMonths));
+    const termDays = roundedTerm * 30;
+
+    switch (frequency) {
+      case 'daily':
+        return termDays;
+      case 'weekly':
+        return roundedTerm * 4;
+      case 'biweekly':
+        return Math.ceil(termDays / 14);
+      case 'monthly':
+        return roundedTerm;
+      default:
+        return roundedTerm * 4;
+    }
   }
 
   /**
-   * Reducing balance: Interest calculated on remaining balance
-   * Simplified version using average balance method
+   * Flat interest: calculated once on principal
+   */
+  private calculateFlatInterest(principal: number, ratePercent: number, termMonths: number): number {
+    return principal * (ratePercent / 100) * termMonths;
+  }
+
+  /**
+   * Reducing balance: interest calculated on remaining balance
    */
   private calculateReducingInterest(
     principal: number,
     ratePercent: number,
-    termDays: number,
-  ): number {
-    // Average balance = (Principal + 0) / 2
-    const averageBalance = principal / 2;
-    return (averageBalance * ratePercent * termDays) / (365 * 100);
-  }
-
-  /**
-   * Compound interest: Interest on interest
-   * Formula: Principal × ((1 + Rate)^(Days/365) - 1)
-   */
-  private calculateCompoundInterest(
-    principal: number,
-    ratePercent: number,
-    termDays: number,
-  ): number {
-    const rate = ratePercent / 100;
-    const years = termDays / 365;
-    const compounded = principal * (Math.pow(1 + rate, years) - 1);
-    return compounded;
-  }
-
-  /**
-   * Calculate monthly payment for amortized loans
-   */
-  calculateMonthlyPayment(
-    principal: number,
-    annualRate: number,
     termMonths: number,
+    numPayments: number,
+    frequency: string
   ): number {
-    const monthlyRate = annualRate / 100 / 12;
-    if (monthlyRate === 0) return principal / termMonths;
+    if (numPayments === 0) return 0;
 
-    const payment =
-      principal *
-      (monthlyRate / (1 - Math.pow(1 + monthlyRate, -termMonths)));
-    return Math.round(payment * 100) / 100;
+    const paymentsPerMonth = this.getPaymentsPerMonth(frequency);
+    const periodicRate = paymentsPerMonth > 0 ? (ratePercent / 100) / paymentsPerMonth : 0;
+
+    if (periodicRate === 0) {
+      return principal * (ratePercent / 100) * termMonths;
+    }
+
+    const payment = principal * (periodicRate / (1 - Math.pow(1 + periodicRate, -numPayments)));
+    const totalPaid = payment * numPayments;
+    return totalPaid - principal;
   }
 
   /**
-   * Calculate late payment penalty
+   * Compound interest: interest on interest
+   */
+  private calculateCompoundInterest(principal: number, ratePercent: number, termMonths: number): number {
+    const monthlyRate = ratePercent / 100;
+    const compounded = principal * Math.pow(1 + monthlyRate, termMonths);
+    return compounded - principal;
+  }
+
+  /**
+   * Calculate effective interest rate (APR)
+   */
+  private calculateEffectiveRate(netProceeds: number, totalRepayable: number, termMonths: number): number {
+    if (netProceeds === 0) return 0;
+    const totalInterest = totalRepayable - netProceeds;
+    const rate = (totalInterest / netProceeds) * (12 / termMonths) * 100;
+    return Math.round(rate * 100) / 100; // Round to 2 decimals
+  }
+
+  /**
+   * Get grace period based on payment frequency
+   */
+  getGracePeriod(frequency: string): number {
+    const gracePeriods = {
+      daily: 0,
+      weekly: 1,
+      monthly: 3
+    };
+    return gracePeriods[frequency as keyof typeof gracePeriods] || 0;
+  }
+
+  /**
+   * Convert installment to monthly equivalent
+   */
+  private convertToMonthlyEquivalent(installment: number, frequency: string): number {
+    const multiplier = this.getPaymentsPerMonth(frequency);
+    return installment * (multiplier || 1);
+  }
+
+  /**
+   * Generate repayment schedule
+   */
+  generateSchedule(calculation: LoanCalculation, startDate: Date): ScheduleItem[] {
+    const schedule: ScheduleItem[] = [];
+    let remainingBalance = calculation.totalRepayable;
+    let cumulativePaid = 0;
+
+    // Calculate days between payments
+    const daysBetweenPayments = this.getDaysBetweenPayments(calculation.paymentFrequency);
+
+    for (let i = 1; i <= calculation.numPayments; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (i * daysBetweenPayments));
+
+      const installment = calculation.installmentAmount;
+      const principalPortion = calculation.numPayments > 0
+        ? calculation.loanAmount / calculation.numPayments
+        : 0;
+      const interestPortion = Math.max(0, installment - principalPortion);
+
+      remainingBalance -= principalPortion;
+      cumulativePaid += installment;
+
+      schedule.push({
+        paymentNumber: i,
+        dueDate,
+        installmentAmount: installment,
+        principal: principalPortion,
+        interest: interestPortion,
+        remainingBalance: Math.max(0, remainingBalance),
+        cumulativePaid
+      });
+    }
+
+    return schedule;
+  }
+
+  /**
+   * Get days between payments based on frequency
+   */
+  private getDaysBetweenPayments(frequency: string): number {
+    const days = {
+      daily: 1,
+      weekly: 7,
+      monthly: 30
+    };
+    return days[frequency as keyof typeof days] || 30;
+  }
+
+  private getPaymentsPerMonth(frequency: string): number {
+    switch (frequency) {
+      case 'daily':
+        return 30;
+      case 'weekly':
+        return 4;
+      case 'biweekly':
+        return 2;
+      case 'monthly':
+        return 1;
+      default:
+        return 4;
+    }
+  }
+
+  /**
+   * Calculate penalty for late payment
    */
   calculatePenalty(
     installmentAmount: number,
-    daysLate: number,
-    penaltyRatePercent: number,
-    gracePeriodDays: number = 0,
-  ): number {
-    const effectiveDaysLate = Math.max(0, daysLate - gracePeriodDays);
-    const penalty =
-      installmentAmount * (penaltyRatePercent / 100) * effectiveDaysLate;
-    return Math.round(penalty * 100) / 100;
+    dueDate: Date,
+    paymentDate: Date,
+    frequency: string,
+    penaltyRate: number
+  ): PenaltyCalculation {
+    const gracePeriod = this.getGracePeriod(frequency);
+    
+    // Calculate days late
+    const diffTime = paymentDate.getTime() - dueDate.getTime();
+    const daysLate = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Effective late days after grace period
+    const effectiveLateDays = Math.max(0, daysLate - gracePeriod);
+
+    // Penalty calculation: Installment × PenaltyRate% × EffectiveLateDays
+    const penaltyAmount = installmentAmount * (penaltyRate / 100) * effectiveLateDays;
+
+    // Total due = installment + penalty
+    const totalDue = installmentAmount + penaltyAmount;
+
+    return {
+      installmentAmount,
+      daysLate,
+      gracePeriod,
+      effectiveLateDays,
+      penaltyRate,
+      penaltyAmount,
+      totalDue
+    };
+  }
+
+  /**
+   * Calculate early payment settlement amount
+   */
+  calculateEarlySettlement(
+    calculation: LoanCalculation,
+    paymentsMade: number,
+  ): {
+    remainingPrincipal: number;
+    interestRebate: number;
+    totalDue: number;
+    savedInterest: number;
+  } {
+    const paymentsRemaining = calculation.numPayments - paymentsMade;
+    const remainingPrincipal = calculation.installmentAmount * paymentsRemaining;
+
+    // Interest rebate for unused term (pro-rated)
+    const interestRebate = (calculation.interestAmount / calculation.numPayments) * paymentsRemaining;
+
+    // Total due for early settlement
+    const totalDue = remainingPrincipal - interestRebate;
+
+    return {
+      remainingPrincipal,
+      interestRebate,
+      totalDue,
+      savedInterest: interestRebate
+    };
   }
 }

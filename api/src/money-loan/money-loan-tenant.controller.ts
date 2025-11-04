@@ -18,7 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { MoneyLoanService } from './money-loan.service';
-import { DisburseLoanDto, CreateLoanProductDto, UpdateLoanProductDto } from './dto/money-loan.dto';
+import { DisburseLoanDto, CreateLoanProductDto, UpdateLoanProductDto, CreateLoanApplicationDto } from './dto/money-loan.dto';
 
 const productBodyValidationPipe = new ValidationPipe({
   whitelist: true,
@@ -272,6 +272,39 @@ export class MoneyLoanTenantController {
       success: true,
       data: result.data,
       pagination: result.pagination,
+    };
+  }
+
+  @Post('loans/applications')
+  async createLoanApplication(
+    @Param('tenantId') tenantIdParam: string,
+    @Body() createDto: CreateLoanApplicationDto,
+    @Req() req: any,
+  ) {
+    const tenantId = this.ensureTenantAccess(req, this.parseTenantId(tenantIdParam));
+    
+    // Check if customer already has a pending application for THIS SPECIFIC product
+    // Products remain disabled through submitted AND approved states, only re-enable after disbursed/rejected
+    const pendingApplications = await this.moneyLoanService.getApplications(tenantId, {
+      customerId: createDto.customerId,
+      productId: createDto.loanProductId,
+      status: 'submitted,approved',
+      limit: 1,
+    });
+
+    if (pendingApplications.data && pendingApplications.data.length > 0) {
+      const app = pendingApplications.data[0];
+      const statusMessage = app.status === 'approved' 
+        ? 'Your application for this loan product has been approved and is awaiting disbursement.'
+        : 'You already have a pending application for this loan product. Please wait for it to be processed.';
+      throw new BadRequestException(statusMessage);
+    }
+
+    const application = await this.moneyLoanService.createApplication(tenantId, createDto);
+    return {
+      success: true,
+      message: 'Loan application submitted successfully',
+      data: application,
     };
   }
 }

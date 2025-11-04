@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -18,11 +18,6 @@ import {
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
-  cashOutline,
-  calendarOutline,
-  trendingUpOutline,
-  informationCircleOutline,
-  checkmarkCircleOutline,
   moonOutline,
   sunnyOutline,
   cardOutline
@@ -43,10 +38,12 @@ interface LoanProduct {
   maxTerm: number;  // Now stores days, not months
   processingFee: number;
   platformFee?: number;
+  paymentFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   requirements: string[];
   features: string[];
   loanTermType?: string;  // 'fixed' or 'flexible' (lowercase from DB)
   fixedTermDays?: number;
+  interestType?: string;
 }
 
 @Component({
@@ -69,26 +66,20 @@ interface LoanProduct {
       <ion-toolbar class="custom-toolbar">
         <div class="toolbar-content">
           <div class="toolbar-left">
-            <ion-button (click)="goBack()" class="icon-btn" fill="clear">
-              <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+            <ion-button (click)="goBack()" class="icon-btn back-btn" fill="clear" title="Go Back">
+              <span class="back-emoji">◄</span>
             </ion-button>
           </div>
           
           <div class="toolbar-center">
-            <ion-icon name="card-outline" class="title-icon"></ion-icon>
-            <span class="title-text">Products</span>
+            <span class="app-emoji">💳</span>
+            <span class="app-title">Apply for Loan</span>
           </div>
           
           <div class="toolbar-right">
-            <!-- Dev Info (Development Only) -->
             <app-dev-info />
-            
             <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <ion-icon 
-                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-                slot="icon-only"
-                class="theme-icon"
-              ></ion-icon>
+              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
             </ion-button>
           </div>
         </div>
@@ -137,94 +128,89 @@ interface LoanProduct {
           <div class="products-list">
             @for (product of products(); track product.id) {
               <div class="product-card">
-                <!-- Product Header -->
-                <div class="product-header">
-                  <div class="product-icon-wrapper">
-                    <ion-icon name="cash-outline" class="product-icon"></ion-icon>
+                <div class="product-headline">
+                  <div class="headline-main">
+                    <span class="product-emoji">💼</span>
+                    <div class="product-title-section">
+                      <h3 class="product-name">{{ product.name }}</h3>
+                      <p class="product-description">{{ product.description }}</p>
+                    </div>
                   </div>
-                  <div class="product-title-section">
-                    <h3 class="product-name">{{ product.name }}</h3>
-                    <p class="product-description">{{ product.description }}</p>
-                  </div>
+                  <span class="product-type-chip">
+                    {{ product.loanTermType === 'fixed' ? 'Fixed Term' : 'Flexible Term' }}
+                  </span>
                 </div>
 
-                <!-- Product Details -->
-                <div class="product-details">
-                  <!-- Amount Range -->
-                  <div class="detail-row">
-                    <div class="detail-item">
-                      <ion-icon name="cash-outline" class="detail-icon"></ion-icon>
-                      <div class="detail-content">
-                        <p class="detail-label">Loan Amount</p>
-                        <p class="detail-value">₱{{ formatCurrency(product.minAmount) }} - ₱{{ formatCurrency(product.maxAmount) }}</p>
-                      </div>
-                    </div>
+                <div class="product-highlights">
+                  <div class="highlight-chip">
+                    <span class="chip-emoji">💰</span>
+                    <span class="chip-text">₱{{ formatCurrency(product.minAmount) }} - ₱{{ formatCurrency(product.maxAmount) }}</span>
                   </div>
-
-                  <!-- Interest Rate & Term -->
-                  <div class="detail-row">
-                    <div class="detail-item">
-                      <ion-icon name="trending-up-outline" class="detail-icon"></ion-icon>
-                      <div class="detail-content">
-                        <p class="detail-label">Interest Rate</p>
-                        <p class="detail-value">{{ product.interestRate }}% per month</p>
-                      </div>
-                    </div>
-                    <div class="detail-item">
-                      <ion-icon name="calendar-outline" class="detail-icon"></ion-icon>
-                      <div class="detail-content">
-                        <p class="detail-label">Loan Term</p>
-                        <p class="detail-value">
-                          @if (product.loanTermType === 'fixed') {
-                            <span class="fixed-term-badge">
-                              🔒 {{ Math.round((product.fixedTermDays || 90) / 30) }}mo
-                            </span>
-                          } @else {
-                            {{ Math.round(product.minTerm / 30) }}-{{ Math.round(product.maxTerm / 30) }} Months
-                          }
-                        </p>
-                      </div>
-                    </div>
+                  <div class="highlight-chip">
+                    <span class="chip-emoji">📈</span>
+                    <span class="chip-text">{{ product.interestRate }}% monthly</span>
                   </div>
-
-                  <!-- Processing Fee -->
-                  @if (product.processingFee > 0) {
-                    <div class="processing-fee-badge">
-                      <ion-icon name="information-circle-outline"></ion-icon>
-                      <span>Processing Fee: {{ product.processingFee }}%</span>
-                    </div>
-                  }
-
-                  <!-- Platform Fee -->
-                  @if (product.platformFee && product.platformFee > 0) {
-                    <div class="platform-fee-badge">
-                      <ion-icon name="business-outline"></ion-icon>
-                      <span>₱{{ formatCurrency(product.platformFee) }}/mo <span class="fee-note">Only while loan is active</span></span>
-                    </div>
-                  }
-
-                  <!-- Features -->
-                  @if (product.features && product.features.length > 0) {
-                    <div class="features-section">
-                      <p class="features-title">Key Features</p>
-                      <div class="features-list">
-                        @for (feature of product.features.slice(0, 3); track feature) {
-                          <div class="feature-item">
-                            <ion-icon name="checkmark-circle-outline" class="feature-icon"></ion-icon>
-                            <span class="feature-text">{{ feature }}</span>
-                          </div>
-                        }
-                      </div>
+                  <div class="highlight-chip">
+                    <span class="chip-emoji">🕒</span>
+                    <span class="chip-text">
+                      @if (product.loanTermType === 'fixed') {
+                        {{ Math.round((product.fixedTermDays || 90) / 30) }} month term
+                      } @else {
+                        {{ Math.round(product.minTerm / 30) }}-{{ Math.round(product.maxTerm / 30) }} months
+                      }
+                    </span>
+                  </div>
+                  @if (product.paymentFrequency) {
+                    <div class="highlight-chip">
+                      <span class="chip-emoji">📅</span>
+                      <span class="chip-text">{{ formatFrequency(product.paymentFrequency) }} payments</span>
                     </div>
                   }
                 </div>
 
-                <!-- Apply Button -->
+                @if (product.processingFee > 0 || (product.platformFee && product.platformFee > 0)) {
+                  <div class="product-meta">
+                    @if (product.processingFee > 0) {
+                      <div class="meta-item">
+                        <span class="meta-emoji">⚙️</span>
+                        <span class="meta-text">Processing fee {{ product.processingFee }}%</span>
+                      </div>
+                    }
+                    @if (product.platformFee && product.platformFee > 0) {
+                      <div class="meta-item">
+                        <span class="meta-emoji">🛡️</span>
+                        <span class="meta-text">Platform fee ₱{{ formatCurrency(product.platformFee) }}/mo</span>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (product.features && product.features.length > 0) {
+                  <div class="features-section">
+                    <p class="features-title">Highlights</p>
+                    <ul class="features-list">
+                      @for (feature of product.features.slice(0, 3); track feature) {
+                        <li class="feature-item">
+                          <span class="feature-bullet">✅</span>
+                          <span class="feature-text">{{ feature }}</span>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+
                 <div class="product-footer">
-                  <button class="apply-btn" (click)="applyForProduct(product)">
-                    <span>Apply Now</span>
-                    <ion-icon name="arrow-forward-outline" class="btn-icon"></ion-icon>
-                  </button>
+                  @if (isProductPending(product.id)) {
+                    <button class="apply-btn disabled" disabled>
+                      <span>{{ getApplicationStatus(product.id) }}</span>
+                      <span class="btn-emoji">⏳</span>
+                    </button>
+                  } @else {
+                    <button class="apply-btn" (click)="applyForProduct(product)">
+                      <span>Apply Now</span>
+                      <span class="btn-emoji">🚀</span>
+                    </button>
+                  }
                 </div>
               </div>
             }
@@ -236,10 +222,10 @@ interface LoanProduct {
   styles: [`
     /* ===== HEADER STYLES ===== */
     .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea, #764ba2);
+      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       --color: white;
       --border-style: none;
-      --min-height: 60px;
+      --min-height: 64px;
       --padding-top: 0;
       --padding-bottom: 0;
       --padding-start: 0;
@@ -250,55 +236,38 @@ interface LoanProduct {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
+      padding: 0 1rem;
       width: 100%;
-      height: 60px;
-      color: white;
+      height: 64px;
     }
 
     .toolbar-left,
     .toolbar-right {
       display: flex;
       align-items: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .toolbar-left {
-      justify-content: flex-start;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
+      gap: 0.25rem;
+      flex: 0 0 auto;
     }
 
     .toolbar-center {
       display: flex;
       align-items: center;
+      gap: 0.5rem;
+      flex: 1;
       justify-content: center;
-      gap: 8px;
-      flex: 0 0 auto;
     }
 
-    .info-text {
-      font-size: 13px;
-      font-weight: 600;
-      opacity: 0.95;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .app-emoji {
+      font-size: 1.75rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
 
-    .title-icon {
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-
-    .title-text {
-      font-size: 18px;
+    .app-title {
+      font-size: 1.125rem;
       font-weight: 700;
-      white-space: nowrap;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
     }
 
     .icon-btn {
@@ -309,13 +278,29 @@ interface LoanProduct {
       width: 40px;
     }
 
-    .icon-btn ion-icon {
-      font-size: 22px;
+    .back-emoji,
+    .theme-emoji {
+      font-size: 1.5rem;
+      display: inline-flex;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+
+    .back-emoji {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .back-btn {
+      --color: rgba(255, 255, 255, 0.95);
+    }
+
+    .back-btn:hover .back-emoji {
+      filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.6));
     }
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      --background: var(--ion-background-color);
+      --background: linear-gradient(180deg, rgba(236, 233, 252, 0.85) 0%, rgba(255, 255, 255, 0.95) 45%, var(--ion-background-color) 100%);
     }
 
     .products-container {
@@ -338,12 +323,49 @@ interface LoanProduct {
     }
 
     .page-subtitle {
-      font-size: 0.9375rem;
+      font-size: 0.95rem;
       color: var(--ion-color-medium);
       margin: 0;
     }
 
-    /* ===== LOADING STATES ===== */
+    /* ===== PENDING BANNER ===== */
+    .pending-banner {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+    }
+
+    .banner-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .banner-content {
+      flex: 1;
+    }
+
+    .banner-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem 0;
+      color: white;
+    }
+
+    .banner-text {
+      font-size: 0.85rem;
+      margin: 0;
+      opacity: 0.95;
+      line-height: 1.4;
+    }
+
+    /* ===== LOADING STATE ===== */
     .products-loading {
       display: flex;
       flex-direction: column;
@@ -417,44 +439,47 @@ interface LoanProduct {
     .products-list {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem; /* Reduced from 1.25rem */
+      gap: 0.85rem;
     }
 
     .product-card {
       background: var(--ion-card-background);
       border: 1px solid var(--ion-border-color, #e5e7eb);
-      border-radius: 12px; /* Reduced from 18px */
-      padding: 1rem; /* Reduced from 1.5rem */
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); /* Lighter shadow */
+      border-radius: 14px;
+      padding: 1.05rem;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
       transition: all 0.3s ease;
     }
 
     .product-card:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Lighter hover shadow */
-      transform: translateY(-1px); /* Less movement */
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+      transform: translateY(-2px);
     }
 
-    /* ===== PRODUCT HEADER ===== */
-    .product-header {
+    .product-headline {
       display: flex;
-      gap: 0.75rem; /* Reduced from 1rem */
-      margin-bottom: 1rem; /* Reduced from 1.25rem */
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
 
-    .product-icon-wrapper {
-      width: 44px; /* Reduced from 56px */
-      height: 44px; /* Reduced from 56px */
-      border-radius: 10px; /* Reduced from 14px */
-      background: linear-gradient(135deg, #667eea, #764ba2);
+    .headline-main {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 0;
     }
 
-    .product-icon {
-      font-size: 1.5rem; /* Reduced from 2rem */
-      color: white;
+    .product-emoji {
+      font-size: 2rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(102, 126, 234, 0.12);
     }
 
     .product-title-section {
@@ -463,197 +488,165 @@ interface LoanProduct {
     }
 
     .product-name {
-      font-size: 1.0625rem; /* Reduced from 1.25rem */
+      margin: 0 0 0.2rem 0;
+      font-size: 1.05rem;
       font-weight: 700;
       color: var(--ion-text-color);
-      margin: 0 0 0.25rem 0; /* Reduced bottom margin */
     }
 
     .product-description {
-      font-size: 0.8125rem; /* Reduced from 0.875rem */
-      color: var(--ion-color-medium);
       margin: 0;
-      line-height: 1.4; /* Tighter line height */
-    }
-
-    /* ===== PRODUCT DETAILS ===== */
-    .product-details {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem; /* Reduced from 1rem */
-    }
-
-    .detail-row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.75rem; /* Reduced from 1rem */
-    }
-
-    .detail-row:has(.detail-item:nth-child(2)) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .detail-item {
-      display: flex;
-      gap: 0.5rem; /* Reduced from 0.75rem */
-      align-items: flex-start;
-    }
-
-    .detail-icon {
-      font-size: 1.125rem; /* Reduced from 1.25rem */
-      color: #667eea;
-      flex-shrink: 0;
-      margin-top: 0.125rem;
-    }
-
-    .detail-content {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .detail-label {
-      font-size: 0.6875rem; /* Reduced from 0.75rem */
+      font-size: 0.82rem;
       color: var(--ion-color-medium);
-      margin: 0 0 0.1875rem 0; /* Reduced bottom margin */
-      font-weight: 500;
+      line-height: 1.4;
     }
 
-    .detail-value {
-      font-size: 0.875rem; /* Reduced from 0.9375rem */
+    .product-type-chip {
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(102, 126, 234, 0.12);
+      color: rgba(67, 56, 202, 0.85);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .product-highlights {
+      margin-top: 0.9rem;
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .highlight-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.6rem;
+      border-radius: 12px;
+      background: rgba(148, 163, 184, 0.12);
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--ion-text-color);
-      margin: 0;
-      
-      .fixed-term-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.2rem 0.4rem; /* Slightly reduced */
-        background: rgba(139, 92, 246, 0.1);
-        color: #8b5cf6;
-        border-radius: 4px; /* Reduced from 6px */
-        font-size: 0.875rem;
-        font-weight: 600;
-      }
     }
 
-    /* ===== PROCESSING FEE ===== */
-    .processing-fee-badge {
+    .chip-emoji {
+      font-size: 1rem;
+    }
+
+    .chip-text {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-meta {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .meta-item {
       display: flex;
       align-items: center;
-      gap: 0.375rem; /* Reduced from 0.5rem */
-      padding: 0.5rem; /* Reduced from 0.75rem */
-      background: rgba(102, 126, 234, 0.1);
-      border-radius: 8px; /* Reduced from 10px */
-      font-size: 0.8125rem; /* Reduced from 0.875rem */
-      color: #667eea;
-      font-weight: 600;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.75);
     }
 
-    .processing-fee-badge ion-icon {
-      font-size: 1rem; /* Reduced from 1.125rem */
+    .meta-emoji {
+      font-size: 1rem;
     }
 
-    /* ===== PLATFORM FEE ===== */
-    .platform-fee-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.375rem; /* Reduced from 0.5rem */
-      padding: 0.5rem; /* Reduced from 0.75rem */
-      background: rgba(16, 185, 129, 0.1);
-      border-radius: 8px; /* Reduced from 10px */
-      font-size: 0.8125rem; /* Reduced from 0.875rem */
-      color: #10b981;
-      font-weight: 600;
-      margin-top: 0.375rem; /* Reduced from 0.5rem */
-      
-      .fee-note {
-        font-size: 0.6875rem; /* Reduced from 0.75rem */
-        opacity: 0.8;
-        font-weight: 400;
-      }
-    }
-
-    .platform-fee-badge ion-icon {
-      font-size: 1rem; /* Reduced from 1.125rem */
-    }
-
-    /* ===== FEATURES SECTION ===== */
     .features-section {
-      margin-top: 0.5rem;
+      margin-top: 0.85rem;
     }
 
     .features-title {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--ion-text-color);
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.45rem 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.65);
     }
 
     .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.375rem;
+      gap: 0.35rem;
     }
 
     .feature-item {
       display: flex;
-      align-items: center;
-      gap: 0.375rem;
+      align-items: flex-start;
+      gap: 0.35rem;
     }
 
-    .feature-icon {
-      font-size: 1rem;
-      color: #10b981;
-      flex-shrink: 0;
+    .feature-bullet {
+      font-size: 0.9rem;
+      line-height: 1.2;
     }
 
     .feature-text {
-      font-size: 0.8125rem;
+      font-size: 0.8rem;
       color: var(--ion-text-color);
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
-    /* ===== PRODUCT FOOTER ===== */
     .product-footer {
-      margin-top: 1.25rem;
-      padding-top: 1.25rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
       border-top: 1px solid var(--ion-border-color, #e5e7eb);
     }
 
     .apply-btn {
       width: 100%;
-      height: 48px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      height: 46px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
       color: white;
       border: none;
       border-radius: 12px;
-      font-size: 1rem;
+      font-size: 0.96rem;
       font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .apply-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 10px 24px rgba(99, 102, 241, 0.35);
     }
 
     .apply-btn:active {
       transform: translateY(0);
     }
 
-    .btn-icon {
-      font-size: 1.25rem;
-      transition: transform 0.3s ease;
+    .apply-btn.disabled {
+      background: linear-gradient(135deg, #9ca3af, #6b7280);
+      cursor: not-allowed;
+      opacity: 0.7;
     }
 
-    .apply-btn:hover .btn-icon {
-      transform: translateX(4px);
+    .apply-btn.disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-emoji {
+      font-size: 1.1rem;
     }
 
     /* ===== DARK MODE ===== */
@@ -670,47 +663,51 @@ interface LoanProduct {
       background: rgba(255, 255, 255, 0.1);
     }
 
-    body.dark .processing-fee-badge,
-    .dark .processing-fee-badge {
-      background: rgba(102, 126, 234, 0.2);
+    body.dark .product-type-chip,
+    .dark .product-type-chip {
+      background: rgba(99, 102, 241, 0.22);
+      color: rgba(196, 181, 253, 0.95);
     }
-    
-    body.dark .platform-fee-badge,
-    .dark .platform-fee-badge {
-      background: rgba(16, 185, 129, 0.2);
+
+    body.dark .highlight-chip,
+    .dark .highlight-chip {
+      background: rgba(148, 163, 184, 0.18);
+    }
+
+    body.dark .meta-item,
+    .dark .meta-item {
+      color: rgba(226, 232, 240, 0.75);
+    }
+
+    body.dark .features-title,
+    .dark .features-title {
+      color: rgba(226, 232, 240, 0.65);
     }
 
     body.dark .product-footer,
     .dark .product-footer {
-      border-top-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    body.dark .fixed-term-badge,
-    .dark .fixed-term-badge {
-      background: rgba(139, 92, 246, 0.3) !important;
-      color: #c4b5fd !important;
+      border-top-color: rgba(255, 255, 255, 0.12);
     }
   `]
 })
 export class ApplyLoanPage implements OnInit {
   loading = signal(false);
   products = signal<LoanProduct[]>([]);
+  hasPendingApplication = signal(false);
+  pendingProductIds = signal<number[]>([]);
+  pendingApplicationsMap = signal<Map<number, any>>(new Map()); // Store full application details
   Math = Math; // Expose Math to template
 
   constructor(
     private apiService: ApiService,
     public authService: AuthService,
     private router: Router,
+    private location: Location,
     public themeService: ThemeService,
     private toastController: ToastController
   ) {
     addIcons({
       arrowBackOutline,
-      cashOutline,
-      calendarOutline,
-      trendingUpOutline,
-      informationCircleOutline,
-      checkmarkCircleOutline,
       moonOutline,
       sunnyOutline,
       cardOutline
@@ -719,6 +716,13 @@ export class ApplyLoanPage implements OnInit {
 
   ngOnInit() {
     this.loadLoanProducts();
+    this.checkPendingApplications();
+  }
+
+  ionViewWillEnter() {
+    // Re-check pending applications when returning to this page
+    console.log('🔄 ionViewWillEnter - Re-checking pending applications');
+    this.checkPendingApplications();
   }
 
   toggleTheme() {
@@ -744,23 +748,26 @@ export class ApplyLoanPage implements OnInit {
           console.log('🔍 Mapping product:', product);
           
           const mapped = {
-            id: product.id,
+            id: Number(product.id),  // Ensure ID is a number
             name: product.name || 'Loan Product',
             description: product.description || '',
-            minAmount: product.minAmount || 0,
-            maxAmount: product.maxAmount || 0,
-            interestRate: product.interestRate || 0,
-            minTerm: product.minTermDays || 30,  // Store as days, convert in template
-            maxTerm: product.maxTermDays || 360, // Store as days, convert in template
-            processingFee: product.processingFeePercent || 0,
-            platformFee: product.platformFee || 0,
+            minAmount: Number(product.minAmount) || 0,
+            maxAmount: Number(product.maxAmount) || 0,
+            interestRate: Number(product.interestRate) || 0,
+            minTerm: Number(product.minTermDays) || 30,  // Store as days, convert in template
+            maxTerm: Number(product.maxTermDays) || 360, // Store as days, convert in template
+            processingFee: Number(product.processingFeePercent) || 0,
+            platformFee: Number(product.platformFee) || 0,
+            paymentFrequency: product.paymentFrequency || 'monthly',
             requirements: product.requirements || [],
             features: product.features || [],
             loanTermType: product.loanTermType || 'flexible',
-            fixedTermDays: product.fixedTermDays || 90
+            fixedTermDays: Number(product.fixedTermDays) || 90,
+            interestType: this.normalizeInterestType(product)
           };
           
           console.log('✅ Mapped product:', mapped);
+          console.log('🔍 Product ID type:', typeof mapped.id, 'Value:', mapped.id);
           return mapped;
         });
         this.products.set(mappedProducts);
@@ -784,19 +791,147 @@ export class ApplyLoanPage implements OnInit {
     return amount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
+  formatFrequency(frequency: string): string {
+    const freqMap: { [key: string]: string } = {
+      'daily': 'Daily',
+      'weekly': 'Weekly',
+      'biweekly': 'Bi-Weekly',
+      'monthly': 'Monthly'
+    };
+    return freqMap[frequency] || frequency;
+  }
+
   async applyForProduct(product: LoanProduct) {
+    // Check if this specific product has a pending application
+    if (this.isProductPending(product.id)) {
+      const toast = await this.toastController.create({
+        message: 'You already have a pending application for this product. Please wait for it to be processed.',
+        duration: 4000,
+        position: 'bottom',
+        color: 'warning'
+      });
+      await toast.present();
+      return;
+    }
+
     // Navigate to loan application form with product data passed via state
     this.router.navigate(['/customer/apply-loan/form'], { 
       state: { product: product }
     });
   }
 
+  isProductPending(productId: number): boolean {
+    const pending = this.pendingProductIds();
+    const isPending = pending.includes(Number(productId));
+    console.log(`🔍 isProductPending(${productId}) - Pending IDs:`, pending, '- Result:', isPending);
+    return isPending;
+  }
+
+  getApplicationStatus(productId: number): string {
+    const app = this.pendingApplicationsMap().get(Number(productId));
+    if (!app) return '';
+    
+    const status = app.status || '';
+    switch(status.toLowerCase()) {
+      case 'submitted':
+        return 'Pending Approval';
+      case 'approved':
+        return 'Approved - Awaiting Disbursement';
+      case 'pending':
+        return 'Pending Approval';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  }
+
+  async checkPendingApplications() {
+    try {
+      const user = this.authService.currentUser();
+      const tenantId = user?.tenant?.id;
+      
+      // Get customer ID from the stored customer object
+      const customerStr = localStorage.getItem('customer');
+      let customerId = 0;
+      if (customerStr) {
+        try {
+          const customer = JSON.parse(customerStr);
+          customerId = customer.id || 0;
+        } catch (e) {
+          console.error('Error parsing customer data:', e);
+        }
+      }
+
+      console.log('🔍 Checking pending - tenantId:', tenantId, 'customerId:', customerId);
+
+      if (!tenantId || !customerId) {
+        console.warn('⚠️ Missing tenant or customer ID for pending check');
+        return;
+      }
+
+      // Get full applications data
+      console.log('🔍 Making API call to getPendingApplications...');
+      const response = await this.apiService.getPendingApplications(String(tenantId), customerId).toPromise();
+      console.log('🔍 API Response - Full response:', response);
+      const applications = response?.data || [];
+      
+      console.log('🔍 API Response - Applications:', applications);
+      console.log('🔍 API Response - Applications count:', applications.length);
+      
+      // Build map of productId -> application/loan
+      const appMap = new Map<number, any>();
+      const pendingIds: number[] = [];
+      
+      applications.forEach((app: any) => {
+        // Handle both loans and applications - they use different field names
+        const productId = app.loan_product_id || app.loanProductId || app.product_id;
+        console.log('🔍 Processing app/loan:', {
+          id: app.id,
+          loanNumber: app.loan_number || app.loanNumber,
+          productId,
+          status: app.status,
+          amount: app.amount || app.principal_amount || app.principalAmount,
+          rawApp: app
+        });
+        if (productId) {
+          appMap.set(Number(productId), app);
+          pendingIds.push(Number(productId));
+        }
+      });
+      
+      this.pendingApplicationsMap.set(appMap);
+      this.pendingProductIds.set(pendingIds);
+      this.hasPendingApplication.set(pendingIds.length > 0);
+      
+      console.log('📋 Pending product IDs:', pendingIds);
+      console.log('📋 Applications map:', appMap);
+    } catch (error) {
+      console.error('Error checking pending applications:', error);
+      this.pendingProductIds.set([]);
+      this.pendingApplicationsMap.set(new Map());
+      this.hasPendingApplication.set(false);
+    }
+  }
+
   goBack() {
+    // Prefer Ionic stack navigation when available, otherwise fall back to dashboard
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      this.location.back();
+      return;
+    }
+
     this.router.navigate(['/customer/dashboard']);
   }
 
   async handleRefresh(event: any) {
-    await this.loadLoanProducts();
+    await Promise.all([
+      this.loadLoanProducts(),
+      this.checkPendingApplications()
+    ]);
     event.target.complete();
+  }
+
+  private normalizeInterestType(product: any): string {
+    const candidate = product?.interestType || product?.interestComputation || product?.interestMethod;
+    return (candidate ? String(candidate) : 'flat').toLowerCase();
   }
 }

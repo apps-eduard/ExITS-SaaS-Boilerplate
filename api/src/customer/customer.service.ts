@@ -851,7 +851,13 @@ export class CustomerService {
     // Resolve user → customer relationship
     // Note: userId from mobile app → users.id → customers.user_id → customers.id
     const userWithCustomer = await knex('users')
-      .select('users.*', 'users.tenant_id', 'customers.id as customer_id')
+      .select(
+        'users.*',
+        'users.tenant_id',
+        'customers.id as customer_id',
+        'customers.assigned_employee_id as assignedEmployeeId',
+        'customers.assigned_at as assignedAt'
+      )
       .leftJoin('customers', 'users.id', 'customers.user_id')
       .where({ 'users.id': userId })
       .first();
@@ -862,7 +868,9 @@ export class CustomerService {
 
     // Knex converts snake_case to camelCase
     // customers.id is the main SaaS customer ID
-    const mainCustomerId = userWithCustomer.customerId;
+  const mainCustomerId = userWithCustomer.customerId;
+  const assignedEmployeeId = userWithCustomer.assignedEmployeeId;
+  const assignedAt = userWithCustomer.assignedAt;
     
     if (!mainCustomerId) {
       throw new NotFoundException('Customer record not found for this user');
@@ -871,6 +879,31 @@ export class CustomerService {
     const tenantId = userWithCustomer.tenantId;
 
     console.log(`🔍 getDashboard - User ID: ${userId}, Main Customer ID: ${mainCustomerId}, Tenant ID: ${tenantId}`);
+
+    // Resolve assigned collector (if any)
+    let assignedCollector: any = null;
+    if (assignedEmployeeId) {
+      const collector = await knex('users')
+        .select('id', 'first_name', 'last_name', 'email', 'phone')
+        .where({ id: assignedEmployeeId })
+        .first();
+
+      if (collector) {
+        const firstName = collector.firstName ?? collector.first_name ?? '';
+        const lastName = collector.lastName ?? collector.last_name ?? '';
+        const fullName = `${firstName} ${lastName}`.trim() || collector.email;
+
+        assignedCollector = {
+          id: collector.id,
+          firstName,
+          lastName,
+          fullName,
+          email: collector.email,
+          phone: collector.phone ?? null,
+          assignedAt: assignedAt ?? null,
+        };
+      }
+    }
 
     // Get all loans for this customer (money_loan_loans.customer_id references customers.id)
     const loans = await knex('money_loan_loans')
@@ -960,6 +993,7 @@ export class CustomerService {
           loan.maturity_date ??
           loan.maturityDate,
       })),
+      assignedCollector,
     };
   }
 
@@ -967,6 +1001,38 @@ export class CustomerService {
     const knex = this.knexService.instance;
 
     console.log(`🔍 getDashboardByCustomerId - Customer ID: ${customerId}, Tenant ID: ${tenantId}`);
+
+    const customerRecord = await knex('customers')
+      .select(
+        'assigned_employee_id as assignedEmployeeId',
+        'assigned_at as assignedAt'
+      )
+      .where({ id: customerId, tenant_id: tenantId })
+      .first();
+
+    let assignedCollector: any = null;
+    if (customerRecord?.assignedEmployeeId) {
+      const collector = await knex('users')
+        .select('id', 'first_name', 'last_name', 'email', 'phone')
+        .where({ id: customerRecord.assignedEmployeeId })
+        .first();
+
+      if (collector) {
+        const firstName = collector.firstName ?? collector.first_name ?? '';
+        const lastName = collector.lastName ?? collector.last_name ?? '';
+        const fullName = `${firstName} ${lastName}`.trim() || collector.email;
+
+        assignedCollector = {
+          id: collector.id,
+          firstName,
+          lastName,
+          fullName,
+          email: collector.email,
+          phone: collector.phone ?? null,
+          assignedAt: customerRecord.assignedAt ?? null,
+        };
+      }
+    }
 
     // Get all loans for this customer (money_loan_loans.customer_id references customers.id)
     const loans = await knex('money_loan_loans')
@@ -1056,6 +1122,7 @@ export class CustomerService {
           loan.maturity_date ??
           loan.maturityDate,
       })),
+      assignedCollector,
     };
   }
 
@@ -1073,7 +1140,8 @@ export class CustomerService {
         'money_loan_products.interest_type as productInterestType',
         'money_loan_products.description as productDescription',
         'money_loan_products.min_amount as productMinAmount',
-        'money_loan_products.max_amount as productMaxAmount'
+        'money_loan_products.max_amount as productMaxAmount',
+        'money_loan_products.payment_frequency as productPaymentFrequency'
       )
       .leftJoin('money_loan_products', 'money_loan_loans.loan_product_id', 'money_loan_products.id')
       .where({
@@ -1099,34 +1167,38 @@ export class CustomerService {
 
     console.log(`💳 Payment history query result: ${payments.length} records`);
 
-    // Generate repayment schedule dynamically (same logic as MoneyLoanService)
-    const paymentFrequency = loan.payment_frequency || loan.paymentFrequency || 'weekly';
+    // Get payment frequency from loan or product
+    const paymentFrequency = (loan.payment_frequency || loan.paymentFrequency || 
+                            loan.productPaymentFrequency || 'weekly') as 'daily' | 'weekly' | 'biweekly' | 'monthly';
     const termDays = loan.term_days || loan.termDays || 30;
+    const termMonths = termDays / 30;
     const disbursementDateValue = loan.disbursement_date || loan.disbursementDate;
     const disbursementDate = disbursementDateValue ? new Date(disbursementDateValue) : new Date();
     
-    // Calculate number of installments based on frequency
-    let numberOfInstallments = 1;
-    let daysBetweenPayments = termDays;
+    console.log(`📋 Using payment frequency: ${paymentFrequency} (term: ${termMonths} months)`);
     
-    if (paymentFrequency === 'daily') {
-      numberOfInstallments = termDays;
-      daysBetweenPayments = 1;
-    } else if (paymentFrequency === 'weekly') {
-      numberOfInstallments = Math.ceil(termDays / 7);
-      daysBetweenPayments = 7;
-    } else if (paymentFrequency === 'monthly') {
-      numberOfInstallments = Math.ceil(termDays / 30);
-      daysBetweenPayments = 30;
-    }
-
-    // Calculate total amount to be repaid (principal + interest)
+    // Use the centralized loan calculator service for schedule generation
     const principalAmount = parseFloat(loan.principal_amount || loan.principalAmount || '0');
-    const totalInterest = parseFloat(loan.total_interest || loan.totalInterest || '0');
-    const totalAmount = parseFloat(loan.total_amount || loan.totalAmount || '0') || (principalAmount + totalInterest);
-    const amountPerInstallment = totalAmount / numberOfInstallments;
+    const interestRate = parseFloat(loan.interest_rate || loan.interestRate || '0');
+    const interestType = (loan.interest_type || loan.interestType || 'flat') as 'flat' | 'reducing' | 'compound';
+    const processingFeePercent = parseFloat(loan.processing_fee || loan.processingFee || '0');
+    const platformFee = parseFloat(loan.platform_fee || loan.platformFee || '50');
 
-    console.log(`📅 Schedule calculation: ${numberOfInstallments} ${paymentFrequency} installments, ${amountPerInstallment} each`);
+    // Import and use the loan calculator
+    const { LoanCalculatorService } = require('../money-loan/loan-calculator.service');
+    const calculator = new LoanCalculatorService();
+    
+    const calculation = calculator.calculate({
+      loanAmount: principalAmount,
+      termMonths,
+      paymentFrequency,
+      interestRate,
+      interestType,
+      processingFeePercentage: processingFeePercent,
+      platformFee,
+    });
+
+    const schedule = calculator.generateSchedule(calculation, disbursementDate);
 
     // Calculate total paid from payments
     let totalPaid = 0;
@@ -1135,70 +1207,68 @@ export class CustomerService {
     }
 
     console.log(`💰 Total paid from ${payments.length} payments: ${totalPaid}`);
+    console.log(`📊 Generated ${schedule.length} installments using centralized calculator`);
 
-    // Generate installment schedule
-    const scheduleData = [];
-    for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date(disbursementDate);
-      dueDate.setDate(dueDate.getDate() + (i * daysBetweenPayments));
+    // Map schedule to response format with payment status
+    const scheduleData = schedule.map((item) => {
+      const previousInstallmentsTotal = (item.paymentNumber - 1) * calculation.installmentAmount;
+      const thisInstallmentEnd = item.paymentNumber * calculation.installmentAmount;
 
-      // Calculate how much of this installment has been paid
-      const previousInstallmentsTotal = (i - 1) * amountPerInstallment;
-      const thisInstallmentEnd = i * amountPerInstallment;
-      
-      let amountPaidForThisInstallment = 0;
       let status = 'pending';
-      
       if (totalPaid >= thisInstallmentEnd) {
-        amountPaidForThisInstallment = amountPerInstallment;
         status = 'paid';
       } else if (totalPaid > previousInstallmentsTotal) {
-        amountPaidForThisInstallment = totalPaid - previousInstallmentsTotal;
         status = 'partial';
       }
 
       // Check if overdue
       const today = new Date();
-      if (status !== 'paid' && dueDate < today) {
+      if (status !== 'paid' && item.dueDate < today) {
         status = 'overdue';
       }
 
-      const principalForInstallment = principalAmount / numberOfInstallments;
-      const interestForInstallment = totalInterest / numberOfInstallments;
-      const outstandingForInstallment = amountPerInstallment - amountPaidForThisInstallment;
-
-      scheduleData.push({
-        id: i,
-        installment_number: i,
-        due_date: dueDate,
-        principal_amount: Math.round(principalForInstallment * 100) / 100,
-        interest_amount: Math.round(interestForInstallment * 100) / 100,
-        total_amount: Math.round(amountPerInstallment * 100) / 100,
-        outstanding_amount: Math.round(outstandingForInstallment * 100) / 100,
-        status: status,
-      });
-    }
+      return {
+        id: item.paymentNumber,
+        installment_number: item.paymentNumber,
+        installmentNumber: item.paymentNumber,
+        due_date: item.dueDate,
+        dueDate: item.dueDate,
+        principal_amount: item.principal,
+        principalAmount: item.principal,
+        interest_amount: item.interest,
+        interestAmount: item.interest,
+        total_amount: item.installmentAmount,
+        totalAmount: item.installmentAmount,
+        outstanding_amount: item.remainingBalance,
+        outstandingAmount: item.remainingBalance,
+        status,
+      };
+    });
 
     const outstandingBalance = parseFloat(loan.outstanding_balance ?? loan.outstandingBalance ?? 0);
-    const paymentProgress = principalAmount > 0 ? Math.round((totalPaid / principalAmount) * 100) : 0;
+    const paymentProgress = principalAmount > 0 ? Math.round((totalPaid / calculation.totalRepayable) * 100) : 0;
 
     return {
       loan: {
         id: loan.id,
         loanNumber: loan.loan_number ?? loan.loanNumber,
         principalAmount: principalAmount,
-        interestRate: parseFloat(loan.interest_rate ?? loan.interestRate ?? loan.productInterestRate ?? 0),
-        interestType: loan.interest_type ?? loan.interestType ?? loan.productInterestType ?? 'flat',
-        totalInterest: totalInterest,
-        totalAmount: totalAmount,
+        interestRate,
+        interestType,
+        totalInterest: calculation.interestAmount,
+        totalAmount: calculation.totalRepayable,
         outstandingBalance: outstandingBalance,
         status: loan.status,
         disbursementDate: loan.disbursement_date ?? loan.disbursementDate,
         maturityDate: loan.maturity_date ?? loan.maturityDate,
         paymentFrequency: paymentFrequency,
         termDays: termDays,
+        term: termMonths,
+        processingFee: calculation.processingFeeAmount,
         productName: loan.productName,
         productDescription: loan.productDescription,
+        nextPaymentDate: scheduleData.find(s => s.status !== 'paid')?.due_date || null,
+        nextPaymentAmount: scheduleData.find(s => s.status !== 'paid')?.total_amount || 0,
       },
       paymentProgress: paymentProgress,
       schedule: scheduleData,
@@ -1210,6 +1280,8 @@ export class CustomerService {
         referenceNumber: payment.reference_number ?? payment.referenceNumber,
         status: payment.status,
         notes: payment.notes,
+        principalPaid: parseFloat(payment.principal_paid ?? payment.principalPaid ?? '0'),
+        interestPaid: parseFloat(payment.interest_paid ?? payment.interestPaid ?? '0'),
       })),
     };
   }

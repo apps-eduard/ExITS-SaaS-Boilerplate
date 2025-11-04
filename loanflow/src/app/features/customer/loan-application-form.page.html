@@ -2,25 +2,20 @@
   <ion-toolbar class="custom-toolbar">
     <div class="toolbar-content">
       <div class="toolbar-left">
-        <ion-button routerLink="/customer/apply-loan" class="icon-btn" fill="clear">
-          <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+        <ion-button (click)="goBack()" class="icon-btn back-btn" fill="clear" title="Go Back">
+          <span class="back-emoji">◄</span>
         </ion-button>
       </div>
       
       <div class="toolbar-center">
-        <span class="title-text">Apply for Loan</span>
+        <span class="app-emoji">💳</span>
+        <span class="app-title">Apply for Loan</span>
       </div>
       
       <div class="toolbar-right">
-        <!-- Dev Info (Development Only) -->
         <app-dev-info />
-        
         <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-          <ion-icon 
-            [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-            slot="icon-only"
-            class="theme-icon"
-          ></ion-icon>
+          <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
         </ion-button>
       </div>
     </div>
@@ -36,27 +31,47 @@
   } @else if (product()) {
     <!-- Product Summary -->
     <ion-card class="product-summary">
-      <ion-card-header>
-        <ion-card-title>{{ product()!.name }}</ion-card-title>
-      </ion-card-header>
       <ion-card-content>
-        <div class="product-info">
-          <div class="info-item">
-            <ion-icon name="cash-outline"></ion-icon>
-            <span>₱{{ formatCurrency(product()!.minAmount) }} - ₱{{ formatCurrency(product()!.maxAmount) }}</span>
+        <div class="product-headline">
+          <div class="headline-main">
+            <span class="product-emoji">💼</span>
+            <div class="headline-text">
+              <h3>{{ product()!.name }}</h3>
+              @if (product()!.features.length > 0) {
+                <p>{{ product()!.features[0] }}</p>
+              }
+            </div>
           </div>
-          <div class="info-item">
-            <ion-icon name="calendar-outline"></ion-icon>
-            @if (product()!.loanTermType === 'fixed') {
-              <span>🔒 {{ Math.round((product()!.fixedTermDays || 90) / 30) }} Months (Fixed)</span>
-            } @else {
-              <span>{{ Math.round(product()!.minTerm / 30) }} - {{ Math.round(product()!.maxTerm / 30) }} Months</span>
-            }
+          <span class="product-chip">
+            {{ product()!.loanTermType === 'fixed' ? 'Fixed Term' : 'Flexible Term' }}
+          </span>
+        </div>
+
+        <div class="product-highlights">
+          <div class="highlight-chip">
+            <span class="chip-emoji">💰</span>
+            <span class="chip-text">₱{{ formatCurrency(product()!.minAmount) }} - ₱{{ formatCurrency(product()!.maxAmount) }}</span>
           </div>
-          <div class="info-item">
-            <span class="rate-label">Interest Rate:</span>
-            <span class="rate-value">{{ product()!.interestRate }}% / month</span>
+          <div class="highlight-chip">
+            <span class="chip-emoji">📈</span>
+            <span class="chip-text">{{ product()!.interestRate }}% monthly</span>
           </div>
+          <div class="highlight-chip">
+            <span class="chip-emoji">🕒</span>
+            <span class="chip-text">
+              @if (product()!.loanTermType === 'fixed') {
+                {{ Math.round((product()!.fixedTermDays || 90) / 30) }} month term
+              } @else {
+                {{ Math.round(product()!.minTerm / 30) }}-{{ Math.round(product()!.maxTerm / 30) }} months
+              }
+            </span>
+          </div>
+          @if (product()!.paymentFrequency) {
+            <div class="highlight-chip">
+              <span class="chip-emoji">📅</span>
+              <span class="chip-text">{{ getPaymentFrequencyDisplay() }} payments</span>
+            </div>
+          }
         </div>
       </ion-card-content>
     </ion-card>
@@ -70,8 +85,8 @@
         <!-- Amount Slider -->
         <div class="form-section">
           <ion-label class="section-label">
-            <ion-icon name="cash-outline"></ion-icon>
-            Requested Amount
+          <span class="label-emoji">💰</span>
+          <span class="label-text">Requested Amount</span>
           </ion-label>
           <div class="amount-display">
             ₱{{ formatCurrency(requestedAmount()) }}
@@ -93,8 +108,9 @@
         <!-- Term Slider -->
         <div class="form-section">
           <ion-label class="section-label">
-            <ion-icon name="calendar-outline"></ion-icon>
-            Loan Term @if (product()!.loanTermType === 'fixed') {<span class="fixed-badge">🔒 Fixed</span>}
+            <span class="label-emoji">🗓️</span>
+            <span class="label-text">Loan Term</span>
+            @if (product()!.loanTermType === 'fixed') {<span class="fixed-badge">🔒 Fixed</span>}
           </ion-label>
           <div class="term-display">
             {{ requestedTermMonths() }} Months
@@ -112,9 +128,9 @@
               <ion-label slot="start">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
               <ion-label slot="end">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
             </ion-range>
-            <ion-note class="fixed-term-note">
+            <div class="fixed-term-note">
               ⚠️ This product has a fixed loan term. The term cannot be changed.
-            </ion-note>
+            </div>
           } @else {
             <!-- Flexible term: Show slider ENABLED -->
             <ion-range
@@ -131,12 +147,26 @@
           }
         </div>
 
+        <!-- Payment Frequency (Display Only) -->
+        <div class="form-section">
+          <ion-label class="section-label">
+            <span class="label-emoji">📅</span>
+            <span class="label-text">Payment Frequency</span>
+          </ion-label>
+          <div class="frequency-display">
+            <div class="frequency-badge">
+              {{ getPaymentFrequencyDisplay() }} Payments
+            </div>
+            <p class="frequency-note">Payment frequency is set by the loan product</p>
+          </div>
+        </div>
+
         <!-- Purpose -->
         <div class="form-section">
           <ion-item lines="none">
             <ion-label position="stacked">
-              <ion-icon name="document-text-outline"></ion-icon>
-              Purpose (Optional)
+                <span class="label-emoji">📝</span>
+                <span class="label-text">Purpose (Optional)</span>
             </ion-label>
             <ion-textarea
               placeholder="E.g., Business expansion, Medical expenses, etc."
@@ -151,42 +181,76 @@
     <!-- Repayment Summary -->
     <ion-card class="repayment-summary">
       <ion-card-header>
-        <ion-card-title>Repayment Summary</ion-card-title>
+        <ion-card-title>
+          <span class="summary-title-icon">📊</span>
+          Payment Summary
+        </ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <div class="summary-item">
-          <span class="label">Principal Amount:</span>
-          <span class="value">₱{{ formatCurrency(requestedAmount()) }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="label">Processing Fee ({{ product()!.processingFee }}%):</span>
-          <span class="value">₱{{ formatCurrency(getProcessingFeeAmount()) }}</span>
-        </div>
-        @if (hasPlatformFee()) {
-          <div class="summary-item">
-            <span class="label">Platform Fee:</span>
-            <span class="value">₱{{ formatCurrency(getPlatformFee()) }}/month</span>
+        <div class="basic-charges">
+          <div class="summary-line">
+            <span class="summary-label">Loan Amount</span>
+            <span class="summary-value">₱{{ formatCurrency(requestedAmount()) }}</span>
           </div>
-        }
-        <div class="summary-item">
-          <span class="label">Loan Term:</span>
-          <span class="value">{{ requestedTermMonths() }} months</span>
+          @if (product()!.processingFee > 0) {
+            <div class="summary-line negative">
+              <span class="summary-label">Processing Fee ({{ product()!.processingFee }}%)</span>
+              <span class="summary-value">-₱{{ formatCurrency(getProcessingFeeAmount()) }}</span>
+            </div>
+          }
+          @if (hasPlatformFee()) {
+            <div class="summary-line negative">
+              <span class="summary-label">Platform Fee (per month)</span>
+              <span class="summary-value">-₱{{ formatCurrency(getPlatformFee()) }}</span>
+            </div>
+          }
         </div>
-        <div class="summary-item">
-          <span class="label">Interest Rate:</span>
-          <span class="value">{{ product()!.interestRate }}% per month</span>
+
+        <div class="net-row">
+          <div class="net-left">
+            <span class="net-icon">🪙</span>
+            <div class="net-text">
+              <p class="net-label">Net Received</p>
+              <p class="net-subtitle">Amount disbursed after fees</p>
+            </div>
+          </div>
+          <span class="net-value">₱{{ formatCurrency(getNetReceived()) }}</span>
         </div>
-        <div class="summary-item highlight">
-          <span class="label">Total Repayment:</span>
-          <span class="value">₱{{ formatCurrency(getTotalRepayment()) }}</span>
+
+        <div class="interest-row">
+          <div class="interest-item">
+            <p class="interest-label">Interest Rate</p>
+            <p class="interest-value">{{ product()!.interestRate }}% ({{ getInterestLabel() }})</p>
+          </div>
+          <div class="interest-item">
+            <p class="interest-label">Total Interest</p>
+            <p class="interest-value">₱{{ formatCurrency(getTotalInterest()) }}</p>
+          </div>
         </div>
-        <div class="summary-item highlight">
-          <span class="label">Monthly Payment:</span>
-          <span class="value">₱{{ formatCurrency(getEstimatedMonthlyPayment()) }}</span>
+
+        <div class="totals-panel">
+          <div class="total-card primary">
+            <p class="total-label">Total Repayment</p>
+            <p class="total-value">₱{{ formatCurrency(getTotalRepayment()) }}</p>
+          </div>
+          <div class="total-card secondary">
+            <p class="total-label">{{ getPaymentLabel() }} Payment</p>
+            <p class="total-value">₱{{ formatCurrency(getInstallmentAmount()) }}</p>
+          </div>
         </div>
-        <ion-note class="disclaimer">
-          *Estimated amounts. Final terms will be confirmed upon approval.
-        </ion-note>
+
+        <div class="payment-schedule">
+          <span>{{ formatNumber(getPaymentCount()) }} {{ getPaymentFrequencyDisplay().toLowerCase() }} payments</span>
+          <span class="separator">•</span>
+          <span>{{ requestedTermMonths() }} {{ requestedTermMonths() === 1 ? 'month' : 'months' }}</span>
+        </div>
+
+        <div class="summary-note">
+          <span class="note-icon">ℹ️</span>
+          <div class="note-text">
+            <p>This is an estimate. Actual terms may vary. Late payments may incur penalties based on your loan agreement.</p>
+          </div>
+        </div>
       </ion-card-content>
     </ion-card>
 

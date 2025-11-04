@@ -61,6 +61,11 @@ export class AuthService {
       map((response) => {
         console.log('Customer login response:', response);
         if (response.data) {
+          // Store the complete customer data separately
+          if (response.data.customer) {
+            localStorage.setItem('customer', JSON.stringify(response.data.customer));
+          }
+          
           // Use the user object from backend which includes tenant info
           const userData = response.data.user;
           const tokens = response.data.tokens;
@@ -253,6 +258,7 @@ export class AuthService {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('customer');
 
     Preferences.remove({ key: 'accessToken' });
     Preferences.remove({ key: 'refreshToken' });

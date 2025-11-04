@@ -5,20 +5,15 @@ import { FormsModule } from '@angular/forms';
 import {
   IonHeader,
   IonToolbar,
-  IonTitle,
   IonContent,
   IonCard,
   IonCardContent,
-  IonItem,
-  IonInput,
   IonButton,
-  IonIcon,
   IonSpinner,
-  IonButtons,
   ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline } from 'ionicons/icons';
+import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { DevInfoComponent } from '../../shared/components/dev-info.component';
@@ -31,55 +26,44 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     FormsModule,
     IonHeader,
     IonToolbar,
-    IonTitle,
     IonContent,
     IonCard,
     IonCardContent,
     IonButton,
-    IonIcon,
     IonSpinner,
-    IonButtons,
     DevInfoComponent
   ],
   template: `
     <ion-header class="ion-no-border">
-      <ion-toolbar>
-        <ion-title class="text-center font-bold">
-          <div class="flex items-center justify-center gap-2">
-            <ion-icon name="cash-outline" class="text-2xl"></ion-icon>
-            <span>LoanFlow</span>
+      <ion-toolbar class="custom-toolbar">
+        <div class="toolbar-content">
+          <div class="toolbar-center">
+            <span class="app-emoji">💰</span>
+            <span class="app-title">LoanFlow</span>
           </div>
-        </ion-title>
-        <ion-buttons slot="end">
-          <!-- Dev Info (Development Only) -->
-          <app-dev-info />
           
-          <ion-button (click)="toggleTheme()" class="theme-toggle">
-            <ion-icon 
-              [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-              slot="icon-only"
-            ></ion-icon>
-          </ion-button>
-        </ion-buttons>
+          <div class="toolbar-right">
+            <app-dev-info />
+            <ion-button (click)="toggleTheme()" class="theme-btn" fill="clear">
+              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
+            </ion-button>
+          </div>
+        </div>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="login-content">
       <div class="login-container">
-        
         <!-- Hero Section -->
         <div class="hero-section">
           <div class="logo-circle">
-            <ion-icon name="cash-outline" class="logo-icon"></ion-icon>
+            <span class="logo-emoji">💵</span>
           </div>
-          <!-- <h1 class="welcome-title">LoanFlow</h1>
-          <p class="welcome-subtitle">Secure Login Portal</p> -->
         </div>
 
         <!-- Login Form Card -->
         <ion-card class="login-card">
           <ion-card-content class="card-content">
-            
             <!-- Login Type Toggle -->
             <div class="login-type-toggle">
               <button 
@@ -88,7 +72,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 [class.active]="!loginAsEmployee"
                 (click)="loginAsEmployee = false"
               >
-                <ion-icon name="person-outline"></ion-icon>
+                <span class="toggle-emoji">👤</span>
                 Customer
               </button>
               <button 
@@ -97,18 +81,17 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 [class.active]="loginAsEmployee"
                 (click)="loginAsEmployee = true"
               >
-                <ion-icon name="briefcase-outline"></ion-icon>
+                <span class="toggle-emoji">💼</span>
                 Employee
               </button>
             </div>
 
             <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-              
               <!-- Email Input -->
               <div class="input-group">
                 <label class="input-label">{{ loginAsEmployee ? 'Email' : 'Email or Phone' }}</label>
                 <div class="input-wrapper">
-                  <ion-icon name="person-outline" class="input-icon"></ion-icon>
+                  <span class="input-emoji">👤</span>
                   <input
                     type="email"
                     class="custom-input"
@@ -125,16 +108,23 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
               <div class="input-group">
                 <label class="input-label">Password</label>
                 <div class="input-wrapper">
-                  <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
+                  <span class="input-emoji">🔒</span>
                   <input
-                    type="password"
+                    [type]="showPassword ? 'text' : 'password'"
                     class="custom-input"
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     [(ngModel)]="password"
                     name="password"
                     required
                     autocomplete="current-password"
                   />
+                  <button
+                    type="button"
+                    class="password-toggle"
+                    (click)="showPassword = !showPassword"
+                  >
+                    <span class="toggle-eye-emoji">{{ showPassword ? '👁️' : '👁️‍🗨️' }}</span>
+                  </button>
                 </div>
               </div>
 
@@ -147,7 +137,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 size="large"
               >
                 <ion-spinner name="crescent" *ngIf="loading" class="button-spinner"></ion-spinner>
-                <ion-icon name="log-in-outline" slot="start" *ngIf="!loading"></ion-icon>
+                <span *ngIf="!loading" class="button-emoji">🚀</span>
                 {{ loading ? 'Signing in...' : 'Sign In' }}
               </ion-button>
 
@@ -175,7 +165,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 <p class="user-name">{{ testUsers[0].name }}</p>
                 <p class="user-role">{{ testUsers[0].role }}</p>
               </div>
-              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+              <span class="card-emoji">→</span>
             </div>
           </div>
 
@@ -191,7 +181,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 <p class="user-name">{{ testUsers[1].name }}</p>
                 <p class="user-role">{{ testUsers[1].role }}</p>
               </div>
-              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+              <span class="card-emoji">→</span>
             </div>
           </div>
 
@@ -208,7 +198,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 <p class="user-name">{{ testUsers[2].name }}</p>
                 <p class="user-role">{{ testUsers[2].role }}</p>
               </div>
-              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+              <span class="card-emoji">→</span>
             </div>
           </div>
 
@@ -224,7 +214,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
                 <p class="user-name">{{ testUsers[3].name }}</p>
                 <p class="user-role">{{ testUsers[3].role }}</p>
               </div>
-              <ion-icon name="arrow-forward-outline" class="card-arrow"></ion-icon>
+              <span class="card-emoji">→</span>
             </div>
           </div>
         </div>
@@ -238,6 +228,68 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     </ion-content>
   `,
   styles: [`
+    /* ===== TOOLBAR / NAVBAR ===== */
+    .custom-toolbar {
+      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --color: white;
+      --border-style: none;
+      --min-height: 64px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 0;
+      --padding-end: 0;
+    }
+
+    .toolbar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      width: 100%;
+      height: 64px;
+    }
+
+    .toolbar-center {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .app-emoji {
+      font-size: 2rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .app-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .theme-btn {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      height: 40px;
+      width: 40px;
+    }
+
+    .theme-emoji {
+      font-size: 1.5rem;
+      display: inline-flex;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+
+    /* ===== GRADIENT BACKGROUND ===== */
     .login-content {
       --background: linear-gradient(165deg,
                     rgba(var(--ion-color-primary-rgb), 0.16) 0%,
@@ -307,7 +359,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     .login-container {
       max-width: 480px;
       margin: 0 auto;
-      padding: 2rem 1rem;
+      padding: 1rem .5rem;
       min-height: 100%;
       display: flex;
       flex-direction: column;
@@ -322,11 +374,6 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       --border-style: none;
     }
 
-    .theme-toggle {
-      --background-hover: rgba(255, 255, 255, 0.1);
-      --border-radius: 50%;
-    }
-
     /* Hero Section */
     .hero-section {
       text-align: center;
@@ -338,13 +385,13 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     .logo-circle {
       width: 100px;
       height: 100px;
-      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+      background: linear-gradient(135deg, #667eea, #764ba2);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 1.5rem;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
       animation: float 3s ease-in-out infinite;
     }
 
@@ -353,9 +400,9 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       50% { transform: translateY(-10px); }
     }
 
-    .logo-icon {
+    .logo-emoji {
       font-size: 3.5rem;
-      color: white;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
     }
 
     .welcome-title {
@@ -390,40 +437,47 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       display: flex;
       gap: 0.5rem;
       margin-bottom: 2rem;
-      padding: 0.25rem;
-      background: var(--ion-color-light);
-      border-radius: 12px;
+      padding: 0.35rem;
+      background: rgba(148, 163, 184, 0.12);
+      border-radius: 14px;
     }
 
     .toggle-btn {
       flex: 1;
-      padding: 0.75rem 1rem;
+      padding: 0.85rem 1rem;
       border: none;
       background: transparent;
       color: var(--ion-color-medium);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 11px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
     }
 
-    .toggle-btn ion-icon {
-      font-size: 1.2rem;
+    .toggle-emoji {
+      font-size: 1.25rem;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
     }
 
     .toggle-btn.active {
-      background: var(--ion-color-primary);
+      background: linear-gradient(135deg, #667eea, #764ba2);
       color: white;
-      box-shadow: 0 2px 8px rgba(56, 128, 255, 0.3);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+      transform: translateY(-1px);
     }
 
     .toggle-btn:not(.active):hover {
-      background: rgba(var(--ion-color-primary-rgb), 0.1);
+      background: rgba(102, 126, 234, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .toggle-btn:active {
+      transform: translateY(0);
     }
 
     /* Form Inputs */
@@ -446,30 +500,31 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       align-items: center;
     }
 
-    .input-icon {
+    .input-emoji {
       position: absolute;
       left: 1rem;
       font-size: 1.25rem;
-      color: var(--ion-color-medium);
       z-index: 2;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
     }
 
     .custom-input {
       width: 100%;
-      padding: 1rem 1rem 1rem 3rem;
+      padding: 0.85rem 0.85rem 0.85rem 3rem;
       font-size: 1rem;
-      border: 2px solid var(--ion-border-color, #e5e7eb);
+      border: 2px solid rgba(148, 163, 184, 0.2);
       border-radius: 12px;
       background: var(--ion-item-background);
       color: var(--ion-text-color);
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       font-family: inherit;
     }
 
     .custom-input:focus {
       outline: none;
-      border-color: var(--ion-color-primary);
-      box-shadow: 0 0 0 3px rgba(56, 128, 255, 0.1);
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+      transform: translateY(-1px);
     }
 
     .custom-input::placeholder {
@@ -477,19 +532,69 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       opacity: 0.7;
     }
 
+    /* Password Toggle Button */
+    .password-toggle {
+      position: absolute;
+      right: 1rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-eye-emoji {
+      font-size: 1.25rem;
+      filter: grayscale(0.3);
+      opacity: 0.7;
+      transition: all 0.3s ease;
+    }
+
+    .password-toggle:hover .toggle-eye-emoji {
+      opacity: 1;
+      filter: grayscale(0);
+      transform: scale(1.1);
+    }
+
+    .password-toggle:active .toggle-eye-emoji {
+      transform: scale(0.95);
+    }
+
     /* Login Button */
     .login-button {
-      margin-top: 1rem;
+      margin-top: 0.75rem;
       --border-radius: 12px;
-      --box-shadow: 0 4px 12px rgba(56, 128, 255, 0.3);
+      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --background-hover: linear-gradient(135deg, #5568d3 0%, #6a4199 100%);
+      --box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
       font-weight: 600;
       font-size: 1rem;
       height: 56px;
       text-transform: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .login-button:hover {
+      transform: translateY(-2px);
+      --box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-button:active {
+      transform: translateY(0);
     }
 
     .button-spinner {
       margin-right: 0.5rem;
+    }
+
+    .button-emoji {
+      font-size: 1.15rem;
+      margin-right: 0.35rem;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     }
 
     /* Divider */
@@ -642,7 +747,18 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       transition: all 0.3s ease;
     }
 
+    .card-emoji {
+      font-size: 1.5rem;
+      opacity: 0.5;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     .quick-login-card:hover .card-arrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+
+    .quick-login-card:hover .card-emoji {
       opacity: 1;
       transform: translateX(4px);
     }
@@ -679,15 +795,25 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
         var(--ion-background-color);
     }
 
+    body.dark .login-type-toggle,
+    .dark .login-type-toggle {
+      background: rgba(148, 163, 184, 0.18);
+    }
+
+    body.dark .toggle-btn.active,
+    .dark .toggle-btn.active {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
     body.dark .custom-input,
     .dark .custom-input {
       background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.12);
     }
 
     body.dark .custom-input:focus,
     .dark .custom-input:focus {
-      border-color: var(--ion-color-primary);
+      border-color: #667eea;
       background: rgba(255, 255, 255, 0.08);
     }
 
@@ -727,6 +853,7 @@ export class LoginPage {
   password = '';
   loading = false;
   loginAsEmployee = false; // Toggle: false = Customer, true = Employee
+  showPassword = false; // Toggle password visibility
 
   // Quick login test users (matching database seed)
   testUsers = [
@@ -749,7 +876,9 @@ export class LoginPage {
       'moon-outline': moonOutline,
       'sunny-outline': sunnyOutline,
       'arrow-forward-outline': arrowForwardOutline,
-      'briefcase-outline': briefcaseOutline
+      'briefcase-outline': briefcaseOutline,
+      'eye-outline': eyeOutline,
+      'eye-off-outline': eyeOffOutline
     });
   }
 

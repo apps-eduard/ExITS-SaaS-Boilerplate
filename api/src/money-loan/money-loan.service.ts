@@ -12,7 +12,9 @@ import {
 
 @Injectable()
 export class MoneyLoanService {
-  constructor(private knexService: KnexService) {}
+  constructor(private knexService: KnexService) {
+    // Clean implementation - no more manual fixes needed
+  }
 
   async createApplication(tenantId: number, createDto: CreateLoanApplicationDto) {
     const knex = this.knexService.instance;
@@ -114,7 +116,14 @@ export class MoneyLoanService {
     }
 
     if (status) {
-      baseQuery.where('mla.status', status);
+      // Support comma-separated statuses
+      const statuses = status.split(',').map(s => s.trim()).filter(s => s);
+      console.log('🔍 [getApplications] Status filter - raw:', status, 'parsed:', statuses);
+      if (statuses.length === 1) {
+        baseQuery.where('mla.status', statuses[0]);
+      } else if (statuses.length > 1) {
+        baseQuery.whereIn('mla.status', statuses);
+      }
     }
 
     if (productId) {
@@ -175,6 +184,34 @@ export class MoneyLoanService {
       throw new NotFoundException('Application not found');
     }
 
+    // Get the product to retrieve all necessary details
+    const product = await knex('money_loan_products')
+      .where({ id: application.loan_product_id || application.loanProductId })
+      .first();
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    // Use the centralized loan calculator - SINGLE SOURCE OF TRUTH
+    const { LoanCalculatorService } = require('./loan-calculator.service');
+    const calculator = new LoanCalculatorService();
+
+    const termMonths = approveDto.approvedTermDays / 30;
+    const paymentFrequency = approveDto.paymentFrequency || product.payment_frequency || 'weekly';
+    
+    const calculation = calculator.calculate({
+      loanAmount: approveDto.approvedAmount,
+      termMonths,
+      paymentFrequency: paymentFrequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
+      interestRate: approveDto.interestRate,
+      interestType: approveDto.interestType as 'flat' | 'reducing' | 'compound',
+      processingFeePercentage: product.processing_fee_percent || 0,
+      platformFee: product.platform_fee || 0,
+    });
+
+    console.log('📊 Loan calculation:', calculation);
+
     await knex('money_loan_applications')
       .where({ id: applicationId })
       .update({
@@ -190,25 +227,29 @@ export class MoneyLoanService {
 
     const loanNumber = `LOAN-${tenantId}-${Date.now()}`;
 
-    // Use pre-calculated values from frontend
+    // Save ALL calculated values from the centralized calculator
     const [loan] = await knex('money_loan_loans')
       .insert({
         tenant_id: tenantId,
-        customer_id: application.customerId,
-        loan_product_id: application.loanProductId,
+        customer_id: application.customerId || application.customer_id,
+        loan_product_id: application.loanProductId || application.loan_product_id,
         application_id: applicationId,
         loan_number: loanNumber,
-        principal_amount: approveDto.approvedAmount,
+        principal_amount: calculation.loanAmount,
         interest_rate: approveDto.interestRate,
         interest_type: approveDto.interestType,
         term_days: approveDto.approvedTermDays,
-        processing_fee: approveDto.processingFee,
-        total_interest: approveDto.totalInterest,
-        total_amount: approveDto.totalAmount,
-        outstanding_balance: approveDto.totalAmount, // Starts at total amount
+        processing_fee: calculation.processingFeeAmount,
+        platform_fee: calculation.platformFee,
+        payment_frequency: paymentFrequency,
+        total_interest: calculation.interestAmount,
+        total_amount: calculation.totalRepayable,
+        outstanding_balance: calculation.totalRepayable,
         status: 'pending',
       })
       .returning('*');
+
+    console.log('✅ Loan created with calculated values:', loan);
 
     return loan;
   }
@@ -410,6 +451,14 @@ export class MoneyLoanService {
         disbursement_reference: disburseDto.disbursementReference,
         disbursement_notes: disburseDto.disbursementNotes,
       });
+
+    // Update the corresponding application status to 'disbursed'
+    // This ensures the product becomes available for new applications
+    if (loan.application_id) {
+      await knex('money_loan_applications')
+        .where({ id: loan.application_id, tenant_id: tenantId })
+        .update({ status: 'disbursed' });
+    }
 
     const [updatedRow] = await knex('money_loan_loans as mll')
       .leftJoin('customers as c', 'mll.customer_id', 'c.id')
@@ -1141,6 +1190,7 @@ export class MoneyLoanService {
 
     let query = knex('customers as c')
       .leftJoin('money_loan_customer_profiles as mlcp', 'c.id', 'mlcp.customer_id')
+      .leftJoin('users as assigned', 'c.assigned_employee_id', 'assigned.id')
       .select(
         'c.id',
         'c.customer_code as customerCode',
@@ -1149,9 +1199,11 @@ export class MoneyLoanService {
         'c.email',
         'c.phone',
         'c.status',
+        'c.assigned_employee_id as assignedEmployeeId',
         'mlcp.kyc_status as kycStatus',
         'mlcp.credit_score as creditScore',
         'mlcp.risk_level as riskLevel',
+        knex.raw("CONCAT_WS(' ', assigned.first_name, assigned.last_name) as assignedEmployeeName"),
         knex.raw('(SELECT COUNT(*) FROM money_loan_loans WHERE customer_id = c.id AND status = \'active\') as active_loans')
       )
       .where('c.tenant_id', tenantId);
@@ -1176,6 +1228,7 @@ export class MoneyLoanService {
 
     const [{ count }] = await knex('customers as c')
       .leftJoin('money_loan_customer_profiles as mlcp', 'c.id', 'mlcp.customer_id')
+      .leftJoin('users as assigned', 'c.assigned_employee_id', 'assigned.id')
       .where('c.tenant_id', tenantId)
       .modify((qb) => {
         if (search) {
@@ -1371,7 +1424,7 @@ export class MoneyLoanService {
         assigned_employee_id: null,
         assigned_by: null,
         assigned_at: null,
-        assignment_notes: knex.raw(`CONCAT(COALESCE(assignment_notes, ''), '\n[', NOW(), '] Unassigned by user ', ?, '.')`, [unassignedBy]),
+        assignment_notes: knex.raw(`CONCAT(COALESCE(assignment_notes, ''), '\n[', NOW(), '] Unassigned by user ', ?::text, '.')`, [unassignedBy]),
         updated_at: timestamp,
       });
 
@@ -1379,5 +1432,92 @@ export class MoneyLoanService {
       unassignedCount: result,
       unassignedAt: new Date().toISOString(),
     };
+  }
+
+  async getCollectorRoute(
+    tenantId: number,
+    collectorId: number
+  ) {
+    const knex = this.knexService.instance;
+
+    const loanSummary = knex('money_loan_loans as ml')
+      .select('ml.customer_id')
+      .sum({ totalOutstanding: knex.raw('COALESCE(ml.outstanding_balance, 0)') })
+      .groupBy('ml.customer_id')
+      .where('ml.tenant_id', tenantId);
+
+    const dueSummary = knex('money_loan_repayment_schedules as rs')
+      .leftJoin('money_loan_loans as ml', 'rs.loan_id', 'ml.id')
+      .select('ml.customer_id')
+      .sum({ totalDue: knex.raw('COALESCE(rs.outstanding_amount, 0)') })
+      .min({ nextDueDate: 'rs.due_date' })
+      .where('ml.tenant_id', tenantId)
+      .whereIn('rs.status', ['pending', 'partially_paid'])
+      .groupBy('ml.customer_id');
+
+    const customers = await knex('customers as c')
+      .leftJoin(
+        loanSummary.as('loan_summary'),
+        'loan_summary.customer_id',
+        'c.id'
+      )
+      .leftJoin(
+        dueSummary.as('due_summary'),
+        'due_summary.customer_id',
+        'c.id'
+      )
+      .leftJoin('addresses as addr', function () {
+        this.on('addr.addressable_id', '=', 'c.id')
+          .andOn('addr.addressable_type', '=', knex.raw('?', ['customer']))
+          .andOn('addr.is_primary', '=', knex.raw('true'));
+      })
+      .select(
+        'c.id',
+        'c.first_name',
+        'c.last_name',
+        'c.phone',
+        'c.email',
+        knex.raw(
+          "COALESCE(NULLIF(TRIM(CONCAT_WS(', ', addr.house_number, addr.street_name, addr.barangay, addr.city_municipality, addr.province)), ''), 'N/A') as full_address",
+        ),
+        knex.raw('COALESCE(loan_summary.totalOutstanding, 0) as loan_balance'),
+        knex.raw('COALESCE(due_summary.totalDue, 0) as amount_due'),
+        knex.raw('due_summary.nextDueDate as next_due_date')
+      )
+      .where('c.tenant_id', tenantId)
+      .andWhere('c.assigned_employee_id', collectorId)
+      .orderBy('c.first_name', 'asc')
+      .orderBy('c.last_name', 'asc');
+
+    return customers.map((customer) => {
+      const fullName = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+      const dueDate = customer.next_due_date ? new Date(customer.next_due_date) : null;
+
+      let formattedDueDate: string | null = null;
+      if (dueDate && !Number.isNaN(dueDate.getTime())) {
+        formattedDueDate = dueDate.toISOString();
+      }
+
+      const loanBalance = Number(customer.loan_balance ?? 0);
+      const amountDue = Number(customer.amount_due ?? 0);
+
+      let status: 'not-visited' | 'collected' | 'visited' | 'missed' = 'not-visited';
+      if (amountDue <= 0 && loanBalance <= 0) {
+        status = 'collected';
+      } else if (amountDue <= 0 && loanBalance > 0) {
+        status = 'visited';
+      }
+
+      return {
+        id: customer.id,
+        name: fullName || customer.email || 'Assigned Customer',
+        address: customer.full_address ?? 'N/A',
+        phone: customer.phone ?? '',
+        loanBalance,
+        amountDue,
+        dueDate: formattedDueDate,
+        status,
+      };
+    });
   }
 }

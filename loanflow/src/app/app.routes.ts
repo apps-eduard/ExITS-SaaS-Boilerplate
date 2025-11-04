@@ -10,7 +10,7 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () => import('./auth/login.page').then((m) => m.LoginPage),
+    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
   },
   
   // Customer routes

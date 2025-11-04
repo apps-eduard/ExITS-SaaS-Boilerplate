@@ -307,49 +307,15 @@ interface Payment {
 
               <div class="schedule-list">
                 @for (item of loanDetails()!.schedule; track item.id) {
-                  <div class="schedule-card" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.overdue]="item.status === 'overdue'">
-                    <div class="schedule-card-header">
-                      <div class="schedule-number-date">
-                        <span class="schedule-number">#{{ item.installmentNumber }}</span>
-                        <span class="schedule-date">
-                          <ion-icon name="calendar-outline"></ion-icon>
-                          {{ formatDate(item.dueDate) }}
-                        </span>
-                      </div>
-                      <ion-badge 
-                        [color]="getStatusColor(item.status)"
-                        class="schedule-badge"
-                      >
-                        {{ getScheduleStatusLabel(item.status) }}
-                      </ion-badge>
+                  <div class="schedule-item" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.overdue]="item.status === 'overdue'">
+                    <div class="schedule-left">
+                      <div class="repayment-number">Repayment #{{ item.installmentNumber }}</div>
+                      <div class="repayment-date">{{ formatDate(item.dueDate) }}</div>
                     </div>
-                    <div class="schedule-card-body">
-                      <div class="schedule-grid">
-                        <div class="schedule-grid-item">
-                          <span class="grid-label">PRINCIPAL</span>
-                          <span class="grid-value">₱{{ formatCurrency(item.principalAmount) }}</span>
-                        </div>
-                        <div class="schedule-grid-item">
-                          <span class="grid-label">INTEREST</span>
-                          <span class="grid-value">₱{{ formatCurrency(item.interestAmount) }}</span>
-                        </div>
-                        <div class="schedule-grid-item">
-                          <span class="grid-label">TOTAL</span>
-                          <span class="grid-value total">₱{{ formatCurrency(item.totalAmount) }}</span>
-                        </div>
-                        <div class="schedule-grid-item">
-                          <span class="grid-label">STATUS</span>
-                          @if (item.status === 'paid') {
-                            <span class="grid-value status-paid">
-                              <ion-icon name="checkmark-circle-outline"></ion-icon>
-                              Paid
-                            </span>
-                          } @else if (item.status === 'pending') {
-                            <span class="grid-value status-pending">Pending</span>
-                          } @else {
-                            <span class="grid-value status-overdue">Overdue</span>
-                          }
-                        </div>
+                    <div class="schedule-right">
+                      <div class="repayment-amount">₱{{ formatCurrency(item.totalAmount) }}</div>
+                      <div class="repayment-status" [class.status-paid]="item.status === 'paid'" [class.status-pending]="item.status === 'pending'" [class.status-overdue]="item.status === 'overdue'">
+                        {{ getScheduleStatusLabel(item.status) }}
                       </div>
                     </div>
                   </div>
@@ -960,189 +926,135 @@ interface Payment {
     .schedule-list {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
-    .schedule-card {
-      background: var(--ion-item-background);
-      border: 2px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
-      border-radius: 16px;
-      padding: 1rem;
-      transition: all 0.2s ease;
-    }
-
-    .schedule-card.paid {
-      border-color: var(--ion-color-success);
-    }
-
-    .schedule-card.pending {
-      border-color: var(--ion-border-color, rgba(148, 163, 184, 0.2));
-    }
-
-    .schedule-card.overdue {
-      border-color: var(--ion-color-danger);
-    }
-
-    .schedule-card-header {
+    .schedule-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-
-    .schedule-number-date {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .schedule-number {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--ion-text-color);
-    }
-
-    .schedule-date {
-      font-size: 0.75rem;
-      color: var(--ion-color-medium);
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .schedule-date ion-icon {
-      font-size: 0.85rem;
-    }
-
-    .schedule-badge {
-      font-size: 0.7rem;
-      padding: 0.35rem 0.75rem;
-      font-weight: 600;
+      padding: 1rem;
+      background: var(--ion-item-background);
+      border: 2px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
       border-radius: 12px;
+      transition: all 0.2s ease;
     }
 
-    .schedule-card-body {
-      background: var(--ion-background-color, rgba(148, 163, 184, 0.05));
-      border-radius: 12px;
-      padding: 0.85rem;
+    .schedule-item.paid {
+      border-color: var(--ion-color-success);
+      background: rgba(34, 197, 94, 0.05);
     }
 
-    .schedule-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
+    .schedule-item.pending {
+      border-color: var(--ion-border-color, rgba(148, 163, 184, 0.2));
     }
 
-    .schedule-grid-item {
+    .schedule-item.overdue {
+      border-color: var(--ion-color-danger);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .schedule-left {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.25rem;
     }
 
-    .grid-label {
-      font-size: 0.65rem;
-      color: var(--ion-color-medium);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-      opacity: 0.8;
-    }
-
-    .grid-value {
-      font-size: 1rem;
+    .repayment-number {
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--ion-text-color);
-      line-height: 1.2;
     }
 
-    .grid-value.total {
-      color: #3b82f6;
-      font-size: 1.1rem;
-    }
-
-    .grid-value.status-paid {
-      color: var(--ion-color-success);
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.9rem;
-    }
-
-    .grid-value.status-paid ion-icon {
-      font-size: 1.1rem;
-    }
-
-    .grid-value.status-pending {
+    .repayment-date {
+      font-size: 0.8rem;
       color: var(--ion-color-medium);
-      font-size: 0.9rem;
     }
 
-    .grid-value.status-overdue {
+    .schedule-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+    }
+
+    .repayment-amount {
+      font-size: 1.1rem;
+      font-weight: 400;
+    }
+
+    .schedule-item.paid .repayment-amount {
+      color: var(--ion-color-success);
+    }
+
+    .schedule-item.pending .repayment-amount {
+      color: #f59e0b;
+    }
+
+    .schedule-item.overdue .repayment-amount {
       color: var(--ion-color-danger);
-      font-size: 0.9rem;
+    }
+
+    .repayment-status {
+      font-size: 0.8rem;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .repayment-status.status-paid {
+      color: var(--ion-color-success);
+    }
+
+    .repayment-status.status-pending {
+      color: #f59e0b;
+    }
+
+    .repayment-status.status-overdue {
+      color: var(--ion-color-danger);
     }
 
     @media (min-width: 400px) {
-      .schedule-card {
-        padding: 1.15rem;
+      .schedule-item {
+        padding: 1.25rem;
       }
 
-      .schedule-card-body {
-        padding: 1rem;
+      .repayment-number {
+        font-size: 1rem;
       }
 
-      .grid-label {
-        font-size: 0.7rem;
+      .repayment-date {
+        font-size: 0.85rem;
       }
 
-      .grid-value {
-        font-size: 1.05rem;
+      .repayment-amount {
+        font-size: 1.2rem;
       }
 
-      .grid-value.total {
-        font-size: 1.15rem;
+      .repayment-status {
+        font-size: 0.8rem;
       }
     }
 
     @media (min-width: 500px) {
-      .schedule-card {
-        padding: 1.25rem;
+      .schedule-item {
+        padding: 1.5rem;
       }
 
-      .schedule-number {
-        font-size: 1.15rem;
+      .repayment-number {
+        font-size: 1.05rem;
       }
 
-      .schedule-date {
-        font-size: 0.8rem;
+      .repayment-date {
+        font-size: 0.9rem;
       }
 
-      .schedule-card-body {
-        padding: 1.1rem;
+      .repayment-amount {
+        font-size: 1.3rem;
       }
 
-      .schedule-grid {
-        gap: 0.85rem;
-      }
-
-      .grid-label {
-        font-size: 0.75rem;
-      }
-
-      .grid-value {
-        font-size: 1.1rem;
-      }
-
-      .grid-value.total {
-        font-size: 1.2rem;
-      }
-
-      .grid-value.status-paid {
-        font-size: 0.95rem;
-      }
-
-      .grid-value.status-paid ion-icon {
-        font-size: 1.15rem;
+      .repayment-status {
+        font-size: 0.85rem;
+        padding: 0.3rem 0.85rem;
       }
     }
 

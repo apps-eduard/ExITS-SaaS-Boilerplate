@@ -907,7 +907,7 @@ export class CollectorRoutePage implements OnInit {
           phone: customer.phone || customer.contact_number || customer.phone_number || 'N/A',
           loanBalance: customer.loanBalance || customer.loan_balance || customer.remaining_balance || 0,
           amountDue: customer.amountDue || customer.amount_due || customer.payment_amount || 0,
-          dueDate: customer.dueDate || customer.due_date || 'N/A',
+          dueDate: this.formatDueDate(customer.dueDate || customer.due_date || customer.next_due_date),
           status: this.mapCustomerStatus(customer.status || customer.visit_status),
           distance: customer.distance || 'N/A'
         }));
@@ -939,6 +939,23 @@ export class CollectorRoutePage implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private formatDueDate(rawDate: string | null | undefined): string {
+    if (!rawDate) {
+      return 'N/A';
+    }
+
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return rawDate;
+    }
+
+    return parsed.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 
   /**

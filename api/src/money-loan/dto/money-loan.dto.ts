@@ -240,21 +240,26 @@ export class ApproveLoanDto {
   @IsNotEmpty()
   interestType: string;
 
+  // The following fields are now calculated by backend and optional from frontend
   @IsNumber()
-  @IsNotEmpty()
-  totalInterest: number;
+  @IsOptional()
+  totalInterest?: number;
 
   @IsNumber()
-  @IsNotEmpty()
-  totalAmount: number;
+  @IsOptional()
+  totalAmount?: number;
 
   @IsNumber()
-  @IsNotEmpty()
-  processingFee: number;
+  @IsOptional()
+  processingFee?: number;
 
   @IsNumber()
-  @IsNotEmpty()
-  platformFee: number;
+  @IsOptional()
+  platformFee?: number;
+
+  @IsString()
+  @IsOptional()
+  paymentFrequency?: string;
 
   @IsString()
   @IsOptional()

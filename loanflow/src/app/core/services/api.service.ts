@@ -122,4 +122,79 @@ export class ApiService {
   applyForLoan(applicationData: any): Observable<any> {
     return this.post<any>('loan-applications', applicationData);
   }
+
+  getPendingApplications(tenantId: string, customerId: number): Observable<any> {
+    // Check for pending/approved applications AND pending loans
+    // Applications: submitted, approved (waiting for disbursement)
+    // Loans: pending, approved (waiting for disbursement)
+    return this.get<any>(`tenants/${tenantId}/platforms/moneyloan/loans`, {
+      customerId,
+      status: 'submitted,approved,pending', // Check both applications and loans
+      limit: 100
+    });
+  }
+
+  checkHasPendingApplication(tenantId: string, customerId: number): Observable<boolean> {
+    return new Observable(observer => {
+      this.getPendingApplications(tenantId, customerId).subscribe({
+        next: (response) => {
+          const hasPending = response?.data && response.data.length > 0;
+          observer.next(hasPending);
+          observer.complete();
+        },
+        error: (err) => {
+          observer.error(err);
+        }
+      });
+    });
+  }
+
+  getPendingProductIds(tenantId: string, customerId: number): Observable<number[]> {
+    return new Observable(observer => {
+      this.getPendingApplications(tenantId, customerId).subscribe({
+        next: (response) => {
+          console.log('🔍 Raw pending applications response:', response);
+          console.log('🔍 Applications data:', response?.data);
+          
+          if (response?.data && response.data.length > 0) {
+            console.log('🔍 First application structure:', response.data[0]);
+            console.log('🔍 Available keys:', Object.keys(response.data[0]));
+          }
+          
+          // Database uses loan_product_id (snake_case)
+          const pendingProductIds = response?.data?.map((app: any) => {
+            const productId = app.loan_product_id || app.loanProductId;
+            console.log('🔍 Extracted productId:', productId, 'from application:', app.id);
+            return productId;
+          }).filter((id: any) => id !== undefined && id !== null) || [];
+          
+          console.log('✅ Final pending product IDs:', pendingProductIds);
+          observer.next(pendingProductIds);
+          observer.complete();
+        },
+        error: (err) => {
+          console.error('❌ Error getting pending applications:', err);
+          observer.error(err);
+        }
+      });
+    });
+  }
+
+  // Get application details by product ID
+  getApplicationByProductId(tenantId: string, customerId: number, productId: number): Observable<any> {
+    return new Observable(observer => {
+      this.getPendingApplications(tenantId, customerId).subscribe({
+        next: (response) => {
+          const application = response?.data?.find((app: any) => 
+            (app.loan_product_id || app.loanProductId) === productId
+          );
+          observer.next(application || null);
+          observer.complete();
+        },
+        error: (err) => {
+          observer.error(err);
+        }
+      });
+    });
+  }
 }

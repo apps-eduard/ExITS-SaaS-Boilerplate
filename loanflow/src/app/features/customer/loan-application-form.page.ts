@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import {
@@ -17,24 +17,22 @@ import {
   IonButton,
   IonIcon,
   IonSpinner,
-  IonNote,
   ToastController,
   LoadingController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
-  cashOutline,
-  calendarOutline,
-  documentTextOutline,
   checkmarkCircleOutline,
   moonOutline,
-  sunnyOutline
+  sunnyOutline,
+  cardOutline
 } from 'ionicons/icons';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../../core/services/theme.service';
 import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
 
 interface LoanProduct {
   id: number;
@@ -46,9 +44,11 @@ interface LoanProduct {
   maxTerm: number;  // Store in days like the web version
   processingFee: number;
   platformFee?: number;
+  paymentFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   features: string[];
   loanTermType?: string; // 'fixed' or 'flexible' (lowercase from DB)
   fixedTermDays?: number; // Fixed term in days
+  interestType?: string;
 }
 
 interface LoanApplicationRequest {
@@ -81,7 +81,6 @@ interface LoanApplicationRequest {
     IonButton,
     IonIcon,
     IonSpinner,
-    IonNote,
     DevInfoComponent
   ]
 })
@@ -91,6 +90,8 @@ export class LoanApplicationFormPage implements OnInit {
   private http = inject(HttpClient);
   private toastController = inject(ToastController);
   private loadingController = inject(LoadingController);
+  private location = inject(Location);
+  private loanCalculator = inject(LoanCalculatorService);
   
   themeService = inject(ThemeService);
 
@@ -112,12 +113,10 @@ export class LoanApplicationFormPage implements OnInit {
   constructor() {
     addIcons({
       arrowBackOutline,
-      cashOutline,
-      calendarOutline,
-      documentTextOutline,
       checkmarkCircleOutline,
       moonOutline,
-      sunnyOutline
+      sunnyOutline,
+      cardOutline
     });
   }
   
@@ -147,11 +146,35 @@ export class LoanApplicationFormPage implements OnInit {
       });
     }
 
-    // Get customer ID from storage
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      this.customerId.set(user.customer?.id || 0);
+    // Get customer ID from the stored customer object
+    const customerStr = localStorage.getItem('customer');
+    console.log('📦 Raw customer string from localStorage:', customerStr);
+    
+    if (customerStr) {
+      try {
+        const customer = JSON.parse(customerStr);
+        console.log('✅ Parsed customer object:', customer);
+        console.log('🔑 Customer keys:', Object.keys(customer));
+        
+        const customerId = customer.id || 0;
+        console.log('🆔 Customer ID resolved:', customerId);
+        
+        this.customerId.set(customerId);
+      } catch (e) {
+        console.error('❌ Error parsing customer data:', e);
+      }
+    } else {
+      console.warn('⚠️ No customer data in localStorage');
+      
+      // Fallback: try to get from user storage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        console.log('🔄 Trying fallback from user');
+        const user = JSON.parse(userStr);
+        const customerId = user.customer?.id || user.customerId || user.id || 0;
+        console.log('🆔 Fallback Customer ID:', customerId);
+        this.customerId.set(customerId);
+      }
     }
   }
   
@@ -159,19 +182,22 @@ export class LoanApplicationFormPage implements OnInit {
     console.log('✅ Loading product from state:', productData);
     
     // Product is already in the correct format from apply-loan page
+    const interestType = this.normalizeInterestType(productData);
     const product: LoanProduct = {
       id: productData.id,
       name: productData.name || 'Loan Product',
-      minAmount: productData.minAmount || 0,
-      maxAmount: productData.maxAmount || 0,
-      interestRate: productData.interestRate || 0,
-      minTerm: productData.minTerm || 30,  // Already in days
-      maxTerm: productData.maxTerm || 360, // Already in days
-      processingFee: productData.processingFee || 0,
-      platformFee: productData.platformFee || 0,
+      minAmount: Number(productData.minAmount) || 0,
+      maxAmount: Number(productData.maxAmount) || 0,
+      interestRate: Number(productData.interestRate) || 0,
+      minTerm: Number(productData.minTerm) || 30,  // Already in days
+      maxTerm: Number(productData.maxTerm) || 360, // Already in days
+      processingFee: Number(productData.processingFee) || 0,
+      platformFee: Number(productData.platformFee) || 0,
+      paymentFrequency: productData.paymentFrequency || 'monthly',
       features: productData.features || [],
       loanTermType: productData.loanTermType || 'flexible',
-      fixedTermDays: productData.fixedTermDays || 90
+      fixedTermDays: Number(productData.fixedTermDays) || 90,
+      interestType
     };
     
     console.log('🎯 Processed product:', product);
@@ -182,13 +208,13 @@ export class LoanApplicationFormPage implements OnInit {
     this.requestedAmount.set(product.minAmount);
     
     // Set default term in months
-    if (product.loanTermType === 'fixed') {
-      // For fixed term, use the fixed term days
-      this.requestedTermMonths.set(Math.round((product.fixedTermDays || 90) / 30));
-    } else {
-      // For flexible term, use minimum term
-      this.requestedTermMonths.set(Math.round(product.minTerm / 30));
-    }
+    this.requestedTermMonths.set(this.getDefaultTermMonths(product));
+    
+    // Log initial calculations
+    console.log('💰 Initial Amount:', this.requestedAmount());
+    console.log('📅 Initial Term (months):', this.requestedTermMonths());
+    console.log('💵 Total Repayment:', this.getTotalRepayment());
+    console.log('📊 Daily Payment:', this.getDailyPayment());
   }
 
   async loadProduct(productId: number) {
@@ -222,18 +248,21 @@ export class LoanApplicationFormPage implements OnInit {
         console.log('🔍 Max Term Days:', productData.maxTermDays);
         
         // Store product data in days, just like web version
+        const interestType = this.normalizeInterestType(productData);
         const product: LoanProduct = {
           id: productData.id,
           name: productData.name || 'Loan Product',
-          minAmount: productData.minAmount || 0,
-          maxAmount: productData.maxAmount || 0,
-          interestRate: productData.interestRate || 0,
-          minTerm: productData.minTermDays || 30,  // Store as days
-          maxTerm: productData.maxTermDays || 360, // Store as days
-          processingFee: productData.processingFeePercent || 0,
+          minAmount: Number(productData.minAmount) || 0,
+          maxAmount: Number(productData.maxAmount) || 0,
+          interestRate: Number(productData.interestRate) || 0,
+          minTerm: Number(productData.minTermDays) || 30,  // Store as days
+          maxTerm: Number(productData.maxTermDays) || 360, // Store as days
+          processingFee: Number(productData.processingFeePercent) || 0,
           features: productData.features || [],
           loanTermType: productData.loanTermType || 'flexible',  // lowercase
-          fixedTermDays: productData.fixedTermDays || 90
+          fixedTermDays: Number(productData.fixedTermDays) || 90,
+          platformFee: Number(productData.platformFee) || 0,
+          interestType
         };
         
         console.log('✅ Processed Product:', product);
@@ -244,13 +273,13 @@ export class LoanApplicationFormPage implements OnInit {
         this.requestedAmount.set(product.minAmount);
         
         // Set default term in months
-        if (product.loanTermType === 'fixed') {
-          // For fixed term, use the fixed term days
-          this.requestedTermMonths.set(Math.round((product.fixedTermDays || 90) / 30));
-        } else {
-          // For flexible term, use minimum term
-          this.requestedTermMonths.set(Math.round(product.minTerm / 30));
-        }
+        this.requestedTermMonths.set(this.getDefaultTermMonths(product));
+        
+        // Log initial calculations
+        console.log('💰 Initial Amount:', this.requestedAmount());
+        console.log('📅 Initial Term (months):', this.requestedTermMonths());
+        console.log('💵 Total Repayment:', this.getTotalRepayment());
+        console.log('📊 Daily Payment:', this.getDailyPayment());
       } else {
         throw new Error('Invalid product data');
       }
@@ -298,8 +327,8 @@ export class LoanApplicationFormPage implements OnInit {
     }
     
     // For flexible term, enforce min/max limits
-    const minTermMonths = Math.round(product.minTerm / 30);
-    const maxTermMonths = Math.round(product.maxTerm / 30);
+    const minTermMonths = this.coerceTermMonths(product.minTerm, 1);
+    const maxTermMonths = this.coerceTermMonths(product.maxTerm, minTermMonths);
     
     if (value < minTermMonths) {
       this.requestedTermMonths.set(minTermMonths);
@@ -311,54 +340,218 @@ export class LoanApplicationFormPage implements OnInit {
   }
 
   getEstimatedMonthlyPayment(): number {
-    const product = this.product();
-    if (!product) return 0;
-
-    const principal = this.requestedAmount();
-    if (!principal) return 0;
-    
-    const monthlyRate = product.interestRate / 100;
     const termMonths = this.requestedTermMonths();
-    const processingFeeAmount = principal * (product.processingFee / 100);
+    if (!termMonths) {
+      return 0;
+    }
 
-    // Simple interest calculation
-    const totalInterest = principal * monthlyRate * termMonths;
-    const totalAmount = principal + totalInterest + processingFeeAmount;
-    
-    return Math.round((totalAmount / termMonths) * 100) / 100; // Round to 2 decimals
+    const calculation = this.getCalculation();
+    if (!calculation) {
+      return 0;
+    }
+
+    const totalRepayment = this.getTotalRepayment();
+    return this.roundToCents(totalRepayment / termMonths);
   }
 
   getTotalRepayment(): number {
-    const product = this.product();
-    if (!product) return 0;
+    const calculation = this.getCalculation();
+    if (!calculation) {
+      return 0;
+    }
 
-    const principal = this.requestedAmount();
-    if (!principal) return 0;
-    
-    const monthlyRate = product.interestRate / 100;
-    const termMonths = this.requestedTermMonths();
-    const processingFeeAmount = principal * (product.processingFee / 100);
-
-    const totalInterest = principal * monthlyRate * termMonths;
-    const total = principal + totalInterest + processingFeeAmount;
-    
-    return Math.round(total * 100) / 100; // Round to 2 decimals
+    return calculation.totalRepayable;
   }
   
   getProcessingFeeAmount(): number {
-    const product = this.product();
-    if (!product) return 0;
-    return this.requestedAmount() * (product.processingFee / 100);
+    const calculation = this.getCalculation();
+    return calculation ? calculation.processingFeeAmount : 0;
   }
   
   hasPlatformFee(): boolean {
-    const product = this.product();
-    return !!(product?.platformFee && product.platformFee > 0);
+    return this.getPlatformFee() > 0;
   }
   
   getPlatformFee(): number {
     const product = this.product();
-    return product?.platformFee || 0;
+    if (!product) {
+      return 0;
+    }
+    return product.platformFee || 0;
+  }
+
+  getPlatformFeeTotal(): number {
+    const calculation = this.getCalculation();
+    return calculation ? calculation.platformFee : 0;
+  }
+
+  getTotalInterest(): number {
+    const calculation = this.getCalculation();
+    return calculation ? calculation.interestAmount : 0;
+  }
+
+  getNetReceived(): number {
+    const calculation = this.getCalculation();
+    if (!calculation) {
+      return 0;
+    }
+    return calculation.netProceeds;
+  }
+
+  getDailyPayment(): number {
+    const calculation = this.getCalculation();
+    if (!calculation) {
+      return 0;
+    }
+    const product = this.product();
+    // Return installment amount if frequency is daily
+    if (product?.paymentFrequency === 'daily') {
+      return calculation.installmentAmount;
+    }
+    // Otherwise calculate from total repayment
+    const termDays = this.requestedTermMonths() * 30;
+    if (!termDays) {
+      return 0;
+    }
+    return this.roundToCents(calculation.totalRepayable / termDays);
+  }
+
+  getPaymentCount(): number {
+    const calculation = this.getCalculation();
+    return calculation ? calculation.numPayments : 0;
+  }
+
+  getInstallmentAmount(): number {
+    const calculation = this.getCalculation();
+    return calculation ? calculation.installmentAmount : 0;
+  }
+
+  getPaymentLabel(): string {
+    const product = this.product();
+    const freq = product?.paymentFrequency || 'monthly';
+    return freq.charAt(0).toUpperCase() + freq.slice(1);
+  }
+
+  getPaymentFrequencyDisplay(): string {
+    const product = this.product();
+    const freq = product?.paymentFrequency || 'monthly';
+    const freqMap: { [key: string]: string } = {
+      'daily': 'Daily',
+      'weekly': 'Weekly',
+      'biweekly': 'Bi-Weekly',
+      'monthly': 'Monthly'
+    };
+    return freqMap[freq] || freq;
+  }
+
+  getInterestLabel(): string {
+    const product = this.product();
+    if (!product) {
+      return 'flat';
+    }
+    const type = this.resolveInterestType(product.interestType);
+    switch (type) {
+      case 'reducing':
+        return 'reducing balance';
+      case 'compound':
+        return 'compound';
+      default:
+        return 'flat';
+    }
+  }
+
+  formatNumber(value: number): string {
+    if (!value) {
+      return '0';
+    }
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+  }
+
+  private getCalculation(): LoanCalculationResult | null {
+    const product = this.product();
+    if (!product) {
+      console.warn('⚠️ No product set');
+      return null;
+    }
+
+    const principal = this.requestedAmount();
+    if (!principal) {
+      console.warn('⚠️ No principal amount');
+      return null;
+    }
+
+    const termMonths = Math.max(1, this.requestedTermMonths());
+    if (!termMonths) {
+      console.warn('⚠️ No term months');
+      return null;
+    }
+
+    const monthlyInterestRate = Number(product.interestRate) || 0;
+    const interestType = this.resolveInterestType(product.interestType);
+    const platformFeePerMonth = Number(product.platformFee) || 0;
+    const processingFeePercent = Number(product.processingFee) || 0;
+    const paymentFrequency = product.paymentFrequency || 'monthly';
+
+    console.log('📊 Calculation Params:', {
+      loanAmount: principal,
+      termMonths,
+      paymentFrequency,
+      monthlyInterestRate,
+      interestType,
+      processingFeePercentage: processingFeePercent,
+      platformFeePerMonth: platformFeePerMonth
+    });
+
+    const result = this.loanCalculator.calculate({
+      loanAmount: principal,
+      termMonths,
+      paymentFrequency,
+      interestRate: monthlyInterestRate,
+      interestType,
+      processingFeePercentage: processingFeePercent,
+      platformFee: platformFeePerMonth,
+      latePenaltyPercentage: 0
+    });
+
+    console.log('📊 Calculation Result:', result);
+
+    return result;
+  }
+
+  private resolveInterestType(rawType?: string): 'flat' | 'reducing' | 'compound' {
+    if (!rawType) {
+      return 'flat';
+    }
+    const normalized = rawType.toLowerCase();
+    if (normalized === 'reducing' || normalized === 'compound') {
+      return normalized;
+    }
+    return 'flat';
+  }
+
+  private normalizeInterestType(productData: any): string {
+    const candidate = productData?.interestType || productData?.interestComputation || productData?.interestMethod;
+    return (candidate ? String(candidate) : 'flat').toLowerCase();
+  }
+
+  private getDefaultTermMonths(product: LoanProduct): number {
+    if (product.loanTermType === 'fixed') {
+      const fixedTerm = this.coerceTermMonths(product.fixedTermDays, 3);
+      return Math.max(1, fixedTerm);
+    }
+
+    const minTerm = this.coerceTermMonths(product.minTerm, 1);
+    return Math.max(1, minTerm);
+  }
+
+  private coerceTermMonths(termDays?: number, fallbackMonths: number = 1): number {
+    const days = typeof termDays === 'number' && !isNaN(termDays) ? termDays : fallbackMonths * 30;
+    const months = Math.round(days / 30);
+    return Math.max(1, months);
+  }
+
+  private roundToCents(value: number): number {
+    return Math.round((value || 0) * 100) / 100;
   }
 
   async submitApplication() {
@@ -398,9 +591,13 @@ export class LoanApplicationFormPage implements OnInit {
     }
 
     if (!this.customerId()) {
+      console.error('❌ Customer ID is not set:', this.customerId());
+      console.error('📋 LocalStorage user:', localStorage.getItem('user'));
       await this.showToast('Customer information not found. Please login again.', 'danger');
       return;
     }
+
+    console.log('✅ Customer ID validated:', this.customerId());
 
     const loading = await this.loadingController.create({
       message: 'Submitting application...',
@@ -469,6 +666,11 @@ export class LoanApplicationFormPage implements OnInit {
   }
 
   goBack() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      this.location.back();
+      return;
+    }
+
     this.router.navigate(['/customer/apply-loan']);
   }
 }

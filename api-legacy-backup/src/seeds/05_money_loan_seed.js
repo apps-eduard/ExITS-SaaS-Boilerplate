@@ -50,6 +50,7 @@ exports.seed = async function(knex) {
       processing_fee_percent: 2.00,
       late_payment_penalty_percent: 5.00,
       grace_period_days: 3,
+      payment_frequency: 'monthly',
       is_active: true,
       required_documents: JSON.stringify(['valid_id', 'proof_of_income', 'billing_statement']),
       eligibility_criteria: JSON.stringify({
@@ -72,6 +73,7 @@ exports.seed = async function(knex) {
       processing_fee_percent: 3.00,
       late_payment_penalty_percent: 5.00,
       grace_period_days: 5,
+      payment_frequency: 'monthly',
       is_active: true,
       required_documents: JSON.stringify(['valid_id', 'business_permit', 'financial_statements', 'bir_registration']),
       eligibility_criteria: JSON.stringify({
@@ -94,6 +96,7 @@ exports.seed = async function(knex) {
       processing_fee_percent: 5.00,
       late_payment_penalty_percent: 10.00,
       grace_period_days: 0,
+      payment_frequency: 'daily',
       is_active: true,
       required_documents: JSON.stringify(['valid_id', 'proof_of_income']),
       eligibility_criteria: JSON.stringify({

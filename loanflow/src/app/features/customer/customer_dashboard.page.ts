@@ -24,7 +24,7 @@ import {
   documentTextOutline,
   addCircleOutline,
   arrowForwardOutline,
-  personCircleOutline,
+  peopleOutline,
   logOutOutline,
   moonOutline,
   sunnyOutline,
@@ -57,6 +57,14 @@ interface RecentLoan {
   dueDate: string;
 }
 
+interface AssignedCollector {
+  id: number;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  assignedAt?: string | null;
+}
+
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,
@@ -79,22 +87,17 @@ interface RecentLoan {
       <ion-toolbar class="custom-toolbar">
         <div class="toolbar-content">
           <div class="toolbar-center">
-            <ion-icon name="wallet-outline" class="title-icon"></ion-icon>
-            <span class="title-text">Dashboard</span>
+            <span class="app-emoji">💼</span>
+            <span class="app-title">Dashboard</span>
           </div>
           
           <div class="toolbar-right">
-            <!-- Dev Info (Development Only) -->
             <app-dev-info />
-            
             <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <ion-icon 
-                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-                slot="icon-only"
-              ></ion-icon>
+              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
             </ion-button>
-            <ion-button (click)="logout()" class="icon-btn" fill="clear">
-              <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+            <ion-button (click)="logout()" class="icon-btn logout-btn" fill="clear" title="Logout">
+              <span class="logout-emoji">⎋</span>
             </ion-button>
           </div>
         </div>
@@ -109,22 +112,44 @@ interface RecentLoan {
       <div class="dashboard-container">
   
         <!-- Hero Overview -->
-  <div class="dashboard-hero animate-fade-up">
-          <div class="hero-left">
-            <p class="hero-greeting">
-              <ion-icon name="person-circle-outline" class="greeting-icon"></ion-icon>
-              {{ authService.currentUser()?.firstName }} {{ authService.currentUser()?.lastName }}
-            </p>
-            <p class="hero-subtitle">{{ currentDateTime() }}</p>
-            <div class="hero-tags">
-              <span class="hero-tag">
-                <ion-icon name="business-outline" class="tag-icon"></ion-icon>
-                {{ authService.currentUser()?.tenant?.name || 'LoanFlow Tenant' }}
-              </span>
-              <span class="hero-tag" *ngIf="stats().activeLoans > 0">
-                <ion-icon name="checkmark-circle-outline" class="tag-icon"></ion-icon>
-                {{ stats().activeLoans }} active loans
-              </span>
+        <div class="dashboard-hero animate-fade-up">
+          <div class="hero-header">
+            <div class="hero-avatar">
+              <span>{{ currentUserInitials() }}</span>
+            </div>
+            <div class="hero-heading">
+              <p class="hero-title">
+                {{ authService.currentUser()?.firstName }} {{ authService.currentUser()?.lastName }}
+              </p>
+              <p class="hero-timestamp">{{ currentDateTime() }}</p>
+            </div>
+          </div>
+
+          <div class="hero-info-cards">
+            <div class="info-card">
+              <span class="info-icon">🏢</span>
+              <div class="info-details">
+                <span class="info-label">Tenant</span>
+                <span class="info-value">{{ authService.currentUser()?.tenant?.name || 'LoanFlow Tenant' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card" *ngIf="assignedCollector() as collector">
+              <span class="info-icon">🧑‍💼</span>
+              <div class="info-details">
+                <span class="info-label">Collector</span>
+                <span class="info-value">{{ collector.fullName }}</span>
+                <span class="info-meta" *ngIf="collector.assignedAt">Assigned {{ collector.assignedAt }}</span>
+                <span class="info-meta" *ngIf="collector.phone">{{ collector.phone }}</span>
+              </div>
+            </div>
+
+            <div class="info-card" *ngIf="stats().activeLoans > 0">
+              <span class="info-icon">📊</span>
+              <div class="info-details">
+                <span class="info-label">Active Loans</span>
+                <span class="info-value">{{ stats().activeLoans }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -399,10 +424,10 @@ interface RecentLoan {
   styles: [`
     /* ===== HEADER STYLES ===== */
     .custom-toolbar {
-      --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       --color: white;
       --border-style: none;
-      --min-height: 60px;
+      --min-height: 64px;
       --padding-top: 0;
       --padding-bottom: 0;
       --padding-start: 0;
@@ -413,36 +438,36 @@ interface RecentLoan {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
+      padding: 0 1rem;
       width: 100%;
-      height: 60px;
-      color: white;
+      height: 64px;
     }
 
     .toolbar-center {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
+      gap: 0.5rem;
       flex: 1;
+      justify-content: center;
     }
 
     .toolbar-right {
       display: flex;
       align-items: center;
-      gap: 6px;
-      justify-content: flex-end;
+      gap: 0.25rem;
     }
 
-    .title-icon {
-      font-size: 22px;
-      flex-shrink: 0;
+    .app-emoji {
+      font-size: 1.75rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
 
-    .title-text {
-      font-size: 18px;
+    .app-title {
+      font-size: 1.125rem;
       font-weight: 700;
-      white-space: nowrap;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
     }
 
     .icon-btn {
@@ -453,25 +478,20 @@ interface RecentLoan {
       width: 40px;
     }
 
-    .icon-btn ion-icon {
-      font-size: 22px;
+    .theme-emoji,
+    .logout-emoji {
+      font-size: 1.75rem;
+      display: inline-flex;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+      font-weight: bold;
     }
 
-    .header-title {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      font-size: 1.125rem;
-      font-weight: 700;
+    .logout-btn {
+      --color: rgba(255, 255, 255, 0.95);
     }
 
-    .title-icon {
-      font-size: 1.5rem;
-    }
-
-    .title-text {
-      font-weight: 700;
+    .logout-btn:hover .logout-emoji {
+      filter: drop-shadow(0 2px 8px rgba(255, 100, 100, 0.5));
     }
 
     .header-btn {
@@ -565,15 +585,16 @@ interface RecentLoan {
     .dashboard-hero {
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
-      background: var(--ion-card-background);
-      border-radius: 22px;
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
+      gap: 1.2rem;
+      padding: 1rem 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 24px;
       position: relative;
       overflow: hidden;
-      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.2));
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      background: linear-gradient(140deg, rgba(99, 102, 241, 0.14), rgba(6, 182, 212, 0.08)), var(--ion-card-background);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
 
     .dashboard-hero::before,
@@ -581,206 +602,179 @@ interface RecentLoan {
       content: '';
       position: absolute;
       border-radius: 999px;
-      filter: blur(60px);
-      opacity: 0.4;
+      filter: blur(70px);
+      opacity: 0.45;
       pointer-events: none;
       transition: opacity 0.3s ease;
     }
 
     .dashboard-hero::before {
-      width: 220px;
-      height: 220px;
-      background: rgba(102, 126, 234, 0.35);
-      top: -120px;
-      right: -80px;
+      width: 260px;
+      height: 260px;
+      background: rgba(99, 102, 241, 0.4);
+      top: -150px;
+      right: -120px;
     }
 
     .dashboard-hero::after {
-      width: 160px;
-      height: 160px;
-      background: rgba(56, 189, 248, 0.35);
-      bottom: -100px;
-      left: -60px;
+      width: 200px;
+      height: 200px;
+      background: rgba(56, 189, 248, 0.38);
+      bottom: -130px;
+      left: -90px;
     }
 
-    .hero-left {
+    .dashboard-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+    }
+
+    .dashboard-hero:hover::before,
+    .dashboard-hero:hover::after {
+      opacity: 0.55;
+    }
+
+    .hero-header {
       display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      align-items: center;
+      gap: 1rem;
       position: relative;
       z-index: 1;
     }
 
-    .hero-greeting {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--ion-text-color);
-      margin: 0;
-      letter-spacing: -0.01em;
+    .hero-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      background: linear-gradient(160deg, rgba(59, 130, 246, 0.9), rgba(14, 165, 233, 0.85));
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      line-height: 1.3;
-    }
-
-    .greeting-icon {
-      font-size: 1.4rem;
-      color: var(--ion-color-primary);
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 12px 24px rgba(59, 130, 246, 0.35);
       flex-shrink: 0;
     }
 
-    .hero-subtitle {
-      font-size: 0.8rem;
-      color: var(--ion-color-medium);
-      margin: 0;
-      font-weight: 500;
-      line-height: 1.4;
+    .hero-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex: 1;
+      min-width: 0;
     }
 
-    @media (min-width: 400px) {
-      .hero-greeting {
-        font-size: 1.4rem;
+    .hero-title {
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-timestamp {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.6);
+    }
+    .hero-info-cards {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: 1fr;
+      position: relative;
+      z-index: 1;
+    }
+
+    .info-card {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .info-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .info-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.18rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .info-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.55);
+    }
+
+    .info-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .info-meta {
+      font-size: 0.7rem;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.55);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media (min-width: 420px) {
+      .hero-info-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .greeting-icon {
+      .info-card {
+        padding: 0.75rem 0.95rem;
+      }
+    }
+
+    @media (min-width: 640px) {
+      .hero-info-cards {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+    }
+
+    @media (min-width: 480px) {
+      .hero-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 1.35rem;
+      }
+
+      .hero-title {
         font-size: 1.6rem;
       }
 
-      .hero-subtitle {
+      .hero-timestamp {
         font-size: 0.9rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .hero-greeting {
-        font-size: 1.5rem;
-      }
-
-      .greeting-icon {
-        font-size: 1.75rem;
-      }
-
-      .hero-subtitle {
-        font-size: 0.95rem;
-      }
-    }
-
-    .hero-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .hero-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.4rem 0.7rem;
-      border-radius: 999px;
-      background: rgba(var(--ion-color-primary-rgb), 0.1);
-      color: var(--ion-color-primary);
-      font-size: 0.7rem;
-      font-weight: 600;
-      line-height: 1.2;
-    }
-
-    @media (min-width: 400px) {
-      .hero-tag {
-        gap: 0.4rem;
-        padding: 0.45rem 0.8rem;
-        font-size: 0.75rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .hero-tag {
-        font-size: 0.8rem;
-      }
-    }
-
-    .tag-icon {
-      font-size: 0.9rem;
-      flex-shrink: 0;
-    }
-
-    @media (min-width: 400px) {
-      .tag-icon {
-        font-size: 1rem;
-      }
-    }
-
-    .hero-right {
-      position: relative;
-      z-index: 1;
-    }
-
-    .hero-progress {
-      background: rgba(255, 255, 255, 0.65);
-      border-radius: 18px;
-      padding: 1rem;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      backdrop-filter: blur(8px);
-    }
-
-    .progress-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-    }
-
-    .progress-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--ion-color-medium);
-    }
-
-    .progress-value {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--ion-text-color);
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.2);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #0ea5e9, #6366f1);
-      transition: width 0.6s ease;
-    }
-
-    .progress-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 0.75rem;
-      font-size: 0.8rem;
-      color: var(--ion-color-medium);
-      font-weight: 600;
-    }
-
-    @media (min-width: 540px) {
-      .dashboard-hero {
-        flex-direction: row;
-        align-items: center;
-      }
-
-      .hero-left {
-        flex: 1;
-      }
-
-      .hero-right {
-        flex: 1;
       }
     }
 
@@ -1697,6 +1691,40 @@ interface RecentLoan {
     .dark .empty-icon-wrapper {
       background: rgba(255, 255, 255, 0.1);
     }
+
+    body.dark .dashboard-hero,
+    .dark .dashboard-hero {
+      background: linear-gradient(150deg, rgba(30, 64, 175, 0.35), rgba(12, 74, 110, 0.25)), rgba(30, 41, 59, 0.85);
+      border-color: rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 42px rgba(2, 6, 23, 0.45);
+    }
+
+    body.dark .hero-timestamp,
+    .dark .hero-timestamp {
+      color: rgba(226, 232, 240, 0.65);
+    }
+
+    body.dark .info-card,
+    .dark .info-card {
+      background: rgba(15, 23, 42, 0.62);
+      border-color: rgba(148, 163, 184, 0.2);
+      box-shadow: 0 14px 32px rgba(2, 6, 23, 0.45);
+    }
+
+    body.dark .info-label,
+    .dark .info-label {
+      color: rgba(226, 232, 240, 0.5);
+    }
+
+    body.dark .info-value,
+    .dark .info-value {
+      color: rgba(226, 232, 240, 0.92);
+    }
+
+    body.dark .info-meta,
+    .dark .info-meta {
+      color: rgba(226, 232, 240, 0.65);
+    }
   `]
 })
 export class CustomerDashboardPage implements OnInit {
@@ -1712,6 +1740,7 @@ export class CustomerDashboardPage implements OnInit {
     nextPaymentDate: ''
   });
   recentLoans = signal<RecentLoan[]>([]);
+  assignedCollector = signal<AssignedCollector | null>(null);
 
   constructor(
     private apiService: ApiService,
@@ -1730,7 +1759,7 @@ export class CustomerDashboardPage implements OnInit {
       documentTextOutline,
       addCircleOutline,
       arrowForwardOutline,
-      personCircleOutline,
+  peopleOutline,
       logOutOutline,
       moonOutline,
       sunnyOutline,
@@ -1830,6 +1859,37 @@ export class CustomerDashboardPage implements OnInit {
           console.log('📋 Mapped recent loans:', mappedLoans);
           this.recentLoans.set(mappedLoans);
         }
+
+        const collectorData = dashboardData.assignedCollector;
+        if (collectorData) {
+          const assignedAtValue = collectorData.assignedAt;
+          let formattedAssignedAt: string | null = null;
+          if (assignedAtValue) {
+            const assignedAtDate = new Date(assignedAtValue);
+            if (!Number.isNaN(assignedAtDate.getTime())) {
+              formattedAssignedAt = assignedAtDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              });
+            }
+          }
+
+          const fullName = collectorData.fullName
+            || `${collectorData.firstName ?? ''} ${collectorData.lastName ?? ''}`.trim()
+            || collectorData.email
+            || 'Assigned Collector';
+
+          this.assignedCollector.set({
+            id: collectorData.id,
+            fullName,
+            email: collectorData.email,
+            phone: collectorData.phone,
+            assignedAt: formattedAssignedAt,
+          });
+        } else {
+          this.assignedCollector.set(null);
+        }
       }
 
       console.log('✅ Dashboard data loaded successfully');
@@ -1858,6 +1918,7 @@ export class CustomerDashboardPage implements OnInit {
         nextPaymentDate: 'N/A'
       });
       this.recentLoans.set([]);
+  this.assignedCollector.set(null);
     } finally {
       this.loading.set(false);
     }
@@ -1904,6 +1965,13 @@ export class CustomerDashboardPage implements OnInit {
       { id: 2, loanNumber: 'LN-2024-002', amount: 75000, balance: 70000, status: 'active', dueDate: 'Nov 20, 2025' },
       { id: 3, loanNumber: 'LN-2023-045', amount: 25000, balance: 0, status: 'completed', dueDate: 'Paid in Full' }
     ]);
+    this.assignedCollector.set({
+      id: 101,
+      fullName: 'Sample Collector',
+      email: 'collector@example.com',
+      phone: '+63 917 000 0000',
+      assignedAt: 'Nov 1, 2025'
+    });
   }
 
   async handleRefresh(event: any) {
@@ -1926,17 +1994,6 @@ export class CustomerDashboardPage implements OnInit {
     return Math.max(0, Math.min(100, progress));
   }
 
-  greetingMessage(): string {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) {
-      return 'Good morning';
-    }
-    if (hour >= 12 && hour < 18) {
-      return 'Good afternoon';
-    }
-    return 'Good evening';
-  }
-
   currentDateTime(): string {
     const now = new Date();
     const dateOptions: Intl.DateTimeFormatOptions = { 
@@ -1953,6 +2010,14 @@ export class CustomerDashboardPage implements OnInit {
     const formattedDate = now.toLocaleDateString('en-US', dateOptions);
     const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
     return `${formattedDate} at ${formattedTime}`;
+  }
+
+  currentUserInitials(): string {
+    const user = this.authService.currentUser();
+    const first = (user?.firstName || '').trim();
+    const last = (user?.lastName || '').trim();
+    const initials = `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+    return initials || (first.slice(0, 2).toUpperCase() || 'YOU');
   }
 
   progressRingBackground(): string {
