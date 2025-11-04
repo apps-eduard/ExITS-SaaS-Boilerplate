@@ -159,7 +159,7 @@ import { TableStateService } from '../../../../shared/services/table-state.servi
           </div>
 
           <!-- Bulk Actions -->
-          <div *ngIf="selectedUsers().size > 0" class="flex items-center gap-2">
+          <div *ngIf="selectedUsers().size > 0 && canBulkManageUsers()" class="flex items-center gap-2">
             <span class="text-xs text-gray-600 dark:text-gray-400">
               {{ selectedUsers().size }} selected
             </span>
@@ -439,6 +439,12 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
 
+  // ===== Permission Configuration =====
+  private readonly createUserPermissionKeys = ['users:create', 'tenant-users:create'];
+  private readonly updateUserPermissionKeys = ['users:update', 'tenant-users:update'];
+  private readonly enableCreateAction = false;
+  private readonly enableUpdateActions = false;
+
   // ===== Table State Manager =====
   // This manages: data, loading, error, pagination, sorting, filtering
   // Mode: 'api' = server-side pagination/filtering
@@ -637,15 +643,35 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
 
   // ===== Permission Checks =====
   canCreateUsers(): boolean {
-    return this.authService.hasPermission('users.create');
+    if (!this.enableCreateAction) {
+      return false;
+    }
+    return this.hasAnyPermission(this.createUserPermissionKeys);
   }
 
   canEditUser(user: User): boolean {
-    return this.authService.hasPermission('users.update');
+    if (!this.enableUpdateActions) {
+      return false;
+    }
+    return this.hasAnyPermission(this.updateUserPermissionKeys);
   }
 
   canToggleStatus(user: User): boolean {
-    return this.authService.hasPermission('users.update');
+    if (!this.enableUpdateActions) {
+      return false;
+    }
+    return this.hasAnyPermission(this.updateUserPermissionKeys);
+  }
+
+  canBulkManageUsers(): boolean {
+    if (!this.enableUpdateActions) {
+      return false;
+    }
+    return this.hasAnyPermission(this.updateUserPermissionKeys);
+  }
+
+  private hasAnyPermission(permissionKeys: string[]): boolean {
+    return permissionKeys.some(permission => this.authService.hasPermission(permission));
   }
 
   // ===== Display Helpers =====
