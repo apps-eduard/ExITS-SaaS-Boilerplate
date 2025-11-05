@@ -949,7 +949,23 @@ export class CustomerService {
       .orderBy('schedule.due_date', 'asc')
       .first();
 
-    // Get recent loans for this customer
+    // Get recent applications (submitted, approved) for this customer
+    // Note: Only fetch applications that haven't been disbursed yet
+    const recentApplications = await knex('money_loan_applications')
+      .select(
+        'money_loan_applications.*',
+        'money_loan_products.name as productName'
+      )
+      .leftJoin('money_loan_products', 'money_loan_applications.loan_product_id', 'money_loan_products.id')
+      .where({
+        'money_loan_applications.customer_id': mainCustomerId,
+        'money_loan_applications.tenant_id': tenantId,
+      })
+      .whereIn('money_loan_applications.status', ['submitted', 'approved', 'pending'])
+      .orderBy('money_loan_applications.created_at', 'desc')
+      .limit(5);
+
+    // Get recent loans (disbursed) for this customer
     const recentLoans = await knex('money_loan_loans')
       .select(
         'money_loan_loans.*',
@@ -962,6 +978,34 @@ export class CustomerService {
       })
       .orderBy('money_loan_loans.created_at', 'desc')
       .limit(5);
+
+    // Combine applications and loans, sorted by created date
+    const combinedRecent = [
+      ...recentApplications.map(app => ({
+        id: app.id,
+        applicationNumber: app.application_number ?? app.applicationNumber,
+        loanNumber: null,
+        amount: app.requested_amount ?? app.requestedAmount,
+        balance: 0,
+        status: app.status,
+        productName: app.productName,
+        createdAt: app.created_at ?? app.createdAt,
+        type: 'application'
+      })),
+      ...recentLoans.map(loan => ({
+        id: loan.id,
+        applicationNumber: null,
+        loanNumber: loan.loan_number ?? loan.loanNumber,
+        amount: loan.principal_amount ?? loan.principalAmount,
+        balance: loan.outstanding_balance ?? loan.outstandingBalance,
+        status: loan.status,
+        productName: loan.productName,
+        createdAt: loan.created_at ?? loan.createdAt,
+        type: 'loan'
+      }))
+    ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
     return {
       totalLoans,
@@ -980,18 +1024,16 @@ export class CustomerService {
         : 0,
       nextPaymentDate:
         nextPayment?.due_date ?? nextPayment?.dueDate ?? null,
-      recentLoans: recentLoans.map(loan => ({
-        id: loan.id,
-        loanNumber: loan.loan_number ?? loan.loanNumber,
-        amount: loan.principal_amount ?? loan.principalAmount,
-        balance: loan.outstanding_balance ?? loan.outstandingBalance,
-        status: loan.status,
-        productName: loan.productName,
-        dueDate:
-          loan.next_payment_date ??
-          loan.nextPaymentDate ??
-          loan.maturity_date ??
-          loan.maturityDate,
+      recentLoans: combinedRecent.map(item => ({
+        id: item.id,
+        loanNumber: item.loanNumber,
+        applicationNumber: item.applicationNumber,
+        amount: item.amount,
+        balance: item.balance,
+        status: item.status,
+        productName: item.productName,
+        type: item.type,
+        dueDate: null, // Will be populated when loan is disbursed
       })),
       assignedCollector,
     };
@@ -1248,9 +1290,9 @@ export class CustomerService {
       const thisInstallmentEnd = item.paymentNumber * calculation.installmentAmount;
 
       let status = 'pending';
-      if (totalPaid >= thisInstallmentEnd) {
+      if (totalPaid >= thisInstallmentEnd - 0.01) { // Small tolerance for rounding
         status = 'paid';
-      } else if (totalPaid > previousInstallmentsTotal) {
+      } else if (totalPaid > previousInstallmentsTotal + 0.01) { // Only partial if clearly beyond previous total
         status = 'partial';
       }
 
@@ -1316,6 +1358,54 @@ export class CustomerService {
         principalPaid: parseFloat(payment.principal_paid ?? payment.principalPaid ?? '0'),
         interestPaid: parseFloat(payment.interest_paid ?? payment.interestPaid ?? '0'),
       })),
+    };
+  }
+
+  async getApplicationDetailsByCustomerId(customerId: number, tenantId: number, applicationId: number) {
+    const knex = this.knexService.instance;
+
+    console.log(`🔍 getApplicationDetailsByCustomerId - Customer ID: ${customerId}, Tenant ID: ${tenantId}, Application ID: ${applicationId}`);
+
+    // Get application details with product information
+    const application = await knex('money_loan_applications')
+      .select(
+        'money_loan_applications.*',
+        'money_loan_products.name as productName',
+        'money_loan_products.description as productDescription',
+        'money_loan_products.interest_rate as productInterestRate',
+        'money_loan_products.min_amount as productMinAmount',
+        'money_loan_products.max_amount as productMaxAmount'
+      )
+      .leftJoin('money_loan_products', 'money_loan_applications.loan_product_id', 'money_loan_products.id')
+      .where({
+        'money_loan_applications.id': applicationId,
+        'money_loan_applications.customer_id': customerId,
+        'money_loan_applications.tenant_id': tenantId,
+      })
+      .first();
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    console.log(`🔍 Found application ${applicationId} for customer ${customerId}`);
+
+    return {
+      id: application.id,
+      applicationNumber: application.application_number ?? application.applicationNumber,
+      status: application.status,
+      requestedAmount: parseFloat(application.requested_amount ?? application.requestedAmount ?? '0'),
+      requestedTermDays: application.requested_term_days ?? application.requestedTermDays,
+      purpose: application.purpose,
+      productName: application.productName,
+      productDescription: application.productDescription,
+      createdAt: application.created_at ?? application.createdAt,
+      reviewedAt: application.reviewed_at ?? application.reviewedAt,
+      approvedAt: application.approved_at ?? application.approvedAt,
+      rejectedAt: application.rejected_at ?? application.rejectedAt,
+      disbursedAt: application.disbursed_at ?? application.disbursedAt,
+      reviewedBy: application.reviewed_by ?? application.reviewedBy,
+      rejectionReason: application.rejection_reason ?? application.rejectionReason,
     };
   }
 

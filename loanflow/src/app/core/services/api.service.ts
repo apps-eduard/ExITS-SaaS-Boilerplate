@@ -1,8 +1,9 @@
 // API Service - Generic HTTP client for all API calls
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 interface QueryParams {
   [key: string]: string | number | boolean;
@@ -13,6 +14,7 @@ interface QueryParams {
 })
 export class ApiService {
   private apiUrl = environment.apiUrl;
+  private authService = inject(AuthService);
 
   constructor(private http: HttpClient) {}
 
@@ -104,7 +106,27 @@ export class ApiService {
   }
 
   getLoanDetails(loanId: number | string): Observable<any> {
-    return this.get<any>(`customers/auth/loans/${loanId}`);
+    // Use different endpoints based on user role
+    const userRole = this.authService.userRole();
+    
+    if (userRole === 'customer') {
+      return this.get<any>(`customers/auth/loans/${loanId}`);
+    } else {
+      // For collectors/employees, use the money-loan endpoint
+      return this.get<any>(`money-loan/loans/${loanId}`);
+    }
+  }
+
+  getLoanSchedule(loanId: number | string): Observable<any> {
+    return this.get<any>(`money-loan/loans/${loanId}/schedule`);
+  }
+
+  recordPayment(loanId: number | string, paymentData: any): Observable<any> {
+    return this.post<any>(`money-loan/loans/${loanId}/payments`, paymentData);
+  }
+
+  getApplicationDetails(applicationId: number | string): Observable<any> {
+    return this.get<any>(`customers/auth/applications/${applicationId}`);
   }
 
   getPaymentHistory(loanId?: number | string): Observable<any> {
@@ -124,12 +146,12 @@ export class ApiService {
   }
 
   getPendingApplications(tenantId: string, customerId: number): Observable<any> {
-    // Check for pending/approved applications AND pending loans
-    // Applications: submitted, approved (waiting for disbursement)
-    // Loans: pending, approved (waiting for disbursement)
+    // Fetch ALL applications and loans for this customer
+    // The frontend will filter which ones should block new applications
+    // We need to get: submitted, approved, active (and exclude completed, rejected, disbursed applications)
     return this.get<any>(`tenants/${tenantId}/platforms/moneyloan/loans`, {
       customerId,
-      status: 'submitted,approved,pending', // Check both applications and loans
+      status: 'submitted,approved,pending,active', // Include active loans
       limit: 100
     });
   }

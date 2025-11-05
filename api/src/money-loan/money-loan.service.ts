@@ -176,29 +176,34 @@ export class MoneyLoanService {
   async approveApplication(tenantId: number, applicationId: number, approveDto: ApproveLoanDto, approvedBy: number) {
     const knex = this.knexService.instance;
 
-    const application = await knex('money_loan_applications')
-      .where({ id: applicationId, tenant_id: tenantId })
-      .first();
+    try {
+      const application = await knex('money_loan_applications')
+        .where({ id: applicationId, tenant_id: tenantId })
+        .first();
 
-    if (!application) {
-      throw new NotFoundException('Application not found');
-    }
+      if (!application) {
+        throw new NotFoundException('Application not found');
+      }
 
-    // Get the product to retrieve all necessary details
-    const product = await knex('money_loan_products')
-      .where({ id: application.loan_product_id || application.loanProductId })
-      .first();
+      console.log('📋 Application found:', application);
 
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
+      // Get the product to retrieve all necessary details
+      const product = await knex('money_loan_products')
+        .where({ id: application.loanProductId })
+        .first();
+
+      if (!product) {
+        throw new NotFoundException('Product not found');
+      }
+
+      console.log('🏷️ Product found:', product);
 
     // Use the centralized loan calculator - SINGLE SOURCE OF TRUTH
     const { LoanCalculatorService } = require('./loan-calculator.service');
     const calculator = new LoanCalculatorService();
 
     const termMonths = approveDto.approvedTermDays / 30;
-    const paymentFrequency = approveDto.paymentFrequency || product.payment_frequency || 'weekly';
+    const paymentFrequency = approveDto.paymentFrequency || product.paymentFrequency || 'weekly';
     
     const calculation = calculator.calculate({
       loanAmount: approveDto.approvedAmount,
@@ -206,13 +211,15 @@ export class MoneyLoanService {
       paymentFrequency: paymentFrequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
       interestRate: approveDto.interestRate,
       interestType: approveDto.interestType as 'flat' | 'reducing' | 'compound',
-      processingFeePercentage: product.processing_fee_percent || 0,
-      platformFee: product.platform_fee || 0,
+      processingFeePercentage: product.processingFeePercent || 0,
+      platformFee: product.platformFee || 0,
     });
 
     console.log('📊 Loan calculation:', calculation);
 
-    await knex('money_loan_applications')
+    // Update application status to approved
+    // NOTE: We don't create a loan record here - that happens during disbursement
+    const [updatedApplication] = await knex('money_loan_applications')
       .where({ id: applicationId })
       .update({
         status: 'approved',
@@ -223,35 +230,18 @@ export class MoneyLoanService {
         reviewed_by: approvedBy,
         review_notes: approveDto.notes,
         updated_at: knex.fn.now(),
-      });
-
-    const loanNumber = `LOAN-${tenantId}-${Date.now()}`;
-
-    // Save ALL calculated values from the centralized calculator
-    const [loan] = await knex('money_loan_loans')
-      .insert({
-        tenant_id: tenantId,
-        customer_id: application.customerId || application.customer_id,
-        loan_product_id: application.loanProductId || application.loan_product_id,
-        application_id: applicationId,
-        loan_number: loanNumber,
-        principal_amount: calculation.loanAmount,
-        interest_rate: approveDto.interestRate,
-        interest_type: approveDto.interestType,
-        term_days: approveDto.approvedTermDays,
-        processing_fee: calculation.processingFeeAmount,
-        platform_fee: calculation.platformFee,
-        payment_frequency: paymentFrequency,
-        total_interest: calculation.interestAmount,
-        total_amount: calculation.totalRepayable,
-        outstanding_balance: calculation.totalRepayable,
-        status: 'pending',
       })
       .returning('*');
 
-    console.log('✅ Loan created with calculated values:', loan);
+    console.log('✅ Application approved:', updatedApplication);
 
-    return loan;
+      return updatedApplication;
+    } catch (error) {
+      console.error('❌ Error approving application:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async rejectApplication(
@@ -391,17 +381,145 @@ export class MoneyLoanService {
     console.log('📦 Retrieved loans:', rows.length);
     console.log('📝 SQL Query:', baseQuery.toString());
 
-    const data = rows.map((row: any) => this.mapLoanRow(row));
+    const loanData = rows.map((row: any) => this.mapLoanRow(row));
     
-    console.log('✅ [GET LOANS SERVICE] Returning:', data.length, 'loans');
+    // ALSO fetch approved applications ready for disbursement if no status filter or status is 'pending'
+    // This allows the disbursement page to show approved applications
+    let applicationData: any[] = [];
+    
+    const shouldIncludeApplications = !status || status.includes('pending') || status.includes('approved');
+    
+    if (shouldIncludeApplications) {
+      console.log('📋 Also fetching approved applications ready for disbursement');
+      
+      const applicationQuery = knex('money_loan_applications as mla')
+        .leftJoin('customers as c', 'mla.customer_id', 'c.id')
+        .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+        .select(
+          'mla.*',
+          'c.first_name',
+          'c.last_name',
+          'c.email as customer_email',
+          'mlp.name as product_name'
+        )
+        .where('mla.tenant_id', tenantId)
+        .where('mla.status', 'approved') // Only approved applications ready for disbursement
+        .whereNotExists(function() {
+          // Exclude applications that already have loans created
+          this.select('id')
+            .from('money_loan_loans')
+            .whereRaw('money_loan_loans.application_id = mla.id');
+        });
+      
+      if (customerId) {
+        applicationQuery.where('mla.customer_id', customerId);
+      }
+      
+      if (search) {
+        const like = `%${search}%`;
+        applicationQuery.where((builder) => {
+          builder
+            .whereILike('mla.application_number', like)
+            .orWhereILike('c.first_name', like)
+            .orWhereILike('c.last_name', like)
+            .orWhereILike('mlp.name', like);
+        });
+      }
+      
+      const applicationRows = await applicationQuery;
+      console.log('📋 Retrieved approved applications:', applicationRows.length);
+      
+      // Map applications to look like loans (for disbursement page compatibility)
+      applicationData = applicationRows.map((row: any) => ({
+        id: row.id,
+        loanNumber: `PENDING-${row.application_number ?? row.applicationNumber ?? row.id}`,
+        applicationNumber: row.application_number ?? row.applicationNumber,
+        customerId: row.customer_id ?? row.customerId,
+        loanProductId: row.loan_product_id ?? row.loanProductId,
+        principalAmount: row.approved_amount ?? row.approvedAmount ?? row.requested_amount ?? row.requestedAmount,
+        outstandingBalance: row.approved_amount ?? row.approvedAmount ?? row.requested_amount ?? row.requestedAmount,
+        status: 'pending', // Show as pending for disbursement
+        createdAt: row.created_at ?? row.createdAt,
+        disbursementDate: null,
+        productName: row.product_name ?? row.productName,
+        interestRate: row.productInterestRate ?? row.product_interest_rate ?? row.approvedInterestRate ?? row.approved_interest_rate,
+        interestType: row.productInterestType ?? row.product_interest_type ?? 'flat',
+        loanTermMonths: Math.round((row.approvedTermDays ?? row.approved_term_days ?? row.productFixedTermDays ?? row.product_fixed_term_days ?? 30) / 30),
+        customer: {
+          fullName: `${row.customerFirstName ?? row.first_name ?? ''} ${row.customerLastName ?? row.last_name ?? ''}`.trim(),
+          customerCode: row.customer_email ?? row.customerEmail ?? row.email
+        },
+        type: 'application', // Mark as application
+        isApplication: true,
+        applicationId: row.id
+      }));
+    }
+    
+    // ALSO fetch applications if customerId is provided and status filter includes application statuses
+    if (customerId && status) {
+      const applicationStatuses = status.split(',').map(s => s.trim()).filter(s => 
+        ['submitted', 'approved', 'pending'].includes(s.toLowerCase())
+      );
+      
+      if (applicationStatuses.length > 0) {
+        console.log('📋 Also fetching applications with statuses:', applicationStatuses);
+        
+        const applicationQuery = knex('money_loan_applications as mla')
+          .leftJoin('customers as c', 'mla.customer_id', 'c.id')
+          .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+          .select(
+            'mla.*',
+            'c.first_name',
+            'c.last_name',
+            'c.email as customer_email',
+            'mlp.name as product_name'
+          )
+          .where('mla.tenant_id', tenantId)
+          .where('mla.customer_id', customerId)
+          .whereIn('mla.status', applicationStatuses);
+        
+        const applicationRows = await applicationQuery;
+        console.log('📋 Retrieved applications:', applicationRows.length);
+        
+        // Map applications to same format as loans
+        applicationData = applicationRows.map((row: any) => ({
+          id: row.id,
+          loanNumber: null,
+          applicationNumber: row.application_number ?? row.applicationNumber ?? `APP-${row.id}`,
+          customerId: row.customer_id ?? row.customerId,
+          loanProductId: row.loan_product_id ?? row.loanProductId,
+          loan_product_id: row.loan_product_id,
+          principalAmount: row.requested_amount ?? row.requestedAmount,
+          amount: row.requested_amount ?? row.requestedAmount,
+          requested_amount: row.requested_amount,
+          requestedAmount: row.requested_amount ?? row.requestedAmount,
+          status: row.status,
+          createdAt: row.created_at ?? row.createdAt,
+          created_at: row.created_at,
+          productName: row.product_name ?? row.productName,
+          interestRate: row.productInterestRate ?? row.product_interest_rate ?? row.approvedInterestRate ?? row.approved_interest_rate,
+          interestType: row.productInterestType ?? row.product_interest_type ?? 'flat',
+          loanTermMonths: Math.round((row.approvedTermDays ?? row.approved_term_days ?? row.productFixedTermDays ?? row.product_fixed_term_days ?? 30) / 30),
+          customerFirstName: row.first_name,
+          customerLastName: row.last_name,
+          customerEmail: row.customer_email,
+          type: 'application', // Mark as application
+        }));
+      }
+    }
+    
+    // Combine loans and applications
+    const combinedData = [...loanData, ...applicationData];
+    
+    console.log('✅ [GET LOANS SERVICE] Returning:', loanData.length, 'loans +', applicationData.length, 'applications =', combinedData.length, 'total');
 
     return {
-      data,
+      data: combinedData,
       pagination: {
         page: pageNumber,
         limit: limitNumber,
-        total,
-        pages: total > 0 ? Math.ceil(total / limitNumber) : 0,
+        total: total + applicationData.length,
+        pages: total > 0 ? Math.ceil((total + applicationData.length) / limitNumber) : 0,
       },
     };
   }
@@ -433,14 +551,120 @@ export class MoneyLoanService {
   async disburseLoan(tenantId: number, loanId: number, disburseDto: DisburseLoanDto, disbursedBy: number) {
     const knex = this.knexService.instance;
 
+    // First, check if this is an approved application that needs disbursement
+    const application = await knex('money_loan_applications')
+      .where({ id: loanId, tenant_id: tenantId, status: 'approved' })
+      .first();
+
+    if (application) {
+      // Check if a loan already exists for this application
+      const existingLoan = await knex('money_loan_loans')
+        .where({ application_id: application.id, tenant_id: tenantId })
+        .first();
+
+      if (existingLoan) {
+        throw new BadRequestException('This application has already been disbursed');
+      }
+
+      console.log('📋 Found approved application, creating loan for disbursement:', application);
+
+      // Get product details for loan calculation
+      const product = await knex('money_loan_products')
+        .where({ id: application.loanProductId })
+        .first();
+
+      if (!product) {
+        throw new NotFoundException('Product not found');
+      }
+
+      // Use the approved values from the application
+      const { LoanCalculatorService } = require('./loan-calculator.service');
+      const calculator = new LoanCalculatorService();
+
+      // Convert string values to numbers
+      const approvedAmount = parseFloat(application.approvedAmount || application.approved_amount);
+      const approvedTermDays = parseInt(application.approvedTermDays || application.approved_term_days);
+      const approvedInterestRate = parseFloat(application.approvedInterestRate || application.approved_interest_rate);
+      const processingFeePercent = parseFloat(product.processingFeePercent || 0);
+      const platformFee = parseFloat(product.platformFee || 0);
+
+      const termMonths = approvedTermDays / 30;
+      const paymentFrequency = product.paymentFrequency || 'weekly';
+      
+      const calculation = calculator.calculate({
+        loanAmount: approvedAmount,
+        termMonths,
+        paymentFrequency: paymentFrequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
+        interestRate: approvedInterestRate,
+        interestType: product.interestType || 'flat',
+        processingFeePercentage: processingFeePercent,
+        platformFee: platformFee,
+      });
+
+      const loanNumber = `LOAN-${tenantId}-${Date.now()}`;
+
+      // Create the loan record with proper numeric values
+      const loanData = {
+        tenant_id: tenantId,
+        customer_id: application.customerId,
+        loan_product_id: application.loanProductId,
+        application_id: application.id,
+        loan_number: loanNumber,
+        principal_amount: Number(calculation.loanAmount),
+        interest_rate: Number(approvedInterestRate),
+        interest_type: product.interestType || 'flat',
+        term_days: Number(approvedTermDays),
+        processing_fee: Number(calculation.processingFeeAmount),
+        total_interest: Number(calculation.interestAmount),
+        total_amount: Number(calculation.totalRepayable),
+        outstanding_balance: Number(calculation.totalRepayable),
+        monthly_payment: Number(calculation.monthlyEquivalent || calculation.installmentAmount),
+        status: 'active',
+        disbursement_date: knex.fn.now(),
+        disbursed_by: disbursedBy,
+        disbursement_method: disburseDto.disbursementMethod,
+        disbursement_reference: disburseDto.disbursementReference,
+        disbursement_notes: disburseDto.disbursementNotes,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      };
+
+      console.log('💾 Creating loan for disbursement:', loanData);
+
+      const [createdLoan] = await knex('money_loan_loans')
+        .insert(loanData)
+        .returning('*');
+
+      // Note: Application remains 'approved' - the linked loan record indicates it was disbursed
+      console.log('✅ Loan created for approved application');
+
+      // Return the created loan with customer and product details
+      const [loanWithDetails] = await knex('money_loan_loans as mll')
+        .leftJoin('customers as c', 'mll.customer_id', 'c.id')
+        .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
+        .select(
+          'mll.*',
+          'c.first_name',
+          'c.last_name',
+          'c.email as customer_email',
+          'mlp.name as product_name'
+        )
+        .where('mll.id', createdLoan.id)
+        .limit(1);
+
+      return this.mapLoanRow(loanWithDetails);
+    }
+
+    // If not an application, check if it's an existing loan that needs disbursement
     const loan = await knex('money_loan_loans')
       .where({ id: loanId, tenant_id: tenantId })
       .first();
 
     if (!loan) {
-      throw new NotFoundException('Loan not found');
+      throw new NotFoundException('Loan or approved application not found');
     }
 
+    // If loan exists (old flow), update it
     await knex('money_loan_loans')
       .where({ id: loanId })
       .update({
@@ -452,13 +676,7 @@ export class MoneyLoanService {
         disbursement_notes: disburseDto.disbursementNotes,
       });
 
-    // Update the corresponding application status to 'disbursed'
-    // This ensures the product becomes available for new applications
-    if (loan.application_id) {
-      await knex('money_loan_applications')
-        .where({ id: loan.application_id, tenant_id: tenantId })
-        .update({ status: 'disbursed' });
-    }
+    // Note: Application remains 'approved' - the loan's active status indicates disbursement
 
     const [updatedRow] = await knex('money_loan_loans as mll')
       .leftJoin('customers as c', 'mll.customer_id', 'c.id')
@@ -749,12 +967,14 @@ export class MoneyLoanService {
   async generateRepaymentSchedule(tenantId: number, loanId: number) {
     const knex = this.knexService.instance;
 
-    // Get loan details
+    // Get loan details with product information
     const loan = await knex('money_loan_loans as mll')
       .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
       .select(
         'mll.*',
-        'mlp.payment_frequency as product_payment_frequency'
+        'mlp.payment_frequency as product_payment_frequency',
+        'mlp.interest_rate as product_interest_rate',
+        'mlp.interest_type as product_interest_type'
       )
       .where('mll.id', loanId)
       .andWhere('mll.tenant_id', tenantId)
@@ -764,35 +984,26 @@ export class MoneyLoanService {
       throw new NotFoundException('Loan not found');
     }
 
-    console.log('🔍 Loan data:', {
-      id: loan.id,
-      principal_amount: loan.principal_amount,
-      total_interest: loan.total_interest,
-      interest_amount: loan.interest_amount,
-      total_amount: loan.total_amount,
-      outstanding_balance: loan.outstanding_balance,
-      status: loan.status,
-      disbursement_date: loan.disbursement_date,
-      // camelCase versions
-      principalAmount: loan.principalAmount,
-      totalInterest: loan.totalInterest,
-      totalAmount: loan.totalAmount,
-      outstandingBalance: loan.outstandingBalance,
-      disbursementDate: loan.disbursementDate,
-      all_keys: Object.keys(loan)
-    });
-
     // Get all payments for this loan
     const payments = await knex('money_loan_payments')
       .where({ tenant_id: tenantId, loan_id: loanId })
       .orderBy('payment_date', 'asc');
 
-    // Determine payment frequency (daily, weekly, monthly)
-    const paymentFrequency = loan.payment_frequency || loan.paymentFrequency || loan.product_payment_frequency || loan.productPaymentFrequency || 'weekly';
+    // Extract loan parameters (supporting both snake_case and camelCase)
+    const principalAmount = parseFloat(loan.principal_amount || loan.principalAmount) || 0;
+    const totalAmount = parseFloat(loan.total_amount || loan.totalAmount) || 0;
     const termDays = loan.term_days || loan.termDays || 30;
+    const paymentFrequency = loan.payment_frequency || loan.paymentFrequency || loan.product_payment_frequency || loan.productPaymentFrequency || 'weekly';
     const disbursementDateValue = loan.disbursement_date || loan.disbursementDate;
     const disbursementDate = disbursementDateValue ? new Date(disbursementDateValue) : new Date();
-    
+
+    console.log('📊 Loan financial data:', {
+      principalAmount,
+      totalAmount,
+      termDays,
+      paymentFrequency
+    });
+
     // Calculate number of installments based on frequency
     let numberOfInstallments = 1;
     let daysBetweenPayments = termDays;
@@ -808,57 +1019,52 @@ export class MoneyLoanService {
       daysBetweenPayments = 30;
     }
 
-    // Calculate total amount to be repaid (principal + interest)
-    // Try both snake_case and camelCase field names
-    const principalAmount = parseFloat(loan.principal_amount || loan.principalAmount) || 0;
-    const totalInterest = parseFloat(loan.total_interest || loan.totalInterest) || 0;
-    const totalAmount = parseFloat(loan.total_amount || loan.totalAmount) || (principalAmount + totalInterest);
-    const amountPerInstallment = totalAmount / numberOfInstallments;
+    // Calculate installment amount from actual total (not recalculating fees)
+    const amountPerInstallment = Math.round((totalAmount / numberOfInstallments) * 100) / 100;
+    const totalOfRegularInstallments = amountPerInstallment * (numberOfInstallments - 1);
+    const lastInstallmentAmount = Math.round((totalAmount - totalOfRegularInstallments) * 100) / 100;
 
-    console.log('📊 Repayment Schedule Calculation:', {
-      loanId,
-      paymentFrequency,
-      termDays,
+    console.log('📊 Repayment Schedule:', {
       numberOfInstallments,
-      principalAmount,
-      totalInterest,
-      totalAmount,
+      daysBetweenPayments,
       amountPerInstallment,
-      paymentsCount: payments.length
+      lastInstallmentAmount,
+      totalAmount
     });
 
-    // Generate installment schedule
-    const schedule = [];
-    let totalPaid = 0;
-    
     // Calculate total paid from payments
+    let totalPaid = 0;
     for (const payment of payments) {
       totalPaid += parseFloat(payment.amount) || 0;
     }
 
     console.log('💰 Total Paid So Far:', totalPaid);
 
+    // Generate installment schedule
+    const schedule = [];
+    const totalInterest = parseFloat(loan.total_interest || loan.totalInterest) || 0;
+
     for (let i = 1; i <= numberOfInstallments; i++) {
       const dueDate = new Date(disbursementDate);
       dueDate.setDate(dueDate.getDate() + (i * daysBetweenPayments));
 
+      // Use the last installment amount for the final payment to account for rounding
+      const installmentAmount = i === numberOfInstallments ? lastInstallmentAmount : amountPerInstallment;
+
       // Calculate how much of this installment has been paid
       const previousInstallmentsTotal = (i - 1) * amountPerInstallment;
-      const thisInstallmentEnd = i * amountPerInstallment;
       
       let amountPaidForThisInstallment = 0;
       if (totalPaid > previousInstallmentsTotal) {
         amountPaidForThisInstallment = Math.min(
           totalPaid - previousInstallmentsTotal,
-          amountPerInstallment
+          installmentAmount
         );
       }
 
-      const remainingForInstallment = amountPerInstallment - amountPaidForThisInstallment;
-      
       // Determine status
       let status = 'pending';
-      if (amountPaidForThisInstallment >= amountPerInstallment - 0.01) { // Small tolerance for rounding
+      if (amountPaidForThisInstallment >= installmentAmount - 0.01) { // Small tolerance for rounding
         status = 'paid';
       } else if (amountPaidForThisInstallment > 0) {
         status = 'partial';
@@ -866,26 +1072,31 @@ export class MoneyLoanService {
         status = 'overdue';
       }
 
-      console.log(`📅 Installment ${i}: totalDue=${amountPerInstallment.toFixed(2)}, paid=${amountPaidForThisInstallment.toFixed(2)}, status=${status}`);
+      const daysOverdue = status === 'overdue' 
+        ? Math.max(0, Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) 
+        : 0;
 
+      console.log(`📅 Installment ${i}: totalDue=${installmentAmount.toFixed(2)}, paid=${amountPaidForThisInstallment.toFixed(2)}, status=${status}`);
+
+      // Return in both snake_case and camelCase for compatibility
       schedule.push({
-        id: i, // Using installment number as ID since we don't have a separate table
+        id: i,
         installmentNumber: i,
         installment_number: i,
         dueDate: dueDate.toISOString().split('T')[0],
         due_date: dueDate.toISOString().split('T')[0],
-        principalAmount: amountPerInstallment * (principalAmount / totalAmount),
-        principal_due: amountPerInstallment * (principalAmount / totalAmount),
-        interestAmount: amountPerInstallment * (totalInterest / totalAmount),
-        interest_due: amountPerInstallment * (totalInterest / totalAmount),
-        totalAmount: amountPerInstallment,
-        total_due: amountPerInstallment,
-        amountPaid: amountPaidForThisInstallment,
-        amount_paid: amountPaidForThisInstallment,
-        outstandingAmount: amountPerInstallment - amountPaidForThisInstallment,
+        principalAmount: Math.round((installmentAmount * (principalAmount / totalAmount)) * 100) / 100,
+        principal_due: Math.round((installmentAmount * (principalAmount / totalAmount)) * 100) / 100,
+        interestAmount: Math.round((installmentAmount * (totalInterest / totalAmount)) * 100) / 100,
+        interest_due: Math.round((installmentAmount * (totalInterest / totalAmount)) * 100) / 100,
+        totalAmount: installmentAmount,
+        total_due: installmentAmount,
+        amountPaid: Math.round(amountPaidForThisInstallment * 100) / 100,
+        amount_paid: Math.round(amountPaidForThisInstallment * 100) / 100,
+        outstandingAmount: Math.round((installmentAmount - amountPaidForThisInstallment) * 100) / 100,
         penaltyAmount: 0,
         status: status === 'partial' ? 'partially_paid' : status,
-        daysOverdue: status === 'overdue' ? Math.max(0, Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0
+        daysOverdue
       });
     }
 
@@ -1440,39 +1651,23 @@ export class MoneyLoanService {
   ) {
     const knex = this.knexService.instance;
 
-    const loanSummary = knex('money_loan_loans as ml')
-      .select('ml.customer_id')
-      .sum({ totalOutstanding: knex.raw('COALESCE(ml.outstanding_balance, 0)') })
-      .groupBy('ml.customer_id')
-      .where('ml.tenant_id', tenantId);
-
-    const dueSummary = knex('money_loan_repayment_schedules as rs')
-      .leftJoin('money_loan_loans as ml', 'rs.loan_id', 'ml.id')
-      .select('ml.customer_id')
-      .sum({ totalDue: knex.raw('COALESCE(rs.outstanding_amount, 0)') })
-      .min({ nextDueDate: 'rs.due_date' })
-      .where('ml.tenant_id', tenantId)
-      .whereIn('rs.status', ['pending', 'partially_paid'])
-      .groupBy('ml.customer_id');
-
-    const customers = await knex('customers as c')
-      .leftJoin(
-        loanSummary.as('loan_summary'),
-        'loan_summary.customer_id',
-        'c.id'
-      )
-      .leftJoin(
-        dueSummary.as('due_summary'),
-        'due_summary.customer_id',
-        'c.id'
-      )
+    // Query: Get all active loans for customers assigned to this collector
+    // Returns one row per loan (not per customer)
+    const loans = await knex('money_loan_loans as ml')
+      .join('customers as c', 'ml.customer_id', 'c.id')
+      .leftJoin('money_loan_products as mlp', 'ml.loan_product_id', 'mlp.id')
       .leftJoin('addresses as addr', function () {
         this.on('addr.addressable_id', '=', 'c.id')
           .andOn('addr.addressable_type', '=', knex.raw('?', ['customer']))
           .andOn('addr.is_primary', '=', knex.raw('true'));
       })
+      .leftJoin('money_loan_repayment_schedules as rs', function () {
+        this.on('rs.loan_id', '=', 'ml.id')
+          .andOnIn('rs.status', ['pending', 'partially_paid']);
+      })
       .select(
-        'c.id',
+        // Customer info
+        'c.id as customer_id',
         'c.first_name',
         'c.last_name',
         'c.phone',
@@ -1480,44 +1675,97 @@ export class MoneyLoanService {
         knex.raw(
           "COALESCE(NULLIF(TRIM(CONCAT_WS(', ', addr.house_number, addr.street_name, addr.barangay, addr.city_municipality, addr.province)), ''), 'N/A') as full_address",
         ),
-        knex.raw('COALESCE(loan_summary.totalOutstanding, 0) as loan_balance'),
-        knex.raw('COALESCE(due_summary.totalDue, 0) as amount_due'),
-        knex.raw('due_summary.nextDueDate as next_due_date')
+        // Loan info
+        'ml.id as loan_id',
+        'ml.loan_number',
+        'ml.principal_amount',
+        'ml.outstanding_balance',
+        'ml.status as loan_status',
+        'ml.disbursement_date',
+        'mlp.name as product_name',
+        // Next repayment info
+        knex.raw('MIN(rs.installment_number) as next_installment'),
+        knex.raw('MIN(rs.due_date) as next_due_date'),
+        knex.raw('SUM(rs.outstanding_amount) as total_due')
       )
-      .where('c.tenant_id', tenantId)
-      .andWhere('c.assigned_employee_id', collectorId)
+      .where('ml.tenant_id', tenantId)
+      .where('c.assigned_employee_id', collectorId)
+      .whereIn('ml.status', ['active', 'overdue'])
+      .groupBy(
+        'c.id',
+        'c.first_name',
+        'c.last_name',
+        'c.phone',
+        'c.email',
+        'addr.house_number',
+        'addr.street_name',
+        'addr.barangay',
+        'addr.city_municipality',
+        'addr.province',
+        'ml.id',
+        'ml.loan_number',
+        'ml.principal_amount',
+        'ml.outstanding_balance',
+        'ml.status',
+        'ml.disbursement_date',
+        'mlp.name'
+      )
       .orderBy('c.first_name', 'asc')
-      .orderBy('c.last_name', 'asc');
+      .orderBy('c.last_name', 'asc')
+      .orderBy('ml.id', 'asc');
 
-    return customers.map((customer) => {
-      const fullName = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
-      const dueDate = customer.next_due_date ? new Date(customer.next_due_date) : null;
+    console.log('📋 [GET COLLECTOR ROUTE] Retrieved', loans.length, 'loans for collector', collectorId);
+    if (loans.length > 0) {
+      console.log('📋 [GET COLLECTOR ROUTE] First loan raw data:', loans[0]);
+    }
 
+    return loans.map((loan) => {
+      // Handle both snake_case and camelCase from database
+      const firstName = loan.first_name || loan.firstName || '';
+      const lastName = loan.last_name || loan.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      const dueDate = loan.next_due_date ? new Date(loan.next_due_date) : null;
       let formattedDueDate: string | null = null;
       if (dueDate && !Number.isNaN(dueDate.getTime())) {
         formattedDueDate = dueDate.toISOString();
       }
 
-      const loanBalance = Number(customer.loan_balance ?? 0);
-      const amountDue = Number(customer.amount_due ?? 0);
+      const outstandingBalance = Number(loan.outstanding_balance ?? 0);
+      const amountDue = Number(loan.total_due ?? 0);
+      const nextInstallment = loan.next_installment ? Number(loan.next_installment) : null;
 
+      // Determine status based on loan status and payment status
       let status: 'not-visited' | 'collected' | 'visited' | 'missed' = 'not-visited';
-      if (amountDue <= 0 && loanBalance <= 0) {
+      if (loan.loan_status === 'overdue') {
+        status = 'missed';
+      } else if (amountDue <= 0 && outstandingBalance <= 0) {
         status = 'collected';
-      } else if (amountDue <= 0 && loanBalance > 0) {
+      } else if (amountDue <= 0 && outstandingBalance > 0) {
         status = 'visited';
       }
 
-      return {
-        id: customer.id,
-        name: fullName || customer.email || 'Assigned Customer',
-        address: customer.full_address ?? 'N/A',
-        phone: customer.phone ?? '',
-        loanBalance,
+      const result = {
+        customerId: loan.customerId ?? loan.customer_id,
+        customerName: fullName || loan.email || 'Assigned Customer',
+        address: loan.fullAddress ?? loan.full_address ?? 'N/A',
+        phone: loan.phone ?? '',
+        email: loan.email ?? '',
+        // Loan specific info
+        loanId: loan.loanId ?? loan.loan_id,
+        loanNumber: loan.loanNumber ?? loan.loan_number,
+        productName: loan.productName ?? loan.product_name,
+        principalAmount: Number(loan.principalAmount ?? loan.principal_amount ?? 0),
+        outstandingBalance,
         amountDue,
+        nextInstallment,
         dueDate: formattedDueDate,
         status,
+        disbursementDate: loan.disbursementDate ?? loan.disbursement_date,
       };
+
+      console.log('📋 [GET COLLECTOR ROUTE] Mapped loan object:', result);
+      return result;
     });
   }
 }

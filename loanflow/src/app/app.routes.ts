@@ -31,11 +31,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/customer/loan-details.page').then((m) => m.LoanDetailsPage),
       },
       {
+        path: 'applications/:id',
+        loadComponent: () => import('./features/customer/application-timeline.page').then((m) => m.ApplicationTimelinePage),
+      },
+      {
         path: 'payments',
         loadComponent: () => import('./features/customer/payments.page').then((m) => m.CustomerPaymentsPage),
       },
       {
         path: 'apply',
+        loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
+      },
+      {
+        path: 'apply-loan',
         loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
       },
       {

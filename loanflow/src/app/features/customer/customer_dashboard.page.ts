@@ -378,15 +378,15 @@ interface AssignedCollector {
               @for (loan of recentLoans().slice(0, 3); track loan.id) {
                 <div 
                   class="loan-item"
-                  [routerLink]="['/customer/loans', loan.id]"
+                  (click)="navigateToLoanOrApplication(loan)"
                 >
                   <div class="loan-header">
                     <span class="loan-number">{{ loan.loanNumber }}</span>
                     <ion-badge 
-                      [color]="loan.status === 'active' ? 'success' : loan.status === 'pending' ? 'warning' : 'medium'"
+                      [color]="getLoanStatusColor(loan.status)"
                       class="loan-status"
                     >
-                      {{ loan.status }}
+                      {{ formatLoanStatus(loan.status) }}
                     </ion-badge>
                   </div>
                   <div class="loan-body">
@@ -1774,6 +1774,13 @@ export class CustomerDashboardPage implements OnInit {
     this.loadDashboardData();
   }
 
+  ionViewWillEnter() {
+    // Reload dashboard data whenever the page becomes visible
+    // This ensures Recent Loans updates after submitting an application
+    console.log('🔄 Dashboard - ionViewWillEnter - Refreshing data');
+    this.loadDashboardData();
+  }
+
   toggleTheme() {
     this.themeService.toggleTheme();
   }
@@ -1825,38 +1832,51 @@ export class CustomerDashboardPage implements OnInit {
 
         // Update recent loans from dashboard data
         if (dashboardData.recentLoans && Array.isArray(dashboardData.recentLoans)) {
-          const mappedLoans = dashboardData.recentLoans.map((loan: any) => {
+          const mappedLoans = dashboardData.recentLoans.map((item: any) => {
+            // Handle both loans and applications
+            const isApplication = item.type === 'application';
+            
             // Format due date
             let formattedDueDate = 'N/A';
-            if (loan.dueDate) {
-              const date = new Date(loan.dueDate);
+            if (item.dueDate) {
+              const date = new Date(item.dueDate);
               formattedDueDate = date.toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 year: 'numeric' 
               });
+            } else if (isApplication) {
+              formattedDueDate = 'Pending'; // Applications don't have due dates yet
             }
 
-            const balance = parseFloat(loan.balance) || 0;
-            const amount = parseFloat(loan.amount) || 0;
+            const balance = parseFloat(item.balance) || 0;
+            const amount = parseFloat(item.amount) || 0;
             
-            // Determine actual status based on balance
-            let actualStatus = this.mapLoanStatus(loan.status);
-            // If balance is 0 or negative, mark as completed
-            if (balance <= 0 && amount > 0) {
-              actualStatus = 'completed';
+            // Determine actual status
+            let actualStatus = this.mapLoanStatus(item.status);
+            
+            // For applications, keep the original status
+            if (isApplication) {
+              actualStatus = item.status; // submitted, approved, pending
+            } else {
+              // For loans, if balance is 0 or negative, mark as completed
+              if (balance <= 0 && amount > 0) {
+                actualStatus = 'completed';
+              }
             }
 
             return {
-              id: loan.id,
-              loanNumber: loan.loanNumber || `LN-${loan.id}`,
+              id: item.id,
+              loanNumber: item.loanNumber || item.applicationNumber || `${isApplication ? 'APP' : 'LN'}-${item.id}`,
               amount: amount,
-              balance: Math.max(0, balance), // Don't show negative balance
+              balance: isApplication ? 0 : Math.max(0, balance), // Applications don't have balance
               status: actualStatus,
-              dueDate: formattedDueDate
+              dueDate: formattedDueDate,
+              type: item.type || 'loan', // Track if it's application or loan
+              productName: item.productName
             };
           });
-          console.log('📋 Mapped recent loans:', mappedLoans);
+          console.log('📋 Mapped recent loans/applications:', mappedLoans);
           this.recentLoans.set(mappedLoans);
         }
 
@@ -1949,6 +1969,69 @@ export class CustomerDashboardPage implements OnInit {
     return 'active';
   }
 
+  getLoanStatusColor(status: string): string {
+    const normalized = (status || '').toLowerCase();
+    
+    switch (normalized) {
+      case 'submitted':
+      case 'pending':
+      case 'under_review':
+        return 'warning';
+      
+      case 'approved':
+        return 'primary';
+      
+      case 'active':
+      case 'disbursed':
+        return 'success';
+      
+      case 'completed':
+      case 'paid':
+      case 'fully_paid':
+        return 'medium';
+      
+      case 'overdue':
+      case 'late':
+      case 'delinquent':
+        return 'danger';
+      
+      case 'rejected':
+      case 'cancelled':
+        return 'dark';
+      
+      default:
+        return 'medium';
+    }
+  }
+
+  formatLoanStatus(status: string): string {
+    const normalized = (status || '').toLowerCase();
+    
+    switch (normalized) {
+      case 'submitted':
+        return 'Submitted';
+      case 'pending':
+        return 'Pending';
+      case 'approved':
+        return 'Approved';
+      case 'active':
+        return 'Active';
+      case 'disbursed':
+        return 'Disbursed';
+      case 'completed':
+        return 'Completed';
+      case 'paid':
+      case 'fully_paid':
+        return 'Paid';
+      case 'overdue':
+        return 'Overdue';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  }
+
   setMockData() {
     this.stats.set({
       totalLoans: 3,
@@ -1977,6 +2060,20 @@ export class CustomerDashboardPage implements OnInit {
   async handleRefresh(event: any) {
     await this.loadDashboardData();
     event.target.complete();
+  }
+
+  navigateToLoanOrApplication(item: any) {
+    // Check if it's an application (not yet an active loan)
+    const isApplication = item.type === 'application' || 
+                         ['submitted', 'approved', 'pending'].includes(item.status?.toLowerCase());
+    
+    if (isApplication) {
+      // Navigate to application timeline
+      this.router.navigate(['/customer/applications', item.id]);
+    } else {
+      // Navigate to loan details
+      this.router.navigate(['/customer/loans', item.id]);
+    }
   }
 
   formatCurrency(amount: number): string {

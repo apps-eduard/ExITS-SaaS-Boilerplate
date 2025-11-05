@@ -82,7 +82,7 @@ export class AuthService {
         return response as AuthResponse;
       }),
       tap((response) => {
-        console.log('Setting customer tokens');
+        // console.log('Setting customer tokens');
         this.setTokens(response);
         this.currentUserSubject.next(response.user);
         this.isAuthenticatedSubject.next(true);

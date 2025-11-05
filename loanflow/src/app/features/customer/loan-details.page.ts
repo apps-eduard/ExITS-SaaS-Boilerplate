@@ -197,40 +197,39 @@ interface Payment {
           <!-- Loan Terms -->
           <div class="section-card compact-terms">
             <h2 class="section-title">
-              <ion-icon name="document-text-outline"></ion-icon>
-              Loan Terms
+              📄 Loan Terms
             </h2>
             <div class="terms-list">
               <div class="term-list-item">
-                <ion-icon name="trending-up-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">📈</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Interest Rate</p>
                   <p class="term-list-value highlight">{{ loanDetails()!.interestRate }}% (Flat)</p>
                 </div>
               </div>
               <div class="term-list-item">
-                <ion-icon name="calendar-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">📅</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Loan Term</p>
                   <p class="term-list-value">{{ loanDetails()!.term }} months</p>
                 </div>
               </div>
               <div class="term-list-item">
-                <ion-icon name="time-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">🔁</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Payment Frequency</p>
-                  <p class="term-list-value">{{ getPaymentFrequency() || 'Weekly' }}</p>
+                  <p class="term-list-value">{{ getPaymentFrequency() || 'Monthly' }}</p>
                 </div>
               </div>
               <div class="term-list-item">
-                <ion-icon name="card-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">💳</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Processing Fee</p>
-                  <p class="term-list-value">{{ loanDetails()!.processingFee || '5.00' }}%</p>
+                  <p class="term-list-value">{{ loanDetails()!.processingFee || '5000' }}%</p>
                 </div>
               </div>
               <div class="term-list-item">
-                <ion-icon name="wallet-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">💼</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Platform Fee</p>
                   <div style="text-align: right;">
@@ -240,7 +239,7 @@ interface Payment {
                 </div>
               </div>
               <div class="term-list-item">
-                <ion-icon name="alert-circle-outline" class="term-list-icon"></ion-icon>
+                <span class="term-list-icon">⚠️</span>
                 <div class="term-list-content">
                   <p class="term-list-label">Late Penalty</p>
                   <div style="text-align: right;">
@@ -639,10 +638,10 @@ interface Payment {
     }
 
     .term-list-icon {
-      font-size: 1.15rem;
-      color: var(--ion-color-medium);
+      font-size: 1.25rem;
       flex-shrink: 0;
-      opacity: 0.7;
+      opacity: 1;
+      line-height: 1;
     }
 
     .term-list-content {

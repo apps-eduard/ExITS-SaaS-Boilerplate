@@ -127,7 +127,13 @@ interface LoanProduct {
         @else {
           <div class="products-list">
             @for (product of products(); track product.id) {
-              <div class="product-card">
+              <div class="product-card" [class.card-disabled]="isProductPending(product.id)">
+                @if (isProductPending(product.id)) {
+                  <div class="pending-overlay">
+                    <span class="overlay-icon">⏳</span>
+                    <span class="overlay-text">Application Pending</span>
+                  </div>
+                }
                 <div class="product-headline">
                   <div class="headline-main">
                     <span class="product-emoji">💼</span>
@@ -201,10 +207,30 @@ interface LoanProduct {
 
                 <div class="product-footer">
                   @if (isProductPending(product.id)) {
-                    <button class="apply-btn disabled" disabled>
-                      <span>{{ getApplicationStatus(product.id) }}</span>
-                      <span class="btn-emoji">⏳</span>
-                    </button>
+                    <div class="application-status">
+                      <div class="status-header">
+                        <span class="status-icon">📋</span>
+                        <span class="status-title">Your Application</span>
+                      </div>
+                      <div class="status-details">
+                        <div class="status-row">
+                          <span class="status-label">Status:</span>
+                          <span class="status-badge">{{ getApplicationStatus(product.id) }}</span>
+                        </div>
+                        @if (getApplicationAmount(product.id)) {
+                          <div class="status-row">
+                            <span class="status-label">Amount:</span>
+                            <span class="status-value">₱{{ formatCurrency(getApplicationAmount(product.id)) }}</span>
+                          </div>
+                        }
+                        @if (getApplicationDate(product.id)) {
+                          <div class="status-row">
+                            <span class="status-label">Submitted:</span>
+                            <span class="status-value">{{ formatDate(getApplicationDate(product.id)) }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
                   } @else {
                     <button class="apply-btn" (click)="applyForProduct(product)">
                       <span>Apply Now</span>
@@ -449,11 +475,62 @@ interface LoanProduct {
       padding: 1.05rem;
       box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
       transition: all 0.3s ease;
+      position: relative;
     }
 
     .product-card:hover {
       box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
       transform: translateY(-2px);
+    }
+
+    .product-card.card-disabled {
+      opacity: 0.7;
+      pointer-events: none;
+      background: var(--ion-color-light);
+      border-color: var(--ion-color-medium);
+    }
+
+    .product-card.card-disabled:hover {
+      transform: none;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .pending-overlay {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.35);
+      z-index: 10;
+    }
+
+    .overlay-icon {
+      font-size: 1rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+      }
+    }
+
+    .overlay-text {
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
     }
 
     .product-headline {
@@ -649,6 +726,67 @@ interface LoanProduct {
       font-size: 1.1rem;
     }
 
+    /* ===== APPLICATION STATUS ===== */
+    .application-status {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(245, 158, 11, 0.08));
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .status-icon {
+      font-size: 1.25rem;
+    }
+
+    .status-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    .status-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+
+    .status-label {
+      color: var(--ion-color-medium);
+      font-weight: 500;
+    }
+
+    .status-badge {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
+    }
+
+    .status-value {
+      color: var(--ion-text-color);
+      font-weight: 600;
+    }
+
     /* ===== DARK MODE ===== */
     body.dark .product-card,
     .dark .product-card,
@@ -688,6 +826,23 @@ interface LoanProduct {
     .dark .product-footer {
       border-top-color: rgba(255, 255, 255, 0.12);
     }
+
+    body.dark .product-card.card-disabled,
+    .dark .product-card.card-disabled {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    body.dark .application-status,
+    .dark .application-status {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(245, 158, 11, 0.12));
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+
+    body.dark .status-header,
+    .dark .status-header {
+      border-bottom-color: rgba(251, 191, 36, 0.25);
+    }
   `]
 })
 export class ApplyLoanPage implements OnInit {
@@ -722,6 +877,7 @@ export class ApplyLoanPage implements OnInit {
   ionViewWillEnter() {
     // Re-check pending applications when returning to this page
     console.log('🔄 ionViewWillEnter - Re-checking pending applications');
+    console.log('📍 Current route:', this.router.url);
     this.checkPendingApplications();
   }
 
@@ -772,6 +928,7 @@ export class ApplyLoanPage implements OnInit {
         });
         this.products.set(mappedProducts);
         console.log('📊 Total products loaded:', mappedProducts.length);
+        console.log('📊 Product IDs:', mappedProducts.map(p => p.id));
       }
     } catch (error) {
       console.error('Failed to load loan products:', error);
@@ -839,8 +996,54 @@ export class ApplyLoanPage implements OnInit {
         return 'Approved - Awaiting Disbursement';
       case 'pending':
         return 'Pending Approval';
+      case 'active':
+        return 'Active Loan - Being Repaid';
+      case 'disbursed':
+        return 'Disbursed';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  }
+
+  getApplicationAmount(productId: number): number {
+    const app = this.pendingApplicationsMap().get(Number(productId));
+    if (!app) return 0;
+    
+    // Try different field names (application vs loan)
+    return app.amount || app.requested_amount || app.requestedAmount || 
+           app.principal_amount || app.principalAmount || 0;
+  }
+
+  getApplicationDate(productId: number): string {
+    const app = this.pendingApplicationsMap().get(Number(productId));
+    if (!app) return '';
+    
+    // Try different field names
+    return app.created_at || app.createdAt || app.application_date || app.applicationDate || '';
+  }
+
+  formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      
+      // Format as MMM DD, YYYY
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return '';
     }
   }
 
@@ -876,14 +1079,21 @@ export class ApplyLoanPage implements OnInit {
       
       console.log('🔍 API Response - Applications:', applications);
       console.log('🔍 API Response - Applications count:', applications.length);
+      console.log('🔍 API Response - Raw data:', JSON.stringify(applications, null, 2));
       
       // Build map of productId -> application/loan
+      // ONLY include applications/loans that should block new applications:
+      // - Applications: submitted, approved (waiting for disbursement)
+      // - Loans: active (currently being repaid)
+      // EXCLUDE: completed, disbursed (application), rejected
       const appMap = new Map<number, any>();
       const pendingIds: number[] = [];
       
       applications.forEach((app: any) => {
         // Handle both loans and applications - they use different field names
         const productId = app.loan_product_id || app.loanProductId || app.product_id;
+        const status = (app.status || '').toLowerCase();
+        
         console.log('🔍 Processing app/loan:', {
           id: app.id,
           loanNumber: app.loan_number || app.loanNumber,
@@ -892,11 +1102,25 @@ export class ApplyLoanPage implements OnInit {
           amount: app.amount || app.principal_amount || app.principalAmount,
           rawApp: app
         });
-        if (productId) {
+        
+        // Only include if status blocks new applications
+        // submitted/approved = pending application
+        // active = loan is being repaid
+        const shouldBlock = ['submitted', 'approved', 'active', 'pending'].includes(status);
+        
+        console.log(`🔍 Product ${productId}, Status: ${status}, Should Block: ${shouldBlock}`);
+        
+        if (productId && shouldBlock) {
           appMap.set(Number(productId), app);
           pendingIds.push(Number(productId));
+          console.log(`✅ Product ${productId} is BLOCKED by ${status} application/loan`);
+        } else if (productId) {
+          console.log(`⏭️ Product ${productId} is AVAILABLE (status: ${status})`);
         }
       });
+      
+      console.log('📋 Final Pending Product IDs:', pendingIds);
+      console.log('📋 Applications Map:', appMap);
       
       this.pendingApplicationsMap.set(appMap);
       this.pendingProductIds.set(pendingIds);

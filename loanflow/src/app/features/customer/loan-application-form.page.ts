@@ -617,6 +617,22 @@ export class LoanApplicationFormPage implements OnInit {
         tenantId = user.tenant?.id || '1';
       }
       
+      // Verify token exists
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.error('❌ No access token found!');
+        await loading.dismiss();
+        await this.showToast('Your session has expired. Please login again.', 'danger');
+        // Navigate to login but preserve the return path
+        this.router.navigate(['/auth/login'], { 
+          queryParams: { returnUrl: '/customer/apply-loan' }
+        });
+        return;
+      }
+      
+      console.log('🔑 Token exists:', token.substring(0, 20) + '...');
+      console.log('🏢 Tenant ID:', tenantId);
+      
       // Convert months to days (30 days per month)
       const requestedTermDays = this.requestedTermMonths() * 30;
 
@@ -629,6 +645,7 @@ export class LoanApplicationFormPage implements OnInit {
       };
 
       console.log('📤 Submitting application:', applicationData);
+      console.log('📡 API URL:', `${environment.apiUrl}/tenants/${tenantId}/platforms/moneyloan/loans/applications`);
 
       // Use the correct tenant-based API endpoint
       const response = await this.http.post<any>(
@@ -640,14 +657,29 @@ export class LoanApplicationFormPage implements OnInit {
 
       if (response?.success) {
         await this.showToast('Loan application submitted successfully!', 'success');
-        // Navigate back to apply-loan page to show the updated status
-        this.router.navigate(['/customer/apply-loan']);
+        // Navigate to dashboard to show the recent loan
+        console.log('✅ Application submitted successfully, navigating to dashboard');
+        this.router.navigate(['/customer/dashboard']);
       } else {
         throw new Error(response?.message || 'Failed to submit application');
       }
     } catch (error: any) {
       await loading.dismiss();
-      console.error('Error submitting application:', error);
+      console.error('❌ Error submitting application:', error);
+      console.error('❌ Error status:', error.status);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error details:', error.error);
+      
+      // Handle 401 specifically
+      if (error.status === 401) {
+        await this.showToast('Your session has expired. Please login again.', 'danger');
+        // Navigate to login but preserve the return path
+        this.router.navigate(['/auth/login'], { 
+          queryParams: { returnUrl: '/customer/apply-loan' }
+        });
+        return;
+      }
+      
       const message = error.error?.message || error.message || 'Failed to submit application';
       await this.showToast(message, 'danger');
     } finally {

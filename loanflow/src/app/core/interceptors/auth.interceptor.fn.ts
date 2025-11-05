@@ -19,10 +19,20 @@ export const authInterceptorFn: HttpInterceptorFn = (req, next) => {
     return next(clonedReq).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('❌ HTTP Error:', error.status, error.message);
+        console.error('❌ Error URL:', error.url);
         
-        if (error.status === 401) {
-          console.log('🔄 Unauthorized - logging out');
+        // Only auto-logout on 401 for auth-related endpoints
+        // Let other endpoints handle 401 errors themselves
+        if (error.status === 401 && (
+          error.url?.includes('/auth/') ||
+          error.url?.includes('/customers/auth/refresh') ||
+          error.url?.includes('/token/refresh')
+        )) {
+          console.log('🔄 Unauthorized on auth endpoint - logging out');
           authService.logout();
+        } else if (error.status === 401) {
+          console.warn('⚠️ 401 Unauthorized but not logging out - endpoint:', error.url);
+          // The component/service will handle this error
         }
         
         return throwError(() => error);

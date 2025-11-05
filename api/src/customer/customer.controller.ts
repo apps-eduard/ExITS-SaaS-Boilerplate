@@ -232,6 +232,27 @@ export class CustomerController {
     };
   }
 
+  @Get('auth/applications/:applicationId')
+  @UseGuards(JwtAuthGuard)
+  async getAuthApplicationDetails(@Req() req: any, @Param('applicationId') applicationId: string) {
+    const customerId = req.user.customerId;
+    const tenantId = req.user.tenantId;
+    
+    if (!customerId) {
+      throw new NotFoundException('Customer ID not found in token');
+    }
+    
+    const applicationDetails = await this.customerService.getApplicationDetailsByCustomerId(
+      customerId, 
+      tenantId, 
+      parseInt(applicationId)
+    );
+    return {
+      success: true,
+      data: applicationDetails,
+    };
+  }
+
   private resolveTenantContext(user: any, tenantIdParam?: string, allowOverride = false): number {
     const permissions: string[] = user?.permissions || [];
     const hasSystemAccess = permissions.includes('money-loan:customers:read') || permissions.includes('users:read');
