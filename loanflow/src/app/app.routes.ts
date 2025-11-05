@@ -72,6 +72,30 @@ export const routes: Routes = [
     canActivate: [collectorGuard],
     children: [
       {
+        path: 'dashboard',
+        loadComponent: () => import('./features/collector/collector-dashboard.page').then((m) => m.CollectorDashboardPage),
+      },
+      {
+        path: 'applications',
+        loadComponent: () => import('./features/collector/applications.page').then((m) => m.CollectorApplicationsPage),
+      },
+      {
+        path: 'disbursements',
+        loadComponent: () => import('./features/collector/disbursements.page').then((m) => m.CollectorDisbursementsPage),
+      },
+      {
+        path: 'visits',
+        loadComponent: () => import('./features/collector/visits.page').then((m) => m.CollectorVisitsPage),
+      },
+      {
+        path: 'waivers',
+        loadComponent: () => import('./features/collector/waivers.page').then((m) => m.CollectorWaiversPage),
+      },
+      {
+        path: 'customers',
+        loadComponent: () => import('./features/collector/route.page').then((m) => m.CollectorRoutePage),
+      },
+      {
         path: 'route',
         loadComponent: () => import('./features/collector/route.page').then((m) => m.CollectorRoutePage),
       },
@@ -85,7 +109,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'route',
+        redirectTo: 'dashboard',
         pathMatch: 'full',
       },
     ],

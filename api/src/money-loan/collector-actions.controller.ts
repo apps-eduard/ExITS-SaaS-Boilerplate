@@ -17,7 +17,7 @@ import { MoneyLoanService } from './money-loan.service';
 import { CollectorAssignmentService } from './services/collector-assignment.service';
 import { ApproveLoanDto, DisburseLoanDto, CreatePaymentDto } from './dto/money-loan.dto';
 
-@Controller('collectors/:collectorId')
+@Controller('money-loan/collectors/:collectorId')
 @UseGuards(JwtAuthGuard)
 export class CollectorActionsController {
   constructor(
@@ -38,6 +38,107 @@ export class CollectorActionsController {
     if (!isOwnRoute && !isAdmin) {
       throw new ForbiddenException('You can only access your own collector routes');
     }
+  }
+
+  /**
+   * Get collector's daily summary for dashboard
+   */
+  @Get('daily-summary')
+  async getDailySummary(
+    @Param('collectorId') collectorIdParam: string,
+    @Req() req: any,
+  ) {
+    const collectorId = parseInt(collectorIdParam);
+    this.verifyCollectorAccess(req, collectorId);
+
+    const tenantId = req.user.tenantId;
+    const knex = this.moneyLoanService['knexService'].instance;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get assigned customers count
+    const customersResult = await knex('customers')
+      .where({ assigned_employee_id: collectorId, tenant_id: tenantId })
+      .count('* as total');
+
+    // Get active and overdue loans
+    const loansResult = await knex('money_loan_loans as mll')
+      .join('customers as c', 'mll.customer_id', 'c.id')
+      .where('c.assigned_employee_id', collectorId)
+      .where('mll.tenant_id', tenantId)
+      .whereIn('mll.status', ['active', 'overdue', 'partially_paid'])
+      .select(
+        knex.raw('COUNT(*) as active_loans'),
+        knex.raw('SUM(CASE WHEN mll.status = ? THEN 1 ELSE 0 END) as overdue_loans', ['overdue']),
+        knex.raw('SUM(mll.outstanding_balance) as total_outstanding')
+      )
+      .first();
+
+    // Get today's collections
+    const collectionsResult = await knex('money_loan_payments as mlp')
+      .join('money_loan_loans as mll', 'mlp.loan_id', 'mll.id')
+      .join('customers as c', 'mll.customer_id', 'c.id')
+      .where('c.assigned_employee_id', collectorId)
+      .where('mlp.tenant_id', tenantId)
+      .whereRaw('DATE(mlp.payment_date) = ?', [today])
+      .sum('mlp.amount as collected_today')
+      .first();
+
+    // Get collector's daily target
+    const targetResult = await knex('money_loan_collector_targets')
+      .where({ collector_id: collectorId, tenant_id: tenantId })
+      .orderBy('id', 'desc')
+      .first();
+
+    // Get today's visits
+    const visitsResult = await knex('money_loan_customer_visits')
+      .where({ collector_id: collectorId, tenant_id: tenantId })
+      .whereRaw('DATE(check_in_time) = ?', [today])
+      .where('status', 'completed')
+      .count('* as visits_completed')
+      .first();
+
+    const totalCustomers = Number(customersResult[0]?.total || 0);
+    const visitsPlanned = totalCustomers;
+
+    // Get pending actions counts
+    const pendingApplications = await knex('money_loan_applications as mla')
+      .join('customers as c', 'mla.customer_id', 'c.id')
+      .where('c.assigned_employee_id', collectorId)
+      .where('mla.tenant_id', tenantId)
+      .whereIn('mla.status', ['submitted', 'under_review'])
+      .count('* as count')
+      .first();
+
+    const pendingDisbursements = await knex('money_loan_loans as mll')
+      .join('customers as c', 'mll.customer_id', 'c.id')
+      .where('c.assigned_employee_id', collectorId)
+      .where('mll.tenant_id', tenantId)
+      .whereIn('mll.status', ['pending', 'approved'])
+      .count('* as count')
+      .first();
+
+    const pendingWaivers = await knex('money_loan_penalty_waivers')
+      .where({ requested_by_collector_id: collectorId, tenant_id: tenantId, status: 'pending' })
+      .count('* as count')
+      .first();
+
+    return {
+      success: true,
+      data: {
+        date: today,
+        totalCustomers,
+        activeLoans: Number(loansResult?.['active_loans'] || 0),
+        overdueLoans: Number(loansResult?.['overdue_loans'] || 0),
+        totalOutstanding: Number(loansResult?.['total_outstanding'] || 0),
+        collectedToday: Number(collectionsResult?.['collected_today'] || 0),
+        collectionTarget: Number(targetResult?.['daily_collection_target'] || 0),
+        visitsCompleted: Number(visitsResult?.['visits_completed'] || 0),
+        visitsPlanned,
+        pendingApplications: Number(pendingApplications?.['count'] || 0),
+        pendingDisbursements: Number(pendingDisbursements?.['count'] || 0),
+        pendingWaivers: Number(pendingWaivers?.['count'] || 0),
+      },
+    };
   }
 
   /**

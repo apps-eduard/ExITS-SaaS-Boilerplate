@@ -219,6 +219,31 @@ export const routes: Routes = [
         path: 'collections/recovery',
         loadComponent: () => import('./features/platforms/money-loan/admin/collections/collections-recovery.component').then(m => m.CollectionsRecoveryComponent)
       },
+      // Collector Management
+      {
+        path: 'collectors/limits',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/collector-limits.component').then(m => m.CollectorLimitsComponent)
+      },
+      {
+        path: 'collectors/performance',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/collector-performance.component').then(m => m.CollectorPerformanceComponent)
+      },
+      {
+        path: 'collectors/action-logs',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/collector-action-logs.component').then(m => m.CollectorActionLogsComponent)
+      },
+      {
+        path: 'collectors/routes',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/collector-routes.component').then(m => m.CollectorRoutesComponent)
+      },
+      {
+        path: 'collectors/waivers',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/penalty-waivers.component').then(m => m.PenaltyWaiversComponent)
+      },
+      {
+        path: 'collectors/targets',
+        loadComponent: () => import('./features/platforms/money-loan/admin/collectors/collector-targets.component').then(m => m.CollectorTargetsComponent)
+      },
       // Audit & Notifications
       {
         path: 'audit-log',

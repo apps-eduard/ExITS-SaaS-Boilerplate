@@ -884,8 +884,8 @@ export class LoginPage {
   testUsers = [
     { email: 'customer1@acme.com', password: 'Admin@123', name: 'Maria Santos', role: 'Customer (ACME)', initials: 'MS' },
     { email: 'customer1@techstart.com', password: 'Admin@123', name: 'Juan Dela Cruz', role: 'Customer (TechStart)', initials: 'JD' },
-    { email: 'employee1@acme.com', password: 'Admin@123', name: 'Employee 1', role: 'Employee (ACME)', initials: 'E1' },
-    { email: 'employee1@techstart.com', password: 'Admin@123', name: 'Employee 1', role: 'Employee (TechStart)', initials: 'E1' }
+    { email: 'employee1@acme.com', password: 'Admin@123', name: 'Employee1 ACME', role: 'Loan Officer', initials: 'E1' },
+    { email: 'employee1@techstart.com', password: 'Admin@123', name: 'Employee1 TechStart', role: 'Loan Officer', initials: 'E1' }
   ];
 
   constructor(
@@ -979,6 +979,11 @@ export class LoginPage {
   quickLogin(user: any) {
     this.email = user.email;
     this.password = user.password;
+    // Auto-detect if employee/collector based on role or email
+    this.loginAsEmployee = user.role?.toLowerCase().includes('employee') || 
+                          user.role?.toLowerCase().includes('loan officer') ||
+                          user.role?.toLowerCase().includes('specialist') ||
+                          user.email.includes('employee');
     this.onSubmit();
   }
 }

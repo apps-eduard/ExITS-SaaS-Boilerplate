@@ -236,6 +236,48 @@ import { AuthService } from '../../../../core/services/auth.service';
             }
           </div>
 
+          <!-- Collector Management -->
+          <div class="space-y-1">
+            <button (click)="toggleSection('collectors')"
+                    class="w-full flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">📱</span>
+                <span class="font-medium">Collectors</span>
+              </div>
+              <svg class="w-4 h-4 transition-transform" [class.rotate-180]="expandedSections().collectors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            @if (expandedSections().collectors) {
+              <div class="ml-8 space-y-1">
+                <a routerLink="/platforms/money-loan/dashboard/collectors/performance" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  📈 Performance
+                </a>
+                <a routerLink="/platforms/money-loan/dashboard/collectors/targets" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  🎯 Targets
+                </a>
+                <a routerLink="/platforms/money-loan/dashboard/collectors/limits" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  📊 Limits
+                </a>
+                <a routerLink="/platforms/money-loan/dashboard/collectors/routes" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  🗺️ Routes & GPS
+                </a>
+                <a routerLink="/platforms/money-loan/dashboard/collectors/waivers" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  💰 Penalty Waivers
+                </a>
+                <a routerLink="/platforms/money-loan/dashboard/collectors/action-logs" routerLinkActive="!text-gray-900 dark:!text-white bg-gray-100 dark:bg-gray-700"
+                   class="block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  📋 Activity Logs
+                </a>
+              </div>
+            }
+          </div>
+
           <!-- KYC Verification -->
           <div class="space-y-1">
             <button (click)="toggleSection('kyc')"
@@ -503,6 +545,7 @@ export class MoneyLoanLayoutComponent {
     payments: false,
     interest: false,
     collections: false,
+    collectors: false,
     kyc: false,
     reports: false,
     settings: false

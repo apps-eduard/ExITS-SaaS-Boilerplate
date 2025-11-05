@@ -57,6 +57,7 @@ import { SyncService } from '../../core/services/sync.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
 import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { CollectorTabsComponent } from '../../shared/components/collector-tabs.component';
 
 interface RouteCustomer {
   customerId: number;
@@ -104,7 +105,8 @@ interface CollectionStats {
     IonButtons,
     IonModal,
     CurrencyMaskDirective,
-    DevInfoComponent
+    DevInfoComponent,
+    CollectorTabsComponent
   ],
   template: `
     <ion-header class="ion-no-border">
@@ -645,6 +647,9 @@ interface CollectionStats {
         </ion-content>
       </ng-template>
     </ion-modal>
+
+    <!-- Bottom Navigation Tabs -->
+    <app-collector-tabs />
   `,
   styles: [`
     /* ===== HEADER STYLES ===== */

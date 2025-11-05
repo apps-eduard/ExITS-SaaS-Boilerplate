@@ -610,40 +610,33 @@ export class CustomerAssignmentComponent implements OnInit {
   loadEmployees() {
     this.loadingEmployees.set(true);
 
-    this.http.get<any>('/api/users', {
-      params: {
-        userType: 'tenant',
-        limit: '1000'
-      }
-    }).subscribe({
+    // Use the new collectors endpoint instead of generic users endpoint
+    this.http.get<any>('/api/collectors').subscribe({
       next: (response) => {
-        const users = response.data || response.users || [];
-        console.log('Raw users from API:', users);
+        const collectors = response.data || response || [];
+        console.log('Collectors from API:', collectors);
 
-        const employees = users.filter((user: any) => {
-          return user.userType !== 'customer' && user.userType !== 'system';
-        });
-
-        const mappedEmployees = employees.map((user: any) => ({
-          id: user.id,
-          firstName: user.firstName || user.name?.split(' ')[0] || '',
-          lastName: user.lastName || user.name?.split(' ')[1] || '',
-          email: user.email,
-          phone: user.phone || '',
-          roleName: user.roleName || user.role?.name || user.roles?.[0]?.name || 'No Role',
-          roleId: user.roleId || user.role?.id || user.roles?.[0]?.id,
-          activeAssignments: 0
+        const mappedEmployees = collectors.map((collector: any) => ({
+          id: collector.id,
+          firstName: collector.firstName || '',
+          lastName: collector.lastName || '',
+          email: collector.email,
+          phone: collector.phone || '',
+          roleName: collector.roleName || collector.role?.name || '',
+          roleId: collector.roleId || collector.role?.id,
+          activeAssignments: collector.activeAssignments || 0,
+          employeeCode: collector.employeeCode,
+          position: collector.position,
+          department: collector.department
         }));
 
-        console.log('Mapped employees:', mappedEmployees);
-        console.log('Available roles:', mappedEmployees.map((e: Employee) => e.roleName));
-
+        console.log('Mapped collectors:', mappedEmployees);
         this.employees.set(mappedEmployees);
         this.loadingEmployees.set(false);
       },
       error: (error) => {
-        console.error('Error loading employees:', error);
-        this.toastService.error('Failed to load employees');
+        console.error('Error loading collectors:', error);
+        this.toastService.error('Failed to load collectors');
         this.employees.set([]);
         this.loadingEmployees.set(false);
       }

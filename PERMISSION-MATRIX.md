@@ -4,8 +4,8 @@
 
 This document provides a complete reference of all permissions in the system, organized by resource and scope (System vs Tenant).
 
-**Last Updated:** October 24, 2025  
-**Total Permissions:** 127+
+**Last Updated:** November 5, 2025  
+**Total Permissions:** 179+
 
 ---
 
@@ -289,6 +289,98 @@ Each permission follows the format: `{resource}:{action}`
 | `money-loan:user-management:manage` | money-loan-user-management | manage | Manage staff accounts and access |
 | `money-loan:integrations:configure` | money-loan-integrations | configure | Configure external integrations |
 
+### **Collector: Assigned Customers (4)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:assigned-customers:read` | money-loan-assigned-customers | read | View assigned customers only |
+| `money-loan:assigned-customers:view-details` | money-loan-assigned-customers | view-details | View detailed customer information |
+| `money-loan:assigned-customers:view-loan-history` | money-loan-assigned-customers | view-loan-history | View customer loan history |
+| `money-loan:assigned-customers:view-payment-history` | money-loan-assigned-customers | view-payment-history | View customer payment history |
+
+### **Collector: Application Approval (5)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:assigned-applications:read` | money-loan-assigned-applications | read | View loan applications from assigned customers |
+| `money-loan:assigned-applications:approve` | money-loan-assigned-applications | approve | Approve applications within assigned limit |
+| `money-loan:assigned-applications:reject` | money-loan-assigned-applications | reject | Reject loan applications |
+| `money-loan:assigned-applications:request-review` | money-loan-assigned-applications | request-review | Request manager review for applications above limit |
+| `money-loan:assigned-applications:view-limits` | money-loan-assigned-applications | view-limits | View own approval limits |
+
+### **Collector: Loan Disbursement (5)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:assigned-loans:read` | money-loan-assigned-loans | read | View loans of assigned customers |
+| `money-loan:assigned-loans:disburse` | money-loan-assigned-loans | disburse | Disburse approved loans within limit |
+| `money-loan:assigned-loans:view-pending-disbursement` | money-loan-assigned-loans | view-pending-disbursement | View loans pending disbursement |
+| `money-loan:assigned-loans:view-disbursement-limits` | money-loan-assigned-loans | view-disbursement-limits | View own disbursement limits |
+| `money-loan:assigned-loans:request-disbursement-approval` | money-loan-assigned-loans | request-disbursement-approval | Request approval for disbursements above limit |
+
+### **Collector: Payment Collection (6)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:assigned-payments:collect` | money-loan-assigned-payments | collect | Collect payments from assigned customers |
+| `money-loan:assigned-payments:collect-cash` | money-loan-assigned-payments | collect-cash | Collect cash payments |
+| `money-loan:assigned-payments:collect-bank-transfer` | money-loan-assigned-payments | collect-bank-transfer | Record bank transfer payments |
+| `money-loan:assigned-payments:view-schedule` | money-loan-assigned-payments | view-schedule | View payment schedules |
+| `money-loan:assigned-payments:view-overdue` | money-loan-assigned-payments | view-overdue | View overdue payments |
+| `money-loan:assigned-payments:view-collection-summary` | money-loan-assigned-payments | view-collection-summary | View collection summary |
+
+### **Collector: Penalty Waiver (6)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:penalties:view` | money-loan-penalties | view | View penalty charges |
+| `money-loan:penalties:waive-partial` | money-loan-penalties | waive-partial | Waive penalties within assigned limit |
+| `money-loan:penalties:waive-request` | money-loan-penalties | waive-request | Request penalty waiver above limit |
+| `money-loan:penalties:view-waiver-history` | money-loan-penalties | view-waiver-history | View penalty waiver history |
+| `money-loan:penalties:view-waiver-limits` | money-loan-penalties | view-waiver-limits | View penalty waiver limits |
+| `money-loan:penalties:approve-waiver` | money-loan-penalties | approve-waiver | Approve penalty waiver requests (Manager) |
+
+### **Collector: Customer Visits & Route (7)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:route:view` | money-loan-route | view | View daily collection route |
+| `money-loan:route:check-in` | money-loan-route | check-in | GPS check-in at customer location |
+| `money-loan:route:record-visit` | money-loan-route | record-visit | Record customer visit details |
+| `money-loan:route:upload-photo` | money-loan-route | upload-photo | Upload visit photos |
+| `money-loan:route:capture-signature` | money-loan-route | capture-signature | Capture customer signature |
+| `money-loan:route:view-visit-history` | money-loan-route | view-visit-history | View past customer visits |
+| `money-loan:route:optimize` | money-loan-route | optimize | Optimize collection route |
+
+### **Collector: Reports (5)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:collector-reports:view-daily` | money-loan-collector-reports | view-daily | View daily performance report |
+| `money-loan:collector-reports:view-weekly` | money-loan-collector-reports | view-weekly | View weekly performance report |
+| `money-loan:collector-reports:view-monthly` | money-loan-collector-reports | view-monthly | View monthly performance report |
+| `money-loan:collector-reports:view-targets` | money-loan-collector-reports | view-targets | View collection targets |
+| `money-loan:collector-reports:export` | money-loan-collector-reports | export | Export performance reports |
+
+### **Collector: Collection Activities (4)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:collection-activities:create` | money-loan-collection-activities | create | Create collection activity notes |
+| `money-loan:collection-activities:view` | money-loan-collection-activities | view | View collection activity history |
+| `money-loan:collection-activities:follow-up` | money-loan-collection-activities | follow-up | Schedule follow-up actions |
+| `money-loan:collection-activities:escalate` | money-loan-collection-activities | escalate | Escalate cases to manager |
+
+### **Collector: Management (Admin/Manager) (8)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:collector-management:read` | money-loan-collector-management | read | View all collectors (Manager) |
+| `money-loan:collector-management:assign-customers` | money-loan-collector-management | assign-customers | Assign customers to collectors (Manager) |
+| `money-loan:collector-management:set-limits` | money-loan-collector-management | set-limits | Set collector limits (Manager) |
+| `money-loan:collector-management:set-targets` | money-loan-collector-management | set-targets | Set collection targets (Manager) |
+| `money-loan:collector-management:view-all-performance` | money-loan-collector-management | view-all-performance | View all collector performance (Manager) |
+| `money-loan:collector-management:view-action-logs` | money-loan-collector-management | view-action-logs | View collector action audit logs (Manager) |
+| `money-loan:collector-management:view-gps-tracking` | money-loan-collector-management | view-gps-tracking | View collector GPS tracking (Manager) |
+| `money-loan:collector-management:manage` | money-loan-collector-management | manage | Full collector management access (Admin) |
+
+### **Collector: Notifications (2)**
+| Permission Key | Resource | Action | Description |
+|----------------|----------|--------|-------------|
+| `money-loan:collector-notifications:view` | money-loan-collector-notifications | view | View collector notifications |
+| `money-loan:collector-notifications:send-reminder` | money-loan-collector-notifications | send-reminder | Send payment reminders to customers |
+
 > **Removed Legacy Keys:** The broad tenant permissions `loans:*` and `payments:*` (including `money-loan:read/create/update/approve/payments`) were retired in November 2025. They are no longer present in the database and should not be assigned going forward.
 
 ---
@@ -339,7 +431,7 @@ Each permission follows the format: `{resource}:{action}`
 | • Billing | 5 |
 | • Reports | 6 |
 | • Recycle Bin | 3 |
-| **Money Loan Product** | 61 permissions *(legacy keys removed)* |
+| **Money Loan Product** | 113 permissions |
 | • Overview | 6 |
 | • Customers | 5 |
 | • Loans | 9 |
@@ -351,10 +443,19 @@ Each permission follows the format: `{resource}:{action}`
 | • Settings | 7 |
 | • Audit | 3 |
 | • Additional | 3 |
-| • Legacy (Deprecated) | 5 |
+| • Collector: Assigned Customers | 4 |
+| • Collector: Application Approval | 5 |
+| • Collector: Loan Disbursement | 5 |
+| • Collector: Payment Collection | 6 |
+| • Collector: Penalty Waiver | 6 |
+| • Collector: Customer Visits & Route | 7 |
+| • Collector: Reports | 5 |
+| • Collector: Collection Activities | 4 |
+| • Collector: Management (Admin/Manager) | 8 |
+| • Collector: Notifications | 2 |
 | **BNPL Product** | 4 permissions |
 | **Pawnshop Product** | 4 permissions |
-| **TOTAL** | **122 permissions** *(active keys)* |
+| **TOTAL** | **174 permissions** *(active keys)* |
 
 ---
 
@@ -371,6 +472,27 @@ Each permission follows the format: `{resource}:{action}`
 - All product permissions for enabled products (Money Loan, BNPL, Pawnshop)
 - Can manage users and roles within tenant
 - Cannot access other tenants' data
+
+### **Money Loan Manager** (Tenant Space)
+- All money loan core permissions (61)
+- Collector management permissions (8)
+- Approve high-value applications above collector limits
+- Approve disbursements above collector limits
+- Approve penalty waivers above collector limits
+- View all collector performance and GPS tracking
+- Assign customers to collectors
+
+### **Money Loan Collector** (Tenant Space)
+- Assigned customers permissions (4)
+- Application approval within limits (5)
+- Loan disbursement within limits (5)
+- Payment collection (6)
+- Penalty waiver within limits (6)
+- Customer visits & GPS tracking (7)
+- Performance reports (5)
+- Collection activities (4)
+- Notifications (2)
+- **Total: 44 collector-specific permissions**
 
 ### **Product-Specific Roles** (Tenant Space)
 - Assigned via `employee_product_access` table
@@ -405,6 +527,6 @@ The following broad permissions are deprecated in favor of granular permissions:
 
 ---
 
-**Document Version:** 2.0  
-**Database Status:** ✅ All permissions seeded  
-**Total Count:** 127 permissions
+**Document Version:** 3.0  
+**Database Status:** ✅ All permissions seeded (including 52 new collector permissions)  
+**Total Count:** 174 active permissions

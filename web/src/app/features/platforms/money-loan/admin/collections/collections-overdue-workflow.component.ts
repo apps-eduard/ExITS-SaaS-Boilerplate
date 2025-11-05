@@ -130,9 +130,9 @@ interface PaymentPlan {
             (ngModelChange)="onFilterChange()"
             class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
             <option value="all">All Collectors</option>
-            <option value="john">John Collector</option>
-            <option value="jane">Jane Collector</option>
-            <option value="mike">Mike Collector</option>
+            @for (collector of collectors(); track collector.id) {
+              <option [value]="collector.id">{{ collector.name }}</option>
+            }
           </select>
 
           <input
@@ -324,6 +324,7 @@ export class CollectionsOverdueWorkflowComponent {
   searchQuery = '';
 
   overdueAccounts = signal<OverdueAccount[]>([]);
+  collectors = signal<Array<{id: string, name: string}>>([]);
   selectedAccount = signal<OverdueAccount | null>(null);
   contactLogs = signal<ContactLog[]>([]);
 
@@ -363,7 +364,23 @@ export class CollectionsOverdueWorkflowComponent {
   });
 
   ngOnInit() {
+    this.loadCollectors();
     this.loadOverdueAccounts();
+  }
+
+  loadCollectors() {
+    this.http.get<any>('/api/collectors').subscribe({
+      next: (response) => {
+        const data = response.data || response || [];
+        this.collectors.set(data.map((c: any) => ({
+          id: c.id.toString(),
+          name: `${c.firstName} ${c.lastName}`
+        })));
+      },
+      error: (error) => {
+        console.error('Error loading collectors:', error);
+      }
+    });
   }
 
   loadOverdueAccounts() {

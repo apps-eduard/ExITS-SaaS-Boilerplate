@@ -35,7 +35,7 @@ export class CollectorAssignmentService {
    */
   async getCollectorLimits(collectorId: number, tenantId: number) {
     const knex = this.knexService.instance;
-    const limits = await knex('collector_limits')
+    const limits = await knex('money_loan_collector_limits')
       .where({ user_id: collectorId, tenant_id: tenantId, is_active: true })
       .first();
 
@@ -73,7 +73,7 @@ export class CollectorAssignmentService {
     // Check daily approval count
     const knex = this.knexService.instance;
     const today = new Date().toISOString().split('T')[0];
-    const todayCount = await knex('collector_action_logs')
+    const todayCount = await knex('money_loan_collector_action_logs')
       .where({ 
         collector_id: collectorId, 
         action_type: 'approve_application',
@@ -209,7 +209,7 @@ export class CollectorAssignmentService {
   }) {
     const knex = this.knexService.instance;
     
-    await knex('collector_action_logs').insert({
+    await knex('money_loan_collector_action_logs').insert({
       tenant_id: actionData.tenantId,
       collector_id: actionData.collectorId,
       customer_id: actionData.customerId,
@@ -237,7 +237,7 @@ export class CollectorAssignmentService {
 
     const [approvalsRaw, disbursementsRaw, paymentsRaw] = await Promise.all([
       // Approvals today
-      knex('collector_action_logs')
+      knex('money_loan_collector_action_logs')
         .where({ 
           collector_id: collectorId, 
           tenant_id: tenantId,

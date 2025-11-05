@@ -184,15 +184,15 @@ interface ResourceGroup {
 
             <!-- Quick Actions -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Selection</div>
+              <div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 text-left">Quick Selection</div>
 
               <!-- Toggle System Only Button - Show if filter is 'all' or 'system' -->
               <button
                 *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'system')"
                 (click)="toggleSelectSystem()"
                 [class]="areAllSystemSelected()
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-purple-50 px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 transition'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-purple-50 px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 transition'"
               >
                 {{ areAllSystemSelected() ? '❌ Unselect System' : '⚡ Select System' }}
               </button>
@@ -202,8 +202,8 @@ interface ResourceGroup {
                 *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
                 (click)="toggleSelectTenant()"
                 [class]="areAllTenantSelected()
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 transition'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-green-50 px-3 py-2 text-xs font-medium text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 transition'"
               >
                 {{ areAllTenantSelected() ? '❌ Unselect Tenant Core' : '🏠 Select Tenant Core' }}
               </button>
@@ -214,10 +214,22 @@ interface ResourceGroup {
                 (click)="toggleSelectProduct('money-loan')"
                 [disabled]="isReadOnlyMode() || isProductDisabled('money-loan')"
                 [class]="areAllProductSelected('money-loan')
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
               >
                 {{ areAllProductSelected('money-loan') ? '❌ Unselect Money Loan' : '💰 Select Money Loan' }}
+              </button>
+
+              <!-- Toggle Collector permissions (subset of Money Loan) -->
+              <button
+                *ngIf="roleSpace !== 'customer' && (filterState().space === 'all' || filterState().space === 'tenant')"
+                (click)="toggleSelectCollector()"
+                [disabled]="isReadOnlyMode()"
+                [class]="areAllCollectorSelected()
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+              >
+                {{ areAllCollectorSelected() ? '❌ Unselect Collector' : '📱 Select Collector' }}
               </button>
 
               <!-- Toggle BNPL permissions -->
@@ -226,8 +238,8 @@ interface ResourceGroup {
                 (click)="toggleSelectProduct('bnpl')"
                 [disabled]="isReadOnlyMode() || isProductDisabled('bnpl')"
                 [class]="areAllProductSelected('bnpl')
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
               >
                 {{ areAllProductSelected('bnpl') ? '❌ Unselect BNPL' : '🛒 Select BNPL' }}
               </button>
@@ -238,8 +250,8 @@ interface ResourceGroup {
                 (click)="toggleSelectProduct('pawnshop')"
                 [disabled]="isReadOnlyMode() || isProductDisabled('pawnshop')"
                 [class]="areAllProductSelected('pawnshop')
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-pink-50 px-3 py-2 text-xs font-medium text-pink-700 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-pink-50 px-3 py-2 text-xs font-medium text-pink-700 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
               >
                 {{ areAllProductSelected('pawnshop') ? '❌ Unselect Pawnshop' : '🪙 Select Pawnshop' }}
               </button>
@@ -250,8 +262,8 @@ interface ResourceGroup {
                 (click)="toggleSelectCustomer()"
                 [disabled]="isReadOnlyMode()"
                 [class]="areAllCustomerSelected()
-                  ? 'w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
-                  : 'w-full rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
+                  ? 'w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition'
+                  : 'w-full text-left rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed'"
               >
                 {{ areAllCustomerSelected() ? '❌ Unselect Customer Portal' : '👤 Select Customer Portal' }}
               </button>
@@ -259,7 +271,7 @@ interface ResourceGroup {
               <!-- Clear All Permissions Button -->
             <button
               (click)="clearAllPermissions()"
-              class="w-full rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition"
+              class="w-full text-left rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition"
             >
               🗑️ Clear All Permissions
             </button>
@@ -743,6 +755,18 @@ export class RoleEditorComponent implements OnInit {
   { resource: 'money-loan:user-management', displayName: '💰 Money Loan: User Mgmt', description: 'Staff management', actions: ['manage'], category: 'tenant', product: 'money-loan' },
   { resource: 'money-loan:integrations', displayName: '💰 Money Loan: Integrations', description: 'External integrations', actions: ['configure'], category: 'tenant', product: 'money-loan' },
 
+  // Money Loan - Collector Permissions (52 permissions)
+  { resource: 'money-loan:assigned-customers', displayName: '💰 Collector: Assigned Customers', description: 'View and manage assigned customers', actions: ['read', 'view-details', 'view-loan-history', 'view-payment-history'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:assigned-applications', displayName: '💰 Collector: Applications', description: 'Approve/reject applications within limits', actions: ['read', 'approve', 'reject', 'request-review', 'view-limits'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:assigned-loans', displayName: '💰 Collector: Loan Disbursement', description: 'Disburse approved loans', actions: ['read', 'disburse', 'view-pending-disbursement', 'view-disbursement-limits', 'request-disbursement-approval'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:assigned-payments', displayName: '💰 Collector: Payment Collection', description: 'Collect payments from customers', actions: ['collect', 'collect-cash', 'collect-bank-transfer', 'view-schedule', 'view-overdue', 'view-collection-summary'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:penalties', displayName: '💰 Collector: Penalty Waiver', description: 'Waive penalties within limits', actions: ['view', 'waive-partial', 'waive-request', 'view-waiver-history', 'view-waiver-limits', 'approve-waiver'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:route', displayName: '💰 Collector: Customer Visits', description: 'GPS tracking and visit management', actions: ['view', 'check-in', 'record-visit', 'upload-photo', 'capture-signature', 'view-visit-history', 'optimize'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:collector-reports', displayName: '💰 Collector: Reports', description: 'Performance and collection reports', actions: ['view-daily', 'view-weekly', 'view-monthly', 'view-targets', 'export'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:collection-activities', displayName: '💰 Collector: Activities', description: 'Collection activity tracking', actions: ['create', 'view', 'follow-up', 'escalate'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:collector-management', displayName: '💰 Collector: Management', description: 'Manage collectors (Admin/Manager)', actions: ['read', 'assign-customers', 'set-limits', 'set-targets', 'view-all-performance', 'view-action-logs', 'view-gps-tracking', 'manage'], category: 'tenant', product: 'money-loan' },
+  { resource: 'money-loan:collector-notifications', displayName: '💰 Collector: Notifications', description: 'Collector notifications', actions: ['view', 'send-reminder'], category: 'tenant', product: 'money-loan' },
+
     // BNPL & Pawnshop
     { resource: 'bnpl', displayName: 'ðŸ›’ Buy Now Pay Later', description: 'BNPL management', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'bnpl' },
     { resource: 'pawnshop', displayName: 'ðŸª Pawnshop', description: 'Pawnshop operations', actions: ['read', 'create', 'update', 'manage'], category: 'tenant', product: 'pawnshop' },
@@ -1115,6 +1139,50 @@ export class RoleEditorComponent implements OnInit {
     this.setProductFilter(product);
   }
 
+  toggleSelectCollector(): void {
+    const perms = new Set<string>();
+    const collectorResources = [
+      'money-loan:assigned-customers',
+      'money-loan:assigned-applications',
+      'money-loan:assigned-loans',
+      'money-loan:assigned-payments',
+      'money-loan:penalties',
+      'money-loan:route',
+      'money-loan:collector-reports',
+      'money-loan:collection-activities',
+      'money-loan:collector-management',
+      'money-loan:collector-notifications'
+    ];
+    const targetGroups = this.resourceGroups.filter(group => 
+      collectorResources.includes(group.resource)
+    );
+    const allSelected = this.areAllCollectorSelected();
+
+    // Preserve all existing permissions
+    this.selectedPermissions().forEach(permKey => {
+      const { resource } = this.parsePermissionKey(permKey);
+      if (!resource || !collectorResources.includes(resource)) {
+        perms.add(permKey);
+      }
+    });
+
+    // If not all selected, select all collector permissions
+    if (!allSelected) {
+      targetGroups.forEach(group => {
+        group.actions.forEach(action => {
+          perms.add(`${group.resource}:${action}`);
+        });
+      });
+    }
+
+    this.ensureEssentialTenantPermissions(perms);
+    this.selectedPermissions.set(perms);
+
+    // Focus filters on money-loan product for immediate visibility
+    this.setSpaceFilter('tenant');
+    this.setProductFilter('money-loan');
+  }
+
   toggleSelectCustomer(): void {
     const perms = new Set<string>();
 
@@ -1202,6 +1270,37 @@ export class RoleEditorComponent implements OnInit {
 
     this.resourceGroups.forEach(group => {
       if (group.product === product) {
+        totalPerms += group.actions.length;
+        group.actions.forEach(action => {
+          if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
+            selectedPerms++;
+          }
+        });
+      }
+    });
+
+    return totalPerms > 0 && selectedPerms === totalPerms;
+  }
+
+  areAllCollectorSelected(): boolean {
+    const collectorResources = [
+      'money-loan:assigned-customers',
+      'money-loan:assigned-applications',
+      'money-loan:assigned-loans',
+      'money-loan:assigned-payments',
+      'money-loan:penalties',
+      'money-loan:route',
+      'money-loan:collector-reports',
+      'money-loan:collection-activities',
+      'money-loan:collector-management',
+      'money-loan:collector-notifications'
+    ];
+
+    let totalPerms = 0;
+    let selectedPerms = 0;
+
+    this.resourceGroups.forEach(group => {
+      if (collectorResources.includes(group.resource)) {
         totalPerms += group.actions.length;
         group.actions.forEach(action => {
           if (this.selectedPermissions().has(`${group.resource}:${action}`)) {
