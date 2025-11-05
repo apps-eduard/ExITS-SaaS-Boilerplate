@@ -17,6 +17,7 @@ export interface User {
     name: string;
   };
   permissions: string[];
+  profileComplete?: boolean;
   avatar?: string;
 }
 
@@ -156,6 +157,46 @@ export class AuthService {
       catchError((error) => {
         console.error('Registration error:', error);
         return throwError(() => new Error(error.error?.message || 'Registration failed'));
+      })
+    );
+  }
+
+  registerCustomer(data: {
+    tenant?: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    phone?: string;
+    address?: string;
+  }): Observable<any> {
+    const body = {
+      tenant: data.tenant || 'ACME', // Default to ACME if not provided
+      email: data.email,
+      password: data.password,
+      ...(data.fullName && { fullName: data.fullName }),
+      ...(data.phone && { phone: data.phone }),
+      ...(data.address && { address: data.address })
+    };
+    
+    return this.http.post<any>(`${this.customerApiUrl}/register`, body).pipe(
+      map((response) => {
+        console.log('Customer registration response:', response);
+        return response;
+      }),
+      catchError((error) => {
+        console.error('Customer registration error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  checkEmailExists(tenant: string, email: string): Observable<{ exists: boolean }> {
+    return this.http.get<{ exists: boolean }>(`${this.customerApiUrl}/check-email`, {
+      params: { tenant, email }
+    }).pipe(
+      catchError((error) => {
+        console.error('Check email error:', error);
+        return throwError(() => error);
       })
     );
   }

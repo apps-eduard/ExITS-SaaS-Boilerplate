@@ -621,6 +621,156 @@ export class CustomerService {
     return `CUST-${tenantId}-${Date.now()}`;
   }
 
+  async checkEmailExists(tenantName: string, email: string): Promise<boolean> {
+    const knex = this.knexService.instance;
+
+    // Find tenant by name
+    const tenant = await knex('tenants')
+      .where({ name: tenantName, status: 'active' })
+      .first();
+
+    if (!tenant) {
+      return false;
+    }
+
+    // Check if email exists in customers table
+    const customer = await knex('customers')
+      .where({ email: email.toLowerCase(), tenant_id: tenant.id })
+      .first();
+
+    if (customer) {
+      return true;
+    }
+
+    // Also check users table
+    const user = await knex('users')
+      .whereRaw('LOWER(email) = LOWER(?)', [email])
+      .where({ tenant_id: tenant.id })
+      .first();
+
+    return !!user;
+  }
+
+  async register(payload: {
+    tenant: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    phone?: string;
+    address?: string;
+  }) {
+    const knex = this.knexService.instance;
+
+    return await knex.transaction(async (trx) => {
+      // Find tenant by name
+      const tenant = await trx('tenants')
+        .where({ name: payload.tenant, status: 'active' })
+        .first();
+
+      if (!tenant) {
+        throw new BadRequestException('Invalid tenant');
+      }
+
+      // Check if email already exists
+      const existingCustomer = await trx('customers')
+        .where({ email: payload.email, tenant_id: tenant.id })
+        .first();
+
+      if (existingCustomer) {
+        throw new BadRequestException('Email already registered');
+      }
+
+      // Check if user exists
+      const existingUser = await trx('users')
+        .whereRaw('LOWER(email) = LOWER(?)', [payload.email])
+        .where({ tenant_id: tenant.id })
+        .first();
+
+      if (existingUser) {
+        throw new BadRequestException('Email already registered');
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(payload.password, 10);
+
+      // Split full name if provided, otherwise leave empty for profile completion
+      let firstName = '';
+      let lastName = '';
+      if (payload.fullName && payload.fullName.trim()) {
+        const nameParts = payload.fullName.trim().split(' ');
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
+
+      // Create user record
+      const [user] = await trx('users')
+        .insert({
+          tenant_id: tenant.id,
+          email: payload.email,
+          password_hash: passwordHash,
+          first_name: firstName,
+          last_name: lastName,
+          status: 'active',
+          email_verified: false,
+        })
+        .returning('*');
+
+      // Find customer role
+      const customerRole = await trx('roles')
+        .where(function() {
+          this.where({ name: 'Customer', tenant_id: tenant.id })
+            .orWhere({ name: 'Customer', tenant_id: null });
+        })
+        .first();
+
+      if (customerRole) {
+        await trx('user_roles').insert({
+          user_id: user.id,
+          role_id: customerRole.id,
+        });
+      }
+
+      // Generate customer code
+      const customerCode = `CUST-${tenant.id}-${Date.now()}`;
+
+      // Create customer record
+      const [customer] = await trx('customers')
+        .insert({
+          tenant_id: tenant.id,
+          user_id: user.id,
+          customer_code: customerCode,
+          email: payload.email,
+          phone: payload.phone || '', // Use empty string if phone not provided
+          first_name: firstName,
+          last_name: lastName,
+          status: 'active',
+        })
+        .returning('*');
+
+      // Create address if provided
+      if (payload.address) {
+        await trx('addresses').insert({
+          customer_id: customer.id,
+          tenant_id: tenant.id,
+          address_type: 'primary',
+          street_address: payload.address,
+          is_primary: true,
+        });
+      }
+
+      return {
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.first_name,
+        lastName: customer.last_name,
+        phone: customer.phone,
+        customerCode: customer.customer_code,
+        tenantId: customer.tenant_id,
+        tenantName: tenant.name,
+      };
+    });
+  }
+
   async login(loginDto: CustomerLoginDto) {
     const knex = this.knexService.instance;
 
@@ -689,6 +839,14 @@ export class CustomerService {
     const customerData = { ...customerRecord };
     delete customerData.passwordHash;
 
+    // Check if profile is complete
+    const profileComplete = !!(
+      customerRecord.first_name && 
+      customerRecord.first_name.trim() !== '' &&
+      customerRecord.phone && 
+      customerRecord.phone.trim() !== ''
+    );
+
     return {
       success: true,
       message: 'Login successful',
@@ -700,6 +858,7 @@ export class CustomerService {
         customer: {
           ...customerData,
           permissions: customerPermissions,
+          profileComplete,
         },
         user: {
           id: customerRecord.id.toString(),
@@ -712,6 +871,7 @@ export class CustomerService {
             name: customerRecord.tenantName,
           },
           permissions: customerPermissions,
+          profileComplete,
         },
       },
     };
@@ -739,6 +899,126 @@ export class CustomerService {
     }
 
     return customerProfile;
+  }
+
+  async updateProfile(customerId: number, tenantId: number, payload: any) {
+    const knex = this.knexService.instance;
+
+    return await knex.transaction(async (trx) => {
+      // Prepare update data
+      const updateData: any = {};
+
+      // Handle personal info updates
+      if (payload.firstName !== undefined) {
+        updateData.first_name = payload.firstName.trim();
+      }
+      if (payload.lastName !== undefined) {
+        updateData.last_name = payload.lastName.trim();
+      }
+      if (payload.phone !== undefined) {
+        updateData.phone = payload.phone.trim();
+      }
+
+      // Update customer record
+      if (Object.keys(updateData).length > 0) {
+        updateData.updated_at = trx.fn.now();
+        
+        await trx('customers')
+          .where({ id: customerId, tenant_id: tenantId })
+          .update(updateData);
+
+        // Also update the user record to keep first_name and last_name in sync
+        const userUpdateData: any = {};
+        if (updateData.first_name !== undefined) {
+          userUpdateData.first_name = updateData.first_name;
+        }
+        if (updateData.last_name !== undefined) {
+          userUpdateData.last_name = updateData.last_name;
+        }
+
+        if (Object.keys(userUpdateData).length > 0) {
+          userUpdateData.updated_at = trx.fn.now();
+          
+          // Find user_id from customer
+          const customer = await trx('customers')
+            .select('user_id')
+            .where({ id: customerId })
+            .first();
+
+          if (customer?.user_id) {
+            await trx('users')
+              .where({ id: customer.user_id })
+              .update(userUpdateData);
+          }
+        }
+      }
+
+      // Handle address updates
+      if (payload.address) {
+        const addressData = {
+          street_name: payload.address.streetAddress || '',
+          city_municipality: payload.address.city || '',
+          province: payload.address.state || '',
+          zip_code: payload.address.postalCode || '',
+          country: payload.address.country || 'Philippines',
+          // Set default required fields for PH addresses
+          barangay: payload.address.barangay || 'N/A',
+          region: payload.address.region || 'NCR',
+          updated_at: trx.fn.now(),
+        };
+
+        // Check if customer already has an address
+        const existingAddress = await trx('addresses')
+          .where({ 
+            addressable_type: 'customer',
+            addressable_id: customerId,
+            tenant_id: tenantId 
+          })
+          .first();
+
+        if (existingAddress) {
+          // Update existing address
+          await trx('addresses')
+            .where({ 
+              addressable_type: 'customer',
+              addressable_id: customerId,
+              tenant_id: tenantId 
+            })
+            .update(addressData);
+        } else {
+          // Create new address
+          await trx('addresses').insert({
+            addressable_type: 'customer',
+            addressable_id: customerId,
+            tenant_id: tenantId,
+            address_type: 'home',
+            is_primary: true,
+            ...addressData,
+            created_at: trx.fn.now(),
+          });
+        }
+      }
+
+      // Fetch and return updated profile
+      const updatedCustomer = await trx('customers')
+        .select('customers.*')
+        .where({ 'customers.id': customerId, 'customers.tenant_id': tenantId })
+        .first();
+
+      // Fetch addresses using polymorphic relation
+      const addresses = await trx('addresses')
+        .where({ 
+          addressable_type: 'customer',
+          addressable_id: customerId,
+          tenant_id: tenantId 
+        })
+        .orderBy('is_primary', 'desc');
+
+      return {
+        ...updatedCustomer,
+        addresses,
+      };
+    });
   }
 
   async getLoans(customerId: number, tenantId: number) {

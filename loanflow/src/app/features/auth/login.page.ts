@@ -1,16 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader,
-  IonToolbar,
   IonContent,
   IonCard,
   IonCardContent,
   IonButton,
   IonSpinner,
-  ToastController
+  ToastController,
+  AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
@@ -24,8 +23,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
+    RouterLink,
     IonContent,
     IonCard,
     IonCardContent,
@@ -34,25 +32,17 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     DevInfoComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-center">
-            <span class="app-emoji">💰</span>
-            <span class="app-title">LoanFlow</span>
-          </div>
-          
-          <div class="toolbar-right">
-            <app-dev-info />
-            <ion-button (click)="toggleTheme()" class="theme-btn" fill="clear">
-              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-            </ion-button>
-          </div>
-        </div>
-      </ion-toolbar>
-    </ion-header>
-
     <ion-content class="login-content">
+      <!-- Floating Theme Toggle -->
+      <button class="floating-theme-btn" (click)="toggleTheme()">
+        <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
+      </button>
+      
+      <!-- Floating Dev Info -->
+      <div class="floating-dev-info">
+        <app-dev-info />
+      </div>
+      
       <div class="login-container">
         <!-- Hero Section -->
         <div class="hero-section">
@@ -142,6 +132,13 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
               </ion-button>
 
             </form>
+
+            <!-- Register Link -->
+            <div class="register-link">
+              <span class="link-text">Don't have an account? </span>
+              <a [routerLink]="['/register']" class="link-action">Sign Up</a>
+            </div>
+
           </ion-card-content>
         </ion-card>
 
@@ -228,59 +225,46 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     </ion-content>
   `,
   styles: [`
-    /* ===== TOOLBAR / NAVBAR ===== */
-    .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --color: white;
-      --border-style: none;
-      --min-height: 64px;
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
-    }
-
-    .toolbar-content {
+    /* ===== FLOATING BUTTONS ===== */
+    .floating-theme-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 1rem;
-      width: 100%;
-      height: 64px;
+      justify-content: center;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
     }
 
-    .toolbar-center {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex: 1;
+    .floating-theme-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
 
-    .app-emoji {
-      font-size: 2rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    .floating-theme-btn:active {
+      transform: scale(0.95);
     }
 
-    .app-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: white;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-      letter-spacing: -0.02em;
+    @media (prefers-color-scheme: dark) {
+      .floating-theme-btn {
+        background: rgba(30, 30, 30, 0.95);
+      }
     }
 
-    .toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-
-    .theme-btn {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      margin: 0;
-      height: 40px;
-      width: 40px;
+    .floating-dev-info {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 1000;
     }
 
     .theme-emoji {
@@ -763,6 +747,47 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
       transform: translateX(4px);
     }
 
+    /* Register Link */
+    .register-link {
+      text-align: center;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .link-text {
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+
+    .link-action {
+      color: #667eea;
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 0.25rem;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .link-action::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -2px;
+      left: 0;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      transition: width 0.3s ease;
+    }
+
+    .link-action:hover {
+      color: #764ba2;
+    }
+
+    .link-action:hover::after {
+      width: 100%;
+    }
+
     /* Footer */
     .login-footer {
       text-align: center;
@@ -866,7 +891,8 @@ export class LoginPage {
   constructor(
     private authService: AuthService,
     private router: Router,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private alertController: AlertController
   ) {
     addIcons({
       'cash-outline': cashOutline,
@@ -904,6 +930,35 @@ export class LoginPage {
       console.log('Current user:', user);
       console.log('User role:', user?.role);
       const role = user?.role?.toLowerCase();
+      
+      // Check if customer profile is incomplete
+      if (role === 'customer') {
+        // Check profileComplete from the user object directly
+        const profileComplete = user?.profileComplete;
+        
+        console.log('Profile complete check:', {
+          user,
+          profileComplete,
+          shouldRedirect: profileComplete === false
+        });
+        
+        if (profileComplete === false) {
+          console.log('Profile incomplete, redirecting to profile page...');
+          // Navigate to profile completion page
+          await this.router.navigate(['/customer/profile']);
+          
+          // Show alert after navigation
+          setTimeout(async () => {
+            const alert = await this.alertController.create({
+              header: '⚠️ Complete Your Profile',
+              message: 'Your name and phone number are required. Please update them to continue.',
+              buttons: ['OK']
+            });
+            await alert.present();
+          }, 500);
+          return;
+        }
+      }
       
       // Navigate based on role
       if (role === 'collector' || role === 'employee') {

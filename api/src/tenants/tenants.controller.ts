@@ -32,6 +32,15 @@ export class TenantsController {
     };
   }
 
+  @Get('public/active')
+  async getActiveTenants() {
+    const tenants = await this.tenantsService.getActiveTenants();
+    return {
+      success: true,
+      data: tenants,
+    };
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('tenants:read')

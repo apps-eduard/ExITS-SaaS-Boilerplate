@@ -103,6 +103,17 @@ export class TenantsService {
     };
   }
 
+  async getActiveTenants() {
+    const knex = this.knexService.instance;
+    
+    const tenants = await knex('tenants')
+      .select('id', 'name', 'subdomain', 'plan', 'status', 'logo_url', 'created_at')
+      .where({ status: 'active' })
+      .orderBy('name', 'asc');
+
+    return tenants;
+  }
+
   async findOne(id: number) {
     const knex = this.knexService.instance;
 

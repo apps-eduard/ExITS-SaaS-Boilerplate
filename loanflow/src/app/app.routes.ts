@@ -12,6 +12,10 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
   },
+  {
+    path: 'register',
+    loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
+  },
   
   // Customer routes
   {
@@ -21,6 +25,10 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/customer/customer_dashboard.page').then((m) => m.CustomerDashboardPage),
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/customer/profile.page').then((m) => m.ProfilePage),
       },
       {
         path: 'loans',

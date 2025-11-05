@@ -134,6 +134,31 @@ export class CustomerController {
   }
 
   // Legacy customer/auth routes
+  @Get('auth/check-email')
+  async checkEmail(
+    @Query('tenant') tenant: string,
+    @Query('email') email: string
+  ) {
+    if (!tenant || !email) {
+      throw new BadRequestException('Tenant and email are required');
+    }
+    
+    const exists = await this.customerService.checkEmailExists(tenant, email);
+    return {
+      exists,
+    };
+  }
+
+  @Post('auth/register')
+  async register(@Body() payload: any) {
+    const customer = await this.customerService.register(payload);
+    return {
+      success: true,
+      message: 'Customer registered successfully',
+      data: customer,
+    };
+  }
+
   @Post('auth/login')
   async login(@Body() loginDto: CustomerLoginDto) {
     return await this.customerService.login(loginDto);
@@ -146,6 +171,21 @@ export class CustomerController {
     return {
       success: true,
       data: customer,
+    };
+  }
+
+  @Put('auth/profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(@Req() req: any, @Body() payload: any) {
+    const updatedCustomer = await this.customerService.updateProfile(
+      req.user.customerId,
+      req.user.tenantId,
+      payload
+    );
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedCustomer,
     };
   }
 

@@ -102,7 +102,6 @@ interface CollectionStats {
     IonBadge,
     IonSkeletonText,
     IonButtons,
-    IonChip,
     IonModal,
     CurrencyMaskDirective,
     DevInfoComponent
@@ -244,37 +243,33 @@ interface CollectionStats {
           </div>
         </div>
 
-        <!-- Filter Chips -->
-        <div class="filter-chips">
-          <ion-chip 
-            class="filter-chip"
-            [class.chip-active]="filter() === 'all'"
-            [class.chip-inactive]="filter() !== 'all'"
-            (click)="setFilter('all')"
-          >
-            All ({{ customers().length }})
-          </ion-chip>
-          <ion-chip 
-            class="filter-chip filter-chip-pending"
-            [class.chip-active]="filter() === 'not-visited'"
-            [class.chip-inactive]="filter() !== 'not-visited'"
-            (click)="setFilter('not-visited')"
-          >
-            Pending ({{ filterCount('not-visited') }})
-          </ion-chip>
-          <ion-chip 
-            class="filter-chip filter-chip-success"
-            [class.chip-active]="filter() === 'collected'"
-            [class.chip-inactive]="filter() !== 'collected'"
-            (click)="setFilter('collected')"
-          >
-            Collected ({{ filterCount('collected') }})
-          </ion-chip>
+        <!-- Search Bar -->
+        <div class="search-container">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input 
+              type="text" 
+              class="search-input"
+              [(ngModel)]="searchQuery"
+              (input)="onSearchChange()"
+              placeholder="Search by name, phone, or email..."
+            />
+            @if (searchQuery) {
+              <button class="search-clear" (click)="clearSearch()">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
+            }
+          </div>
         </div>
 
         <!-- Customer Route List -->
         <div class="section-card">
-          <h3 class="section-title">Today's Route</h3>
+          <h3 class="section-title">
+            Today's Route
+            @if (searchQuery) {
+              <span class="search-results-count">({{ filteredCustomers().length }} results)</span>
+            }
+          </h3>
 
           @if (loading()) {
             <div class="customers-loading">
@@ -290,8 +285,13 @@ interface CollectionStats {
               <div class="empty-icon-wrapper">
                 <ion-icon name="map-outline" class="empty-icon"></ion-icon>
               </div>
-              <p class="empty-title">No customers found</p>
-              <p class="empty-subtitle">Check back later or adjust your filters</p>
+              @if (searchQuery) {
+                <p class="empty-title">No customers found</p>
+                <p class="empty-subtitle">No matches for "{{ searchQuery }}"</p>
+              } @else {
+                <p class="empty-title">No customers found</p>
+                <p class="empty-subtitle">Check back later for your route</p>
+              }
             </div>
           } @else {
             <div class="customers-list">
@@ -917,46 +917,84 @@ interface CollectionStats {
       transition: width 0.5s ease;
     }
 
-    /* ===== FILTER CHIPS ===== */
-    .filter-chips {
-      display: flex;
-      gap: 0.5rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
+    /* ===== SEARCH BAR ===== */
+    .search-container {
       margin-bottom: 1.25rem;
-      -webkit-overflow-scrolling: touch;
     }
 
-    .filter-chips::-webkit-scrollbar {
-      display: none;
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--ion-card-background);
+      border: 2px solid var(--ion-border-color, #e5e7eb);
+      border-radius: 16px;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    .filter-chip {
+    .search-wrapper:focus-within {
+      border-color: #a855f7;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .search-icon {
+      font-size: 1.25rem;
+      margin-right: 0.75rem;
       flex-shrink: 0;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color);
+      outline: none;
+      font-weight: 500;
+    }
+
+    .search-input::placeholder {
+      color: var(--ion-color-medium);
+      font-weight: 400;
+    }
+
+    .search-clear {
+      background: rgba(168, 85, 247, 0.1);
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+    }
+
+    .search-clear:hover {
+      background: rgba(168, 85, 247, 0.2);
+      transform: scale(1.1);
+    }
+
+    .search-clear:active {
+      transform: scale(0.95);
+    }
+
+    .search-clear ion-icon {
+      font-size: 1rem;
+      color: #a855f7;
+    }
+
+    .search-results-count {
       font-size: 0.875rem;
-      font-weight: 600;
-      --background: var(--ion-color-light);
-      --color: var(--ion-text-color);
-    }
-
-    .chip-active {
-      --background: #a855f7 !important;
-      --color: white !important;
-    }
-
-    .chip-inactive {
-      --background: var(--ion-color-light);
-      --color: var(--ion-color-medium);
-    }
-
-    .filter-chip-pending.chip-active {
-      --background: #f59e0b !important;
-    }
-
-    .filter-chip-success.chip-active {
-      --background: #10b981 !important;
+      font-weight: 500;
+      color: var(--ion-color-medium);
+      margin-left: 0.5rem;
     }
 
     /* ===== SECTION CARD ===== */
@@ -1048,13 +1086,19 @@ interface CollectionStats {
       border-radius: 12px;
       padding: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       border-left: 4px solid transparent;
+      overflow: hidden;
     }
 
     .customer-card:active {
       transform: scale(0.98);
+    }
+
+    .customer-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
     }
 
     .card-pending {
@@ -1288,6 +1332,26 @@ interface CollectionStats {
       margin-top: 8px;
       background: rgba(0,0,0,0.02);
       border-radius: 0 0 12px 12px;
+      animation: expandPanel 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: top;
+      overflow: hidden;
+    }
+
+    @keyframes expandPanel {
+      from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-top: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 2000px;
+        padding-top: 10px;
+        padding-bottom: 12px;
+        margin-top: 8px;
+      }
     }
 
     .filter-buttons {
@@ -1296,6 +1360,18 @@ interface CollectionStats {
       padding: 8px;
       margin-bottom: 8px;
       border-bottom: 1px solid var(--ion-border-color, #e5e7eb);
+      animation: fadeInSlideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
+    }
+
+    @keyframes fadeInSlideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .filter-buttons ion-button {
@@ -1306,9 +1382,18 @@ interface CollectionStats {
       height: 32px;
       font-size: 13px;
       text-transform: none;
+      transition: all 0.2s ease;
     }
 
-    .repayment-list { display: flex; flex-direction: column; gap: 8px; }
+    .filter-buttons ion-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .repayment-list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+    }
 
     .repayment-row {
       display: flex;
@@ -1319,6 +1404,27 @@ interface CollectionStats {
       background: var(--ion-background-color);
       border-radius: 8px;
       border: 1px solid rgba(0,0,0,0.04);
+      animation: fadeInSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+      transition: all 0.2s ease;
+    }
+
+    /* Staggered animation for each row */
+    .repayment-row:nth-child(1) { animation-delay: 0.15s; }
+    .repayment-row:nth-child(2) { animation-delay: 0.2s; }
+    .repayment-row:nth-child(3) { animation-delay: 0.25s; }
+    .repayment-row:nth-child(4) { animation-delay: 0.3s; }
+    .repayment-row:nth-child(5) { animation-delay: 0.35s; }
+    .repayment-row:nth-child(n+6) { animation-delay: 0.4s; }
+
+    @keyframes fadeInSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .repayment-row.disabled {
@@ -1839,7 +1945,7 @@ export class CollectorRoutePage implements OnInit {
   currentUser = signal<any>(null);
   currentDate = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   
-  filter = signal<string>('all');
+  searchQuery: string = '';
   installmentFilter = signal<'pending' | 'paid' | 'all'>('pending'); // Default to pending only
   customers = signal<RouteCustomer[]>([]);
   stats = signal<CollectionStats>({
@@ -2270,18 +2376,27 @@ export class CollectorRoutePage implements OnInit {
   }
 
   filteredCustomers() {
-    if (this.filter() === 'all') {
-      return this.customers();
+    let filtered = this.customers();
+    
+    // Apply search filter
+    if (this.searchQuery && this.searchQuery.trim()) {
+      const query = this.searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(c => 
+        c.customerName.toLowerCase().includes(query) ||
+        c.phone.toLowerCase().includes(query) ||
+        (c.email && c.email.toLowerCase().includes(query))
+      );
     }
-    return this.customers().filter(c => c.status === this.filter());
+    
+    return filtered;
   }
 
-  filterCount(status: string): number {
-    return this.customers().filter(c => c.status === status).length;
+  onSearchChange() {
+    // Trigger change detection
   }
 
-  setFilter(filter: string) {
-    this.filter.set(filter);
+  clearSearch() {
+    this.searchQuery = '';
   }
 
   progressPercentage(): number {
