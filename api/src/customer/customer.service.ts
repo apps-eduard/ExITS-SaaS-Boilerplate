@@ -839,13 +839,22 @@ export class CustomerService {
     const customerData = { ...customerRecord };
     delete customerData.passwordHash;
 
-    // Check if profile is complete
+    // Check if profile is complete (handle both camelCase and snake_case due to Knex transformation)
+    const firstName = customerRecord.firstName || customerRecord.first_name;
+    const phone = customerRecord.phone;
     const profileComplete = !!(
-      customerRecord.first_name && 
-      customerRecord.first_name.trim() !== '' &&
-      customerRecord.phone && 
-      customerRecord.phone.trim() !== ''
+      firstName && 
+      firstName.trim() !== '' &&
+      phone && 
+      phone.trim() !== ''
     );
+
+    console.log('🔍 Profile completeness check:', {
+      firstName,
+      phone,
+      profileComplete,
+      rawCustomerRecord: customerRecord
+    });
 
     return {
       success: true,
