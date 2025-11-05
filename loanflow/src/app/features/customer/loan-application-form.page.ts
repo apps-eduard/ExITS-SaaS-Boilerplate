@@ -640,8 +640,8 @@ export class LoanApplicationFormPage implements OnInit {
 
       if (response?.success) {
         await this.showToast('Loan application submitted successfully!', 'success');
-        // Navigate to dashboard
-        this.router.navigate(['/customer/dashboard']);
+        // Navigate back to apply-loan page to show the updated status
+        this.router.navigate(['/customer/apply-loan']);
       } else {
         throw new Error(response?.message || 'Failed to submit application');
       }

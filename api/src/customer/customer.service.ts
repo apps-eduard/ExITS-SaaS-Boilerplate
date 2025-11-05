@@ -1092,6 +1092,51 @@ export class CustomerService {
       .orderBy('money_loan_loans.created_at', 'desc')
       .limit(5);
 
+    // Get recent applications (pending/submitted) for this customer
+    const recentApplications = await knex('money_loan_applications')
+      .select(
+        'money_loan_applications.*',
+        'money_loan_products.name as productName'
+      )
+      .leftJoin('money_loan_products', 'money_loan_applications.loan_product_id', 'money_loan_products.id')
+      .where({
+        'money_loan_applications.customer_id': customerId,
+        'money_loan_applications.tenant_id': tenantId,
+      })
+      .whereIn('money_loan_applications.status', ['submitted', 'approved', 'pending'])
+      .orderBy('money_loan_applications.created_at', 'desc')
+      .limit(5);
+
+    // Combine loans and applications, sort by created_at
+    const combinedRecent = [
+      ...recentLoans.map(loan => ({
+        id: loan.id,
+        loanNumber: loan.loan_number ?? loan.loanNumber,
+        applicationNumber: null,
+        amount: loan.principal_amount ?? loan.principalAmount,
+        balance: loan.outstanding_balance ?? loan.outstandingBalance,
+        status: loan.status,
+        productName: loan.productName,
+        dueDate: loan.next_payment_date ?? loan.nextPaymentDate ?? loan.maturity_date ?? loan.maturityDate,
+        createdAt: loan.created_at ?? loan.createdAt,
+        type: 'loan',
+      })),
+      ...recentApplications.map(app => ({
+        id: app.id,
+        loanNumber: null,
+        applicationNumber: app.application_number ?? app.applicationNumber,
+        amount: app.requested_amount ?? app.requestedAmount,
+        balance: null,
+        status: app.status,
+        productName: app.productName,
+        dueDate: null,
+        createdAt: app.created_at ?? app.createdAt,
+        type: 'application',
+      }))
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
     return {
       totalLoans,
       activeLoans,
@@ -1109,19 +1154,7 @@ export class CustomerService {
         : 0,
       nextPaymentDate:
         nextPayment?.due_date ?? nextPayment?.dueDate ?? null,
-      recentLoans: recentLoans.map(loan => ({
-        id: loan.id,
-        loanNumber: loan.loan_number ?? loan.loanNumber,
-        amount: loan.principal_amount ?? loan.principalAmount,
-        balance: loan.outstanding_balance ?? loan.outstandingBalance,
-        status: loan.status,
-        productName: loan.productName,
-        dueDate:
-          loan.next_payment_date ??
-          loan.nextPaymentDate ??
-          loan.maturity_date ??
-          loan.maturityDate,
-      })),
+      recentLoans: combinedRecent,
       assignedCollector,
     };
   }
