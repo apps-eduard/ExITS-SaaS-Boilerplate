@@ -1,4 +1,47 @@
-// Collector Disbursements Page - Disburse Approved Loans
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * COLLECTOR DISBURSEMENTS PAGE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * This page allows collectors to disburse approved loans to customers.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IMPORTANT: LOAN CALCULATION FORMULA
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Total Repayable = Principal + Interest + Processing Fee + Platform Fee
+ * 
+ * What Customer Receives (Net Proceeds):
+ *   Net = Principal - Processing Fee - Platform Fee
+ * 
+ * What Customer Must Pay Back (Total Repayable):
+ *   Total = Principal + Interest + Processing Fee + Platform Fee
+ * 
+ * Example:
+ *   Principal:        ₱10,000.00
+ *   Interest (10%):   ₱1,000.00
+ *   Processing (3%):  ₱300.00
+ *   Platform (₱100):  ₱200.00 (₱100 × 2 months)
+ *   ─────────────────────────────
+ *   Net Proceeds:     ₱9,500.00  (Customer receives this)
+ *   Total Repayable:  ₱11,500.00 (Customer pays back this)
+ * 
+ * ⚠️  Processing Fee and Platform Fee are:
+ *     1. Deducted UPFRONT from disbursement (customer receives less)
+ *     2. Added to TOTAL REPAYABLE (customer must pay them back)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CURRENCY DISPLAY STANDARD
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * All currency amounts MUST be displayed with:
+ *   - Comma thousands separator (e.g., 10,000 not 10000)
+ *   - Two decimal places (e.g., 10,000.00 not 10000)
+ * 
+ * Use formatCurrency() method for all amount displays.
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -18,7 +61,7 @@ import {
   DisburseDto,
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 @Component({
   selector: 'app-collector-disbursements',
@@ -29,7 +72,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    HeaderUtilsComponent
+    CollectorTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
@@ -38,16 +81,11 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">💰</span>
-            <h1 class="app-title">Disbursements</h1>
-          </div>
-          <app-header-utils></app-header-utils>
-        </div>
-      </div>
+      <app-collector-top-bar
+        emoji="💰"
+        title="Disbursements"
+        subtitle="Process approved loans"
+      />
 
       <!-- Content Container -->
       <div class="disbursements-container">
@@ -92,29 +130,35 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                 <div class="amounts-section">
                   <div class="amount-row">
                     <span class="amount-label">💵 Principal</span>
-                    <span class="amount-value principal">₱{{ disbursement.principalAmount.toLocaleString() }}</span>
+                    <span class="amount-value principal">₱{{ formatCurrency(disbursement.principalAmount) }}</span>
                   </div>
 
                   @if (disbursement.interestAmount !== undefined && disbursement.interestAmount !== null) {
                     <div class="amount-row interest-row">
-                      <span class="amount-label">📈 Interest</span>
-                      <span class="amount-value interest">₱{{ disbursement.interestAmount.toLocaleString() }}</span>
+                      <span class="amount-label">
+                        📈 Interest ({{ (disbursement.interestRate ?? 0) | number:'1.0-2' }}%)
+                      </span>
+                      <span class="amount-value interest">₱{{ formatCurrency(disbursement.interestAmount) }}</span>
                     </div>
                   }
                   
                   <div class="amount-row fee-row">
-                    <span class="amount-label">📝 Processing Fee</span>
-                    <span class="amount-value fee">-₱{{ disbursement.processingFee.toLocaleString() }}</span>
+                    <span class="amount-label">
+                      📝 Processing Fee ({{ (disbursement.processingFeePercent ?? 0) | number:'1.0-2' }}%)
+                    </span>
+                    <span class="amount-value fee">-₱{{ formatCurrency(disbursement.processingFee) }}</span>
                   </div>
                   
                   <div class="amount-row fee-row">
-                    <span class="amount-label">⚡ Platform Fee</span>
-                    <span class="amount-value fee">-₱{{ disbursement.platformFee.toLocaleString() }}</span>
+                    <span class="amount-label">
+                      ⚡ Platform Fee (₱{{ formatCurrency(disbursement.platformFeeMonthly ?? 0) }}/month)
+                    </span>
+                    <span class="amount-value fee">-₱{{ formatCurrency(disbursement.platformFee) }}</span>
                   </div>
                   
                   <div class="amount-row net-row">
                     <span class="amount-label bold">Net Disbursement</span>
-                    <span class="amount-value net">₱{{ disbursement.netDisbursement.toLocaleString() }}</span>
+                    <span class="amount-value net">₱{{ formatCurrency(disbursement.netDisbursement) }}</span>
                   </div>
                 </div>
 
@@ -137,7 +181,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                   @if (disbursement.totalRepayable !== undefined && disbursement.totalRepayable !== null) {
                     <div class="detail-item">
                       <div class="detail-label">Total Repayable</div>
-                      <div class="detail-value">₱{{ disbursement.totalRepayable.toLocaleString() }}</div>
+                      <div class="detail-value">₱{{ formatCurrency(disbursement.totalRepayable) }}</div>
                     </div>
                   }
                 </div>
@@ -176,7 +220,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                   </div>
                   <div class="info-row highlighted">
                     <span class="info-label">Net Amount</span>
-                    <span class="info-value amount">₱{{ selectedDisbursement()!.netDisbursement.toLocaleString() }}</span>
+                    <span class="info-value amount">₱{{ formatCurrency(selectedDisbursement()!.netDisbursement) }}</span>
                   </div>
                 </div>
 
@@ -271,48 +315,9 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       --background: var(--ion-background-color, #f8fafc);
     }
 
-    /* Fixed Top Bar */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
-      padding-top: env(safe-area-inset-top);
-    }
-
-    .top-bar-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 56px;
-      padding: 0 1rem;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: 0.01em;
-      margin: 0;
-    }
-
     /* Main Container */
     .disbursements-container {
-      padding: calc(56px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+      padding: calc(84px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(72px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
     }
 
     /* ======================
@@ -1095,6 +1100,18 @@ export class CollectorDisbursementsPage implements OnInit, ViewWillEnter {
     } catch (error: any) {
       await this.showToast(error.error?.message || 'Failed to disburse loan', 'danger');
     }
+  }
+
+  /**
+   * Format currency with comma thousands separator and 2 decimal places
+   * Example: 10000 → "10,000.00"
+   */
+  formatCurrency(amount: number | null | undefined): string {
+    const value = Number(amount ?? 0);
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   formatDate(dateString: string): string {

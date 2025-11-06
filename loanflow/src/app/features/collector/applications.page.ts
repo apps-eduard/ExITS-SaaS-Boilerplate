@@ -41,6 +41,7 @@ import {
   cashOutline,
   timeOutline,
   arrowBackOutline,
+  refreshOutline,
 } from 'ionicons/icons';
 import { 
   CollectorService, 
@@ -50,7 +51,7 @@ import {
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 @Component({
   selector: 'app-collector-applications',
@@ -74,7 +75,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
     IonTextarea,
     IonSelect,
     IonSelectOption,
-    HeaderUtilsComponent
+    CollectorTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
@@ -82,19 +83,11 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">📄</span>
-            <span class="app-title">Pending Applications</span>
-          </div>
-          
-          <div class="top-bar-right">
-            <app-header-utils />
-          </div>
-        </div>
-      </div>
+      <app-collector-top-bar
+        emoji="📄"
+        title="Pending Applications"
+        subtitle="Review and approve requests"
+      />
 
       <!-- Content Container with Padding -->
       <div class="applications-container">
@@ -110,10 +103,30 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
 
       <!-- Empty State -->
       @if (!loading() && applications().length === 0) {
-        <div class="flex flex-col items-center justify-center h-full text-center p-8">
-          <ion-icon [icon]="'document-text-outline'" class="text-6xl text-gray-400 mb-4"></ion-icon>
-          <h2 class="text-xl font-bold text-gray-700 mb-2">No Pending Applications</h2>
-          <p class="text-gray-500">All applications have been processed</p>
+        <div class="empty-state">
+          <div class="empty-pill">
+            <span class="empty-emoji">🎯</span>
+          </div>
+          <h2 class="empty-title">No Pending Applications</h2>
+          <p class="empty-subtitle">
+            You're all caught up. We'll let you know the moment a new request needs your review.
+          </p>
+          <div class="empty-hint">
+            <ion-icon [icon]="'time-outline'"></ion-icon>
+            <span>Pull down anytime or tap below to check for updates.</span>
+          </div>
+          <div class="empty-actions">
+            <ion-button
+              size="small"
+              shape="round"
+              class="empty-refresh-button"
+              (click)="refreshApplications()"
+              [disabled]="loading()"
+            >
+              <ion-icon slot="start" [icon]="'refresh-outline'"></ion-icon>
+              Check for updates
+            </ion-button>
+          </div>
         </div>
       }
 
@@ -121,7 +134,11 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       @if (!loading() && applications().length > 0) {
         <div class="applications-list">
           @for (app of applications(); track app.id) {
-            <div class="application-card" [class.expanded]="selectedApp()?.id === app.id && showApproveModal()">
+            <div 
+              class="application-card" 
+              [class.expanded]="selectedApp()?.id === app.id && showApproveModal()"
+              (click)="toggleCard(app)"
+            >
               <!-- Card Header -->
               <div class="card-header">
                 <div class="customer-info">
@@ -143,7 +160,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                 
                 <div class="summary-row">
                   <span class="summary-label">💰 Amount</span>
-                  <span class="summary-value amount">₱{{ app.requestedAmount.toLocaleString() }}</span>
+                  <span class="summary-value amount">₱{{ formatAmount(app.requestedAmount) }}</span>
                 </div>
                 <div class="summary-divider"></div>
                 
@@ -155,7 +172,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                 
                 <div class="summary-row">
                   <span class="summary-label">⏰ Submitted</span>
-                  <span class="summary-value">{{ formatDate(app.submittedAt || app.createdAt || '') }}</span>
+                  <span class="summary-value">{{ formatDateWithYear(app.submittedAt || app.createdAt || '') }}</span>
                 </div>
               </div>
 
@@ -167,31 +184,45 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                   <div class="loan-summary">
                     <div class="summary-row">
                       <span class="summary-label">Principal</span>
-                      <span class="summary-value">₱{{ calculation()!.loanAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-value">₱{{ calculation()!.loanAmount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                     <div class="summary-divider"></div>
                     
                     <div class="summary-row">
-                      <span class="summary-label">Interest</span>
-                      <span class="summary-value highlight-orange">₱{{ calculation()!.interestAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-label">
+                        Interest ({{ approveForm.approvedInterestRate | number:'1.0-2' }}%)
+                      </span>
+                      <span class="summary-value highlight-orange">₱{{ calculation()!.interestAmount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                     <div class="summary-divider"></div>
                     
                     <div class="summary-row">
-                      <span class="summary-label">Processing Fee</span>
-                      <span class="summary-value">₱{{ calculation()!.processingFeeAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-label">
+                        Processing Fee ({{ productProcessingFeePercent | number:'1.0-2' }}%)
+                      </span>
+                      <span class="summary-value">₱{{ calculation()!.processingFeeAmount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                     <div class="summary-divider"></div>
+                    
+                    @if (calculation()!.platformFee > 0) {
+                      <div class="summary-row">
+                        <span class="summary-label">
+                          Platform Fee (₱{{ productPlatformFee | number:'1.0-2' }}/month)
+                        </span>
+                        <span class="summary-value">₱{{ calculation()!.platformFee.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
+                      </div>
+                      <div class="summary-divider"></div>
+                    }
                     
                     <div class="summary-row">
                       <span class="summary-label">Net Proceeds</span>
-                      <span class="summary-value amount">₱{{ calculation()!.netProceeds.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-value amount">₱{{ calculation()!.netProceeds.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                     <div class="summary-divider"></div>
                     
                     <div class="summary-row">
                       <span class="summary-label">Total Repayment</span>
-                      <span class="summary-value highlight-green">₱{{ calculation()!.totalRepayable.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-value highlight-green">₱{{ calculation()!.totalRepayable.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                     <div class="summary-divider"></div>
                     
@@ -203,7 +234,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                     
                     <div class="summary-row highlight-row">
                       <span class="summary-label">Per Installment</span>
-                      <span class="summary-value highlight-large">₱{{ calculation()!.installmentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                      <span class="summary-value highlight-large">₱{{ calculation()!.installmentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
                     </div>
                   </div>
 
@@ -217,7 +248,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
                   </div>
 
                   <!-- Approve/Reject in expanded state -->
-                  <div class="expanded-actions">
+                  <div class="expanded-actions" (click)="$event.stopPropagation()">
                     <button class="action-btn approve" (click)="confirmApprove()">
                       <ion-icon [icon]="'checkmark-circle-outline'"></ion-icon>
                       <span>Approve</span>
@@ -236,11 +267,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
 
               <!-- Action Buttons (collapsed state) -->
               @if (selectedApp()?.id !== app.id || !showApproveModal()) {
-                <div class="action-buttons">
-                  <button class="action-btn view" (click)="openApproveModal(app)">
-                    <ion-icon [icon]="'eye-outline'"></ion-icon>
-                    <span>View</span>
-                  </button>
+                <div class="action-buttons" (click)="$event.stopPropagation()">
                   <button class="action-btn reject" (click)="openRejectModal(app)">
                     <ion-icon [icon]="'close-circle-outline'"></ion-icon>
                     <span>Reject</span>
@@ -327,53 +354,122 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       --background: #f8fafc;
     }
 
-    /* Fixed Top Bar */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      padding-top: env(safe-area-inset-top);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-    }
-
-    .top-bar-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 56px;
-      padding: 0 1rem;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: 0.01em;
-    }
-
     /* Container */
     .applications-container {
-      padding: calc(56px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+      padding: calc(84px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(72px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    }
+
+    .empty-state {
+      position: relative;
+      overflow: hidden;
+      margin-top: 2.5rem;
+      padding: 2.25rem 1.75rem;
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(37, 99, 235, 0.16) 0%, rgba(236, 72, 153, 0.12) 45%, #ffffff 100%);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+      text-align: center;
+      color: #0f172a;
+    }
+
+    .empty-state::before,
+    .empty-state::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(0);
+      opacity: 0.45;
+    }
+
+    .empty-state::before {
+      width: 180px;
+      height: 180px;
+      top: -70px;
+      right: -40px;
+      background: rgba(59, 130, 246, 0.22);
+    }
+
+    .empty-state::after {
+      width: 140px;
+      height: 140px;
+      bottom: -60px;
+      left: -30px;
+      background: rgba(14, 165, 233, 0.18);
+    }
+
+    .empty-pill {
+      position: relative;
+      z-index: 1;
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .empty-emoji {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .empty-title {
+      position: relative;
+      z-index: 1;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-subtitle {
+      position: relative;
+      z-index: 1;
+      font-size: 0.95rem;
+      color: #475569;
+      margin: 0 auto 1.5rem;
+      max-width: 18rem;
+      line-height: 1.5;
+    }
+
+    .empty-hint {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    .empty-hint ion-icon {
+      font-size: 1rem;
+      color: #2563eb;
+    }
+
+    .empty-actions {
+      position: relative;
+      z-index: 1;
+      margin-top: 1.75rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .empty-refresh-button {
+      --background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      --background-activated: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      --border-radius: 999px;
+      --padding-start: 1.25rem;
+      --padding-end: 1.25rem;
+      --box-shadow: 0 12px 25px rgba(37, 99, 235, 0.25);
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }
 
     /* Applications List */
@@ -389,12 +485,42 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       border-radius: 14px;
       padding: 1rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .application-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
     }
 
     .application-card:active {
       transform: scale(0.98);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .application-card.expanded {
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+      border: 2px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .application-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .application-card.expanded::before {
+      transform: scaleX(1);
     }
 
     /* Card Header */
@@ -586,17 +712,19 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       margin-top: 0.85rem;
       padding-top: 0.85rem;
       border-top: 1px solid rgba(0, 0, 0, 0.08);
-      animation: expandDown 0.2s ease-out;
+      animation: expandDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     @keyframes expandDown {
       from {
         opacity: 0;
+        transform: translateY(-10px);
         max-height: 0;
       }
       to {
         opacity: 1;
-        max-height: 1000px;
+        transform: translateY(0);
+        max-height: 2000px;
       }
     }
 
@@ -922,6 +1050,7 @@ export class CollectorApplicationsPage implements OnInit {
     approvedAmount: 0,
     approvedTermDays: 0,
     approvedInterestRate: 0,
+    interestType: 'flat',
     notes: '',
   };
 
@@ -932,6 +1061,11 @@ export class CollectorApplicationsPage implements OnInit {
 
   // Loan calculation
   calculation = signal<LoanCalculationResult | null>(null);
+
+  productProcessingFeePercent = 0;
+  productPlatformFee = 0;
+  productPaymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' = 'daily';
+  productInterestType: 'flat' | 'reducing' | 'compound' = 'flat';
 
   constructor(private loanCalculator: LoanCalculatorService) {
     addIcons({
@@ -944,6 +1078,7 @@ export class CollectorApplicationsPage implements OnInit {
       cashOutline,
       timeOutline,
       arrowBackOutline,
+      refreshOutline,
     });
   }
 
@@ -976,34 +1111,107 @@ export class CollectorApplicationsPage implements OnInit {
     event.target.complete();
   }
 
+  async refreshApplications() {
+    if (this.loading()) {
+      return;
+    }
+    await this.loadApplications();
+  }
+
   openApproveModal(app: CollectorApplication) {
     this.selectedApp.set(app);
+
+    const requestedAmount = Math.max(0, this.resolveNumber(app, [
+      'requestedAmount',
+      'requested_amount',
+      'approvedAmount',
+      'approved_amount',
+    ]) ?? 0);
+
+    const requestedTermDays = Math.max(0, this.resolveNumber(app, [
+      'requestedTermDays',
+      'requested_term_days',
+      'approvedTermDays',
+      'approved_term_days',
+    ]) ?? 0);
+
+    const productFixedTermDays = Math.max(0, this.resolveNumber(app, [
+      'productFixedTermDays',
+      'product_fixed_term_days',
+    ]) ?? 0);
+
+    const productInterestRate = this.resolveNumber(app, [
+      'productInterestRate',
+      'product_interest_rate',
+      'approvedInterestRate',
+      'approved_interest_rate',
+    ]);
+
+    const resolvedProcessingFee = this.resolveNumber(app, [
+      'productProcessingFeePercent',
+      'product_processing_fee_percent',
+    ]);
+    this.productProcessingFeePercent = resolvedProcessingFee !== null ? resolvedProcessingFee : 0;
+
+    const resolvedPlatformFee = this.resolveNumber(app, [
+      'productPlatformFee',
+      'product_platform_fee',
+    ]);
+    this.productPlatformFee = resolvedPlatformFee !== null ? resolvedPlatformFee : 0;
+
+    const resolvedFrequency = this.resolveString(app, [
+      'productPaymentFrequency',
+      'product_payment_frequency',
+    ]);
+    this.productPaymentFrequency = this.normalizeFrequency(resolvedFrequency);
+
+    const resolvedInterestType = this.resolveString(app, [
+      'productInterestType',
+      'product_interest_type',
+    ]);
+    this.productInterestType = this.normalizeInterestType(resolvedInterestType);
+
+    const defaultInterestRate = productInterestRate !== null && productInterestRate > 0
+      ? productInterestRate
+      : 2.5;
+
+    const effectiveTermDays = requestedTermDays > 0 ? requestedTermDays : productFixedTermDays;
+
     this.approveForm = {
-      approvedAmount: app.requestedAmount,
-      approvedTermDays: app.requestedTermDays,
-      approvedInterestRate: 2.5, // Default rate
+      approvedAmount: requestedAmount,
+      approvedTermDays: effectiveTermDays > 0 ? effectiveTermDays : 30,
+      approvedInterestRate: defaultInterestRate,
+      interestType: this.productInterestType,
       notes: '',
     };
+
+    if (!this.approveForm.approvedInterestRate || this.approveForm.approvedInterestRate <= 0) {
+      this.approveForm.approvedInterestRate = 2.5;
+    }
+
     this.showApproveModal.set(true);
     // Calculate initial loan breakdown
     this.calculateLoan();
   }
 
   calculateLoan() {
+    this.approveForm.interestType = this.productInterestType;
     if (this.approveForm.approvedAmount > 0 && 
         this.approveForm.approvedTermDays > 0 && 
         this.approveForm.approvedInterestRate > 0) {
       
       const termMonths = Math.ceil(this.approveForm.approvedTermDays / 30);
+      const processingFeePercent = Math.max(0, this.productProcessingFeePercent || 0);
+      const platformFee = Math.max(0, this.productPlatformFee || 0);
       
       const result = this.loanCalculator.calculate({
         loanAmount: this.approveForm.approvedAmount,
         termMonths: termMonths,
-        paymentFrequency: 'daily',
+        paymentFrequency: this.productPaymentFrequency,
         interestRate: this.approveForm.approvedInterestRate,
-        interestType: 'flat',
-        processingFeePercentage: 2, // Default processing fee
-        platformFee: 50 // Default platform fee per month
+        interestType: this.productInterestType,
+        processingFeePercentage: processingFeePercent,
+        platformFee: platformFee
       });
       
       this.calculation.set(result);
@@ -1156,6 +1364,59 @@ export class CollectorApplicationsPage implements OnInit {
     await alert.present();
   }
 
+  private resolveNumber(app: CollectorApplication, keys: string[]): number | null {
+    for (const key of keys) {
+      const value = (app as any)[key];
+      if (value === undefined || value === null) {
+        continue;
+      }
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  private resolveString(app: CollectorApplication, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = (app as any)[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  private normalizeFrequency(value: string | null): 'daily' | 'weekly' | 'biweekly' | 'monthly' {
+    const normalized = (value ?? '').toLowerCase().replace(/\s+/g, '_');
+    switch (normalized) {
+      case 'weekly':
+        return 'weekly';
+      case 'biweekly':
+      case 'bi-weekly':
+      case 'semi_monthly':
+      case 'semi-monthly':
+        return 'biweekly';
+      case 'monthly':
+        return 'monthly';
+      case 'daily':
+      default:
+        return 'daily';
+    }
+  }
+
+  private normalizeInterestType(value: string | null): 'flat' | 'reducing' | 'compound' {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized === 'reducing') {
+      return 'reducing';
+    }
+    if (normalized === 'compound') {
+      return 'compound';
+    }
+    return 'flat';
+  }
+
   formatDate(dateString: string): string {
     if (!dateString) return 'N/A';
     try {
@@ -1164,6 +1425,33 @@ export class CollectorApplicationsPage implements OnInit {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } catch {
       return 'N/A';
+    }
+  }
+
+  formatDateWithYear(dateString: string): string {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
+  }
+
+  formatAmount(amount: number): string {
+    // Currency formatting: comma separator with 2 decimal places
+    return amount.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  toggleCard(app: CollectorApplication): void {
+    if (this.selectedApp()?.id === app.id && this.showApproveModal()) {
+      this.closeApproveModal();
+    } else {
+      this.openApproveModal(app);
     }
   }
 

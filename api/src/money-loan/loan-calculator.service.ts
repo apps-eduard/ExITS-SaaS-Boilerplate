@@ -59,6 +59,55 @@ export interface PenaltyCalculation {
 export class LoanCalculatorService {
 
   /**
+   * ═══════════════════════════════════════════════════════════════════════════
+   * LOAN CALCULATION SERVICE - SINGLE SOURCE OF TRUTH
+   * ═══════════════════════════════════════════════════════════════════════════
+   * 
+   * This service implements the core loan calculation formulas for the money loan system.
+   * All loan amounts, fees, and repayments MUST be calculated using this service.
+   * 
+   * ═══════════════════════════════════════════════════════════════════════════
+   * CRITICAL LOAN CALCULATION FORMULA
+   * ═══════════════════════════════════════════════════════════════════════════
+   * 
+   * Total Repayable = Principal + Interest + Processing Fee + Platform Fee
+   * 
+   * Breakdown:
+   * ┌─────────────────────────────────────────────────────────────────────────┐
+   * │ Component          │ Formula                          │ Notes           │
+   * ├─────────────────────────────────────────────────────────────────────────┤
+   * │ Principal          │ Base loan amount                 │ What is borrowed│
+   * │ Interest           │ Principal × Rate × Term          │ Cost of credit  │
+   * │ Processing Fee     │ Principal × Fee%                 │ Upfront admin   │
+   * │ Platform Fee       │ Monthly Fee × Term (months)      │ Service charge  │
+   * └─────────────────────────────────────────────────────────────────────────┘
+   * 
+   * Net Proceeds (What Customer Receives):
+   *   Net = Principal - Processing Fee - Platform Fee
+   * 
+   * Total Repayable (What Customer Must Pay Back):
+   *   Total = Principal + Interest + Processing Fee + Platform Fee
+   * 
+   * ⚠️  IMPORTANT NOTES:
+   * 1. Processing Fee and Platform Fee are deducted UPFRONT from disbursement
+   * 2. Customer receives LESS than principal (Net Proceeds)
+   * 3. Customer pays back MORE than principal (Total Repayable)
+   * 4. Processing Fee must be ADDED to total repayable (customer pays it back)
+   * 5. Platform Fee must be ADDED to total repayable (customer pays it back)
+   * 
+   * Example:
+   *   Principal:        ₱10,000.00
+   *   Interest (10%):   ₱1,000.00
+   *   Processing (3%):  ₱300.00
+   *   Platform (2mo):   ₱200.00
+   *   ─────────────────────────────
+   *   Net Proceeds:     ₱9,500.00  (10,000 - 300 - 200)
+   *   Total Repayable:  ₱11,500.00 (10,000 + 1,000 + 300 + 200)
+   * 
+   * ═══════════════════════════════════════════════════════════════════════════
+   */
+
+  /**
    * Main calculation method implementing all formulas from documentation
    * THIS IS THE SINGLE SOURCE OF TRUTH FOR ALL LOAN CALCULATIONS
    */
@@ -100,10 +149,11 @@ export class LoanCalculatorService {
     // Platform fee is charged per month of the term
     const platformFeeTotal = platformFee * normalizedTerm;
 
-    // Total repayable = principal + earned interest + total platform fees
-    const totalRepayable = loanAmount + interestAmount + platformFeeTotal;
+    // ⚠️ IMPORTANT: Total Repayable = Principal + Interest + Processing Fee + Platform Fee
+    // This is the total amount the customer must pay back to the lender
+    const totalRepayable = loanAmount + interestAmount + processingFeeAmount + platformFeeTotal;
 
-    // Net proceeds = what borrower actually receives after upfront fees
+    // Net proceeds = what borrower actually receives after upfront fees are deducted
     const netProceeds = loanAmount - processingFeeAmount - platformFeeTotal;
 
     // Installment amount (guard against divide-by-zero)

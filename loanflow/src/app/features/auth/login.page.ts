@@ -957,8 +957,8 @@ export class LoginPage {
       
       // Navigate based on role
       if (role === 'collector' || role === 'employee') {
-        console.log('Navigating to collector route...');
-        await this.router.navigate(['/collector/route']);
+        console.log('Navigating to collector dashboard...');
+        await this.router.navigate(['/collector/dashboard']);
       } else {
         console.log('Navigating to customer dashboard...');
         await this.router.navigate(['/customer/dashboard']);

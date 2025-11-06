@@ -57,8 +57,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
-import { CollectorTabsComponent } from '../../shared/components/collector-tabs.component';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 interface RouteCustomer {
   customerId: number;
@@ -100,13 +99,8 @@ interface CollectionStats {
     IonIcon,
     IonBadge,
     IonSkeletonText,
-    IonModal,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonButtons,
     CurrencyMaskDirective,
-    HeaderUtilsComponent
+    CollectorTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
@@ -114,19 +108,11 @@ interface CollectionStats {
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">📍</span>
-            <span class="app-title">My Route</span>
-          </div>
-          
-          <div class="top-bar-right">
-            <app-header-utils />
-          </div>
-        </div>
-      </div>
+      <app-collector-top-bar
+        emoji="📍"
+        title="Route HQ"
+        [subtitle]="currentDate"
+      />
 
       <!-- Content Container with Padding -->
       <div class="route-container">
@@ -478,205 +464,140 @@ interface CollectionStats {
     </ion-content>
 
     <!-- Payment Modal -->
-    <ion-modal [isOpen]="showPaymentModal()" (didDismiss)="closePaymentModal()">
-      <ng-template>
-        <ion-header>
-          <ion-toolbar color="primary">
-            <ion-title class="compact-title">Payment</ion-title>
-            <ion-buttons slot="end">
-              <ion-button (click)="closePaymentModal()">
-                <ion-icon name="close-outline" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content class="compact-modal-content">
-          @if (selectedInstallment()) {
-            <div class="payment-compact">
-              <!-- Compact Header -->
-              <div class="payment-header-compact">
-                <div class="customer-name">{{ selectedLoan()?.customerName }}</div>
-                <div class="installment-badge">Installment {{ selectedInstallment()?.installmentNumber }}</div>
-                <div class="amount-due">
-                  <span class="label">Due Amount:</span>
-                  <span class="value">₱{{ formatCurrency(selectedInstallment()?.outstandingAmount || 0) }}</span>
-                </div>
+    @if (showPaymentModal() && selectedInstallment()) {
+      <div class="modal-backdrop" (click)="closePaymentModal()">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h2 class="modal-title">💰 Record Payment</h2>
+            <button class="close-button" (click)="closePaymentModal()">✕</button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="modal-content">
+            <!-- Customer Info Card -->
+            <div class="info-card">
+              <div class="info-row">
+                <span class="info-label">Customer</span>
+                <span class="info-value">{{ selectedLoan()?.customerName }}</span>
               </div>
-
-              <!-- Compact Form -->
-              <div class="payment-form-compact">
-                <!-- Payment Method Chips -->
-                <div class="method-label">Payment Method</div>
-                <div class="payment-methods">
-                  <div 
-                    class="method-chip"
-                    [class.active]="paymentMethod === 'cash'"
-                    (click)="selectPaymentMethod('cash')"
-                  >
-                    <ion-icon name="cash-outline"></ion-icon>
-                    <span>Cash</span>
-                  </div>
-                  <div 
-                    class="method-chip"
-                    [class.active]="paymentMethod === 'cheque'"
-                    (click)="selectPaymentMethod('cheque')"
-                  >
-                    <ion-icon name="card-outline"></ion-icon>
-                    <span>Cheque</span>
-                  </div>
-                  <div 
-                    class="method-chip"
-                    [class.active]="paymentMethod === 'gcash'"
-                    (click)="selectPaymentMethod('gcash')"
-                  >
-                    <ion-icon name="logo-google"></ion-icon>
-                    <span>GCash</span>
-                  </div>
-                </div>
-
-                <!-- Amount with Partial Payment Option -->
-                <div class="amount-section">
-                  <div class="amount-header">
-                    <label>Payment Amount</label>
-                    <button 
-                      type="button" 
-                      class="partial-btn"
-                      [class.active]="isPartialPayment"
-                      (click)="togglePartialPayment()"
-                    >
-                      {{ isPartialPayment ? 'Full Payment' : 'Partial Payment' }}
-                    </button>
-                  </div>
-                  
-                  @if (!isPartialPayment) {
-                    <!-- Full Payment Display -->
-                    <div class="full-payment-display">
-                      <span class="currency">₱</span>
-                      <span class="amount-value">{{ formatCurrency(selectedInstallment()?.outstandingAmount || 0) }}</span>
-                    </div>
-                  } @else {
-                    <!-- Partial Payment Input -->
-                    <div class="amount-input-wrapper">
-                      <span class="currency"></span>
-                      <input 
-                        #partialAmountInput
-                        type="text" 
-                        class="amount-input"
-                        [(ngModel)]="paymentAmount" 
-                        appCurrencyMask
-                        placeholder="0.00"
-                      />
-                    </div>
-                    @if (paymentAmount > 0 && paymentAmount < (selectedInstallment()?.outstandingAmount || 0)) {
-                      <div class="remaining-balance">
-                        Remaining: ₱{{ formatCurrency((selectedInstallment()?.outstandingAmount || 0) - paymentAmount) }}
-                      </div>
-                    }
-                    @if (paymentAmount <= 0 || paymentAmount >= (selectedInstallment()?.outstandingAmount || 0)) {
-                      <div class="payment-error">
-                        @if (paymentAmount <= 0) {
-                          <ion-icon name="alert-circle-outline"></ion-icon>
-                          <span>Amount must be greater than ₱0</span>
-                        } @else if (paymentAmount >= (selectedInstallment()?.outstandingAmount || 0)) {
-                          <ion-icon name="alert-circle-outline"></ion-icon>
-                          <span>Use Full Payment instead</span>
-                        }
-                      </div>
-                    }
-                  }
-                </div>
-
-                <!-- Reference Number -->
-                <div class="reference-section">
-                  <label>Reference Number</label>
-                  <input 
-                    type="text"
-                    class="reference-input"
-                    [(ngModel)]="paymentReference" 
-                    [readonly]="paymentMethod === 'cash'"
-                    [class.readonly]="paymentMethod === 'cash'"
-                    placeholder="Auto-generated"
-                  />
-                </div>
-
-                <!-- Quick Notes Chips -->
-                <div class="notes-section">
-                  <label>Notes (Optional)</label>
-                  <div class="quick-notes">
-                    <span class="quick-note" (click)="addQuickNote('Full payment')">Full payment</span>
-                    <span class="quick-note" (click)="addQuickNote('Partial payment')">Partial</span>
-                    <span class="quick-note" (click)="addQuickNote('Late payment')">Late</span>
-                  </div>
-                  <input 
-                    type="text"
-                    class="notes-input"
-                    [(ngModel)]="paymentNotes" 
-                    placeholder="Add notes..."
-                  />
-                </div>
+              <div class="info-row">
+                <span class="info-label">Installment</span>
+                <span class="info-value">#{{ selectedInstallment()!.installmentNumber }}</span>
               </div>
-
-              <!-- Submit Button -->
-              <button 
-                class="submit-payment-btn" 
-                (click)="submitPayment()"
-                [disabled]="!isPaymentValid()"
-              >
-                <ion-icon name="checkmark-circle-outline"></ion-icon>
-                <span>Record ₱{{ formatCurrency(paymentAmount || 0) }}</span>
-              </button>
+              <div class="info-row highlighted">
+                <span class="info-label">Amount Due</span>
+                <span class="info-value amount">₱{{ formatCurrency(selectedInstallment()!.outstandingAmount || 0) }}</span>
+              </div>
             </div>
-          }
-        </ion-content>
-      </ng-template>
-    </ion-modal>
+
+            <!-- Payment Form -->
+            <div class="payment-form-compact">
+              <!-- Payment Method -->
+              <div class="form-field">
+                <label class="field-label">Payment Method <span class="required">*</span></label>
+                <div class="select-wrapper">
+                  <select [(ngModel)]="paymentMethod" class="custom-select">
+                    <option value="cash">💵 Cash</option>
+                    <option value="cheque">💳 Cheque</option>
+                    <option value="gcash">📱 GCash</option>
+                  </select>
+                  <div class="select-arrow">▼</div>
+                </div>
+              </div>
+
+              <!-- Payment Amount Type -->
+              <div class="form-field">
+                <div class="amount-header">
+                  <label class="field-label">Payment Amount</label>
+                  <button 
+                    type="button" 
+                    class="partial-btn"
+                    [class.active]="isPartialPayment"
+                    (click)="togglePartialPayment()"
+                  >
+                    {{ isPartialPayment ? 'Full Payment' : 'Partial Payment' }}
+                  </button>
+                </div>
+                
+                @if (!isPartialPayment) {
+                  <!-- Full Payment Display -->
+                  <div class="full-payment-display">
+                    <span class="currency">₱</span>
+                    <span class="amount-value">{{ formatCurrency(selectedInstallment()!.outstandingAmount || 0) }}</span>
+                  </div>
+                } @else {
+                  <!-- Partial Payment Input -->
+                  <div class="amount-input-wrapper">
+                    <span class="currency">₱</span>
+                    <input 
+                      #partialAmountInput
+                      type="text" 
+                      class="custom-input amount-input"
+                      [(ngModel)]="paymentAmount" 
+                      appCurrencyMask
+                      placeholder="0.00"
+                    />
+                  </div>
+                  @if (paymentAmount > 0 && paymentAmount < (selectedInstallment()!.outstandingAmount || 0)) {
+                    <div class="remaining-balance">
+                      Remaining: ₱{{ formatCurrency((selectedInstallment()!.outstandingAmount || 0) - paymentAmount) }}
+                    </div>
+                  }
+                  @if (paymentAmount <= 0 || paymentAmount >= (selectedInstallment()!.outstandingAmount || 0)) {
+                    <div class="payment-error">
+                      @if (paymentAmount <= 0) {
+                        <ion-icon name="alert-circle-outline"></ion-icon>
+                        <span>Amount must be greater than ₱0</span>
+                      } @else if (paymentAmount >= (selectedInstallment()!.outstandingAmount || 0)) {
+                        <ion-icon name="alert-circle-outline"></ion-icon>
+                        <span>Use Full Payment instead</span>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+
+              <!-- Reference Number (if not cash) -->
+              @if (paymentMethod !== 'cash') {
+                <div class="form-field">
+                  <label class="field-label">Reference Number <span class="required">*</span></label>
+                  <input 
+                    type="text"
+                    class="custom-input"
+                    [(ngModel)]="paymentReference" 
+                    placeholder="Enter reference/transaction number"
+                  />
+                </div>
+              }
+
+              <!-- Notes -->
+              <div class="form-field">
+                <label class="field-label">Notes (Optional)</label>
+                <textarea 
+                  class="custom-textarea"
+                  [(ngModel)]="paymentNotes" 
+                  placeholder="Add payment notes..."
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              class="submit-payment-btn" 
+              (click)="submitPayment()"
+              [disabled]="!isPaymentValid()"
+            >
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              <span>Record ₱{{ formatCurrency(paymentAmount || 0) }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
-    /* Fixed Top Bar Styles */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      padding-top: env(safe-area-inset-top);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .top-bar-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 56px;
-      padding: 0 1rem;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex: 1;
-    }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      line-height: 1;
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: -0.01em;
-    }
-
     /* Main Content Background */
     .main-content {
       --background: linear-gradient(to bottom, #f7f7f9 0%, #eeeef2 100%);
@@ -684,10 +605,42 @@ interface CollectionStats {
 
     /* Container with safe area padding */
     .route-container {
-      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-top: calc(80px + env(safe-area-inset-top) + 0.85rem);
       padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       padding-left: 1rem;
       padding-right: 1rem;
+    }
+
+    .topbar-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-right: 0.15rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(4px);
+    }
+
+    .pill-finance {
+      background: rgba(16, 185, 129, 0.25);
+      color: #bbf7d0;
+    }
+
+    .pill-outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.35);
     }
 
     /* ===== HEADER STYLES ===== */
@@ -1585,121 +1538,224 @@ interface CollectionStats {
       background: rgba(255, 255, 255, 0.05);
     }
 
-    /* ===== PAYMENT MODAL STYLES (COMPACT) ===== */
-    .compact-modal-content {
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
-    }
-
-    .compact-title {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .payment-compact {
+    /* ===== PAYMENT MODAL STYLES ===== */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
       display: flex;
-      flex-direction: column;
-      height: 100%;
+      align-items: flex-end;
+      animation: fadeIn 0.2s;
     }
 
-    .payment-header-compact {
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: white;
-      padding: 1rem;
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .customer-name {
-      font-size: 1.125rem;
-      font-weight: 600;
-      margin-bottom: 0.25rem;
+    .modal-container {
+      background: var(--ion-card-background, #fff);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    .installment-badge {
-      display: inline-block;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      margin-bottom: 0.75rem;
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
     }
 
-    .amount-due {
+    .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 1.25rem 1.25rem 1rem 1.25rem;
+      border-bottom: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+      position: sticky;
+      top: 0;
+      background: var(--ion-card-background, #fff);
+      z-index: 1;
     }
 
-    .amount-due .label {
-      font-size: 0.875rem;
-      opacity: 0.9;
-    }
-
-    .amount-due .value {
-      font-size: 1.5rem;
+    .modal-title {
+      font-size: 1.25rem;
       font-weight: 700;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0;
     }
 
-    .payment-form-compact {
-      flex: 1;
-      padding: 1rem;
-      overflow-y: auto;
+    .close-button {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--ion-color-light, #f4f5f8);
+      border: none;
+      color: var(--ion-text-color, #1e293b);
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
     }
 
-    .method-label {
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--ion-text-color);
+    .close-button:active {
+      background: var(--ion-color-step-200, #e2e8f0);
     }
 
-    .payment-methods {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .method-chip {
+    .modal-content {
+      padding: 1.25rem;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.75rem 0.5rem;
-      border: 2px solid rgba(168, 85, 247, 0.2);
+      gap: 1.25rem;
+    }
+
+    /* Info Card */
+    .info-card {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
       border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: transparent;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
     }
 
-    .method-chip ion-icon {
-      font-size: 1.5rem;
-      color: #a855f7;
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .method-chip span {
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--ion-text-color);
+    .info-row.highlighted {
+      border-top: 2px solid #10b981;
+      padding-top: 0.65rem;
+      margin-top: 0.35rem;
     }
 
-    .method-chip.active {
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      border-color: #a855f7;
+    .info-label {
+      font-size: 0.8125rem;
+      color: #047857;
     }
 
-    .method-chip.active ion-icon,
-    .method-chip.active span {
-      color: white;
+    .info-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #065f46;
     }
 
-    .amount-section {
-      margin-bottom: 1.25rem;
+    .info-value.amount {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: #059669;
+    }
+
+    /* Form Fields */
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .field-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+    }
+
+    .field-label .required {
+      color: #dc2626;
+      margin-left: 0.15rem;
+    }
+
+    .select-wrapper {
       position: relative;
+    }
+
+    .custom-select {
+      width: 100%;
+      padding: 0.75rem 2.5rem 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      appearance: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .custom-select:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ion-color-step-600, #64748b);
+      pointer-events: none;
+      font-size: 0.75rem;
+    }
+
+    .custom-input {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      transition: all 0.2s;
+    }
+
+    .custom-input:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .custom-input::placeholder {
+      color: var(--ion-color-step-400, #94a3b8);
+    }
+
+    .custom-textarea {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      font-family: inherit;
+      resize: vertical;
+      transition: all 0.2s;
+    }
+
+    .custom-textarea:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .custom-textarea::placeholder {
+      color: var(--ion-color-step-400, #94a3b8);
+    }
+
+    /* Payment Form Compact - for partial payment */
+    .payment-form-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
     }
 
     .amount-header {
@@ -1709,196 +1765,94 @@ interface CollectionStats {
       margin-bottom: 0.5rem;
     }
 
-    .amount-header label {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--ion-text-color);
-    }
-
     .partial-btn {
-      background: rgba(168, 85, 247, 0.1);
-      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 0.35rem 0.75rem;
+      background: var(--ion-color-light, #f4f5f8);
+      color: var(--ion-text-color, #1e293b);
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
       border-radius: 8px;
-      padding: 0.25rem 0.75rem;
-      font-size: 0.75rem;
-      color: #a855f7;
+      font-size: 0.8125rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      transform: scale(1);
-    }
-
-    .partial-btn:hover {
-      transform: scale(1.05);
+      transition: all 0.2s;
     }
 
     .partial-btn:active {
-      transform: scale(0.95);
+      background: var(--ion-color-step-200, #e2e8f0);
     }
 
     .partial-btn.active {
-      background: #a855f7;
+      background: linear-gradient(135deg, #10b981, #059669);
       color: white;
-      border-color: #a855f7;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+      border-color: #10b981;
     }
 
     .full-payment-display {
       display: flex;
       align-items: center;
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(99, 102, 241, 0.1));
-      border: 2px solid rgba(168, 85, 247, 0.3);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      animation: slideInFromTop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 1;
-      transform: translateY(0);
+      gap: 0.5rem;
+      padding: 0.75rem 0.85rem;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-radius: 10px;
     }
 
     .full-payment-display .currency {
       font-size: 1.25rem;
-      font-weight: 600;
-      color: #a855f7;
-      margin-right: 0.5rem;
+      font-weight: 700;
+      color: #047857;
     }
 
     .full-payment-display .amount-value {
-      flex: 1;
       font-size: 1.5rem;
       font-weight: 700;
-      color: #a855f7;
+      color: #059669;
     }
 
     .amount-input-wrapper {
-      position: relative;
       display: flex;
       align-items: center;
-      border: 2px solid rgba(168, 85, 247, 0.2);
-      border-radius: 12px;
-      padding: 0.75rem 1rem;
-      background: var(--ion-background-color);
-      animation: slideInFromTop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 1;
-      transform: translateY(0);
-      transition: all 0.3s ease;
-    }
-
-    .amount-input-wrapper:focus-within {
-      border-color: #a855f7;
-      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+      gap: 0.5rem;
+      position: relative;
     }
 
     .amount-input-wrapper .currency {
-      font-size: 1.25rem;
+      position: absolute;
+      left: 0.85rem;
+      font-size: 1rem;
       font-weight: 600;
-      color: #a855f7;
-      margin-right: 0.5rem;
+      color: var(--ion-text-color, #1e293b);
     }
 
-    .amount-input-wrapper .amount-input {
-      flex: 1;
-      border: none;
-      background: transparent;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--ion-text-color);
-      outline: none;
-    }
-
-    .amount-input-wrapper .amount-input[readonly] {
-      opacity: 0.7;
+    .amount-input {
+      padding-left: 2rem !important;
     }
 
     .remaining-balance {
+      font-size: 0.8125rem;
+      color: #047857;
+      padding: 0.5rem 0.85rem;
+      background: #ecfdf5;
+      border-radius: 8px;
       margin-top: 0.5rem;
-      font-size: 0.75rem;
-      color: #f59e0b;
-      font-weight: 500;
-      animation: fadeInSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 1;
-      transform: translateY(0);
     }
 
     .payment-error {
-      margin-top: 0.5rem;
       display: flex;
       align-items: center;
-      gap: 0.375rem;
-      font-size: 0.75rem;
-      color: #ef4444;
-      font-weight: 500;
-      animation: fadeInSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 1;
-      transform: translateY(0);
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      color: #dc2626;
+      padding: 0.5rem 0.85rem;
+      background: #fee;
+      border-radius: 8px;
+      margin-top: 0.5rem;
     }
 
     .payment-error ion-icon {
       font-size: 1rem;
-      animation: shake 0.5s ease-in-out;
-    }
-
-    .reference-section,
-    .notes-section {
-      margin-bottom: 1.25rem;
-    }
-
-    .reference-section label,
-    .notes-section label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--ion-text-color);
-    }
-
-    .reference-input,
-    .notes-input {
-      width: 100%;
-      border: 2px solid rgba(168, 85, 247, 0.2);
-      border-radius: 12px;
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
-      color: var(--ion-text-color);
-      background: var(--ion-background-color);
-      outline: none;
-      transition: border-color 0.2s ease;
-    }
-
-    .reference-input:focus,
-    .notes-input:focus {
-      border-color: #a855f7;
-    }
-
-    .reference-input.readonly {
-      background: rgba(168, 85, 247, 0.05);
-      opacity: 0.8;
-      cursor: not-allowed;
-    }
-
-    .quick-notes {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .quick-note {
-      padding: 0.25rem 0.75rem;
-      background: rgba(168, 85, 247, 0.1);
-      border: 1px solid rgba(168, 85, 247, 0.3);
-      border-radius: 12px;
-      font-size: 0.75rem;
-      color: #a855f7;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .quick-note:active {
-      background: #a855f7;
-      color: white;
     }
 
     .submit-payment-btn {
-      margin: 1rem;
       padding: 1rem;
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
@@ -1912,6 +1866,7 @@ interface CollectionStats {
       gap: 0.5rem;
       cursor: pointer;
       transition: all 0.2s ease;
+      margin-top: 0.5rem;
     }
 
     .submit-payment-btn:active:not(:disabled) {
@@ -1945,34 +1900,6 @@ interface CollectionStats {
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
-    }
-    
-    @keyframes slideInFromTop {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes fadeInSlide {
-      from {
-        opacity: 0;
-        transform: translateY(-5px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-      20%, 40%, 60%, 80% { transform: translateX(2px); }
     }
 
     .animate-spin {
@@ -2479,8 +2406,12 @@ export class CollectorRoutePage implements OnInit, ViewWillEnter {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
 
+  /**
+   * Format currency with comma thousands separator and 2 decimal places
+   * Example: 10000 → "10,000.00"
+   */
   formatCurrency(amount: number): string {
-    return amount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   async handleRefresh(event: any) {

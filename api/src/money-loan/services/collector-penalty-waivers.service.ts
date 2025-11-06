@@ -9,6 +9,28 @@ export class CollectorPenaltyWaiversService {
     private collectorAssignmentService: CollectorAssignmentService,
   ) {}
 
+  private waiverColumnCache: Record<string, boolean> = {};
+
+  private async waiverHasColumn(column: string): Promise<boolean> {
+    if (this.waiverColumnCache[column] !== undefined) {
+      return this.waiverColumnCache[column];
+    }
+
+    const knex = this.knexService.instance;
+    try {
+      const exists = await knex.schema.hasColumn('money_loan_penalty_waivers', column);
+      this.waiverColumnCache[column] = exists;
+      return exists;
+    } catch (error) {
+      console.error('❌ [CollectorPenaltyWaiversService] Failed to inspect waiver column', {
+        column,
+        error,
+      });
+      this.waiverColumnCache[column] = false;
+      return false;
+    }
+  }
+
   private toNumber(value: any, fallback: number | null = 0): number | null {
     if (value === null || value === undefined) {
       return fallback;
@@ -139,23 +161,106 @@ export class CollectorPenaltyWaiversService {
       approvedAt = new Date();
     }
 
-    // Create waiver request
+    const [
+      hasInstallmentIdColumn,
+      hasWaiveTypeColumn,
+      hasRequestedAmountColumn,
+      hasApprovedAmountColumn,
+      hasNotesColumn,
+      hasWaivedAmountColumn,
+      hasRemainingPenaltyColumn,
+      hasWaiverPercentageColumn,
+      hasDetailedJustificationColumn,
+      hasSupportingDocumentsColumn,
+      hasRequestedAtColumn,
+      hasCreatedAtColumn,
+      hasUpdatedAtColumn,
+    ] = await Promise.all([
+      this.waiverHasColumn('installment_id'),
+      this.waiverHasColumn('waive_type'),
+      this.waiverHasColumn('requested_waiver_amount'),
+      this.waiverHasColumn('approved_waiver_amount'),
+      this.waiverHasColumn('notes'),
+      this.waiverHasColumn('waived_amount'),
+      this.waiverHasColumn('remaining_penalty'),
+      this.waiverHasColumn('waiver_percentage'),
+      this.waiverHasColumn('detailed_justification'),
+      this.waiverHasColumn('supporting_documents'),
+      this.waiverHasColumn('requested_at'),
+      this.waiverHasColumn('created_at'),
+      this.waiverHasColumn('updated_at'),
+    ]);
+
+  const waiverAmount = requestDto.requestedWaiverAmount;
+  const approvedAmount = canWaive.canWaive ? waiverAmount : null;
+
+    const insertPayload: Record<string, any> = {
+      tenant_id: tenantId,
+      loan_id: requestDto.loanId,
+      customer_id: loan.customer_id,
+      original_penalty_amount: totalPenalties,
+      requested_by: collectorId,
+      reason: requestDto.reason,
+      status,
+      approved_by: approvedBy,
+      approved_at: approvedAt,
+    };
+
+    if (hasInstallmentIdColumn) {
+      insertPayload.installment_id = requestDto.installmentId ?? null;
+    }
+
+    if (hasWaiveTypeColumn) {
+      insertPayload.waive_type = requestDto.waiveType;
+    }
+
+    if (hasRequestedAmountColumn) {
+      insertPayload.requested_waiver_amount = waiverAmount;
+    }
+
+    if (hasApprovedAmountColumn) {
+      insertPayload.approved_waiver_amount = approvedAmount;
+    }
+
+    if (hasNotesColumn) {
+      insertPayload.notes = requestDto.notes ?? null;
+    }
+
+    if (hasDetailedJustificationColumn) {
+      insertPayload.detailed_justification = requestDto.notes ?? requestDto.reason;
+    }
+
+    if (hasSupportingDocumentsColumn) {
+      insertPayload.supporting_documents = null;
+    }
+
+    if (hasWaivedAmountColumn) {
+      insertPayload.waived_amount = approvedAmount ?? waiverAmount;
+    }
+
+    if (hasRemainingPenaltyColumn) {
+      const remaining = totalPenalties - (approvedAmount ?? waiverAmount);
+      insertPayload.remaining_penalty = remaining < 0 ? 0 : remaining;
+    }
+
+    if (hasWaiverPercentageColumn) {
+      insertPayload.waiver_percentage = totalPenalties > 0 ? ((approvedAmount ?? waiverAmount) / totalPenalties) * 100 : 0;
+    }
+
+    if (hasRequestedAtColumn) {
+      insertPayload.requested_at = knex.fn.now();
+    }
+
+    if (hasCreatedAtColumn) {
+      insertPayload.created_at = knex.fn.now();
+    }
+
+    if (hasUpdatedAtColumn) {
+      insertPayload.updated_at = knex.fn.now();
+    }
+
     const [waiver] = await knex('money_loan_penalty_waivers')
-      .insert({
-        tenant_id: tenantId,
-        loan_id: requestDto.loanId,
-        installment_id: requestDto.installmentId,
-        requested_by: collectorId,
-        waive_type: requestDto.waiveType,
-        original_penalty_amount: totalPenalties,
-        requested_waiver_amount: requestDto.requestedWaiverAmount,
-        approved_waiver_amount: canWaive.canWaive ? requestDto.requestedWaiverAmount : null,
-        reason: requestDto.reason,
-        status,
-        approved_by: approvedBy,
-        approved_at: approvedAt,
-        notes: requestDto.notes,
-      })
+      .insert(insertPayload)
       .returning('*');
 
     // If auto-approved, apply the waiver
@@ -188,35 +293,49 @@ export class CollectorPenaltyWaiversService {
   private async applyWaiver(waiver: any, tenantId: number) {
     const knex = this.knexService.instance;
 
+    const approvedAmount = Number(
+      waiver?.approved_waiver_amount ??
+      waiver?.waived_amount ??
+      waiver?.requested_waiver_amount ??
+      0,
+    );
+
+    if (!approvedAmount || Number.isNaN(approvedAmount) || approvedAmount <= 0) {
+      return;
+    }
+
     if (waiver.installment_id) {
-      // Apply to specific installment
       const installment = await knex('money_loan_repayment_schedules')
         .where({ id: waiver.installment_id })
         .first();
 
-      const newPenaltyAmount = Math.max(0, installment.penalty_amount - waiver.approved_waiver_amount);
+      if (installment) {
+        const newPenaltyAmount = Math.max(0, (installment.penalty_amount || 0) - approvedAmount);
 
-      await knex('money_loan_repayment_schedules')
-        .where({ id: waiver.installment_id })
-        .update({
-          penalty_amount: newPenaltyAmount,
-          penalty_waived_amount: (installment.penalty_waived_amount || 0) + waiver.approved_waiver_amount,
-          updated_at: knex.fn.now(),
-        });
+        await knex('money_loan_repayment_schedules')
+          .where({ id: waiver.installment_id })
+          .update({
+            penalty_amount: newPenaltyAmount,
+            penalty_waived_amount: (installment.penalty_waived_amount || 0) + approvedAmount,
+            updated_at: knex.fn.now(),
+          });
+      }
     } else {
-      // Apply proportionally to all unpaid installments with penalties
       const installments = await knex('money_loan_repayment_schedules')
         .where({ loan_id: waiver.loan_id })
         .where('penalty_amount', '>', 0)
         .whereIn('status', ['pending', 'overdue']);
 
-      let remainingWaiver = waiver.approved_waiver_amount;
+      let remainingWaiver = approvedAmount;
 
       for (const installment of installments) {
-        if (remainingWaiver <= 0) break;
+        if (remainingWaiver <= 0) {
+          break;
+        }
 
-        const waiverForInstallment = Math.min(installment.penalty_amount, remainingWaiver);
-        const newPenaltyAmount = installment.penalty_amount - waiverForInstallment;
+        const penaltyAmount = Number(installment.penalty_amount ?? 0);
+        const waiverForInstallment = Math.min(penaltyAmount, remainingWaiver);
+        const newPenaltyAmount = penaltyAmount - waiverForInstallment;
 
         await knex('money_loan_repayment_schedules')
           .where({ id: installment.id })
@@ -229,17 +348,18 @@ export class CollectorPenaltyWaiversService {
         remainingWaiver -= waiverForInstallment;
       }
 
-      // Update loan total waived amount
-      const loan = await knex('money_loan_loans')
+      const loanRow = await knex('money_loan_loans')
         .where({ id: waiver.loan_id })
         .first();
 
-      await knex('money_loan_loans')
-        .where({ id: waiver.loan_id })
-        .update({
-          penalty_waived_amount: (loan.penalty_waived_amount || 0) + waiver.approved_waiver_amount,
-          updated_at: knex.fn.now(),
-        });
+      if (loanRow) {
+        await knex('money_loan_loans')
+          .where({ id: waiver.loan_id })
+          .update({
+            penalty_waived_amount: (loanRow.penalty_waived_amount || 0) + approvedAmount,
+            updated_at: knex.fn.now(),
+          });
+      }
     }
   }
 
@@ -294,22 +414,49 @@ export class CollectorPenaltyWaiversService {
     }
 
     // Get pending waivers for these customers
-    const waiversRaw = await knex('money_loan_penalty_waivers as w')
-      .select(
-        'w.*',
-        'l.loan_number',
-        'l.customer_id',
-        'c.first_name',
-        'c.last_name',
-        'c.id_number',
-        'i.installment_number',
-      )
-      .leftJoin('money_loan_loans as l', 'w.loan_id', 'l.id')
-      .leftJoin('customers as c', 'l.customer_id', 'c.id')
-      .leftJoin('money_loan_repayment_schedules as i', 'w.installment_id', 'i.id')
-      .where({ 'w.tenant_id': tenantId, 'w.status': 'pending' })
-      .whereIn('l.customer_id', assignmentIds)
-      .orderBy('w.created_at', 'desc');
+    let waiversRaw: any[];
+    try {
+      waiversRaw = await knex('money_loan_penalty_waivers as w')
+        .select(
+          'w.*',
+          'l.loan_number',
+          'l.customer_id',
+          'c.first_name',
+          'c.last_name',
+          'c.id_number',
+          'i.installment_number',
+        )
+        .leftJoin('money_loan_loans as l', 'w.loan_id', 'l.id')
+        .leftJoin('customers as c', 'l.customer_id', 'c.id')
+        .leftJoin('money_loan_repayment_schedules as i', 'w.installment_id', 'i.id')
+        .where({ 'w.tenant_id': tenantId, 'w.status': 'pending' })
+        .whereIn('l.customer_id', assignmentIds)
+        .orderBy('w.created_at', 'desc');
+    } catch (error: any) {
+      if (error?.code !== '42703') {
+        throw error;
+      }
+
+      console.warn('⚠️ [CollectorPenaltyWaiversService] Falling back to legacy waiver schema (missing column)', {
+        code: error.code,
+        message: error.message,
+      });
+
+      waiversRaw = await knex('money_loan_penalty_waivers as w')
+        .select(
+          'w.*',
+          'l.loan_number',
+          'l.customer_id',
+          'c.first_name',
+          'c.last_name',
+          'c.id_number'
+        )
+        .leftJoin('money_loan_loans as l', 'w.loan_id', 'l.id')
+        .leftJoin('customers as c', 'l.customer_id', 'c.id')
+        .where({ 'w.tenant_id': tenantId, 'w.status': 'pending' })
+        .whereIn('l.customer_id', assignmentIds)
+        .orderBy('w.created_at', 'desc');
+    }
 
     const waivers = (waiversRaw || []).map((row: any) => {
       const id = this.toNumber(row.id, null);
@@ -317,15 +464,28 @@ export class CollectorPenaltyWaiversService {
       const installmentId = this.toNumber(row.installment_id, null);
       const installmentNumber = this.toNumber(row.installment_number, null);
       const originalPenaltyAmount = this.toNumber(row.original_penalty_amount, 0) ?? 0;
-      const requestedWaiverAmount = this.toNumber(row.requested_waiver_amount, 0) ?? 0;
-      const approvedWaiverAmount = row.approved_waiver_amount !== null && row.approved_waiver_amount !== undefined
-        ? this.toNumber(row.approved_waiver_amount, 0)
+      const requestedWaiverAmountRaw =
+        row.requested_waiver_amount ?? row.waived_amount ?? row.waiverAmount ?? null;
+      const requestedWaiverAmount = this.toNumber(requestedWaiverAmountRaw, 0) ?? 0;
+
+      const approvedWaiverAmountRaw =
+        row.approved_waiver_amount ?? (row.status === 'approved' || row.status === 'auto_approved'
+          ? (row.waived_amount ?? row.waiverAmount)
+          : null);
+      const approvedWaiverAmount = approvedWaiverAmountRaw !== null && approvedWaiverAmountRaw !== undefined
+        ? this.toNumber(approvedWaiverAmountRaw, 0)
         : null;
 
       const requestedBy = this.toNumber(row.requested_by, null);
       const approvedBy = row.approved_by !== null && row.approved_by !== undefined
         ? this.toNumber(row.approved_by, null)
         : null;
+      const waiverPercentage = this.toNumber(row.waiver_percentage, null);
+      const waiveTypeValue = row.waive_type
+        ? this.toString(row.waive_type, 'partial')
+        : waiverPercentage !== null && waiverPercentage >= 99.99
+          ? 'full'
+          : 'partial';
 
       return {
         id,
@@ -336,20 +496,20 @@ export class CollectorPenaltyWaiversService {
         customerIdNumber: this.toString(row.id_number, null),
         installmentId,
         installmentNumber,
-        waiveType: this.toString(row.waive_type, 'partial'),
+        waiveType: waiveTypeValue,
         originalPenaltyAmount,
         requestedWaiverAmount,
         approvedWaiverAmount,
         status: this.toString(row.status, 'pending'),
         reason: this.toString(row.reason, null),
-        notes: this.toString(row.notes, null),
+        notes: this.toString(row.notes ?? row.detailed_justification, null),
         requestedBy,
         requestedByName: this.toString(row.requested_by_name, null),
         approvedBy,
         approvedByName: this.toString(row.approved_by_name, null),
-        requestedAt: this.toIsoString(row.created_at),
+        requestedAt: this.toIsoString(row.requested_at ?? row.created_at),
         approvedAt: this.toIsoString(row.approved_at),
-        updatedAt: this.toIsoString(row.updated_at),
+        updatedAt: this.toIsoString(row.updated_at ?? row.approved_at ?? row.created_at),
         createdAt: this.toIsoString(row.created_at),
       };
     });

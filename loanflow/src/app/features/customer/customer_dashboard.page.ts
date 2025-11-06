@@ -3,8 +3,6 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -25,9 +23,6 @@ import {
   addCircleOutline,
   arrowForwardOutline,
   peopleOutline,
-  logOutOutline,
-  moonOutline,
-  sunnyOutline,
   chevronForwardOutline,
   calendarOutline,
   alertCircleOutline
@@ -36,7 +31,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CustomerTopBarComponent } from '../../shared/components/customer-top-bar.component';
 
 interface DashboardStats {
   totalLoans: number;
@@ -78,7 +73,7 @@ interface AssignedCollector {
     IonIcon,
     IonBadge,
     IonSkeletonText,
-    HeaderUtilsComponent
+    CustomerTopBarComponent
   ],
   template: `
     <ion-content class="main-content" [fullscreen]="true">
@@ -86,22 +81,11 @@ interface AssignedCollector {
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">💼</span>
-            <span class="app-title">Dashboard</span>
-          </div>
-          
-          <div class="top-bar-right">
-            <app-header-utils />
-            <ion-button (click)="logout()" class="icon-btn logout-btn" fill="clear" title="Logout">
-              <span class="logout-emoji">⎋</span>
-            </ion-button>
-          </div>
-        </div>
-      </div>
+      <app-customer-top-bar
+        emoji="💼"
+        title="Dashboard"
+        [subtitle]="currentDateTime()"
+      />
 
       <div class="dashboard-container">
   
@@ -417,72 +401,6 @@ interface AssignedCollector {
   `,
   styles: [`
     /* ===== FIXED TOP BAR ===== */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      padding-top: env(safe-area-inset-top);
-    }
-
-    .top-bar-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1rem;
-      height: 56px;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    }
-
-    .app-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: white;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-      letter-spacing: -0.02em;
-    }
-
-    .icon-btn {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      margin: 0;
-      height: 40px;
-      width: 40px;
-    }
-
-    .logout-emoji {
-      font-size: 1.5rem;
-      display: inline-flex;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-      font-weight: bold;
-      color: rgba(255, 255, 255, 0.95);
-    }
-
-    .logout-btn:hover .logout-emoji {
-      filter: drop-shadow(0 2px 8px rgba(255, 100, 100, 0.5));
-    }
-
-    /* ===== HEADER STYLES ===== (Removed - using fixed top bar now) */
-
     /* ===== MAIN CONTENT ===== */
     .main-content {
       --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)) , var(--ion-background-color);
@@ -490,7 +408,7 @@ interface AssignedCollector {
 
     .dashboard-container {
       padding: 0 1rem 1rem 1rem;
-      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-top: calc(84px + env(safe-area-inset-top) + 0.85rem);
       padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       max-width: 600px;
       margin: 0 auto;
@@ -1622,10 +1540,7 @@ export class CustomerDashboardPage implements OnInit {
       documentTextOutline,
       addCircleOutline,
       arrowForwardOutline,
-  peopleOutline,
-      logOutOutline,
-      moonOutline,
-      sunnyOutline,
+      peopleOutline,
       chevronForwardOutline,
       calendarOutline,
       alertCircleOutline

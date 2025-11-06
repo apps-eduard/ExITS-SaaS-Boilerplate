@@ -19,7 +19,7 @@ import {
   AssignedCustomer,
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 @Component({
   selector: 'app-collector-waivers',
@@ -32,30 +32,15 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
     IonRefresherContent,
     IonSegment,
     IonSegmentButton,
-    HeaderUtilsComponent
+    CollectorTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">⚠️</span>
-            <h1 class="app-title">Penalty Waivers</h1>
-          </div>
-          <app-header-utils></app-header-utils>
-        </div>
-
-        <!-- Segment Tabs -->
-        <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
-          <ion-segment-button value="pending">
-            <span>Pending</span>
-          </ion-segment-button>
-          <ion-segment-button value="request">
-            <span>Request New</span>
-          </ion-segment-button>
-        </ion-segment>
-      </div>
+      <app-collector-top-bar
+        emoji="⚠️"
+        title="Penalty Waivers"
+        subtitle="Request and track waivers"
+      />
 
       <!-- Pull to Refresh -->
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
@@ -64,6 +49,16 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
 
       <!-- Content Container with Padding -->
       <div class="waivers-container">
+        
+        <!-- Segment Tabs -->
+        <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" class="content-segment">
+          <ion-segment-button value="pending">
+            <span>Pending</span>
+          </ion-segment-button>
+          <ion-segment-button value="request">
+            <span>Request</span>
+          </ion-segment-button>
+        </ion-segment>
 
         <!-- PENDING TAB -->
         @if (selectedTab === 'pending') {
@@ -298,70 +293,28 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       --background: var(--ion-background-color, #f8fafc);
     }
 
-    /* Fixed Top Bar */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
-      padding-top: env(safe-area-inset-top);
-    }
-
-    .top-bar-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 56px;
-      padding: 0 1rem;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: 0.01em;
-      margin: 0;
-    }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    /* Segment Tabs */
-    ion-segment {
-      margin: 0.5rem 1rem 0.75rem 1rem;
-      --background: rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-    }
-
-    ion-segment-button {
-      --color: rgba(255, 255, 255, 0.7);
-      --color-checked: white;
-      --indicator-color: rgba(255, 255, 255, 0.3);
-      font-size: 0.875rem;
-      font-weight: 500;
-      min-height: 32px;
-    }
-
     /* Main Container */
     .waivers-container {
-      padding: calc(56px + env(safe-area-inset-top) + 3.5rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+      padding: calc(84px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(72px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    }
+
+    /* Content Segment Tabs */
+    .content-segment {
+      --background: white;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .content-segment ion-segment-button {
+      --color: #64748b;
+      --color-checked: #3b82f6;
+      --indicator-color: #3b82f6;
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-height: 42px;
+      text-transform: none;
     }
 
     /* ======================

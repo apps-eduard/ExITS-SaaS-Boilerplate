@@ -54,6 +54,20 @@ export interface CollectorApplication {
   customerLastName?: string;
   customerPhone?: string;
   productName?: string;
+  productInterestRate?: number | null;
+  product_interest_rate?: number | null;
+  productInterestType?: 'flat' | 'reducing' | 'compound' | null;
+  product_interest_type?: 'flat' | 'reducing' | 'compound' | null;
+  productProcessingFeePercent?: number | null;
+  product_processing_fee_percent?: number | null;
+  productPlatformFee?: number | null;
+  product_platform_fee?: number | null;
+  productPaymentFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null;
+  product_payment_frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | null;
+  productLoanTermType?: string | null;
+  product_loan_term_type?: string | null;
+  productFixedTermDays?: number | null;
+  product_fixed_term_days?: number | null;
   // Fallback fields (if API changes)
   customerName?: string;
   loanProductName?: string;
@@ -75,6 +89,7 @@ export interface ApproveApplicationDto {
   approvedAmount: number;
   approvedTermDays: number;
   approvedInterestRate: number;
+  interestType?: 'flat' | 'reducing' | 'compound';
   notes?: string;
 }
 
@@ -90,7 +105,9 @@ export interface PendingDisbursement {
   customerName: string;
   principalAmount: number;
   processingFee: number;
+  processingFeePercent?: number | null;
   platformFee: number;
+  platformFeeMonthly?: number | null;
   netDisbursement: number;
   approvedAt: string;
   applicationId?: number;
@@ -267,7 +284,7 @@ export class CollectorService {
       approvedAmount: Number(dto.approvedAmount),
       approvedTermDays: Number(dto.approvedTermDays),
       interestRate: Number(dto.approvedInterestRate), // Map approvedInterestRate to interestRate
-      interestType: 'flat', // Default to flat interest
+      interestType: dto.interestType ?? 'flat',
       notes: dto.notes,
     };
     
@@ -360,8 +377,10 @@ export class CollectorService {
    * Get pending waivers
    */
   getPendingWaivers(collectorId: number): Observable<PenaltyWaiver[]> {
-    return this.apiService.get<PenaltyWaiver[]>(
+    return this.apiService.get<any>(
       `money-loan/collectors/${collectorId}/waivers/pending`
+    ).pipe(
+      map((response: any) => response?.data || response || [])
     );
   }
 
@@ -369,8 +388,10 @@ export class CollectorService {
    * Get waiver details
    */
   getWaiverDetails(collectorId: number, waiverId: number): Observable<PenaltyWaiver> {
-    return this.apiService.get<PenaltyWaiver>(
+    return this.apiService.get<any>(
       `money-loan/collectors/${collectorId}/waivers/${waiverId}`
+    ).pipe(
+      map((response: any) => response?.data || response)
     );
   }
 

@@ -63,18 +63,34 @@
 
   <!-- Empty State -->
   @if (!loading && filteredPayments.length === 0) {
-    <ion-card class="empty-state">
-      <ion-card-content>
-        <ion-icon name="receipt-outline" class="empty-icon"></ion-icon>
-        <h2>No Payments Found</h2>
-        @if (selectedFilter === 'all') {
-          <p>You haven't made any payments yet.</p>
-        }
-        @if (selectedFilter !== 'all') {
-          <p>No {{ selectedFilter }} payments found.</p>
-        }
-      </ion-card-content>
-    </ion-card>
+    <div class="empty-state">
+      <div class="empty-hero">
+        <span class="empty-emoji">💸</span>
+      </div>
+      <h2 class="empty-title">No payments here yet</h2>
+      @if (selectedFilter === 'all') {
+        <p class="empty-message">
+          Once you complete your first repayment, the full history will appear here for easy tracking.
+        </p>
+      } @else {
+        <p class="empty-message">
+          We could not find any {{ selectedFilter }} payments. Try another filter or refresh to check for recent activity.
+        </p>
+      }
+      <div class="empty-hint">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>Payments sync in real time after every transaction.</span>
+      </div>
+      <div class="empty-actions">
+        <ion-button size="small" class="empty-refresh" (click)="refreshPayments()" [disabled]="loading">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          Refresh payments
+        </ion-button>
+        <button type="button" class="empty-secondary" (click)="goToDashboard()">
+          Back to dashboard
+        </button>
+      </div>
+    </div>
   }
 
   <!-- Payment List -->

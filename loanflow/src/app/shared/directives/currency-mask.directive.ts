@@ -55,7 +55,7 @@ export class CurrencyMaskDirective implements AfterViewInit {
   @HostListener('input', ['$event'])
   onInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    let value = input.value;
+    const value = input.value;
 
     // Store cursor position
     const cursorPosition = input.selectionStart || 0;

@@ -17,7 +17,7 @@ export const roleGuard: (allowedRoles: ('customer' | 'collector')[]) => CanActiv
 
     if (!allowedRoles.includes(userRole)) {
       // Redirect to appropriate home based on role
-      const redirectPath = userRole === 'collector' ? '/collector/route' : '/customer/dashboard';
+  const redirectPath = userRole === 'collector' ? '/collector/dashboard' : '/customer/dashboard';
       router.navigate([redirectPath]);
       return false;
     }

@@ -43,6 +43,14 @@ export class CollectorActionsController {
     }
   }
 
+  private parseNullableNumber(value: any): number | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   /**
    * Get collector's daily summary for dashboard
    */
@@ -112,19 +120,36 @@ export class CollectorActionsController {
       .count('* as count')
       .first();
 
-    const pendingDisbursements = await knex('money_loan_loans as mll')
-      .join('customers as c', 'mll.customer_id', 'c.id')
-      .where('c.assigned_employee_id', collectorId)
-      .where('mll.tenant_id', tenantId)
-      .whereIn('mll.status', ['pending', 'approved'])
-      .count('* as count')
-      .first();
+    const [pendingDisbursementItems, pendingWaiversList] = await Promise.all([
+      this.moneyLoanService
+        .getCollectorPendingDisbursements(tenantId, collectorId)
+        .catch((error) => {
+          console.error('❌ [CollectorActionsController] Failed to load pending disbursements for summary', {
+            collectorId,
+            tenantId,
+            error: error?.message,
+          });
+          return [];
+        }),
+      this.collectorPenaltyWaiversService
+        .getPendingWaivers(collectorId, tenantId)
+        .catch((error) => {
+          console.error('❌ [CollectorActionsController] Failed to load pending waivers for summary', {
+            collectorId,
+            tenantId,
+            error: error?.message,
+          });
+          return [];
+        }),
+    ]);
 
-    // Get pending waivers
-    const pendingWaivers = await knex('money_loan_penalty_waivers')
-      .where({ requested_by: collectorId, tenant_id: tenantId, status: 'pending' })
-      .count('* as count')
-      .first();
+    const pendingDisbursementsCount = Array.isArray(pendingDisbursementItems)
+      ? pendingDisbursementItems.length
+      : 0;
+
+    const pendingWaiversCount = Array.isArray(pendingWaiversList)
+      ? pendingWaiversList.length
+      : 0;
 
     return {
       success: true,
@@ -139,8 +164,8 @@ export class CollectorActionsController {
         visitsCompleted: Number(visitsResult?.['visits_completed'] || 0),
         visitsPlanned,
         pendingApplications: Number(pendingApplications?.['count'] || 0),
-        pendingDisbursements: Number(pendingDisbursements?.['count'] || 0),
-        pendingWaivers: Number(pendingWaivers?.['count'] || 0),
+        pendingDisbursements: pendingDisbursementsCount,
+        pendingWaivers: pendingWaiversCount,
       },
     };
   }
@@ -195,6 +220,13 @@ export class CollectorActionsController {
         'c.last_name as customerLastName',
         'c.phone as customerPhone',
         'mlp.name as productName',
+        'mlp.interest_rate as productInterestRate',
+        'mlp.interest_type as productInterestType',
+        'mlp.processing_fee_percent as productProcessingFeePercent',
+        'mlp.platform_fee as productPlatformFee',
+        'mlp.payment_frequency as productPaymentFrequency',
+        'mlp.loan_term_type as productLoanTermType',
+        'mlp.fixed_term_days as productFixedTermDays',
       );
 
     if (status) {
@@ -205,9 +237,51 @@ export class CollectorActionsController {
 
     const applications = await query.orderBy('mla.created_at', 'desc');
 
+    const normalizedApplications = applications.map((application: any) => {
+      const productInterestRate = this.parseNullableNumber(
+        application.productInterestRate ?? application.product_interest_rate,
+      );
+      const productProcessingFeePercent = this.parseNullableNumber(
+        application.productProcessingFeePercent ?? application.product_processing_fee_percent,
+      );
+      const productPlatformFee = this.parseNullableNumber(
+        application.productPlatformFee ?? application.product_platform_fee,
+      );
+      const productFixedTermDays = this.parseNullableNumber(
+        application.productFixedTermDays ?? application.product_fixed_term_days,
+      );
+      const productPaymentFrequency = application.productPaymentFrequency
+        ?? application.product_payment_frequency
+        ?? null;
+      const productInterestType = application.productInterestType
+        ?? application.product_interest_type
+        ?? null;
+      const productLoanTermType = application.productLoanTermType
+        ?? application.product_loan_term_type
+        ?? null;
+
+      return {
+        ...application,
+        productInterestRate,
+        product_interest_rate: productInterestRate,
+        productProcessingFeePercent,
+        product_processing_fee_percent: productProcessingFeePercent,
+        productPlatformFee,
+        product_platform_fee: productPlatformFee,
+        productPaymentFrequency,
+        product_payment_frequency: productPaymentFrequency,
+        productInterestType,
+        product_interest_type: productInterestType,
+        productLoanTermType,
+        product_loan_term_type: productLoanTermType,
+        productFixedTermDays,
+        product_fixed_term_days: productFixedTermDays,
+      };
+    });
+
     return {
       success: true,
-      data: applications,
+      data: normalizedApplications,
     };
   }
 

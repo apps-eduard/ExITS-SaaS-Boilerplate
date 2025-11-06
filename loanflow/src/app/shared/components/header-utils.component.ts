@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -27,10 +27,12 @@ import { AuthService } from '../../core/services/auth.service';
       ></ion-icon>
     </ion-button>
 
-    <!-- Logout -->
-    <ion-button (click)="logout()" class="header-btn logout-btn">
-      <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
-    </ion-button>
+    <!-- Logout (optional) -->
+    @if (showLogout) {
+      <ion-button (click)="logout()" class="header-btn logout-btn">
+        <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    }
   `,
   styles: [`
     :host {
@@ -52,6 +54,8 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class HeaderUtilsComponent {
+  @Input() showLogout = true;
+  
   public themeService = inject(ThemeService);
   private authService = inject(AuthService);
 

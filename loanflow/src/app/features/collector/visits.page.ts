@@ -48,7 +48,7 @@ import {
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Geolocation } from '@capacitor/geolocation';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 @Component({
   selector: 'app-collector-visits',
@@ -77,7 +77,7 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
     IonBadge,
     IonItem,
     IonLabel,
-    HeaderUtilsComponent
+    CollectorTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
@@ -85,137 +85,148 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">📍</span>
-            <span class="app-title">Customer Visits</span>
-          </div>
-          <div class="top-bar-right">
-            <app-header-utils />
-          </div>
+      <app-collector-top-bar
+        emoji="🧭"
+        title="Customer Visits"
+        subtitle="Live check-ins and history"
+      >
+        <div topbar-right class="topbar-pills">
+          @if (activeVisit()) {
+            <span class="pill pill-live">Active visit</span>
+          }
+          <span class="pill pill-outline">{{ todayVisits().length }} today</span>
         </div>
-      </div>
+      </app-collector-top-bar>
 
       <!-- Content Container -->
       <div class="visits-container">
-      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-        <ion-refresher-content></ion-refresher-content>
-      </ion-refresher>
-
-      <!-- Active Visit Card -->
-      @if (activeVisit()) {
-        <ion-card class="m-0 mb-4 bg-green-50 border-2 border-green-500">
-          <ion-card-header>
-            <ion-card-title class="text-base flex items-center justify-between">
-              <span>Active Visit</span>
-              <ion-badge color="success">In Progress</ion-badge>
-            </ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div class="space-y-3">
-              <div>
-                <div class="text-lg font-bold">{{ activeVisit()!.customerName }}</div>
-                <div class="text-sm text-gray-600">{{ activeVisit()!.visitType | titlecase }}</div>
-              </div>
-
-              <div class="flex items-center gap-2 text-sm">
-                <ion-icon [icon]="'time-outline'" class="text-gray-600"></ion-icon>
-                <span>Started {{ formatTime(activeVisit()!.checkInTime) }}</span>
-              </div>
-
-              @if (activeVisit()!.distanceFromCustomerMeters !== null) {
-                <div class="flex items-center gap-2 text-sm">
-                  <ion-icon [icon]="'navigate-outline'" class="text-gray-600"></ion-icon>
-                  <span>{{ formatDistance(activeVisit()!.distanceFromCustomerMeters!) }} from registered address</span>
+        @if (activeVisit()) {
+          <ion-card class="m-0">
+            <ion-card-header>
+              <ion-card-title class="visit-card-title">
+                <span>Active Visit</span>
+                <ion-badge color="success">In Progress</ion-badge>
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="active-visit">
+                <div>
+                  <div class="value text-lg">{{ activeVisit()!.customerName }}</div>
+                  <div class="label">{{ activeVisit()!.visitType | titlecase }}</div>
                 </div>
-              }
 
-              <ion-button expand="block" color="success" (click)="openCheckOutModal()">
-                <ion-icon slot="start" [icon]="'checkmark-circle-outline'"></ion-icon>
-                Check Out
-              </ion-button>
-            </div>
-          </ion-card-content>
-        </ion-card>
-      }
+                <div class="visit-meta">
+                  <div>
+                    <div class="label">Started</div>
+                    <div class="value">{{ formatTime(activeVisit()!.checkInTime) }}</div>
+                  </div>
 
-      <!-- Start Visit Button -->
-      @if (!activeVisit()) {
-        <ion-button expand="block" color="primary" class="mb-4" (click)="openCheckInModal()">
-          <ion-icon slot="start" [icon]="'location-outline'"></ion-icon>
-          Start New Visit
-        </ion-button>
-      }
+                  @if (activeVisit()!.distanceFromCustomerMeters !== null) {
+                    <div>
+                      <div class="label">Distance</div>
+                      <div class="value">{{ formatDistance(activeVisit()!.distanceFromCustomerMeters!) }}</div>
+                    </div>
+                  }
+                </div>
 
-      <!-- Today's Visits -->
-      <div class="mb-4">
-        <h2 class="text-lg font-bold text-gray-800 mb-3">Today's Visits</h2>
+                <ion-button expand="block" color="success" (click)="openCheckOutModal()">
+                  <ion-icon slot="start" [icon]="'checkmark-circle-outline'"></ion-icon>
+                  Check Out
+                </ion-button>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        } @else {
+          <ion-card class="cta-card">
+            <ion-card-content>
+              <div class="cta-content">
+                <div>
+                  <div class="cta-title">No active visit</div>
+                  <div class="cta-subtitle">Start your next customer visit with GPS tracking.</div>
+                </div>
+                <ion-button color="primary" (click)="openCheckInModal()">
+                  <ion-icon slot="start" [icon]="'location-outline'"></ion-icon>
+                  Start Visit
+                </ion-button>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+
+        <div class="section-header">
+          <h3>Today's Visits</h3>
+          <span class="count-badge">{{ todayVisits().length }}</span>
+        </div>
 
         @if (loading()) {
-          <div class="text-center py-8 text-gray-500">Loading...</div>
-        }
-
-        @if (!loading() && todayVisits().length === 0) {
-          <div class="text-center py-8 text-gray-500">
-            <ion-icon [icon]="'location-outline'" class="text-5xl text-gray-400 mb-2"></ion-icon>
-            <p>No visits logged today</p>
-          </div>
-        }
-
-        @if (!loading() && todayVisits().length > 0) {
-          <div class="space-y-3">
-            @for (visit of todayVisits(); track visit.id) {
-              <ion-card class="m-0">
-                <ion-card-content>
-                  <div class="flex justify-between items-start mb-2">
-                    <div>
-                      <div class="font-bold">{{ visit.customerName }}</div>
-                      <div class="text-sm text-gray-600">{{ visit.visitType | titlecase }}</div>
-                    </div>
-                    <ion-badge [color]="getVisitStatusColor(visit.status)">
-                      {{ visit.status }}
-                    </ion-badge>
+          <ion-card>
+            <ion-card-content>
+              <div class="state-message">Loading visits...</div>
+            </ion-card-content>
+          </ion-card>
+        } @else if (todayVisits().length === 0) {
+          <ion-card>
+            <ion-card-content class="empty-state">
+              <div class="state-message">No visits logged yet today.</div>
+              <ion-button expand="block" fill="outline" color="primary" (click)="openCheckInModal()">
+                <ion-icon slot="start" [icon]="'location-outline'"></ion-icon>
+                Start a visit
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        } @else {
+          @for (visit of todayVisits(); track visit.id) {
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title class="visit-card-title">
+                  <span>{{ visit.customerName }}</span>
+                  <ion-badge [color]="getVisitStatusColor(visit.status)">
+                    {{ visit.status | titlecase }}
+                  </ion-badge>
+                </ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="visit-meta">
+                  <div>
+                    <div class="label">Visit Type</div>
+                    <div class="value">{{ visit.visitType | titlecase }}</div>
                   </div>
-
-                  <div class="grid grid-cols-2 gap-2 text-sm mt-3">
-                    <div>
-                      <div class="text-gray-600">Check In</div>
-                      <div class="font-semibold">{{ formatTime(visit.checkInTime) }}</div>
-                    </div>
-                    @if (visit.checkOutTime) {
-                      <div>
-                        <div class="text-gray-600">Check Out</div>
-                        <div class="font-semibold">{{ formatTime(visit.checkOutTime) }}</div>
-                      </div>
-                    }
-                    @if (visit.durationMinutes) {
-                      <div>
-                        <div class="text-gray-600">Duration</div>
-                        <div class="font-semibold">{{ visit.durationMinutes }} mins</div>
-                      </div>
-                    }
-                    @if (visit.visitOutcome) {
-                      <div>
-                        <div class="text-gray-600">Outcome</div>
-                        <div class="font-semibold">{{ visit.visitOutcome | titlecase }}</div>
-                      </div>
-                    }
-                    @if (visit.paymentCollectedAmount) {
-                      <div class="col-span-2">
-                        <div class="text-gray-600">Payment Collected</div>
-                        <div class="font-semibold text-green-600">₱{{ visit.paymentCollectedAmount.toLocaleString() }}</div>
-                      </div>
-                    }
+                  <div>
+                    <div class="label">Check In</div>
+                    <div class="value">{{ formatTime(visit.checkInTime) }}</div>
                   </div>
-                </ion-card-content>
-              </ion-card>
-            }
-          </div>
+                  @if (visit.checkOutTime) {
+                    <div>
+                      <div class="label">Check Out</div>
+                      <div class="value">{{ formatTime(visit.checkOutTime) }}</div>
+                    </div>
+                  }
+                  @if (visit.durationMinutes) {
+                    <div>
+                      <div class="label">Duration</div>
+                      <div class="value">{{ visit.durationMinutes }} mins</div>
+                    </div>
+                  }
+                </div>
+
+                @if (visit.visitOutcome) {
+                  <div class="visit-detail">
+                    <div class="label">Outcome</div>
+                    <div class="value">{{ visit.visitOutcome | titlecase }}</div>
+                  </div>
+                }
+
+                @if (visit.paymentCollectedAmount) {
+                  <div class="visit-detail">
+                    <div class="label">Payment Collected</div>
+                    <div class="value payment">₱{{ visit.paymentCollectedAmount.toLocaleString() }}</div>
+                  </div>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
         }
       </div>
-      </div><!-- Close visits-container -->
 
       <!-- Check-In Modal -->
       <ion-modal [isOpen]="showCheckInModal()" (didDismiss)="closeCheckInModal()">
@@ -413,51 +424,147 @@ import { HeaderUtilsComponent } from '../../shared/components/header-utils.compo
       --background: #f8fafc;
     }
 
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-      padding-top: env(safe-area-inset-top);
-    }
-
-    .top-bar-content {
+    .visits-container {
+      padding: calc(84px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(72px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 56px;
-      padding: 0 1rem;
+      flex-direction: column;
+      gap: 1rem;
     }
 
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: 0.01em;
-    }
-
-    .top-bar-right {
+    .topbar-pills {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      margin-right: 0.15rem;
     }
 
-    .visits-container {
-      padding: calc(56px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(4px);
+    }
+
+    .pill-live {
+      background: rgba(34, 197, 94, 0.25);
+      color: #bbf7d0;
+    }
+
+    .pill-outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .cta-card {
+      margin: 0;
+    }
+
+    .cta-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .cta-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .cta-subtitle {
+      font-size: 0.875rem;
+      color: #475569;
+      margin-top: 0.25rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.25rem;
+    }
+
+    .section-header h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .state-message {
+      text-align: center;
+      color: #475569;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .visit-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .active-visit {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .visit-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .visit-detail {
+      margin-top: 0.75rem;
+    }
+
+    .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+    }
+
+    .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .payment {
+      color: #15803d;
     }
   `]
 })

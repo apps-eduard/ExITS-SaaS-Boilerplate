@@ -20,7 +20,7 @@ import {
   arrowBackOutline,
   moonOutline,
   sunnyOutline,
-  cardOutline
+  refreshOutline
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -53,6 +53,7 @@ interface LoanProduct {
     CommonModule,
     IonContent,
     IonIcon,
+    IonButton,
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
@@ -102,11 +103,31 @@ interface LoanProduct {
         <!-- Empty State -->
         @else if (products().length === 0) {
           <div class="empty-state">
-            <div class="empty-icon-wrapper">
-              <ion-icon name="card-outline" class="empty-icon"></ion-icon>
+            <div class="empty-hero">
+              <span class="empty-emoji">🌟</span>
             </div>
-            <p class="empty-title">No Loan Products Available</p>
-            <p class="empty-subtitle">Please check back later or contact support</p>
+            <h3 class="empty-title">Loan offers are on the way</h3>
+            <p class="empty-message">
+              It looks like your lender is still setting things up. We will let you know as soon as new loan products are ready.
+            </p>
+            <div class="empty-hint">
+              <ion-icon [icon]="'refresh-outline'"></ion-icon>
+              <span>We refresh the catalog automatically throughout the day.</span>
+            </div>
+            <div class="empty-actions">
+              <ion-button
+                size="small"
+                class="empty-refresh"
+                (click)="refreshProducts()"
+                [disabled]="loading()"
+              >
+                <ion-icon slot="start" [icon]="'refresh-outline'"></ion-icon>
+                Refresh products
+              </ion-button>
+              <button type="button" class="empty-secondary" (click)="goToDashboard()">
+                Back to dashboard
+              </button>
+            </div>
           </div>
         }
         
@@ -250,41 +271,137 @@ interface LoanProduct {
     </ion-content>
   `,
   styles: [`
-    /* ===== FIXED TOP BAR ===== */
-    .fixed-top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      padding-top: env(safe-area-inset-top);
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      position: relative;
+      overflow: hidden;
+      margin-top: 2.5rem;
+      padding: 2.5rem 2rem;
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.12) 45%, #ffffff 100%);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
+      text-align: center;
     }
 
-    .top-bar-content {
+    .empty-state::before,
+    .empty-state::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.5;
+      filter: blur(0);
+    }
+
+    .empty-state::before {
+      width: 200px;
+      height: 200px;
+      top: -80px;
+      right: -50px;
+      background: rgba(236, 72, 153, 0.2);
+    }
+
+    .empty-state::after {
+      width: 160px;
+      height: 160px;
+      bottom: -70px;
+      left: -40px;
+      background: rgba(14, 165, 233, 0.18);
+    }
+
+    .empty-hero {
+      position: relative;
+      z-index: 1;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      border-radius: 20px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1rem;
-      height: 56px;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.65);
+      box-shadow: 0 15px 30px rgba(102, 126, 234, 0.25);
+      backdrop-filter: blur(14px);
     }
 
-    .top-bar-left {
-      display: flex;
+    .empty-emoji {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .empty-title {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 0.75rem;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+
+    .empty-message {
+      position: relative;
+      z-index: 1;
+      margin: 0 auto 1.75rem;
+      max-width: 22rem;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #475569;
+    }
+
+    .empty-hint {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      color: #1e293b;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+      margin-bottom: 1.75rem;
     }
 
-    .top-bar-right {
+    .empty-hint ion-icon {
+      font-size: 1rem;
+      color: #2563eb;
+    }
+
+    .empty-actions {
+      position: relative;
+      z-index: 1;
       display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
       align-items: center;
-      gap: 0.25rem;
     }
 
-    .app-emoji {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    .empty-refresh {
+      --background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      --background-activated: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      --border-radius: 999px;
+      --padding-start: 1.35rem;
+      --padding-end: 1.35rem;
+      --box-shadow: 0 15px 28px rgba(37, 99, 235, 0.28);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .empty-secondary {
+      background: none;
+      border: none;
+      color: #1d4ed8;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .empty-secondary:active {
+      opacity: 0.7;
     }
 
     .app-title {
@@ -887,6 +1004,35 @@ interface LoanProduct {
       border-top-color: rgba(255, 255, 255, 0.12);
     }
 
+    body.dark .empty-state,
+    .dark .empty-state {
+      background: linear-gradient(145deg, rgba(59, 130, 246, 0.25) 0%, rgba(99, 102, 241, 0.18) 50%, rgba(17, 24, 39, 0.9) 100%);
+      border-color: rgba(148, 163, 184, 0.25);
+      box-shadow: 0 20px 40px rgba(2, 6, 23, 0.5);
+    }
+
+    body.dark .empty-title,
+    .dark .empty-title {
+      color: rgba(248, 250, 252, 0.95);
+    }
+
+    body.dark .empty-message,
+    .dark .empty-message {
+      color: rgba(226, 232, 240, 0.75);
+    }
+
+    body.dark .empty-hint,
+    .dark .empty-hint {
+      background: rgba(30, 64, 175, 0.55);
+      color: rgba(226, 232, 240, 0.9);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.6);
+    }
+
+    body.dark .empty-secondary,
+    .dark .empty-secondary {
+      color: rgba(191, 219, 254, 0.95);
+    }
+
     body.dark .product-card.card-disabled,
     .dark .product-card.card-disabled {
       background: rgba(255, 255, 255, 0.02);
@@ -925,7 +1071,7 @@ export class ApplyLoanPage implements OnInit {
       arrowBackOutline,
       moonOutline,
       sunnyOutline,
-      cardOutline
+      refreshOutline
     });
   }
 
@@ -1203,6 +1349,21 @@ export class ApplyLoanPage implements OnInit {
       return;
     }
 
+    this.router.navigate(['/customer/dashboard']);
+  }
+
+  async refreshProducts() {
+    if (this.loading()) {
+      return;
+    }
+
+    await Promise.all([
+      this.loadLoanProducts(),
+      this.checkPendingApplications()
+    ]);
+  }
+
+  goToDashboard() {
     this.router.navigate(['/customer/dashboard']);
   }
 
