@@ -1,6 +1,65 @@
+/* ===== FIXED TOP BAR ===== */
+.fixed-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding-top: env(safe-area-inset-top);
+}
+
+.top-bar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  height: 56px;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.app-emoji {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.app-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  letter-spacing: -0.02em;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)), var(--ion-background-color);
+}
+
+.payments-container {
+  padding: 0;
+  padding-top: calc(56px + env(safe-area-inset-top));
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  max-width: 600px;
+  margin: 0 auto;
+}
+
 .summary-card {
-  margin: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 0.85rem 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
 
   .summary-content {
     display: flex;
@@ -39,8 +98,9 @@
 }
 
 .filter-card {
-  margin: 0 16px 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 0 1rem 0.85rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
 
   ion-card-content {
     padding: 8px;
@@ -92,9 +152,9 @@
 }
 
 .payment-card {
-  margin: 0 16px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  margin: 0 1rem 0.85rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
 
   ion-card-header {
     padding: 16px;

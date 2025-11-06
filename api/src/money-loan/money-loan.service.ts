@@ -319,12 +319,15 @@ export class MoneyLoanService {
     const baseQuery = knex('money_loan_loans as mll')
       .leftJoin('customers as c', 'mll.customer_id', 'c.id')
       .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
+      .leftJoin('users as assigned_emp', 'c.assigned_employee_id', 'assigned_emp.id')
       .select(
         'mll.*',
         'c.first_name',
         'c.last_name',
         'c.email as customer_email',
-        'mlp.name as product_name'
+        'c.assigned_employee_id',
+        'mlp.name as product_name',
+        knex.raw("CONCAT_WS(' ', assigned_emp.first_name, assigned_emp.last_name) as assigned_employee_name")
       )
       .where('mll.tenant_id', tenantId);
 
@@ -395,12 +398,15 @@ export class MoneyLoanService {
       const applicationQuery = knex('money_loan_applications as mla')
         .leftJoin('customers as c', 'mla.customer_id', 'c.id')
         .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+        .leftJoin('users as assigned_emp', 'c.assigned_employee_id', 'assigned_emp.id')
         .select(
           'mla.*',
           'c.first_name',
           'c.last_name',
           'c.email as customer_email',
-          'mlp.name as product_name'
+          'c.assigned_employee_id',
+          'mlp.name as product_name',
+          knex.raw("CONCAT_WS(' ', assigned_emp.first_name, assigned_emp.last_name) as assigned_employee_name")
         )
         .where('mla.tenant_id', tenantId)
         .where('mla.status', 'approved') // Only approved applications ready for disbursement
@@ -429,6 +435,10 @@ export class MoneyLoanService {
       const applicationRows = await applicationQuery;
       console.log('📋 Retrieved approved applications:', applicationRows.length);
       
+      if (applicationRows.length > 0) {
+        console.log('📄 [Applications → Loans] First approved application row:', applicationRows[0]);
+      }
+
       // Map applications to look like loans (for disbursement page compatibility)
       applicationData = applicationRows.map((row: any) => ({
         id: row.id,
@@ -445,10 +455,19 @@ export class MoneyLoanService {
         interestRate: row.productInterestRate ?? row.product_interest_rate ?? row.approvedInterestRate ?? row.approved_interest_rate,
         interestType: row.productInterestType ?? row.product_interest_type ?? 'flat',
         loanTermMonths: Math.round((row.approvedTermDays ?? row.approved_term_days ?? row.productFixedTermDays ?? row.product_fixed_term_days ?? 30) / 30),
+        // Build customer object with proper field names from database
         customer: {
-          fullName: `${row.customerFirstName ?? row.first_name ?? ''} ${row.customerLastName ?? row.last_name ?? ''}`.trim(),
-          customerCode: row.customer_email ?? row.customerEmail ?? row.email
+          fullName: `${row.firstName ?? row.first_name ?? ''} ${row.lastName ?? row.last_name ?? ''}`.trim(),
+          customerCode: row.customerEmail ?? row.customer_email ?? row.email,
+          email: row.customerEmail ?? row.customer_email ?? row.email,
+          firstName: row.firstName ?? row.first_name ?? null,
+          lastName: row.lastName ?? row.last_name ?? null,
+          assignedEmployeeId: row.assignedEmployeeId ?? row.assigned_employee_id ?? null,
+          assignedEmployeeName: row.assignedEmployeeName ?? row.assigned_employee_name ?? null,
         },
+        // Also include at top level for collector column
+        assignedEmployeeName: row.assignedEmployeeName ?? row.assigned_employee_name ?? null,
+        assignedEmployeeId: row.assignedEmployeeId ?? row.assigned_employee_id ?? null,
         type: 'application', // Mark as application
         isApplication: true,
         applicationId: row.id
@@ -467,12 +486,15 @@ export class MoneyLoanService {
         const applicationQuery = knex('money_loan_applications as mla')
           .leftJoin('customers as c', 'mla.customer_id', 'c.id')
           .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+          .leftJoin('users as assigned_emp', 'c.assigned_employee_id', 'assigned_emp.id')
           .select(
             'mla.*',
             'c.first_name',
             'c.last_name',
             'c.email as customer_email',
-            'mlp.name as product_name'
+            'c.assigned_employee_id',
+            'mlp.name as product_name',
+            knex.raw("CONCAT_WS(' ', assigned_emp.first_name, assigned_emp.last_name) as assigned_employee_name")
           )
           .where('mla.tenant_id', tenantId)
           .where('mla.customer_id', customerId)
@@ -480,6 +502,9 @@ export class MoneyLoanService {
         
         const applicationRows = await applicationQuery;
         console.log('📋 Retrieved applications:', applicationRows.length);
+        if (applicationRows.length > 0) {
+          console.log('📄 [Applications → Loans] First filtered application row:', applicationRows[0]);
+        }
         
         // Map applications to same format as loans
         applicationData = applicationRows.map((row: any) => ({
@@ -500,9 +525,23 @@ export class MoneyLoanService {
           interestRate: row.productInterestRate ?? row.product_interest_rate ?? row.approvedInterestRate ?? row.approved_interest_rate,
           interestType: row.productInterestType ?? row.product_interest_type ?? 'flat',
           loanTermMonths: Math.round((row.approvedTermDays ?? row.approved_term_days ?? row.productFixedTermDays ?? row.product_fixed_term_days ?? 30) / 30),
-          customerFirstName: row.first_name,
-          customerLastName: row.last_name,
-          customerEmail: row.customer_email,
+          // Add customer object for consistency
+          customer: {
+            fullName: `${row.firstName ?? row.first_name ?? ''} ${row.lastName ?? row.last_name ?? ''}`.trim(),
+            customerCode: row.customerEmail ?? row.customer_email ?? row.email,
+            email: row.customerEmail ?? row.customer_email ?? row.email,
+            firstName: row.firstName ?? row.first_name ?? null,
+            lastName: row.lastName ?? row.last_name ?? null,
+            assignedEmployeeId: row.assignedEmployeeId ?? row.assigned_employee_id ?? null,
+            assignedEmployeeName: row.assignedEmployeeName ?? row.assigned_employee_name ?? null,
+          },
+          // Legacy fields for backward compatibility
+          customerFirstName: row.firstName ?? row.first_name ?? null,
+          customerLastName: row.lastName ?? row.last_name ?? null,
+          customerEmail: row.customerEmail ?? row.customer_email ?? null,
+          // Collector fields at top level
+          assignedEmployeeName: row.assignedEmployeeName ?? row.assigned_employee_name ?? null,
+          assignedEmployeeId: row.assignedEmployeeId ?? row.assigned_employee_id ?? null,
           type: 'application', // Mark as application
         }));
       }
@@ -522,6 +561,364 @@ export class MoneyLoanService {
         pages: total > 0 ? Math.ceil((total + applicationData.length) / limitNumber) : 0,
       },
     };
+  }
+
+  async getCollectorPendingDisbursements(tenantId: number, collectorId: number) {
+    const knex = this.knexService.instance;
+
+    const { LoanCalculatorService } = require('./loan-calculator.service');
+    const calculator = new LoanCalculatorService();
+    const clampAmount = (value: any) => {
+      const num = Number(value ?? 0);
+      if (!Number.isFinite(num)) {
+        return 0;
+      }
+      return Math.round(num * 100) / 100;
+    };
+    const getNumber = (row: any, keys: string[], fallback = 0) => {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== null) {
+          const num = Number(row[key]);
+          if (!Number.isNaN(num)) {
+            return num;
+          }
+        }
+      }
+      return fallback;
+    };
+
+    const getString = (row: any, keys: string[], fallback: string | null = null) => {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== null) {
+          return row[key];
+        }
+      }
+      return fallback;
+    };
+
+    const normalizeIds = (items: unknown[]): number[] =>
+      (items || [])
+        .map((value) => {
+          try {
+            const coerced = Number(value);
+            return Number.isFinite(coerced) ? coerced : null;
+          } catch (error) {
+            console.error('❌ [getCollectorPendingDisbursements] Failed to normalize ID', {
+              value,
+              error,
+            });
+            return null;
+          }
+        })
+        .filter((value): value is number => value !== null);
+
+    const directAssignmentsRaw = await knex('customers')
+      .where({ tenant_id: tenantId, assigned_employee_id: collectorId })
+      .pluck('id');
+
+    let explicitAssignmentsRaw: unknown[] = [];
+    try {
+      explicitAssignmentsRaw = await knex('money_loan_collector_assignments')
+        .where({ tenant_id: tenantId, collector_id: collectorId, is_active: true })
+        .pluck('customer_id');
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        console.warn('⚠️ [getCollectorPendingDisbursements] Collector assignment table missing, continuing with direct assignments only');
+        explicitAssignmentsRaw = [];
+      } else {
+        throw error;
+      }
+    }
+
+    const directAssignments = normalizeIds(directAssignmentsRaw as unknown[]);
+    const explicitAssignments = normalizeIds(explicitAssignmentsRaw as unknown[]);
+
+    const assignedCustomerIds = Array.from(new Set([...directAssignments, ...explicitAssignments]));
+
+    if (!assignedCustomerIds.length) {
+      console.log('ℹ️ [getCollectorPendingDisbursements] No assigned customers for collector', collectorId);
+      return [];
+    }
+
+    const loans = await knex('money_loan_loans as mll')
+      .leftJoin('customers as c', 'mll.customer_id', 'c.id')
+      .leftJoin('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
+      .leftJoin('users as assigned_emp', 'c.assigned_employee_id', 'assigned_emp.id')
+      .select(
+        'mll.id as loan_id',
+        'mll.loan_number',
+        'mll.customer_id',
+        'mll.principal_amount',
+        'mll.processing_fee',
+        'mll.term_days',
+        'mll.interest_rate',
+        'mll.interest_type',
+        'mll.status',
+        'mll.created_at as loan_created_at',
+        'mll.updated_at as loan_updated_at',
+        'mll.disbursement_date',
+        'c.first_name as customer_first_name',
+        'c.last_name as customer_last_name',
+        'c.email as customer_email',
+        'c.assigned_employee_id',
+        'mlp.processing_fee_percent',
+        'mlp.platform_fee',
+        'mlp.payment_frequency',
+        'mlp.interest_type as product_interest_type',
+        'mlp.interest_rate as product_interest_rate',
+        'mlp.fixed_term_days',
+        knex.raw("CONCAT_WS(' ', assigned_emp.first_name, assigned_emp.last_name) as assigned_employee_name"),
+      )
+  .where('mll.tenant_id', tenantId)
+  .whereIn('mll.customer_id', assignedCustomerIds)
+      .whereIn('mll.status', ['pending', 'approved'])
+      .orderBy('mll.created_at', 'desc');
+
+    const mappedLoans = loans.map((row: any) => {
+      const principalAmount = getNumber(row, ['principalAmount', 'principal_amount'], 0);
+      const productProcessingPercent = getNumber(row, ['processingFeePercent', 'processing_fee_percent', 'productProcessingFeePercent'], 0);
+      const productPlatformFee = getNumber(row, ['platformFee', 'platform_fee', 'productPlatformFee'], 0);
+      const termDays = getNumber(row, ['termDays', 'term_days', 'fixedTermDays', 'fixed_term_days'], 30);
+      const termMonths = termDays / 30;
+      const interestRate = getNumber(row, ['interestRate', 'interest_rate', 'productInterestRate', 'product_interest_rate'], 0);
+      const interestType = getString(row, ['interestType', 'interest_type', 'productInterestType', 'product_interest_type'], 'flat') ?? 'flat';
+      const paymentFrequency = getString(row, ['paymentFrequency', 'payment_frequency'], 'weekly') ?? 'weekly';
+
+  let processingFee = clampAmount(getNumber(row, ['processingFee', 'processing_fee'], 0));
+  let platformFee = 0;
+  let netDisbursement = principalAmount;
+    const loanIdValue = getNumber(row, ['loanId', 'loan_id', 'id'], NaN);
+    const loanId = Number.isNaN(loanIdValue) ? null : loanIdValue;
+    const customerIdValue = getNumber(row, ['customerId', 'customer_id'], NaN);
+    const customerId = Number.isNaN(customerIdValue) ? null : customerIdValue;
+    const loanNumber = getString(row, ['loanNumber', 'loan_number'], null);
+    const initialInterestAmount = getNumber(row, ['interestAmount', 'totalInterest', 'total_interest'], NaN);
+    let interestAmount = Number.isNaN(initialInterestAmount)
+      ? clampAmount(principalAmount * (interestRate / 100) * Math.max(termMonths || 1, 1))
+      : clampAmount(initialInterestAmount);
+    let totalRepayable = clampAmount(
+      getNumber(
+        row,
+        ['totalRepayable', 'total_repayable', 'totalAmount', 'total_amount'],
+        principalAmount + interestAmount + clampAmount(productPlatformFee * termMonths),
+      ),
+    );
+
+      try {
+        const calculation = calculator.calculate({
+          loanAmount: principalAmount,
+          termMonths,
+          paymentFrequency,
+          interestRate,
+          interestType,
+          processingFeePercentage: productProcessingPercent,
+          platformFee: productPlatformFee,
+        });
+
+        processingFee = clampAmount(calculation.processingFeeAmount);
+        platformFee = clampAmount(calculation.platformFee);
+        netDisbursement = clampAmount(calculation.netProceeds);
+        interestAmount = clampAmount(calculation.interestAmount);
+        totalRepayable = clampAmount(calculation.totalRepayable);
+      } catch (error) {
+        console.error('❌ [getCollectorPendingDisbursements] Loan calculation failed', {
+          loanId: loanId ?? loanIdValue ?? row.loan_id ?? row.loanId ?? null,
+          error: error?.message,
+        });
+
+        const fallbackProcessing = principalAmount * (productProcessingPercent / 100);
+        const fallbackPlatform = productPlatformFee * termMonths;
+
+        processingFee = clampAmount(fallbackProcessing || processingFee);
+        platformFee = clampAmount(fallbackPlatform);
+        netDisbursement = clampAmount(principalAmount - processingFee - platformFee);
+      }
+
+      const customerFirstName = getString(row, ['customerFirstName', 'customer_first_name', 'firstName', 'first_name'], '');
+      const customerLastName = getString(row, ['customerLastName', 'customer_last_name', 'lastName', 'last_name'], '');
+      const customerFullName = `${customerFirstName ?? ''} ${customerLastName ?? ''}`.trim();
+  const approvedAt = getString(row, ['disbursementDate', 'disbursement_date', 'loanUpdatedAt', 'loan_updated_at', 'loanCreatedAt', 'loan_created_at'], null);
+      const customerEmail = getString(row, ['customerEmail', 'customer_email', 'email'], null);
+  const assignedEmployeeIdValue = getNumber(row, ['assignedEmployeeId', 'assigned_employee_id'], NaN);
+  const assignedEmployeeId = Number.isNaN(assignedEmployeeIdValue) ? null : assignedEmployeeIdValue;
+  const assignedEmployeeName = getString(row, ['assignedEmployeeName', 'assigned_employee_name'], null);
+
+      return {
+        id: loanId ?? customerId ?? 0,
+        loanNumber: loanNumber ?? null,
+        applicationNumber: null,
+        applicationId: null,
+        customerId: customerId ?? 0,
+        customerName: customerFullName || customerEmail || (customerId != null ? `Customer #${customerId}` : 'Customer'),
+        principalAmount,
+        processingFee,
+        platformFee,
+        netDisbursement: netDisbursement < 0 ? 0 : netDisbursement,
+        approvedAt,
+        status: row.status ?? 'pending',
+        type: 'loan',
+        interestRate,
+        interestType,
+        interestAmount,
+        totalRepayable,
+        termDays,
+        termMonths,
+        paymentFrequency,
+        customer: {
+          fullName: customerFullName || customerEmail || 'N/A',
+          email: customerEmail,
+          firstName: customerFirstName ?? null,
+          lastName: customerLastName ?? null,
+          assignedEmployeeId: assignedEmployeeId ?? null,
+          assignedEmployeeName: assignedEmployeeName ?? null,
+        },
+      };
+    });
+
+    const applications = await knex('money_loan_applications as mla')
+      .leftJoin('customers as c', 'mla.customer_id', 'c.id')
+      .leftJoin('money_loan_products as mlp', 'mla.loan_product_id', 'mlp.id')
+      .leftJoin('users as assigned_emp', 'c.assigned_employee_id', 'assigned_emp.id')
+      .select(
+        'mla.id as application_id',
+        'mla.application_number',
+        'mla.customer_id',
+        'mla.loan_product_id',
+        'mla.requested_amount',
+        'mla.approved_amount',
+        'mla.requested_term_days',
+        'mla.approved_term_days',
+        'mla.approved_interest_rate',
+        'mla.status',
+        'mla.reviewed_at',
+        'mla.updated_at',
+        'mla.created_at',
+        'c.first_name as customer_first_name',
+        'c.last_name as customer_last_name',
+        'c.email as customer_email',
+        'c.assigned_employee_id',
+        'mlp.processing_fee_percent',
+        'mlp.platform_fee',
+        'mlp.payment_frequency',
+        'mlp.interest_type',
+        'mlp.interest_rate',
+        'mlp.fixed_term_days',
+        knex.raw("CONCAT_WS(' ', assigned_emp.first_name, assigned_emp.last_name) as assigned_employee_name"),
+      )
+  .where('mla.tenant_id', tenantId)
+  .whereIn('mla.customer_id', assignedCustomerIds)
+      .where('mla.status', 'approved')
+      .whereNotExists(function () {
+        this.select('*')
+          .from('money_loan_loans')
+          .whereRaw('money_loan_loans.application_id = mla.id')
+          .where('money_loan_loans.tenant_id', tenantId);
+      })
+      .orderBy('mla.updated_at', 'desc');
+
+    const mappedApplications = applications.map((row: any) => {
+      const principalAmount = getNumber(row, ['approvedAmount', 'approved_amount', 'requestedAmount', 'requested_amount'], 0);
+      const termDays = getNumber(row, ['approvedTermDays', 'approved_term_days', 'requestedTermDays', 'requested_term_days', 'fixedTermDays', 'fixed_term_days'], 30);
+      const termMonths = termDays / 30;
+      const processingPercent = getNumber(row, ['processingFeePercent', 'processing_fee_percent'], 0);
+      const platformFeePerMonth = getNumber(row, ['platformFee', 'platform_fee'], 0);
+      const interestRate = getNumber(row, ['approvedInterestRate', 'approved_interest_rate', 'interestRate', 'interest_rate'], 0);
+      const interestType = getString(row, ['interestType', 'interest_type'], 'flat') ?? 'flat';
+      const paymentFrequency = getString(row, ['paymentFrequency', 'payment_frequency'], 'weekly') ?? 'weekly';
+
+  let processingFee = 0;
+  let platformFee = 0;
+  let netDisbursement = principalAmount;
+    const applicationIdValue = getNumber(row, ['applicationId', 'application_id', 'id'], NaN);
+    const applicationId = Number.isNaN(applicationIdValue) ? null : applicationIdValue;
+    const customerIdValue = getNumber(row, ['customerId', 'customer_id'], NaN);
+    const customerId = Number.isNaN(customerIdValue) ? null : customerIdValue;
+    const applicationNumber = getString(row, ['applicationNumber', 'application_number'], null);
+  const loanProductIdValue = getNumber(row, ['loanProductId', 'loan_product_id'], NaN);
+  const loanProductId = Number.isNaN(loanProductIdValue) ? null : loanProductIdValue;
+    const initialInterestAmount = getNumber(row, ['interestAmount', 'totalInterest', 'total_interest'], NaN);
+    let interestAmount = Number.isNaN(initialInterestAmount)
+      ? clampAmount(principalAmount * (interestRate / 100) * Math.max(termMonths || 1, 1))
+      : clampAmount(initialInterestAmount);
+    let totalRepayable = clampAmount(
+      getNumber(
+        row,
+        ['totalRepayable', 'total_repayable', 'totalAmount', 'total_amount'],
+        principalAmount + interestAmount + clampAmount(platformFeePerMonth * termMonths),
+      ),
+    );
+
+      try {
+        const calculation = calculator.calculate({
+          loanAmount: principalAmount,
+          termMonths,
+          paymentFrequency,
+          interestRate,
+          interestType,
+          processingFeePercentage: processingPercent,
+          platformFee: platformFeePerMonth,
+        });
+
+        processingFee = clampAmount(calculation.processingFeeAmount);
+        platformFee = clampAmount(calculation.platformFee);
+        netDisbursement = clampAmount(calculation.netProceeds);
+        interestAmount = clampAmount(calculation.interestAmount);
+        totalRepayable = clampAmount(calculation.totalRepayable);
+      } catch (error) {
+        console.error('❌ [getCollectorPendingDisbursements] Application calculation failed', {
+          applicationId: applicationId ?? applicationIdValue ?? row.application_id ?? row.applicationId ?? null,
+          error: error?.message,
+        });
+
+        processingFee = clampAmount(principalAmount * (processingPercent / 100));
+        platformFee = clampAmount(platformFeePerMonth * termMonths);
+        netDisbursement = clampAmount(principalAmount - processingFee - platformFee);
+      }
+      const customerFirstName = getString(row, ['customerFirstName', 'customer_first_name', 'firstName', 'first_name'], '');
+      const customerLastName = getString(row, ['customerLastName', 'customer_last_name', 'lastName', 'last_name'], '');
+      const customerEmail = getString(row, ['customerEmail', 'customer_email', 'email'], null);
+      const customerFullName = `${customerFirstName ?? ''} ${customerLastName ?? ''}`.trim();
+      const approvedAt = getString(row, ['reviewedAt', 'reviewed_at', 'updatedAt', 'updated_at', 'createdAt', 'created_at'], null);
+  const assignedEmployeeIdValue = getNumber(row, ['assignedEmployeeId', 'assigned_employee_id'], NaN);
+  const assignedEmployeeId = Number.isNaN(assignedEmployeeIdValue) ? null : assignedEmployeeIdValue;
+  const assignedEmployeeName = getString(row, ['assignedEmployeeName', 'assigned_employee_name'], null);
+
+      return {
+        id: applicationId ?? customerId ?? 0,
+        loanNumber: `PENDING-${applicationNumber ?? applicationId ?? ''}`,
+        applicationNumber: applicationNumber ?? null,
+        applicationId: applicationId ?? null,
+        customerId: customerId ?? 0,
+        customerName: customerFullName || customerEmail || (customerId != null ? `Customer #${customerId}` : 'Customer'),
+        principalAmount,
+        processingFee,
+        platformFee,
+        netDisbursement: netDisbursement < 0 ? 0 : netDisbursement,
+        approvedAt,
+        status: 'pending',
+        type: 'application',
+        interestRate,
+        interestType,
+        interestAmount,
+        totalRepayable,
+        termDays,
+        termMonths,
+        paymentFrequency,
+        customer: {
+          fullName: customerFullName || customerEmail || 'N/A',
+          email: customerEmail,
+          firstName: customerFirstName ?? null,
+          lastName: customerLastName ?? null,
+          assignedEmployeeId: assignedEmployeeId ?? null,
+          assignedEmployeeName: assignedEmployeeName ?? null,
+        },
+        loanProductId,
+      };
+    });
+
+    console.log('📋 [getCollectorPendingDisbursements] Loans:', mappedLoans.length, 'Applications:', mappedApplications.length);
+
+    return [...mappedLoans, ...mappedApplications];
   }
 
   async getLoanById(tenantId: number, loanId: number) {
@@ -782,6 +1179,14 @@ export class MoneyLoanService {
     const interestRate = parseFloat(row.interestRate || row.interest_rate || 0);
     const monthlyPayment = row.monthlyPayment || row.monthly_payment || null;
 
+    // Build full name from first_name and last_name
+    const firstName = row.firstName || row.first_name || '';
+    const lastName = row.lastName || row.last_name || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    // Build assigned employee name
+    const assignedEmployeeName = row.assignedEmployeeName || row.assigned_employee_name || '';
+
     return {
       ...row,
       // Override with explicitly parsed values
@@ -798,10 +1203,17 @@ export class MoneyLoanService {
       daysOverdue: parseInt(row.daysOverdue || row.days_overdue || 0),
       loanTermMonths,
       customer: {
-        fullName: [row.firstName || row.first_name, row.lastName || row.last_name].filter(Boolean).join(' ') || 'N/A',
-        customerCode: row.customerId ? `CUST-${row.customerId}` : undefined,
+        fullName: fullName || 'N/A',
+        customerCode: row.customerEmail || row.customer_email || (row.customerId ? `CUST-${row.customerId}` : undefined),
         email: (row.customerEmail || row.customer_email) ?? undefined,
+        firstName: firstName,
+        lastName: lastName,
+        assignedEmployeeId: row.assignedEmployeeId || row.assigned_employee_id || null,
+        assignedEmployeeName: assignedEmployeeName || null,
       },
+      // Also include at top level for collector column
+      assignedEmployeeName: assignedEmployeeName || null,
+      assignedEmployeeId: row.assignedEmployeeId || row.assigned_employee_id || null,
       productName: row.productName || row.product_name,
     };
   }

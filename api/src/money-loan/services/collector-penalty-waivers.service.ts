@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { KnexService } from '../../database/knex.service';
 import { CollectorAssignmentService } from './collector-assignment.service';
 
@@ -8,6 +8,62 @@ export class CollectorPenaltyWaiversService {
     private knexService: KnexService,
     private collectorAssignmentService: CollectorAssignmentService,
   ) {}
+
+  private toNumber(value: any, fallback: number | null = 0): number | null {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
+    try {
+      const normalized = typeof value === 'bigint' ? Number(value) : Number(value);
+      return Number.isFinite(normalized) ? normalized : fallback;
+    } catch (error) {
+      console.error('❌ [CollectorPenaltyWaiversService] Failed to coerce number', {
+        value,
+        fallback,
+        error,
+      });
+      return fallback;
+    }
+  }
+
+  private toString(value: any, fallback: string | null = ''): string | null {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
+    try {
+      return String(value);
+    } catch (error) {
+      console.error('❌ [CollectorPenaltyWaiversService] Failed to coerce string', {
+        value,
+        fallback,
+        error,
+      });
+      return fallback;
+    }
+  }
+
+  private toIsoString(value: any): string | null {
+    if (!value) {
+      return null;
+    }
+
+    try {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? this.toString(value, null) : date.toISOString();
+    } catch (error) {
+      console.error('❌ [CollectorPenaltyWaiversService] Failed to coerce ISO string', {
+        value,
+        error,
+      });
+      return this.toString(value, null);
+    }
+  }
 
   /**
    * Request a penalty waiver
@@ -193,16 +249,56 @@ export class CollectorPenaltyWaiversService {
   async getPendingWaivers(collectorId: number, tenantId: number) {
     const knex = this.knexService.instance;
 
-    // Get customers assigned to this collector
-    const assignments = await knex('money_loan_collector_assignments')
-      .where({ collector_id: collectorId, tenant_id: tenantId, is_active: true })
-      .pluck('customer_id');
+    const normalizeIds = (items: unknown[]): number[] =>
+      (items || [])
+        .map((value) => {
+          try {
+            const coerced = Number(value);
+            return Number.isFinite(coerced) ? coerced : null;
+          } catch (error) {
+            console.error('❌ [CollectorPenaltyWaiversService] Failed to normalize ID', {
+              value,
+              error,
+            });
+            return null;
+          }
+        })
+        .filter((value): value is number => value !== null);
+
+    let explicitAssignmentsRaw: unknown[] = [];
+    try {
+      explicitAssignmentsRaw = await knex('money_loan_collector_assignments')
+        .where({ collector_id: collectorId, tenant_id: tenantId, is_active: true })
+        .pluck('customer_id');
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        console.warn('⚠️ [CollectorPenaltyWaiversService] Collector assignment table missing, using direct assignments only');
+        explicitAssignmentsRaw = [];
+      } else {
+        throw error;
+      }
+    }
+
+    const directAssignmentsRaw = await knex('customers')
+      .where({ assigned_employee_id: collectorId, tenant_id: tenantId })
+      .pluck('id');
+
+    const assignmentIds = normalizeIds([
+      ...(explicitAssignmentsRaw as unknown[]),
+      ...(directAssignmentsRaw as unknown[]),
+    ]);
+
+    if (!assignmentIds.length) {
+      console.log('ℹ️ [CollectorPenaltyWaiversService] No assigned customers for collector', collectorId);
+      return [];
+    }
 
     // Get pending waivers for these customers
-    const waivers = await knex('money_loan_penalty_waivers as w')
+    const waiversRaw = await knex('money_loan_penalty_waivers as w')
       .select(
         'w.*',
         'l.loan_number',
+        'l.customer_id',
         'c.first_name',
         'c.last_name',
         'c.id_number',
@@ -212,8 +308,51 @@ export class CollectorPenaltyWaiversService {
       .leftJoin('customers as c', 'l.customer_id', 'c.id')
       .leftJoin('money_loan_repayment_schedules as i', 'w.installment_id', 'i.id')
       .where({ 'w.tenant_id': tenantId, 'w.status': 'pending' })
-      .whereIn('l.customer_id', assignments)
+      .whereIn('l.customer_id', assignmentIds)
       .orderBy('w.created_at', 'desc');
+
+    const waivers = (waiversRaw || []).map((row: any) => {
+      const id = this.toNumber(row.id, null);
+      const loanId = this.toNumber(row.loan_id, null);
+      const installmentId = this.toNumber(row.installment_id, null);
+      const installmentNumber = this.toNumber(row.installment_number, null);
+      const originalPenaltyAmount = this.toNumber(row.original_penalty_amount, 0) ?? 0;
+      const requestedWaiverAmount = this.toNumber(row.requested_waiver_amount, 0) ?? 0;
+      const approvedWaiverAmount = row.approved_waiver_amount !== null && row.approved_waiver_amount !== undefined
+        ? this.toNumber(row.approved_waiver_amount, 0)
+        : null;
+
+      const requestedBy = this.toNumber(row.requested_by, null);
+      const approvedBy = row.approved_by !== null && row.approved_by !== undefined
+        ? this.toNumber(row.approved_by, null)
+        : null;
+
+      return {
+        id,
+        loanId,
+        loanNumber: this.toString(row.loan_number, null),
+        customerId: this.toNumber(row.customer_id, null),
+        customerName: [row.first_name, row.last_name].filter((part) => !!part).join(' ').trim() || this.toString(row.id_number, null) || null,
+        customerIdNumber: this.toString(row.id_number, null),
+        installmentId,
+        installmentNumber,
+        waiveType: this.toString(row.waive_type, 'partial'),
+        originalPenaltyAmount,
+        requestedWaiverAmount,
+        approvedWaiverAmount,
+        status: this.toString(row.status, 'pending'),
+        reason: this.toString(row.reason, null),
+        notes: this.toString(row.notes, null),
+        requestedBy,
+        requestedByName: this.toString(row.requested_by_name, null),
+        approvedBy,
+        approvedByName: this.toString(row.approved_by_name, null),
+        requestedAt: this.toIsoString(row.created_at),
+        approvedAt: this.toIsoString(row.approved_at),
+        updatedAt: this.toIsoString(row.updated_at),
+        createdAt: this.toIsoString(row.created_at),
+      };
+    });
 
     return waivers;
   }

@@ -4,9 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -20,9 +17,11 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonButtons,
-  IonBackButton,
   IonModal,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
   IonInput,
   IonTextarea,
   IonSelect,
@@ -50,6 +49,8 @@ import {
   RejectApplicationDto,
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-collector-applications',
@@ -57,46 +58,48 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonRefresher,
     IonRefresherContent,
     IonItem,
     IonLabel,
-    IonBadge,
     IonButton,
     IonIcon,
     IonSkeletonText,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    IonButtons,
-    IonBackButton,
     IonModal,
-    IonInput,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
     IonTextarea,
     IonSelect,
     IonSelectOption,
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/collector/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Pending Applications</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding">
+    <ion-content [fullscreen]="true" class="main-content">
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Loading State -->
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📄</span>
+            <span class="app-title">Pending Applications</span>
+          </div>
+          
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Container with Padding -->
+      <div class="applications-container">
+
+      <!-- Loading Skeleton -->
       @if (loading()) {
         <div class="space-y-4">
           @for (i of [1,2,3]; track i) {
@@ -116,166 +119,144 @@ import { AuthService } from '../../core/services/auth.service';
 
       <!-- Applications List -->
       @if (!loading() && applications().length > 0) {
-        <div class="space-y-4">
+        <div class="applications-list">
           @for (app of applications(); track app.id) {
-            <ion-card class="m-0">
-              <ion-card-header>
-                <div class="flex justify-between items-start">
-                  <div>
-                    <ion-card-title class="text-base">{{ app.customerName }}</ion-card-title>
-                    <p class="text-sm text-gray-600 mt-1">{{ app.applicationNumber }}</p>
-                  </div>
-                  <ion-badge [color]="getStatusColor(app.status)">
-                    {{ app.status }}
-                  </ion-badge>
+            <div class="application-card" [class.expanded]="selectedApp()?.id === app.id && showApproveModal()">
+              <!-- Card Header -->
+              <div class="card-header">
+                <div class="customer-info">
+                  <div class="customer-name">{{ getCustomerName(app) }}</div>
+                  <div class="application-number">{{ app.applicationNumber }}</div>
                 </div>
-              </ion-card-header>
+                <div class="status-badge" [attr.data-status]="app.status.toLowerCase()">
+                  {{ app.status }}
+                </div>
+              </div>
 
-              <ion-card-content>
-                <div class="space-y-3">
-                  <!-- Application Details -->
-                  <div class="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <div class="text-gray-600">Product</div>
-                      <div class="font-semibold">{{ app.loanProductName }}</div>
+              <!-- Loan Details Summary -->
+              <div class="loan-summary">
+                <div class="summary-row">
+                  <span class="summary-label">💼 Product</span>
+                  <span class="summary-value">{{ getProductName(app) }}</span>
+                </div>
+                <div class="summary-divider"></div>
+                
+                <div class="summary-row">
+                  <span class="summary-label">💰 Amount</span>
+                  <span class="summary-value amount">₱{{ app.requestedAmount.toLocaleString() }}</span>
+                </div>
+                <div class="summary-divider"></div>
+                
+                <div class="summary-row">
+                  <span class="summary-label">📅 Term</span>
+                  <span class="summary-value">{{ app.requestedTermDays }} days</span>
+                </div>
+                <div class="summary-divider"></div>
+                
+                <div class="summary-row">
+                  <span class="summary-label">⏰ Submitted</span>
+                  <span class="summary-value">{{ formatDate(app.submittedAt || app.createdAt || '') }}</span>
+                </div>
+              </div>
+
+              <!-- Expandable Breakdown (shows when View is clicked) -->
+              @if (selectedApp()?.id === app.id && showApproveModal() && calculation()) {
+                <div class="breakdown-section">
+                  <div class="breakdown-title">💰 Loan Breakdown</div>
+                  
+                  <div class="loan-summary">
+                    <div class="summary-row">
+                      <span class="summary-label">Principal</span>
+                      <span class="summary-value">₱{{ calculation()!.loanAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
                     </div>
-                    <div>
-                      <div class="text-gray-600">Requested Amount</div>
-                      <div class="font-semibold text-blue-600">₱{{ app.requestedAmount.toLocaleString() }}</div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row">
+                      <span class="summary-label">Interest</span>
+                      <span class="summary-value highlight-orange">₱{{ calculation()!.interestAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
                     </div>
-                    <div>
-                      <div class="text-gray-600">Term</div>
-                      <div class="font-semibold">{{ app.requestedTermDays }} days</div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row">
+                      <span class="summary-label">Processing Fee</span>
+                      <span class="summary-value">₱{{ calculation()!.processingFeeAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
                     </div>
-                    <div>
-                      <div class="text-gray-600">Submitted</div>
-                      <div class="font-semibold">{{ formatDate(app.submittedAt) }}</div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row">
+                      <span class="summary-label">Net Proceeds</span>
+                      <span class="summary-value amount">₱{{ calculation()!.netProceeds.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row">
+                      <span class="summary-label">Total Repayment</span>
+                      <span class="summary-value highlight-green">₱{{ calculation()!.totalRepayable.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row">
+                      <span class="summary-label">Installments</span>
+                      <span class="summary-value">{{ calculation()!.numPayments }} payments</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    
+                    <div class="summary-row highlight-row">
+                      <span class="summary-label">Per Installment</span>
+                      <span class="summary-value highlight-large">₱{{ calculation()!.installmentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}) }}</span>
                     </div>
                   </div>
 
-                  <!-- Action Buttons -->
-                  <div class="flex gap-2 mt-4">
-                    <ion-button 
-                      expand="block" 
-                      color="success" 
-                      size="small"
-                      (click)="openApproveModal(app)">
-                      <ion-icon slot="start" [icon]="'checkmark-circle-outline'"></ion-icon>
-                      Approve
-                    </ion-button>
-                    <ion-button 
-                      expand="block" 
-                      color="danger" 
-                      size="small"
-                      (click)="openRejectModal(app)">
-                      <ion-icon slot="start" [icon]="'close-circle-outline'"></ion-icon>
-                      Reject
-                    </ion-button>
-                    <ion-button 
-                      expand="block" 
-                      color="warning" 
-                      size="small"
-                      (click)="requestReview(app)">
-                      <ion-icon slot="start" [icon]="'alert-circle-outline'"></ion-icon>
-                      Review
-                    </ion-button>
+                  <!-- Notes Field -->
+                  <div class="notes-field">
+                    <ion-textarea 
+                      [(ngModel)]="approveForm.notes"
+                      rows="2"
+                      placeholder="Add notes (optional)...">
+                    </ion-textarea>
+                  </div>
+
+                  <!-- Approve/Reject in expanded state -->
+                  <div class="expanded-actions">
+                    <button class="action-btn approve" (click)="confirmApprove()">
+                      <ion-icon [icon]="'checkmark-circle-outline'"></ion-icon>
+                      <span>Approve</span>
+                    </button>
+                    <button class="action-btn reject" (click)="openRejectModal(app)">
+                      <ion-icon [icon]="'close-circle-outline'"></ion-icon>
+                      <span>Reject</span>
+                    </button>
+                    <button class="action-btn back" (click)="closeApproveModal()">
+                      <ion-icon [icon]="'arrow-back-outline'"></ion-icon>
+                      <span>Close</span>
+                    </button>
                   </div>
                 </div>
-              </ion-card-content>
-            </ion-card>
+              }
+
+              <!-- Action Buttons (collapsed state) -->
+              @if (selectedApp()?.id !== app.id || !showApproveModal()) {
+                <div class="action-buttons">
+                  <button class="action-btn view" (click)="openApproveModal(app)">
+                    <ion-icon [icon]="'eye-outline'"></ion-icon>
+                    <span>View</span>
+                  </button>
+                  <button class="action-btn reject" (click)="openRejectModal(app)">
+                    <ion-icon [icon]="'close-circle-outline'"></ion-icon>
+                    <span>Reject</span>
+                  </button>
+                  <button class="action-btn review" (click)="requestReview(app)">
+                    <ion-icon [icon]="'alert-circle-outline'"></ion-icon>
+                    <span>Review</span>
+                  </button>
+                </div>
+              }
+            </div>
           }
         </div>
       }
 
-      <!-- Approve Modal -->
-      <ion-modal [isOpen]="showApproveModal()" (didDismiss)="closeApproveModal()">
-        <ng-template>
-          <ion-header>
-            <ion-toolbar>
-              <ion-title>Approve Application</ion-title>
-              <ion-buttons slot="end">
-                <ion-button (click)="closeApproveModal()">Close</ion-button>
-              </ion-buttons>
-            </ion-toolbar>
-          </ion-header>
-          <ion-content class="ion-padding">
-            @if (selectedApp()) {
-              <div class="space-y-4">
-                <!-- Customer Info -->
-                <div class="bg-blue-50 p-4 rounded-lg">
-                  <div class="font-bold text-lg">{{ selectedApp()!.customerName }}</div>
-                  <div class="text-sm text-gray-600">{{ selectedApp()!.applicationNumber }}</div>
-                </div>
-
-                <!-- Approval Form -->
-                <ion-item>
-                  <ion-label position="stacked">Approved Amount *</ion-label>
-                  <ion-input 
-                    type="number" 
-                    [(ngModel)]="approveForm.approvedAmount"
-                    [placeholder]="'Max: ' + selectedApp()!.requestedAmount">
-                  </ion-input>
-                </ion-item>
-
-                <ion-item>
-                  <ion-label position="stacked">Approved Term (Days) *</ion-label>
-                  <ion-input 
-                    type="number" 
-                    [(ngModel)]="approveForm.approvedTermDays"
-                    [placeholder]="selectedApp()!.requestedTermDays.toString()">
-                  </ion-input>
-                </ion-item>
-
-                <ion-item>
-                  <ion-label position="stacked">Interest Rate (%) *</ion-label>
-                  <ion-input 
-                    type="number" 
-                    step="0.01"
-                    [(ngModel)]="approveForm.approvedInterestRate"
-                    placeholder="e.g., 2.5">
-                  </ion-input>
-                </ion-item>
-
-                <ion-item>
-                  <ion-label position="stacked">Notes (Optional)</ion-label>
-                  <ion-textarea 
-                    [(ngModel)]="approveForm.notes"
-                    rows="3"
-                    placeholder="Add any approval notes...">
-                  </ion-textarea>
-                </ion-item>
-
-                <!-- Warning if above limit -->
-                @if (approveForm.approvedAmount > 50000) {
-                  <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
-                    <div class="flex items-start">
-                      <ion-icon [icon]="'alert-circle-outline'" class="text-orange-500 text-xl mr-2"></ion-icon>
-                      <div class="text-sm text-orange-700">
-                        This amount may exceed your approval limit. Manager approval may be required.
-                      </div>
-                    </div>
-                  </div>
-                }
-
-                <!-- Action Buttons -->
-                <div class="flex gap-2">
-                  <ion-button 
-                    expand="block" 
-                    color="success" 
-                    [disabled]="!isApproveFormValid()"
-                    (click)="confirmApprove()">
-                    <ion-icon slot="start" [icon]="'checkmark-circle-outline'"></ion-icon>
-                    Confirm Approval
-                  </ion-button>
-                  <ion-button expand="block" fill="outline" (click)="closeApproveModal()">
-                    Cancel
-                  </ion-button>
-                </div>
-              </div>
-            }
-          </ion-content>
-        </ng-template>
-      </ion-modal>
+      </div><!-- Close applications-container -->
 
       <!-- Reject Modal -->
       <ion-modal [isOpen]="showRejectModal()" (didDismiss)="closeRejectModal()">
@@ -293,7 +274,7 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="space-y-4">
                 <!-- Customer Info -->
                 <div class="bg-red-50 p-4 rounded-lg">
-                  <div class="font-bold text-lg">{{ selectedApp()!.customerName }}</div>
+                  <div class="font-bold text-lg">{{ getCustomerName(selectedApp()!) }}</div>
                   <div class="text-sm text-gray-600">{{ selectedApp()!.applicationNumber }}</div>
                 </div>
 
@@ -340,6 +321,585 @@ import { AuthService } from '../../core/services/auth.service';
       </ion-modal>
     </ion-content>
   `,
+  styles: [`
+    /* Main Content */
+    .main-content {
+      --background: #f8fafc;
+    }
+
+    /* Fixed Top Bar */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+
+    .top-bar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 1rem;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .app-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.01em;
+    }
+
+    /* Container */
+    .applications-container {
+      padding: calc(56px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    }
+
+    /* Applications List */
+    .applications-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    /* Modern Compact Application Card */
+    .application-card {
+      background: white;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      transition: all 0.2s ease;
+    }
+
+    .application-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Card Header */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      gap: 0.75rem;
+    }
+
+    .customer-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .customer-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.3;
+      margin-bottom: 0.25rem;
+    }
+
+    .application-number {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .status-badge[data-status="submitted"] {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-badge[data-status="under_review"] {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-badge[data-status="approved"] {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-badge[data-status="rejected"] {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Loan Summary - Clean Compact Style */
+    .loan-summary {
+      margin-bottom: 1rem;
+      padding: 0.5rem 0;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      gap: 1rem;
+    }
+
+    .summary-label {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .summary-value {
+      font-size: 0.875rem;
+      color: #1e293b;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .summary-value.amount {
+      color: #2563eb;
+      font-size: 0.95rem;
+    }
+
+    .summary-divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 0 0.25rem;
+    }
+
+    /* Calculation Summary (used in approve modal) */
+    .calculation-summary {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .summary-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .highlight-row {
+      background: #eff6ff;
+      padding: 0.65rem 0.5rem;
+      margin: 0.25rem -0.5rem;
+      border-radius: 8px;
+    }
+
+    .highlight-orange {
+      color: #ea580c !important;
+    }
+
+    .highlight-green {
+      color: #16a34a !important;
+    }
+
+    .highlight-large {
+      font-size: 1.05rem !important;
+      font-weight: 700 !important;
+      color: #2563eb !important;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+
+    .action-btn ion-icon {
+      font-size: 0.95rem;
+    }
+
+    .action-btn span {
+      white-space: nowrap;
+    }
+
+    .action-btn.approve {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .action-btn.approve:active {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .action-btn.view {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    /* Breakdown Section Styles */
+    .breakdown-section {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      animation: expandDown 0.2s ease-out;
+    }
+
+    @keyframes expandDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 1000px;
+      }
+    }
+
+    .breakdown-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .breakdown-title ion-icon {
+      font-size: 1rem;
+      color: #3b82f6;
+    }
+
+    .notes-field {
+      margin-top: 0.85rem;
+      padding: 0.65rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .notes-field ion-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    .notes-field ion-textarea {
+      --background: white;
+      --padding-start: 0.65rem;
+      --padding-end: 0.65rem;
+      --padding-top: 0.5rem;
+      --padding-bottom: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      font-size: 0.8rem;
+    }
+
+    .expanded-actions {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .expanded-actions .action-btn {
+      flex: 1;
+    }
+
+    .action-btn.view:active {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    }
+
+    .action-btn.reject {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .action-btn.reject:active {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+
+    .action-btn.review {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+    }
+
+    .action-btn.review:active {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    }
+
+    /* Approve Form View Styles */
+    .approve-form-view {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .customer-header-card {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      padding: 1.25rem;
+      border-radius: 14px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .customer-header-card .customer-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .customer-header-card .application-number {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .details-card {
+      background: white;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-section {
+      background: white;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 1rem;
+    }
+
+    .form-item {
+      --background: #f8fafc;
+      --border-radius: 10px;
+      --padding-start: 0.75rem;
+      --padding-end: 0.75rem;
+      margin-bottom: 0.75rem;
+      border-radius: 10px;
+    }
+
+    .calculation-card {
+      background: white;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .calculation-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 1rem;
+    }
+
+    .warning-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+
+    .warning-icon {
+      font-size: 1.5rem;
+      color: #f59e0b;
+      flex-shrink: 0;
+    }
+
+    .warning-text {
+      font-size: 0.85rem;
+      color: #92400e;
+      line-height: 1.5;
+    }
+
+    .action-buttons-fixed {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .action-btn.large {
+      flex: 1;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .action-btn.large ion-icon {
+      font-size: 1rem;
+    }
+
+    .action-btn.cancel {
+      background: white;
+      color: #64748b;
+      border: 2px solid #e2e8f0;
+    }
+
+    .action-btn.cancel:active {
+      background: #f8fafc;
+    }
+
+    .action-btn.back {
+      background: white;
+      color: #64748b;
+      border: 2px solid #e2e8f0;
+    }
+
+    .action-btn.back:active {
+      background: #f8fafc;
+    }
+
+    .summary-value.highlight-orange {
+      color: #f59e0b;
+    }
+
+    .summary-value.highlight-green {
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    .summary-row.highlight-row {
+      background: #eff6ff;
+      padding: 0.75rem 0.5rem;
+      margin: 0 -0.5rem;
+      border-radius: 8px;
+    }
+
+    .summary-value.highlight-large {
+      font-size: 1.1rem;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    /* Empty State */
+    .flex {
+      display: flex;
+    }
+
+    .flex-col {
+      flex-direction: column;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .justify-center {
+      justify-content: center;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .h-full {
+      height: 100%;
+    }
+
+    .p-8 {
+      padding: 2rem;
+    }
+
+    .text-6xl {
+      font-size: 3.75rem;
+    }
+
+    .text-xl {
+      font-size: 1.25rem;
+    }
+
+    .text-gray-400 {
+      color: #9ca3af;
+    }
+
+    .text-gray-500 {
+      color: #6b7280;
+    }
+
+    .text-gray-700 {
+      color: #374151;
+    }
+
+    .font-bold {
+      font-weight: 700;
+    }
+
+    .mb-2 {
+      margin-bottom: 0.5rem;
+    }
+
+    .mb-4 {
+      margin-bottom: 1rem;
+    }
+
+    /* Skeleton Loading */
+    .space-y-4 > * + * {
+      margin-top: 1rem;
+    }
+
+    .h-32 {
+      height: 8rem;
+    }
+
+    .rounded-lg {
+      border-radius: 0.85rem;
+    }
+  `],
 })
 export class CollectorApplicationsPage implements OnInit {
   private collectorService = inject(CollectorService);
@@ -370,7 +930,10 @@ export class CollectorApplicationsPage implements OnInit {
     notes: '',
   };
 
-  constructor() {
+  // Loan calculation
+  calculation = signal<LoanCalculationResult | null>(null);
+
+  constructor(private loanCalculator: LoanCalculatorService) {
     addIcons({
       documentTextOutline,
       checkmarkCircleOutline,
@@ -396,6 +959,10 @@ export class CollectorApplicationsPage implements OnInit {
     this.loading.set(true);
     try {
       const apps = await this.collectorService.getPendingApplications(this.collectorId()).toPromise();
+      console.log('🔍 Loaded applications:', apps);
+      if (apps && apps.length > 0) {
+        console.log('📋 First application sample:', apps[0]);
+      }
       this.applications.set(apps || []);
     } catch (error: any) {
       await this.showToast(error.error?.message || 'Failed to load applications', 'danger');
@@ -418,6 +985,31 @@ export class CollectorApplicationsPage implements OnInit {
       notes: '',
     };
     this.showApproveModal.set(true);
+    // Calculate initial loan breakdown
+    this.calculateLoan();
+  }
+
+  calculateLoan() {
+    if (this.approveForm.approvedAmount > 0 && 
+        this.approveForm.approvedTermDays > 0 && 
+        this.approveForm.approvedInterestRate > 0) {
+      
+      const termMonths = Math.ceil(this.approveForm.approvedTermDays / 30);
+      
+      const result = this.loanCalculator.calculate({
+        loanAmount: this.approveForm.approvedAmount,
+        termMonths: termMonths,
+        paymentFrequency: 'daily',
+        interestRate: this.approveForm.approvedInterestRate,
+        interestType: 'flat',
+        processingFeePercentage: 2, // Default processing fee
+        platformFee: 50 // Default platform fee per month
+      });
+      
+      this.calculation.set(result);
+    } else {
+      this.calculation.set(null);
+    }
   }
 
   closeApproveModal() {
@@ -450,9 +1042,11 @@ export class CollectorApplicationsPage implements OnInit {
   async confirmApprove() {
     if (!this.selectedApp()) return;
 
+    const customerName = this.getCustomerName(this.selectedApp()!);
+
     const alert = await this.alertController.create({
       header: 'Confirm Approval',
-      message: `Approve loan of ₱${this.approveForm.approvedAmount.toLocaleString()} for ${this.selectedApp()!.customerName}?`,
+      message: `Approve loan of ₱${this.approveForm.approvedAmount.toLocaleString()} for ${customerName}?`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
@@ -488,9 +1082,11 @@ export class CollectorApplicationsPage implements OnInit {
   async confirmReject() {
     if (!this.selectedApp()) return;
 
+    const customerName = this.getCustomerName(this.selectedApp()!);
+
     const alert = await this.alertController.create({
       header: 'Confirm Rejection',
-      message: `Reject application from ${this.selectedApp()!.customerName}?`,
+      message: `Reject application from ${customerName}?`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
@@ -561,8 +1157,46 @@ export class CollectorApplicationsPage implements OnInit {
   }
 
   formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
+  }
+
+  getCustomerName(app: CollectorApplication): string {
+    // API returns customerFirstName and customerLastName from JOIN
+    if (app.customerFirstName && app.customerLastName) {
+      return `${app.customerFirstName} ${app.customerLastName}`;
+    }
+    // Fallback to nested Customer object
+    if (app.Customer?.firstName && app.Customer?.lastName) {
+      return `${app.Customer.firstName} ${app.Customer.lastName}`;
+    }
+    // Fallback to flat customerName
+    if (app.customerName) {
+      return app.customerName;
+    }
+    return 'N/A';
+  }
+
+  getProductName(app: CollectorApplication): string {
+    // API returns productName from JOIN
+    if (app.productName) {
+      return app.productName;
+    }
+    // Fallback to nested LoanProduct object
+    if (app.LoanProduct?.name) {
+      return app.LoanProduct.name;
+    }
+    // Fallback to flat loanProductName
+    if (app.loanProductName) {
+      return app.loanProductName;
+    }
+    return 'N/A';
   }
 
   getStatusColor(status: string): string {

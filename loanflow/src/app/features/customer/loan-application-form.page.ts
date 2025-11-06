@@ -4,8 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import {
   IonContent,
-  IonHeader,
-  IonToolbar,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -31,7 +29,7 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
 
 interface LoanProduct {
@@ -68,8 +66,6 @@ interface LoanApplicationRequest {
     CommonModule,
     FormsModule,
     IonContent,
-    IonHeader,
-    IonToolbar,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -81,7 +77,7 @@ interface LoanApplicationRequest {
     IonButton,
     IonIcon,
     IonSpinner,
-    DevInfoComponent
+    HeaderUtilsComponent
   ]
 })
 export class LoanApplicationFormPage implements OnInit {

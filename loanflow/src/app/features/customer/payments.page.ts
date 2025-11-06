@@ -38,7 +38,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface Payment {
   id: number;
@@ -63,11 +63,6 @@ interface Payment {
     CommonModule,
     FormsModule,
     IonContent,
-    IonHeader,
-    IonTitle,
-    IonToolbar,
-    IonBackButton,
-    IonButtons,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -82,7 +77,7 @@ interface Payment {
     IonSegment,
     IonSegmentButton,
     IonNote,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   templateUrl: './payments.page.html',
   styleUrls: ['./payments.page.scss'],

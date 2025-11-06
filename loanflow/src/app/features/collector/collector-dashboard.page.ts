@@ -1,10 +1,7 @@
-// Collector Dashboard Page - Ionic 8 + Tailwind Design
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -34,259 +31,620 @@ import {
 } from 'ionicons/icons';
 import { CollectorService, CollectorDailySummary, CollectorLimits } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
-import { CollectorTabsComponent } from '../../shared/components/collector-tabs.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-collector-dashboard',
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader,
-    IonToolbar,
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonButton,
     IonIcon,
-    IonBadge,
     IonSkeletonText,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    CollectorTabsComponent,
+    HeaderUtilsComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar class="bg-gradient-to-r from-blue-600 to-blue-700">
-        <div class="px-4 py-2">
-          <h1 class="text-2xl font-bold text-white">Collector Dashboard</h1>
-          <p class="text-blue-100 text-sm">{{ currentDate }}</p>
-        </div>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding bg-gray-50">
+    <ion-content [fullscreen]="true" class="main-content">
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📊</span>
+            <span class="app-title">Collector Dashboard</span>
+          </div>
+          
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Container with Padding -->
+      <div class="dashboard-container">
+
       <!-- Loading Skeleton -->
       @if (loading()) {
-        <div class="space-y-4">
-          <ion-skeleton-text animated class="h-32 rounded-lg"></ion-skeleton-text>
-          <ion-skeleton-text animated class="h-24 rounded-lg"></ion-skeleton-text>
-          <ion-skeleton-text animated class="h-24 rounded-lg"></ion-skeleton-text>
+        <div class="loading-skeletons">
+          <ion-skeleton-text animated style="height: 140px; border-radius: 14px;"></ion-skeleton-text>
+          <ion-skeleton-text animated style="height: 100px; border-radius: 14px;"></ion-skeleton-text>
+          <ion-skeleton-text animated style="height: 180px; border-radius: 14px;"></ion-skeleton-text>
         </div>
       }
 
       <!-- Dashboard Content -->
       @if (!loading() && summary()) {
-        <div class="space-y-4">
+        <div class="dashboard-content">
           <!-- Collection Progress Card -->
-          <ion-card class="m-0">
-            <ion-card-header>
-              <ion-card-title class="text-lg font-bold text-gray-800">
-                Today's Collection Progress
-              </ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="space-y-4">
-                <!-- Collection Amount -->
-                <div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-gray-600">Collected</span>
-                    <span class="text-lg font-bold text-green-600">
-                      ₱{{ summary()!.collectedToday.toLocaleString() }}
-                    </span>
-                  </div>
-                  <div class="flex justify-between items-center text-sm text-gray-500">
-                    <span>Target: ₱{{ summary()!.collectionTarget.toLocaleString() }}</span>
-                    <span>{{ collectionPercentage() }}%</span>
-                  </div>
-                  <!-- Progress Bar -->
-                  <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div 
-                      class="h-2 rounded-full transition-all"
-                      [class.bg-green-500]="collectionPercentage() >= 100"
-                      [class.bg-blue-500]="collectionPercentage() < 100"
-                      [style.width.%]="Math.min(collectionPercentage(), 100)">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Visits Progress -->
-                <div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-gray-600">Visits Completed</span>
-                    <span class="text-lg font-bold text-blue-600">
-                      {{ summary()!.visitsCompleted }} / {{ summary()!.visitsPlanned }}
-                    </span>
-                  </div>
-                  <!-- Progress Bar -->
-                  <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div 
-                      class="bg-blue-500 h-2 rounded-full transition-all"
-                      [style.width.%]="visitPercentage()">
-                    </div>
-                  </div>
+          <div class="progress-card">
+            <div class="card-title">📈 Today's Collection Progress</div>
+            
+            <!-- Collection Amount -->
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-label">Collected Today</span>
+                <span class="progress-value collected">₱{{ summary()!.collectedToday.toLocaleString() }}</span>
+              </div>
+              <div class="progress-subtext">
+                <span>Target: ₱{{ summary()!.collectionTarget.toLocaleString() }}</span>
+                <span class="percentage">{{ collectionPercentage() }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill"
+                  [class.complete]="collectionPercentage() >= 100"
+                  [style.width.%]="Math.min(collectionPercentage(), 100)">
                 </div>
               </div>
-            </ion-card-content>
-          </ion-card>
+            </div>
+
+            <!-- Visits Progress -->
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-label">Visits Completed</span>
+                <span class="progress-value visits">
+                  {{ summary()!.visitsCompleted }} / {{ summary()!.visitsPlanned }}
+                </span>
+              </div>
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill visits"
+                  [style.width.%]="visitPercentage()">
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Quick Stats Grid -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="stats-grid">
             <!-- Customers Card -->
-            <ion-card class="m-0" button (click)="navigateTo('/collector/customers')">
-              <ion-card-content class="text-center py-6">
-                <ion-icon [icon]="'person-outline'" class="text-4xl text-blue-600 mb-2"></ion-icon>
-                <div class="text-2xl font-bold text-gray-800">{{ summary()!.totalCustomers }}</div>
-                <div class="text-sm text-gray-600 mt-1">Customers</div>
-              </ion-card-content>
-            </ion-card>
+            <div class="stat-card" (click)="navigateTo('/collector/customers')">
+              <div class="stat-icon customers">👥</div>
+              <div class="stat-value">{{ summary()!.totalCustomers }}</div>
+              <div class="stat-label">Customers</div>
+            </div>
 
             <!-- Active Loans Card -->
-            <ion-card class="m-0">
-              <ion-card-content class="text-center py-6">
-                <ion-icon [icon]="'wallet-outline'" class="text-4xl text-green-600 mb-2"></ion-icon>
-                <div class="text-2xl font-bold text-gray-800">{{ summary()!.activeLoans }}</div>
-                <div class="text-sm text-gray-600 mt-1">Active Loans</div>
-              </ion-card-content>
-            </ion-card>
+            <div class="stat-card">
+              <div class="stat-icon active">💰</div>
+              <div class="stat-value">{{ summary()!.activeLoans }}</div>
+              <div class="stat-label">Active Loans</div>
+            </div>
 
             <!-- Overdue Loans Card -->
-            <ion-card class="m-0">
-              <ion-card-content class="text-center py-6">
-                <ion-icon [icon]="'alert-circle-outline'" class="text-4xl text-red-600 mb-2"></ion-icon>
-                <div class="text-2xl font-bold text-gray-800">{{ summary()!.overdueLoans }}</div>
-                <div class="text-sm text-gray-600 mt-1">Overdue</div>
-              </ion-card-content>
-            </ion-card>
+            <div class="stat-card">
+              <div class="stat-icon overdue">⚠️</div>
+              <div class="stat-value">{{ summary()!.overdueLoans }}</div>
+              <div class="stat-label">Overdue</div>
+            </div>
 
             <!-- Total Outstanding Card -->
-            <ion-card class="m-0">
-              <ion-card-content class="text-center py-6">
-                <ion-icon [icon]="'trending-up-outline'" class="text-4xl text-purple-600 mb-2"></ion-icon>
-                <div class="text-xl font-bold text-gray-800">₱{{ (summary()!.totalOutstanding / 1000).toFixed(0) }}k</div>
-                <div class="text-sm text-gray-600 mt-1">Outstanding</div>
-              </ion-card-content>
-            </ion-card>
+            <div class="stat-card">
+              <div class="stat-icon outstanding">📊</div>
+              <div class="stat-value">₱{{ (summary()!.totalOutstanding / 1000).toFixed(0) }}k</div>
+              <div class="stat-label">Outstanding</div>
+            </div>
           </div>
 
           <!-- Pending Actions -->
-          <ion-card class="m-0">
-            <ion-card-header>
-              <ion-card-title class="text-lg font-bold text-gray-800 flex items-center justify-between">
-                <span>Pending Actions</span>
-                <ion-badge color="danger">{{ totalPendingActions() }}</ion-badge>
-              </ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="space-y-3">
-                <!-- Applications -->
-                <div 
-                  class="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100"
-                  (click)="navigateTo('/collector/applications')">
-                  <div class="flex items-center gap-3">
-                    <ion-icon [icon]="'document-text-outline'" class="text-2xl text-blue-600"></ion-icon>
-                    <div>
-                      <div class="font-semibold text-gray-800">Applications</div>
-                      <div class="text-sm text-gray-600">Pending approval</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <ion-badge color="primary">{{ summary()!.pendingApplications }}</ion-badge>
-                    <ion-icon [icon]="'arrow-forward-outline'" class="text-gray-400"></ion-icon>
+          <div class="actions-card">
+            <div class="card-header">
+              <span class="card-title">⚡ Pending Actions</span>
+              <div class="badge-count">{{ totalPendingActions() }}</div>
+            </div>
+            
+            <div class="actions-list">
+              <!-- Applications -->
+              <div class="action-item applications" (click)="navigateTo('/collector/applications')">
+                <div class="action-info">
+                  <div class="action-icon">📄</div>
+                  <div>
+                    <div class="action-title">Applications</div>
+                    <div class="action-subtitle">Pending approval</div>
                   </div>
                 </div>
-
-                <!-- Disbursements -->
-                <div 
-                  class="flex items-center justify-between p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100"
-                  (click)="navigateTo('/collector/disbursements')">
-                  <div class="flex items-center gap-3">
-                    <ion-icon [icon]="'card-outline'" class="text-2xl text-green-600"></ion-icon>
-                    <div>
-                      <div class="font-semibold text-gray-800">Disbursements</div>
-                      <div class="text-sm text-gray-600">Ready to disburse</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <ion-badge color="success">{{ summary()!.pendingDisbursements }}</ion-badge>
-                    <ion-icon [icon]="'arrow-forward-outline'" class="text-gray-400"></ion-icon>
-                  </div>
-                </div>
-
-                <!-- Penalty Waivers -->
-                <div 
-                  class="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100"
-                  (click)="navigateTo('/collector/waivers')">
-                  <div class="flex items-center gap-3">
-                    <ion-icon [icon]="'time-outline'" class="text-2xl text-orange-600"></ion-icon>
-                    <div>
-                      <div class="font-semibold text-gray-800">Penalty Waivers</div>
-                      <div class="text-sm text-gray-600">Pending approval</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <ion-badge color="warning">{{ summary()!.pendingWaivers }}</ion-badge>
-                    <ion-icon [icon]="'arrow-forward-outline'" class="text-gray-400"></ion-icon>
-                  </div>
+                <div class="action-right">
+                  <div class="action-badge">{{ summary()!.pendingApplications }}</div>
+                  <ion-icon name="chevron-forward-outline" class="chevron-icon"></ion-icon>
                 </div>
               </div>
-            </ion-card-content>
-          </ion-card>
+
+              <!-- Disbursements -->
+              <div class="action-item disbursements" (click)="navigateTo('/collector/disbursements')">
+                <div class="action-info">
+                  <div class="action-icon">💳</div>
+                  <div>
+                    <div class="action-title">Disbursements</div>
+                    <div class="action-subtitle">Ready to disburse</div>
+                  </div>
+                </div>
+                <div class="action-right">
+                  <div class="action-badge">{{ summary()!.pendingDisbursements }}</div>
+                  <ion-icon name="chevron-forward-outline" class="chevron-icon"></ion-icon>
+                </div>
+              </div>
+
+              <!-- Penalty Waivers -->
+              <div class="action-item waivers" (click)="navigateTo('/collector/waivers')">
+                <div class="action-info">
+                  <div class="action-icon">⏰</div>
+                  <div>
+                    <div class="action-title">Penalty Waivers</div>
+                    <div class="action-subtitle">Pending approval</div>
+                  </div>
+                </div>
+                <div class="action-right">
+                  <div class="action-badge">{{ summary()!.pendingWaivers }}</div>
+                  <ion-icon name="chevron-forward-outline" class="chevron-icon"></ion-icon>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Collector Limits -->
           @if (limits()) {
-            <ion-card class="m-0">
-              <ion-card-header>
-                <ion-card-title class="text-lg font-bold text-gray-800">
-                  Your Limits
-                </ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <div class="space-y-3">
-                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Max Approval Amount</span>
-                    <span class="font-semibold">₱{{ limits()!.maxApprovalAmount.toLocaleString() }}</span>
-                  </div>
-                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Max Approvals/Day</span>
-                    <span class="font-semibold">{{ limits()!.maxApprovalPerDay }}</span>
-                  </div>
-                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Max Disbursement</span>
-                    <span class="font-semibold">₱{{ limits()!.maxDisbursementAmount.toLocaleString() }}</span>
-                  </div>
-                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600">Max Penalty Waiver</span>
-                    <span class="font-semibold">₱{{ limits()!.maxPenaltyWaiverAmount.toLocaleString() }} ({{ limits()!.maxPenaltyWaiverPercent }}%)</span>
-                  </div>
+            <div class="limits-card">
+              <div class="card-title">🎯 Your Limits</div>
+              
+              <div class="limits-list">
+                <div class="limit-item">
+                  <span class="limit-label">Max Approval Amount</span>
+                  <span class="limit-value">₱{{ limits()!.maxApprovalAmount.toLocaleString() }}</span>
                 </div>
-              </ion-card-content>
-            </ion-card>
+                <div class="limit-divider"></div>
+                
+                <div class="limit-item">
+                  <span class="limit-label">Max Approvals/Day</span>
+                  <span class="limit-value">{{ limits()!.maxApprovalPerDay }}</span>
+                </div>
+                <div class="limit-divider"></div>
+                
+                <div class="limit-item">
+                  <span class="limit-label">Max Disbursement</span>
+                  <span class="limit-value">₱{{ limits()!.maxDisbursementAmount.toLocaleString() }}</span>
+                </div>
+                <div class="limit-divider"></div>
+                
+                <div class="limit-item">
+                  <span class="limit-label">Max Penalty Waiver</span>
+                  <span class="limit-value">₱{{ limits()!.maxPenaltyWaiverAmount.toLocaleString() }} ({{ limits()!.maxPenaltyWaiverPercent }}%)</span>
+                </div>
+              </div>
+            </div>
           }
 
           <!-- Quick Actions -->
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <ion-button expand="block" (click)="navigateTo('/collector/visits')">
-              <ion-icon slot="start" [icon]="'location-outline'"></ion-icon>
-              Start Visit
-            </ion-button>
-            <ion-button expand="block" color="success" (click)="navigateTo('/collector/customers')">
-              <ion-icon slot="start" [icon]="'person-outline'"></ion-icon>
-              Customers
-            </ion-button>
+          <div class="quick-actions">
+            <button class="action-btn primary" (click)="navigateTo('/collector/visits')">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>Start Visit</span>
+            </button>
+            <button class="action-btn success" (click)="navigateTo('/collector/route')">
+              <ion-icon name="people-outline"></ion-icon>
+              <span>My Customers</span>
+            </button>
           </div>
         </div>
       }
+      </div>
     </ion-content>
-
-    <!-- Bottom Navigation Tabs -->
-    <app-collector-tabs />
   `,
+  styles: [`
+    /* Fixed Top Bar Styles */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .top-bar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 1rem;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .app-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: -0.01em;
+    }
+
+    /* Main Content Background */
+    .main-content {
+      --background: var(--ion-background-color, #f7f7f9);
+    }
+
+    /* Container with safe area padding */
+    .dashboard-container {
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
+    }
+
+    /* Loading Skeletons */
+    .loading-skeletons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    /* Dashboard Content */
+    .dashboard-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    /* Progress Card */
+    .progress-card {
+      background: var(--ion-card-background, white);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.04));
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1f2937);
+      margin-bottom: 0.85rem;
+    }
+
+    .progress-item {
+      margin-bottom: 1rem;
+    }
+
+    .progress-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-label {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium, #64748b);
+      font-weight: 500;
+    }
+
+    .progress-value {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .progress-value.collected {
+      color: #10b981;
+    }
+
+    .progress-value.visits {
+      color: #3b82f6;
+    }
+
+    .progress-subtext {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--ion-color-medium, #6b7280);
+      margin-bottom: 0.5rem;
+    }
+
+    .percentage {
+      font-weight: 600;
+      color: var(--ion-text-color, #1f2937);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--ion-color-light, #e5e7eb);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-fill.complete {
+      background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    }
+
+    .progress-fill.visits {
+      background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stat-card {
+      background: var(--ion-card-background, white);
+      border-radius: 14px;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.04));
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:active {
+      transform: scale(0.98);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1f2937);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium, #6b7280);
+      font-weight: 500;
+    }
+
+    /* Actions Card */
+    .actions-card {
+      background: var(--ion-card-background, white);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.04));
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.85rem;
+    }
+
+    .badge-count {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      padding: 0.25rem 0.65rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .action-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-item.applications {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    }
+
+    .action-item.applications:active {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    }
+
+    .action-item.disbursements {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    }
+
+    .action-item.disbursements:active {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    }
+
+    .action-item.waivers {
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    }
+
+    .action-item.waivers:active {
+      background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    }
+
+    .action-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .action-icon {
+      font-size: 1.75rem;
+    }
+
+    .action-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1f2937);
+    }
+
+    .action-subtitle {
+      font-size: 0.7rem;
+      color: var(--ion-color-medium, #6b7280);
+      margin-top: 0.15rem;
+    }
+
+    .action-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-badge {
+      background: var(--ion-card-background, white);
+      color: var(--ion-text-color, #1f2937);
+      padding: 0.25rem 0.65rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .chevron-icon {
+      font-size: 1.1rem;
+      color: var(--ion-color-medium, #9ca3af);
+    }
+
+    /* Limits Card */
+    .limits-card {
+      background: var(--ion-card-background, white);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.04));
+    }
+
+    .limits-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .limit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0;
+    }
+
+    .limit-label {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium, #64748b);
+      font-weight: 500;
+    }
+
+    .limit-value {
+      font-size: 0.85rem;
+      color: var(--ion-text-color, #1f2937);
+      font-weight: 700;
+    }
+
+    .limit-divider {
+      height: 1px;
+      background: var(--ion-border-color, #e5e7eb);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .action-btn ion-icon {
+      font-size: 1.1rem;
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    .action-btn.primary:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .action-btn.success:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+  `],
 })
 export class CollectorDashboardPage implements OnInit {
   private collectorService = inject(CollectorService);

@@ -15,7 +15,7 @@ import { addIcons } from 'ionicons';
 import { cashOutline, personOutline, lockClosedOutline, logInOutline, moonOutline, sunnyOutline, arrowForwardOutline, briefcaseOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-login',
@@ -29,18 +29,13 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     IonCardContent,
     IonButton,
     IonSpinner,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
     <ion-content class="login-content">
-      <!-- Floating Theme Toggle -->
-      <button class="floating-theme-btn" (click)="toggleTheme()">
-        <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-      </button>
-      
-      <!-- Floating Dev Info -->
+      <!-- Floating Theme Toggle and Dev Info -->
       <div class="floating-dev-info">
-        <app-dev-info />
+        <app-header-utils />
       </div>
       
       <div class="login-container">
@@ -924,7 +919,7 @@ export class LoginPage {
         ? await this.authService.loginAsStaff(this.email, this.password).toPromise()
         : await this.authService.loginAsCustomer(this.email, this.password).toPromise();
       
-      console.log('Login response:', response);
+      // console.log('Login response:', response);
       
       const user = this.authService.currentUser();
       console.log('Current user:', user);

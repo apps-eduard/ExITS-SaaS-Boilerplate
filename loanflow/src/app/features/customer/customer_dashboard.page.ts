@@ -36,7 +36,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface DashboardStats {
   totalLoans: number;
@@ -71,8 +71,6 @@ interface AssignedCollector {
   imports: [
     CommonModule,
     RouterLink,
-    IonHeader,
-    IonToolbar,
     IonContent,
     IonRefresher,
     IonRefresherContent,
@@ -80,34 +78,30 @@ interface AssignedCollector {
     IonIcon,
     IonBadge,
     IonSkeletonText,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-center">
+    <ion-content class="main-content" [fullscreen]="true">
+      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
+
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
             <span class="app-emoji">💼</span>
             <span class="app-title">Dashboard</span>
           </div>
           
-          <div class="toolbar-right">
-            <app-dev-info />
-            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-            </ion-button>
+          <div class="top-bar-right">
+            <app-header-utils />
             <ion-button (click)="logout()" class="icon-btn logout-btn" fill="clear" title="Logout">
               <span class="logout-emoji">⎋</span>
             </ion-button>
           </div>
         </div>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="main-content">
-      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-        <ion-refresher-content></ion-refresher-content>
-      </ion-refresher>
+      </div>
 
       <div class="dashboard-container">
   
@@ -422,48 +416,45 @@ interface AssignedCollector {
     </ion-content>
   `,
   styles: [`
-    /* ===== HEADER STYLES ===== */
-    .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --color: white;
-      --border-style: none;
-      --min-height: 64px;
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
+    /* ===== FIXED TOP BAR ===== */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding-top: env(safe-area-inset-top);
     }
 
-    .toolbar-content {
+    .top-bar-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 1rem;
-      width: 100%;
-      height: 64px;
+      padding: 0.75rem 1rem;
+      height: 56px;
     }
 
-    .toolbar-center {
+    .top-bar-left {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex: 1;
-      justify-content: center;
     }
 
-    .toolbar-right {
+    .top-bar-right {
       display: flex;
       align-items: center;
       gap: 0.25rem;
     }
 
     .app-emoji {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
 
     .app-title {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 700;
       color: white;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -478,65 +469,19 @@ interface AssignedCollector {
       width: 40px;
     }
 
-    .theme-emoji,
     .logout-emoji {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
       display: inline-flex;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
       font-weight: bold;
-    }
-
-    .logout-btn {
-      --color: rgba(255, 255, 255, 0.95);
+      color: rgba(255, 255, 255, 0.95);
     }
 
     .logout-btn:hover .logout-emoji {
       filter: drop-shadow(0 2px 8px rgba(255, 100, 100, 0.5));
     }
 
-    .header-btn {
-      --background-hover: rgba(255, 255, 255, 0.15);
-      --border-radius: 50%;
-      --padding-start: 8px;
-      --padding-end: 8px;
-    }
-
-    .tenant-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      color: white;
-    }
-
-    .tenant-icon {
-      font-size: 1.25rem;
-      opacity: 0.9;
-    }
-
-    .tenant-name {
-      font-size: 0.875rem;
-      font-weight: 600;
-      opacity: 0.95;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: white;
-    }
-
-    .user-name {
-      font-size: 0.875rem;
-      font-weight: 600;
-      opacity: 0.95;
-      margin-right: 0.25rem;
-    }
-
-    .logout-btn {
-      margin: 0;
-    }
+    /* ===== HEADER STYLES ===== (Removed - using fixed top bar now) */
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
@@ -544,7 +489,9 @@ interface AssignedCollector {
     }
 
     .dashboard-container {
-      padding: 1rem;
+      padding: 0 1rem 1rem 1rem;
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       max-width: 600px;
       margin: 0 auto;
     }
@@ -585,89 +532,85 @@ interface AssignedCollector {
     .dashboard-hero {
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
-      padding: 1rem 1rem;
-      margin-bottom: 1.5rem;
-      border-radius: 24px;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 18px;
       position: relative;
       overflow: hidden;
-      background: linear-gradient(140deg, rgba(99, 102, 241, 0.14), rgba(6, 182, 212, 0.08)), var(--ion-card-background);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(6, 182, 212, 0.08)), var(--ion-card-background);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
       transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
 
-    .dashboard-hero::before,
+    .dashboard-hero::before {
+      content: '';
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      background: rgba(99, 102, 241, 0.3);
+      top: -90px;
+      right: -80px;
+      border-radius: 999px;
+      filter: blur(50px);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
     .dashboard-hero::after {
       content: '';
       position: absolute;
+      width: 140px;
+      height: 140px;
+      background: rgba(56, 189, 248, 0.3);
+      bottom: -80px;
+      left: -60px;
       border-radius: 999px;
-      filter: blur(70px);
-      opacity: 0.45;
+      filter: blur(50px);
+      opacity: 0.4;
       pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    .dashboard-hero::before {
-      width: 260px;
-      height: 260px;
-      background: rgba(99, 102, 241, 0.4);
-      top: -150px;
-      right: -120px;
-    }
-
-    .dashboard-hero::after {
-      width: 200px;
-      height: 200px;
-      background: rgba(56, 189, 248, 0.38);
-      bottom: -130px;
-      left: -90px;
     }
 
     .dashboard-hero:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
-    }
-
-    .dashboard-hero:hover::before,
-    .dashboard-hero:hover::after {
-      opacity: 0.55;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
     }
 
     .hero-header {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       position: relative;
       z-index: 1;
     }
 
     .hero-avatar {
-      width: 54px;
-      height: 54px;
-      border-radius: 18px;
-      background: linear-gradient(160deg, rgba(59, 130, 246, 0.9), rgba(14, 165, 233, 0.85));
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(14, 165, 233, 0.85));
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
+      font-size: 1rem;
       font-weight: 700;
       color: white;
-      box-shadow: 0 12px 24px rgba(59, 130, 246, 0.35);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
       flex-shrink: 0;
     }
 
     .hero-heading {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.15rem;
       flex: 1;
       min-width: 0;
     }
 
     .hero-title {
       margin: 0;
-      font-size: 1.45rem;
+      font-size: 1.15rem;
       font-weight: 700;
       color: var(--ion-text-color);
       letter-spacing: -0.01em;
@@ -679,13 +622,14 @@ interface AssignedCollector {
 
     .hero-timestamp {
       margin: 0;
-      font-size: 0.85rem;
+      font-size: 0.7rem;
       font-weight: 500;
-      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.6);
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.55);
     }
+
     .hero-info-cards {
       display: grid;
-      gap: 0.6rem;
+      gap: 0.5rem;
       grid-template-columns: 1fr;
       position: relative;
       z-index: 1;
@@ -694,43 +638,43 @@ interface AssignedCollector {
     .info-card {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      padding: 0.7rem 0.85rem;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(12px);
+      gap: 0.5rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .info-card:hover {
       transform: translateY(-1px);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
     }
 
     .info-icon {
-      font-size: 1.2rem;
+      font-size: 1rem;
       line-height: 1;
     }
 
     .info-details {
       display: flex;
       flex-direction: column;
-      gap: 0.18rem;
+      gap: 0.1rem;
       flex: 1;
       min-width: 0;
     }
 
     .info-label {
-      font-size: 0.62rem;
+      font-size: 0.55rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.55);
+      letter-spacing: 0.1em;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.5);
     }
 
     .info-value {
-      font-size: 0.9rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--ion-text-color);
       white-space: nowrap;
@@ -739,8 +683,8 @@ interface AssignedCollector {
     }
 
     .info-meta {
-      font-size: 0.7rem;
-      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.55);
+      font-size: 0.62rem;
+      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.5);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -752,29 +696,17 @@ interface AssignedCollector {
       }
 
       .info-card {
-        padding: 0.75rem 0.95rem;
+        padding: 0.6rem 0.75rem;
       }
-    }
 
-    @media (min-width: 640px) {
-      .hero-info-cards {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      }
-    }
-
-    @media (min-width: 480px) {
       .hero-avatar {
-        width: 60px;
-        height: 60px;
-        font-size: 1.35rem;
+        width: 46px;
+        height: 46px;
+        font-size: 1.1rem;
       }
 
       .hero-title {
-        font-size: 1.6rem;
-      }
-
-      .hero-timestamp {
-        font-size: 0.9rem;
+        font-size: 1.25rem;
       }
     }
 
@@ -782,13 +714,13 @@ interface AssignedCollector {
     .insights-card {
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: 0.85rem;
       background: var(--ion-card-background);
-      border-radius: 20px;
-      padding: 1.5rem 1.25rem;
-      margin-bottom: 1.25rem;
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1rem;
       border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.18));
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
       position: relative;
       overflow: hidden;
     }
@@ -796,125 +728,92 @@ interface AssignedCollector {
     .insight-item {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
     .insight-divider {
       height: 1px;
       width: 100%;
       background: var(--ion-border-color, rgba(148, 163, 184, 0.2));
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
     .insight-ring {
-      width: 110px;
-      height: 110px;
+      width: 85px;
+      height: 85px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       background: conic-gradient(rgba(14, 165, 233, 0.85) 0 0%, rgba(148, 163, 184, 0.25) 0% 100%);
       position: relative;
+      flex-shrink: 0;
     }
 
     .ring-center {
-      width: 82px;
-      height: 82px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.2rem;
+      gap: 0.1rem;
       background: rgba(255, 255, 255, 0.9);
       color: var(--ion-text-color);
-      box-shadow: inset 0 1px 6px rgba(15, 23, 42, 0.12);
+      box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.1);
       font-weight: 700;
     }
 
     .ring-value {
-      font-size: 1.15rem;
+      font-size: 1rem;
       letter-spacing: -0.01em;
     }
 
     .ring-label {
-      font-size: 0.7rem;
+      font-size: 0.6rem;
       font-weight: 600;
       text-transform: uppercase;
       color: var(--ion-color-medium);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
     }
 
     .insight-details {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.25rem;
       color: var(--ion-text-color);
+      flex: 1;
+      min-width: 0;
     }
 
     .insight-title {
       margin: 0;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 700;
       line-height: 1.3;
     }
 
-    @media (min-width: 400px) {
-      .insight-title {
-        font-size: 0.9rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .insight-title {
-        font-size: 0.95rem;
-      }
-    }
-
     .insight-subtitle {
       margin: 0;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--ion-color-medium);
       font-weight: 500;
       line-height: 1.4;
     }
 
-    @media (min-width: 400px) {
-      .insight-subtitle {
-        font-size: 0.75rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .insight-subtitle {
-        font-size: 0.8rem;
-      }
-    }
-
     .insight-amount {
       margin: 0;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--ion-text-color);
       line-height: 1.2;
     }
 
-    @media (min-width: 400px) {
-      .insight-amount {
-        font-size: 1.1rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .insight-amount {
-        font-size: 1.15rem;
-      }
-    }
-
     .insight-icon-wrapper {
-      width: 52px;
-      height: 52px;
-      border-radius: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -924,7 +823,7 @@ interface AssignedCollector {
     }
 
     .insight-icon {
-      font-size: 1.4rem;
+      font-size: 1.2rem;
     }
 
     @media (min-width: 500px) {
@@ -976,17 +875,17 @@ interface AssignedCollector {
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.25rem;
+      gap: 0.65rem;
+      margin-bottom: 1rem;
     }
 
     .stat-card {
       background: var(--ion-card-background);
-      border-radius: 16px;
-      padding: 1.25rem;
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
       border: 1px solid var(--ion-border-color, #e5e7eb);
       transition: all 0.3s ease;
     }
@@ -999,20 +898,20 @@ interface AssignedCollector {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
 
     .stat-icon-wrapper {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .stat-icon {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
     }
 
     .stat-icon-primary {
@@ -1048,60 +947,48 @@ interface AssignedCollector {
     }
 
     .stat-badge {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 600;
-      padding: 0.25rem 0.5rem;
+      padding: 0.2rem 0.45rem;
     }
 
     .stat-value {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--ion-text-color);
-      margin: 0 0 0.25rem 0;
+      margin: 0 0 0.2rem 0;
       line-height: 1.2;
     }
 
     @media (min-width: 400px) {
       .stat-value {
-        font-size: 1.4rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .stat-value {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
       }
     }
 
     .stat-label {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--ion-color-medium);
       margin: 0;
       font-weight: 500;
       line-height: 1.3;
     }
 
-    @media (min-width: 400px) {
-      .stat-label {
-        font-size: 0.75rem;
-      }
-    }
-
     .stat-skeleton {
       width: 70%;
-      height: 24px;
+      height: 20px;
       border-radius: 6px;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
 
     .stat-decoration {
       position: absolute;
-      bottom: -10px;
-      right: -10px;
-      width: 80px;
-      height: 80px;
+      bottom: -8px;
+      right: -8px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      opacity: 0.1;
+      opacity: 0.08;
     }
 
     .stat-decoration-primary {
@@ -1203,10 +1090,10 @@ interface AssignedCollector {
     /* ===== SECTION CARD ===== */
     .section-card {
       background: var(--ion-card-background);
-      border-radius: 18px;
-      padding: 1.25rem;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
       border: 1px solid var(--ion-border-color, #e5e7eb);
     }
 
@@ -1214,32 +1101,20 @@ interface AssignedCollector {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
     .section-title {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--ion-text-color);
       margin: 0;
       line-height: 1.3;
     }
 
-    @media (min-width: 400px) {
-      .section-title {
-        font-size: 1.1rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .section-title {
-        font-size: 1.125rem;
-      }
-    }
-
     .view-all-btn {
       --color: var(--ion-color-primary);
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       font-weight: 600;
     }
 
@@ -1247,17 +1122,17 @@ interface AssignedCollector {
     .actions-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 0.75rem;
+      gap: 0.6rem;
     }
 
     .action-btn {
       background: var(--ion-card-background);
       border: 2px solid;
-      border-radius: 14px;
-      padding: 1rem;
+      border-radius: 12px;
+      padding: 0.75rem 0.85rem;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       cursor: pointer;
       transition: all 0.3s ease;
       text-align: left;
@@ -1305,9 +1180,9 @@ interface AssignedCollector {
     }
 
     .action-icon-wrapper {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1315,7 +1190,7 @@ interface AssignedCollector {
     }
 
     .action-icon {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       color: white;
     }
 
@@ -1341,26 +1216,14 @@ interface AssignedCollector {
 
     .action-label {
       flex: 1;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--ion-text-color);
       line-height: 1.3;
     }
 
-    @media (min-width: 400px) {
-      .action-label {
-        font-size: 0.9rem;
-      }
-    }
-
-    @media (min-width: 500px) {
-      .action-label {
-        font-size: 0.95rem;
-      }
-    }
-
     .action-arrow {
-      font-size: 1.125rem;
+      font-size: 1rem;
       color: var(--ion-color-medium);
       opacity: 0.6;
       transition: all 0.3s ease;

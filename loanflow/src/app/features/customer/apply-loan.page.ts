@@ -25,7 +25,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface LoanProduct {
   id: number;
@@ -51,45 +51,32 @@ interface LoanProduct {
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader,
-    IonToolbar,
     IonContent,
-    IonButton,
     IonIcon,
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-left">
-            <ion-button (click)="goBack()" class="icon-btn back-btn" fill="clear" title="Go Back">
-              <span class="back-emoji">◄</span>
-            </ion-button>
-          </div>
-          
-          <div class="toolbar-center">
+    <ion-content [fullscreen]="true" class="main-content">
+      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
+
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
             <span class="app-emoji">💳</span>
             <span class="app-title">Apply for Loan</span>
           </div>
           
-          <div class="toolbar-right">
-            <app-dev-info />
-            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-            </ion-button>
+          <div class="top-bar-right">
+            <app-header-utils />
           </div>
         </div>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="main-content">
-      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-        <ion-refresher-content></ion-refresher-content>
-      </ion-refresher>
+      </div>
 
       <div class="products-container">
         <!-- Header Section -->
@@ -154,7 +141,7 @@ interface LoanProduct {
                   </div>
                   <div class="highlight-chip">
                     <span class="chip-emoji">📈</span>
-                    <span class="chip-text">{{ product.interestRate }}% monthly</span>
+                    <span class="chip-text">{{ product.interestRate }}% monthly ({{ product.interestType || 'flat' }})</span>
                   </div>
                   <div class="highlight-chip">
                     <span class="chip-emoji">🕒</span>
@@ -172,6 +159,23 @@ interface LoanProduct {
                       <span class="chip-text">{{ formatFrequency(product.paymentFrequency) }} payments</span>
                     </div>
                   }
+                </div>
+
+                <!-- Example Calculation Preview -->
+                <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mt-3">
+                  <div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Example (₱{{ formatCurrency(product.minAmount) }} for {{ Math.round(product.minTerm / 30) }} months)</div>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div class="text-gray-500">Processing Fee ({{ product.processingFee }}%)</div>
+                      <div class="font-medium">₱{{ formatCurrency(product.minAmount * (product.processingFee / 100)) }}</div>
+                    </div>
+                    @if (product.platformFee && product.platformFee > 0) {
+                      <div>
+                        <div class="text-gray-500">Platform Fee</div>
+                        <div class="font-medium">₱{{ formatCurrency(product.platformFee * Math.round(product.minTerm / 30)) }}</div>
+                      </div>
+                    }
+                  </div>
                 </div>
 
                 @if (product.processingFee > 0 || (product.platformFee && product.platformFee > 0)) {
@@ -246,7 +250,63 @@ interface LoanProduct {
     </ion-content>
   `,
   styles: [`
-    /* ===== HEADER STYLES ===== */
+    /* ===== FIXED TOP BAR ===== */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding-top: env(safe-area-inset-top);
+    }
+
+    .top-bar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      height: 56px;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .app-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+      --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)), var(--ion-background-color);
+    }
+
+    .products-container {
+      padding: 0 1rem 1rem 1rem;
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+      max-width: 600px;
+      margin: 0 auto;
+    }
     .custom-toolbar {
       --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       --color: white;

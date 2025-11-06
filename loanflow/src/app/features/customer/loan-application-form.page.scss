@@ -1,82 +1,60 @@
-/* ===== CUSTOM TOOLBAR ===== */
-.custom-toolbar {
-  --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --color: white;
-  --border-style: none;
-  --min-height: 64px;
-  --padding-top: 0;
-  --padding-bottom: 0;
-  --padding-start: 0;
-  --padding-end: 0;
+/* ===== FIXED TOP BAR ===== */
+.fixed-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding-top: env(safe-area-inset-top);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.toolbar-content {
+.top-bar-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 56px;
   padding: 0 1rem;
-  width: 100%;
-  height: 64px;
 }
 
-.toolbar-left,
-.toolbar-right {
+.top-bar-left {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  flex: 0 0 auto;
+  gap: 0.75rem;
+  flex: 1;
 }
 
-.toolbar-center {
+.top-bar-right {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
-  justify-content: center;
 }
 
 .app-emoji {
-  font-size: 1.75rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .app-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  letter-spacing: -0.02em;
-}
-
-.icon-btn {
-  --padding-start: 8px;
-  --padding-end: 8px;
-  margin: 0;
-  height: 40px;
-  width: 40px;
-}
-
-.back-emoji,
-.theme-emoji {
-  font-size: 1.5rem;
-  display: inline-flex;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-}
-
-.back-emoji {
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.back-btn {
-  --color: rgba(255, 255, 255, 0.95);
-}
-
-.back-btn:hover .back-emoji {
-  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.6));
+  letter-spacing: -0.01em;
 }
 
 /* ===== MAIN CONTENT ===== */
+.main-content {
+  --background: linear-gradient(to bottom, #f7f7f9 0%, #eeeef2 100%);
+}
+
+.application-form-container {
+  padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+  padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 ion-content {
   --background: linear-gradient(180deg, rgba(236, 233, 252, 0.9) 0%, rgba(255, 255, 255, 0.95) 35%, var(--ion-background-color) 100%);
   --padding-top: 0.75rem;

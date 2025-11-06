@@ -26,7 +26,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { TenantService, Tenant } from '../../core/services/tenant.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-register',
@@ -43,7 +43,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     IonIcon,
     IonSelect,
     IonSelectOption,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
     <ion-content class="register-content">
@@ -52,14 +52,9 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
         <span class="back-emoji">←</span>
       </button>
       
-      <!-- Floating Theme Toggle -->
-      <button class="floating-theme-btn" (click)="toggleTheme()">
-        <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-      </button>
-      
-      <!-- Floating Dev Info -->
+      <!-- Floating Theme Toggle and Dev Info -->
       <div class="floating-dev-info">
-        <app-dev-info />
+        <app-header-utils />
       </div>
       
       <div class="register-container">

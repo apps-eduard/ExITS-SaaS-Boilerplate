@@ -48,12 +48,27 @@ export interface CollectorApplication {
   id: number;
   applicationNumber: string;
   customerId: number;
-  customerName: string;
-  loanProductName: string;
+  loanProductId: number;
+  // API returns these fields from JOIN
+  customerFirstName?: string;
+  customerLastName?: string;
+  customerPhone?: string;
+  productName?: string;
+  // Fallback fields (if API changes)
+  customerName?: string;
+  loanProductName?: string;
+  Customer?: {
+    firstName: string;
+    lastName: string;
+  };
+  LoanProduct?: {
+    name: string;
+  };
   requestedAmount: number;
   requestedTermDays: number;
   status: string;
-  submittedAt: string;
+  submittedAt?: string;
+  createdAt?: string;
 }
 
 export interface ApproveApplicationDto {
@@ -78,6 +93,18 @@ export interface PendingDisbursement {
   platformFee: number;
   netDisbursement: number;
   approvedAt: string;
+  applicationId?: number;
+  applicationNumber?: string;
+  loanProductId?: number;
+  interestRate?: number;
+  interestType?: string;
+  interestAmount?: number;
+  totalRepayable?: number;
+  termDays?: number;
+  termMonths?: number;
+  paymentFrequency?: string;
+  status?: string;
+  type?: 'loan' | 'application';
 }
 
 export interface DisburseDto {
@@ -302,7 +329,7 @@ export class CollectorService {
     dto: DisburseDto
   ): Observable<any> {
     return this.apiService.post(
-      `money-loan/collectors/${collectorId}/disbursements/${loanId}`,
+      `money-loan/collectors/${collectorId}/loans/${loanId}/disburse`,
       dto
     );
   }

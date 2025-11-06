@@ -112,13 +112,13 @@ export class AuthService {
             user: userData,
             expiresIn: response.data.expiresIn || response.data.expires_in || 3600
           } as AuthResponse;
-          console.log('Mapped staff response:', mapped);
+          // console.log('Mapped staff response:', mapped);
           return mapped;
         }
         return response as AuthResponse;
       }),
       tap((response) => {
-        console.log('Setting staff tokens');
+        // console.log('Setting staff tokens');
         this.setTokens(response);
         this.currentUserSubject.next(response.user);
         this.isAuthenticatedSubject.next(true);
@@ -314,5 +314,29 @@ export class AuthService {
   hasRole(role: string): boolean {
     const user = this.getCurrentUser();
     return user ? user.role === role : false;
+  }
+
+  // Method to update current user (called after profile update)
+  updateCurrentUser(updates: Partial<User>): void {
+    const currentUser = this.currentUserSubject.value;
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...updates };
+      this.currentUserSubject.next(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      Preferences.set({ key: 'currentUser', value: JSON.stringify(updatedUser) });
+    }
+  }
+
+  // Method to refresh current user from localStorage
+  refreshCurrentUser(): void {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        this.currentUserSubject.next(user);
+      } catch (e) {
+        console.error('Failed to parse current user:', e);
+      }
+    }
   }
 }

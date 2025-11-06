@@ -36,7 +36,7 @@ import {
 } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -47,11 +47,6 @@ import { environment } from '../../../environments/environment';
     CommonModule,
     FormsModule,
     IonContent,
-    IonHeader,
-    IonTitle,
-    IonToolbar,
-    IonBackButton,
-    IonButtons,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -65,19 +60,24 @@ import { environment } from '../../../environments/environment';
     IonSegment,
     IonSegmentButton,
     IonIcon,
-    DevInfoComponent,
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/customer/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Complete Your Profile</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <ion-content [fullscreen]="true" class="profile-content">
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">👤</span>
+            <span class="app-title">Profile</span>
+          </div>
+          
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
 
-    <ion-content [fullscreen]="true">
       <div class="profile-container">
         <!-- Segment for tabs -->
         <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
@@ -243,19 +243,81 @@ import { environment } from '../../../environments/environment';
           </ion-card>
         </div>
       </div>
-
-      <app-dev-info></app-dev-info>
     </ion-content>
   `,
   styles: [`
+    /* ===== FIXED TOP BAR ===== */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding-top: env(safe-area-inset-top);
+    }
+
+    .top-bar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      height: 56px;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .app-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
+    }
+
+    /* ===== CONTENT ===== */
+    .profile-content {
+      --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)) , var(--ion-background-color);
+    }
+
     .profile-container {
-      padding: 16px;
+      padding: 0 0.85rem 0.85rem 0.85rem;
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       max-width: 600px;
       margin: 0 auto;
     }
 
     ion-segment {
-      margin-bottom: 16px;
+      margin-bottom: 0.85rem;
+      --background: rgba(148, 163, 184, 0.1);
+      border-radius: 12px;
+      padding: 0.3rem;
+    }
+
+    ion-segment-button {
+      --indicator-color: linear-gradient(135deg, #667eea, #764ba2);
+      --color-checked: white;
+      --indicator-box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3);
+      font-size: 0.8rem;
+      min-height: 36px;
+      font-weight: 600;
     }
 
     .tab-content {
@@ -263,57 +325,135 @@ import { environment } from '../../../environments/environment';
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     .info-text {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
+      gap: 0.5rem;
+      margin-bottom: 0.85rem;
       color: var(--ion-color-medium);
-      font-size: 14px;
+      font-size: 0.75rem;
+      padding: 0.5rem 0.65rem;
+      background: rgba(var(--ion-color-primary-rgb), 0.05);
+      border-radius: 10px;
+      border-left: 3px solid var(--ion-color-primary);
     }
 
     ion-list {
-      margin-bottom: 16px;
+      margin-bottom: 0.85rem;
+      background: transparent;
     }
 
     ion-item {
       --padding-start: 0;
       --inner-padding-end: 0;
+      --background: var(--ion-card-background);
+      --border-radius: 12px;
+      margin-bottom: 0.6rem;
+      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.15));
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    ion-item:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    ion-label {
+      font-size: 0.7rem !important;
+      font-weight: 600 !important;
+      margin-bottom: 0.3rem !important;
+      color: var(--ion-color-medium) !important;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    ion-input {
+      font-size: 0.85rem !important;
+      font-weight: 500;
     }
 
     .error-input {
       --border-color: var(--ion-color-danger) !important;
       --highlight-color-focused: var(--ion-color-danger) !important;
+      border-color: var(--ion-color-danger) !important;
     }
 
     .error-message {
       color: var(--ion-color-danger);
-      font-size: 12px;
-      margin-top: -8px;
-      margin-bottom: 12px;
-      padding-left: 16px;
+      font-size: 0.7rem;
+      margin-top: -0.4rem;
+      margin-bottom: 0.6rem;
+      padding-left: 0.85rem;
+      font-weight: 500;
     }
 
     .save-button {
-      margin-top: 16px;
-      --background: var(--ion-color-primary);
+      margin-top: 0.85rem;
+      --background: linear-gradient(135deg, #667eea, #764ba2);
+      --border-radius: 12px;
+      --box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      font-weight: 600;
+      height: 44px;
+      font-size: 0.85rem;
+      text-transform: none;
     }
 
     .skip-button {
-      margin-top: 8px;
+      margin-top: 0.5rem;
+      --border-radius: 12px;
+      height: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
     }
 
     ion-card {
-      margin-bottom: 16px;
+      margin-bottom: 0.85rem;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--ion-border-color, rgba(148, 163, 184, 0.15));
+      overflow: hidden;
+    }
+
+    ion-card-header {
+      padding: 0.85rem 1rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
     }
 
     ion-card-title {
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    ion-card-content {
+      padding: 1rem;
+    }
+
+    /* Dark mode adjustments */
+    body.dark ion-item,
+    .dark ion-item {
+      --background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .info-text,
+    .dark .info-text {
+      background: rgba(var(--ion-color-primary-rgb), 0.12);
+    }
+
+    body.dark ion-card,
+    .dark ion-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark ion-card-header,
+    .dark ion-card-header {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.12));
     }
   `],
 })
@@ -445,6 +585,12 @@ export class ProfilePage implements OnInit {
         customer.phone = this.personalInfo.phone;
         localStorage.setItem('customer', JSON.stringify(customer));
       }
+
+      // Update AuthService currentUser signal
+      this.authService.updateCurrentUser({
+        firstName: this.personalInfo.firstName,
+        lastName: this.personalInfo.lastName,
+      });
 
       await this.showToast('✅ Personal information saved successfully!', 'success');
       

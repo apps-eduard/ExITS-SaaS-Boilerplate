@@ -184,8 +184,8 @@ exports.up = async function(knex) {
 
   console.log('✓ Created money_loan_collector_daily_summaries table');
 
-  // 5. Create money_loan_collector_customer_visits table
-  await knex.schema.createTable('money_loan_collector_customer_visits', table => {
+  // 5. Create money_loan_customer_visits table (used by collector daily summary queries)
+  await knex.schema.createTable('money_loan_customer_visits', table => {
     table.increments('id').primary();
     table.integer('tenant_id').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
     table.integer('collector_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
@@ -194,8 +194,8 @@ exports.up = async function(knex) {
     table.date('scheduled_date');
     table.time('scheduled_time');
     
-    table.timestamp('actual_visit_start');
-    table.timestamp('actual_visit_end');
+    table.timestamp('check_in_time'); // Used in daily summary query
+    table.timestamp('check_out_time');
     table.integer('visit_duration_minutes');
     
     // GPS verification
@@ -208,7 +208,7 @@ exports.up = async function(knex) {
     
     // Visit outcome
     table.string('visit_type', 50); // 'collection', 'follow_up', 'new_application', 'document_collection', 'dispute_resolution'
-    table.string('visit_outcome', 50); // 'payment_collected', 'promised_payment', 'not_home', 'refused', 'rescheduled'
+    table.string('status', 50).defaultTo('scheduled'); // 'scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'
     
     table.decimal('amount_collected', 15, 2).defaultTo(0);
     table.integer('payment_id').references('id').inTable('money_loan_payments');
@@ -221,12 +221,13 @@ exports.up = async function(knex) {
     table.timestamp('created_at').defaultTo(knex.fn.now());
   });
 
-  await knex.schema.raw('CREATE INDEX idx_money_loan_collector_customer_visits_date ON money_loan_collector_customer_visits(scheduled_date)');
-  await knex.schema.raw('CREATE INDEX idx_money_loan_collector_customer_visits_collector ON money_loan_collector_customer_visits(collector_id, scheduled_date)');
-  await knex.schema.raw('CREATE INDEX idx_money_loan_collector_customer_visits_customer ON money_loan_collector_customer_visits(customer_id)');
-  await knex.schema.raw('CREATE INDEX idx_money_loan_collector_customer_visits_outcome ON money_loan_collector_customer_visits(visit_outcome)');
+  await knex.schema.raw('CREATE INDEX idx_money_loan_customer_visits_date ON money_loan_customer_visits(scheduled_date)');
+  await knex.schema.raw('CREATE INDEX idx_money_loan_customer_visits_collector ON money_loan_customer_visits(collector_id, scheduled_date)');
+  await knex.schema.raw('CREATE INDEX idx_money_loan_customer_visits_customer ON money_loan_customer_visits(customer_id)');
+  await knex.schema.raw('CREATE INDEX idx_money_loan_customer_visits_status ON money_loan_customer_visits(status)');
+  await knex.schema.raw('CREATE INDEX idx_money_loan_customer_visits_check_in ON money_loan_customer_visits(check_in_time)');
 
-  console.log('✓ Created money_loan_collector_customer_visits table');
+  console.log('✓ Created money_loan_customer_visits table');
 
   // 6. Add penalty waiver fields to existing tables (if not already exist)
   const hasLoansPenaltyWaived = await knex.schema.hasColumn('money_loan_loans', 'penalty_waived_amount');
@@ -281,7 +282,7 @@ exports.down = async function(knex) {
   }
 
   // Drop tables in reverse order
-  await knex.schema.dropTableIfExists('money_loan_collector_customer_visits');
+  await knex.schema.dropTableIfExists('money_loan_customer_visits');
   await knex.schema.dropTableIfExists('money_loan_collector_daily_summaries');
   await knex.schema.dropTableIfExists('money_loan_penalty_waivers');
   await knex.schema.dropTableIfExists('money_loan_collector_action_logs');

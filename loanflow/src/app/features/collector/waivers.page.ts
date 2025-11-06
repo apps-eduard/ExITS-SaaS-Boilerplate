@@ -4,42 +4,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonRefresher,
   IonRefresherContent,
-  IonButton,
-  IonIcon,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonButtons,
-  IonBackButton,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
-  IonTextarea,
-  IonBadge,
-  IonItem,
-  IonLabel,
-  IonSkeletonText,
   IonSegment,
   IonSegmentButton,
   ToastController,
   AlertController,
 } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import {
-  timeOutline,
-  checkmarkCircleOutline,
-  closeCircleOutline,
-  alertCircleOutline,
-  addCircleOutline,
-  documentTextOutline,
-} from 'ionicons/icons';
 import { 
   CollectorService, 
   PenaltyWaiver,
@@ -47,6 +19,7 @@ import {
   AssignedCustomer,
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-collector-waivers',
@@ -54,274 +27,862 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonButton,
-    IonIcon,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    IonButtons,
-    IonBackButton,
-    IonInput,
-    IonSelect,
-    IonSelectOption,
-    IonTextarea,
-    IonBadge,
-    IonItem,
-    IonLabel,
-    IonSkeletonText,
     IonSegment,
     IonSegmentButton,
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/collector/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Penalty Waivers</ion-title>
-      </ion-toolbar>
-      <ion-toolbar>
+    <ion-content [fullscreen]="true" class="main-content">
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">⚠️</span>
+            <h1 class="app-title">Penalty Waivers</h1>
+          </div>
+          <app-header-utils></app-header-utils>
+        </div>
+
+        <!-- Segment Tabs -->
         <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
           <ion-segment-button value="pending">
-            <ion-label>Pending</ion-label>
+            <span>Pending</span>
           </ion-segment-button>
           <ion-segment-button value="request">
-            <ion-label>Request New</ion-label>
+            <span>Request New</span>
           </ion-segment-button>
         </ion-segment>
-      </ion-toolbar>
-    </ion-header>
+      </div>
 
-    <ion-content class="ion-padding">
+      <!-- Pull to Refresh -->
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Pending Waivers Tab -->
-      @if (selectedTab === 'pending') {
-        <!-- Loading State -->
-        @if (loading()) {
-          <div class="space-y-4">
-            @for (i of [1,2,3]; track i) {
-              <ion-skeleton-text animated class="h-32 rounded-lg"></ion-skeleton-text>
-            }
-          </div>
-        }
+      <!-- Content Container with Padding -->
+      <div class="waivers-container">
 
-        <!-- Empty State -->
-        @if (!loading() && pendingWaivers().length === 0) {
-          <div class="flex flex-col items-center justify-center h-full text-center p-8">
-            <ion-icon [icon]="'time-outline'" class="text-6xl text-gray-400 mb-4"></ion-icon>
-            <h2 class="text-xl font-bold text-gray-700 mb-2">No Pending Waivers</h2>
-            <p class="text-gray-500">All waiver requests have been processed</p>
-          </div>
-        }
+        <!-- PENDING TAB -->
+        @if (selectedTab === 'pending') {
+          <!-- Loading State -->
+          @if (loading()) {
+            <div class="loading-container">
+              @for (item of [1,2,3]; track item) {
+                <div class="skeleton-card"></div>
+              }
+            </div>
+          }
 
-        <!-- Waivers List -->
-        @if (!loading() && pendingWaivers().length > 0) {
-          <div class="space-y-4">
-            @for (waiver of pendingWaivers(); track waiver.id) {
-              <ion-card class="m-0">
-                <ion-card-header>
-                  <div class="flex justify-between items-start">
-                    <div>
-                      <ion-card-title class="text-base">{{ waiver.customerName }}</ion-card-title>
-                      <p class="text-sm text-gray-600 mt-1">{{ waiver.loanNumber }}</p>
-                    </div>
-                    <ion-badge [color]="getWaiverStatusColor(waiver.status)">
-                      {{ waiver.status | titlecase }}
-                    </ion-badge>
-                  </div>
-                </ion-card-header>
-
-                <ion-card-content>
-                  <div class="space-y-3">
-                    <!-- Waiver Details -->
-                    <div class="bg-orange-50 p-4 rounded-lg space-y-2">
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-700">Original Penalty</span>
-                        <span class="font-bold text-red-600">₱{{ waiver.originalPenaltyAmount.toLocaleString() }}</span>
-                      </div>
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-700">Requested Waiver</span>
-                        <span class="font-bold text-orange-600">₱{{ waiver.requestedWaiverAmount.toLocaleString() }}</span>
-                      </div>
-                      @if (waiver.approvedWaiverAmount) {
-                        <div class="flex justify-between items-center border-t border-orange-200 pt-2">
-                          <span class="font-semibold text-gray-700">Approved Amount</span>
-                          <span class="font-bold text-green-600">₱{{ waiver.approvedWaiverAmount.toLocaleString() }}</span>
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Additional Info -->
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div class="text-gray-600">Type</div>
-                        <div class="font-semibold">{{ waiver.waiveType | titlecase }}</div>
-                      </div>
-                      @if (waiver.installmentNumber) {
-                        <div>
-                          <div class="text-gray-600">Installment</div>
-                          <div class="font-semibold">#{{ waiver.installmentNumber }}</div>
-                        </div>
-                      }
-                      <div>
-                        <div class="text-gray-600">Requested</div>
-                        <div class="font-semibold">{{ formatDate(waiver.requestedAt) }}</div>
-                      </div>
-                      @if (waiver.approvedAt) {
-                        <div>
-                          <div class="text-gray-600">Approved</div>
-                          <div class="font-semibold">{{ formatDate(waiver.approvedAt) }}</div>
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Reason -->
-                    <div class="bg-gray-50 p-3 rounded">
-                      <div class="text-sm text-gray-600 mb-1">Reason</div>
-                      <div class="text-sm">{{ waiver.reason }}</div>
-                    </div>
-                  </div>
-                </ion-card-content>
-              </ion-card>
-            }
-          </div>
-        }
-      }
-
-      <!-- Request New Waiver Tab -->
-      @if (selectedTab === 'request') {
-        <div class="space-y-4">
-          <ion-card class="m-0">
-            <ion-card-header>
-              <ion-card-title class="text-base">Request Penalty Waiver</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="space-y-4">
-                <!-- Customer Selection -->
-                <ion-item>
-                  <ion-label position="stacked">Customer *</ion-label>
-                  <ion-select 
-                    [(ngModel)]="requestForm.loanId" 
-                    placeholder="Select customer loan"
-                    interface="action-sheet">
-                    @for (customer of assignedCustomers(); track customer.id) {
-                      <ion-select-option [value]="customer.id">
-                        {{ customer.firstName }} {{ customer.lastName }}
-                      </ion-select-option>
-                    }
-                  </ion-select>
-                </ion-item>
-
-                <!-- Waive Type -->
-                <ion-item>
-                  <ion-label position="stacked">Waiver Type *</ion-label>
-                  <ion-select 
-                    [(ngModel)]="requestForm.waiveType" 
-                    placeholder="Select type"
-                    interface="action-sheet">
-                    <ion-select-option value="full">Full Waiver</ion-select-option>
-                    <ion-select-option value="partial">Partial Waiver</ion-select-option>
-                  </ion-select>
-                </ion-item>
-
-                <!-- Requested Amount -->
-                <ion-item>
-                  <ion-label position="stacked">Requested Waiver Amount *</ion-label>
-                  <ion-input 
-                    type="number"
-                    [(ngModel)]="requestForm.requestedWaiverAmount"
-                    placeholder="Enter amount">
-                  </ion-input>
-                </ion-item>
-
-                <!-- Reason -->
-                <ion-item>
-                  <ion-label position="stacked">Reason *</ion-label>
-                  <ion-select 
-                    [(ngModel)]="requestForm.reason" 
-                    placeholder="Select reason"
-                    interface="action-sheet">
-                    <ion-select-option value="Financial hardship">Financial hardship</ion-select-option>
-                    <ion-select-option value="Medical emergency">Medical emergency</ion-select-option>
-                    <ion-select-option value="Natural disaster">Natural disaster</ion-select-option>
-                    <ion-select-option value="Job loss">Job loss</ion-select-option>
-                    <ion-select-option value="Good payment history">Good payment history</ion-select-option>
-                    <ion-select-option value="System error">System error</ion-select-option>
-                    <ion-select-option value="Other">Other</ion-select-option>
-                  </ion-select>
-                </ion-item>
-
-                <!-- Additional Notes -->
-                <ion-item>
-                  <ion-label position="stacked">Additional Notes</ion-label>
-                  <ion-textarea 
-                    [(ngModel)]="requestForm.notes"
-                    rows="4"
-                    placeholder="Provide detailed explanation for waiver request...">
-                  </ion-textarea>
-                </ion-item>
-
-                <!-- Info Box -->
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                  <div class="flex items-start">
-                    <ion-icon [icon]="'alert-circle-outline'" class="text-blue-500 text-xl mr-2"></ion-icon>
-                    <div class="text-sm text-blue-700">
-                      <p class="font-semibold mb-1">Auto-Approval</p>
-                      <p>Waiver requests within your limit will be automatically approved. Higher amounts require manager approval.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Submit Button -->
-                <ion-button 
-                  expand="block" 
-                  color="primary"
-                  [disabled]="!isRequestFormValid()"
-                  (click)="submitWaiverRequest()">
-                  <ion-icon slot="start" [icon]="'add-circle-outline'"></ion-icon>
-                  Submit Waiver Request
-                </ion-button>
-              </div>
-            </ion-card-content>
-          </ion-card>
-
-          <!-- Recent Requests -->
-          @if (pendingWaivers().length > 0) {
-            <div class="mt-6">
-              <h3 class="text-lg font-bold text-gray-800 mb-3">Recent Requests</h3>
-              <div class="space-y-3">
-                @for (waiver of pendingWaivers().slice(0, 3); track waiver.id) {
-                  <ion-card class="m-0">
-                    <ion-card-content>
-                      <div class="flex justify-between items-start">
-                        <div>
-                          <div class="font-bold">{{ waiver.customerName }}</div>
-                          <div class="text-sm text-gray-600">₱{{ waiver.requestedWaiverAmount.toLocaleString() }}</div>
-                        </div>
-                        <ion-badge [color]="getWaiverStatusColor(waiver.status)">
-                          {{ waiver.status | titlecase }}
-                        </ion-badge>
-                      </div>
-                    </ion-card-content>
-                  </ion-card>
-                }
+          <!-- Empty State -->
+          @else if (pendingWaivers().length === 0) {
+            <div class="empty-state">
+              <div class="empty-emoji">⚠️</div>
+              <h3 class="empty-title">No Pending Waivers</h3>
+              <p class="empty-subtitle">You don't have any waiver requests at the moment</p>
+              <div class="hint-box">
+                <div class="hint-label">💡 Quick Tip</div>
+                <div class="hint-text">Switch to "Request New" tab to submit a waiver request for your customers</div>
               </div>
             </div>
           }
-        </div>
-      }
+
+          <!-- Waivers List -->
+          @else {
+            <div class="waivers-list">
+              @for (waiver of pendingWaivers(); track waiver.id) {
+                <div class="waiver-card">
+                  <!-- Header -->
+                  <div class="waiver-header">
+                    <div>
+                      <div class="waiver-customer">{{ waiver.customerName }}</div>
+                      <div class="waiver-loan">Loan #{{ waiver.loanNumber }}</div>
+                    </div>
+                    <div class="status-badge" 
+                         [class.status-pending]="waiver.status === 'pending'"
+                         [class.status-approved]="waiver.status === 'approved' || waiver.status === 'auto_approved'"
+                         [class.status-rejected]="waiver.status === 'rejected'">
+                      {{ waiver.status === 'auto_approved' ? 'Auto-Approved' : (waiver.status | titlecase) }}
+                    </div>
+                  </div>
+
+                  <!-- Amounts -->
+                  <div class="amounts-section">
+                    <div class="amount-row">
+                      <span class="amount-label">Original Penalty</span>
+                      <span class="amount-value original">₱{{ waiver.originalPenaltyAmount.toLocaleString() }}</span>
+                    </div>
+                    <div class="amount-row">
+                      <span class="amount-label">Requested Waiver</span>
+                      <span class="amount-value waiver">₱{{ waiver.requestedWaiverAmount.toLocaleString() }}</span>
+                    </div>
+                    @if (waiver.approvedWaiverAmount) {
+                      <div class="amount-row approved-row">
+                        <span class="amount-label bold">Approved Amount</span>
+                        <span class="amount-value approved">₱{{ waiver.approvedWaiverAmount.toLocaleString() }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Details Grid -->
+                  <div class="details-grid">
+                    <div class="detail-item">
+                      <div class="detail-label">Type</div>
+                      <div class="detail-value">{{ waiver.waiveType | titlecase }}</div>
+                    </div>
+                    @if (waiver.installmentNumber) {
+                      <div class="detail-item">
+                        <div class="detail-label">Installment</div>
+                        <div class="detail-value">#{{ waiver.installmentNumber }}</div>
+                      </div>
+                    }
+                    <div class="detail-item">
+                      <div class="detail-label">Requested</div>
+                      <div class="detail-value">{{ formatDate(waiver.requestedAt) }}</div>
+                    </div>
+                    @if (waiver.approvedAt) {
+                      <div class="detail-item">
+                        <div class="detail-label">Approved</div>
+                        <div class="detail-value">{{ formatDate(waiver.approvedAt) }}</div>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Reason Box -->
+                  <div class="reason-box">
+                    <div class="reason-label">Reason</div>
+                    <div class="reason-text">{{ waiver.reason }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- REQUEST NEW TAB -->
+        @if (selectedTab === 'request') {
+          <div class="request-container">
+            <!-- Request Form Card -->
+            <div class="form-card">
+              <div class="form-header">
+                <h2 class="form-title">📝 Request Penalty Waiver</h2>
+              </div>
+
+              <!-- Customer Selection -->
+              <div class="form-field">
+                <label class="field-label">Customer <span class="required">*</span></label>
+                <div class="select-wrapper">
+                  <select 
+                    [(ngModel)]="requestForm.loanId" 
+                    class="custom-select">
+                    <option [value]="0">Select customer loan</option>
+                    @for (customer of assignedCustomers(); track customer.id) {
+                      <option [value]="customer.id">
+                        {{ customer.firstName }} {{ customer.lastName }}
+                      </option>
+                    }
+                  </select>
+                  <div class="select-arrow">▼</div>
+                </div>
+              </div>
+
+              <!-- Waive Type -->
+              <div class="form-field">
+                <label class="field-label">Waiver Type <span class="required">*</span></label>
+                <div class="select-wrapper">
+                  <select 
+                    [(ngModel)]="requestForm.waiveType" 
+                    class="custom-select">
+                    <option value="full">Full Waiver</option>
+                    <option value="partial">Partial Waiver</option>
+                  </select>
+                  <div class="select-arrow">▼</div>
+                </div>
+              </div>
+
+              <!-- Requested Amount -->
+              <div class="form-field">
+                <label class="field-label">Requested Waiver Amount <span class="required">*</span></label>
+                <input 
+                  type="number"
+                  [(ngModel)]="requestForm.requestedWaiverAmount"
+                  placeholder="Enter amount"
+                  class="custom-input">
+              </div>
+
+              <!-- Reason -->
+              <div class="form-field">
+                <label class="field-label">Reason <span class="required">*</span></label>
+                <div class="select-wrapper">
+                  <select 
+                    [(ngModel)]="requestForm.reason" 
+                    class="custom-select">
+                    <option value="">Select reason</option>
+                    <option value="Financial hardship">Financial hardship</option>
+                    <option value="Medical emergency">Medical emergency</option>
+                    <option value="Natural disaster">Natural disaster</option>
+                    <option value="Job loss">Job loss</option>
+                    <option value="Good payment history">Good payment history</option>
+                    <option value="System error">System error</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div class="select-arrow">▼</div>
+                </div>
+              </div>
+
+              <!-- Additional Notes -->
+              <div class="form-field">
+                <label class="field-label">Additional Notes</label>
+                <textarea 
+                  [(ngModel)]="requestForm.notes"
+                  rows="4"
+                  placeholder="Provide detailed explanation for waiver request..."
+                  class="custom-textarea"></textarea>
+              </div>
+
+              <!-- Info Box -->
+              <div class="info-box">
+                <div class="info-icon">ℹ️</div>
+                <div class="info-content">
+                  <div class="info-title">Auto-Approval</div>
+                  <div class="info-text">Waiver requests within your limit will be automatically approved. Higher amounts require manager approval.</div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <button 
+                class="submit-button"
+                [class.disabled]="!isRequestFormValid()"
+                [disabled]="!isRequestFormValid()"
+                (click)="submitWaiverRequest()">
+                <span class="button-icon">✓</span>
+                <span>Submit Waiver Request</span>
+              </button>
+            </div>
+
+            <!-- Recent Requests -->
+            @if (pendingWaivers().length > 0) {
+              <div class="recent-section">
+                <h3 class="recent-title">Recent Requests</h3>
+                <div class="recent-list">
+                  @for (waiver of pendingWaivers().slice(0, 3); track waiver.id) {
+                    <div class="recent-card">
+                      <div class="recent-info">
+                        <div class="recent-customer">{{ waiver.customerName }}</div>
+                        <div class="recent-amount">₱{{ waiver.requestedWaiverAmount.toLocaleString() }}</div>
+                      </div>
+                      <div class="status-badge status-small"
+                           [class.status-pending]="waiver.status === 'pending'"
+                           [class.status-approved]="waiver.status === 'approved' || waiver.status === 'auto_approved'"
+                           [class.status-rejected]="waiver.status === 'rejected'">
+                        {{ waiver.status | titlecase }}
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+      </div>
     </ion-content>
   `,
+  styles: [`
+    /* ======================
+       MAIN LAYOUT
+       ====================== */
+    .main-content {
+      --background: var(--ion-background-color, #f8fafc);
+    }
+
+    /* Fixed Top Bar */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+      padding-top: env(safe-area-inset-top);
+    }
+
+    .top-bar-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 56px;
+      padding: 0 1rem;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .app-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.01em;
+      margin: 0;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Segment Tabs */
+    ion-segment {
+      margin: 0.5rem 1rem 0.75rem 1rem;
+      --background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+    }
+
+    ion-segment-button {
+      --color: rgba(255, 255, 255, 0.7);
+      --color-checked: white;
+      --indicator-color: rgba(255, 255, 255, 0.3);
+      font-size: 0.875rem;
+      font-weight: 500;
+      min-height: 32px;
+    }
+
+    /* Main Container */
+    .waivers-container {
+      padding: calc(56px + env(safe-area-inset-top) + 3.5rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    }
+
+    /* ======================
+       LOADING STATE
+       ====================== */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .skeleton-card {
+      height: 180px;
+      background: linear-gradient(
+        90deg,
+        var(--ion-card-background, #fff) 0%,
+        var(--ion-color-light, #f4f5f8) 50%,
+        var(--ion-card-background, #fff) 100%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 14px;
+      border: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ======================
+       EMPTY STATE
+       ====================== */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .empty-emoji {
+      font-size: 4rem;
+      margin-bottom: 1.25rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .empty-subtitle {
+      font-size: 0.9375rem;
+      color: var(--ion-color-step-600, #64748b);
+      margin: 0 0 1.5rem 0;
+      line-height: 1.5;
+    }
+
+    .hint-box {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 12px;
+      padding: 1rem;
+      max-width: 280px;
+      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.15);
+    }
+
+    .hint-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 0.35rem;
+    }
+
+    .hint-text {
+      font-size: 0.8125rem;
+      color: #78350f;
+      line-height: 1.4;
+    }
+
+    /* ======================
+       WAIVER CARDS
+       ====================== */
+    .waivers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .waiver-card {
+      background: var(--ion-card-background, #fff);
+      border-radius: 14px;
+      padding: 1rem;
+      border: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+      box-shadow: 0 1px 3px var(--shadow-color, rgba(0,0,0,0.05));
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    /* Header */
+    .waiver-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .waiver-customer {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+      line-height: 1.3;
+    }
+
+    .waiver-loan {
+      font-size: 0.8125rem;
+      color: var(--ion-color-step-600, #64748b);
+      margin-top: 0.25rem;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      padding: 0.3rem 0.65rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .status-badge.status-pending {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+    }
+
+    .status-badge.status-approved {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #065f46;
+    }
+
+    .status-badge.status-rejected {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #991b1b;
+    }
+
+    .status-badge.status-small {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
+    }
+
+    /* Amounts Section */
+    .amounts-section {
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+      border-radius: 10px;
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .amount-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .amount-row.approved-row {
+      border-top: 1px solid #fed7aa;
+      padding-top: 0.65rem;
+      margin-top: 0.2rem;
+    }
+
+    .amount-label {
+      font-size: 0.8125rem;
+      color: var(--ion-color-step-700, #475569);
+    }
+
+    .amount-label.bold {
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+    }
+
+    .amount-value {
+      font-size: 0.9375rem;
+      font-weight: 700;
+    }
+
+    .amount-value.original {
+      color: #dc2626;
+    }
+
+    .amount-value.waiver {
+      color: #ea580c;
+    }
+
+    .amount-value.approved {
+      color: #16a34a;
+    }
+
+    /* Details Grid */
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--ion-color-step-600, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .detail-value {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+    }
+
+    /* Reason Box */
+    .reason-box {
+      background: var(--ion-color-light, #f8fafc);
+      border-radius: 10px;
+      padding: 0.85rem;
+    }
+
+    .reason-label {
+      font-size: 0.75rem;
+      color: var(--ion-color-step-600, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.35rem;
+    }
+
+    .reason-text {
+      font-size: 0.8125rem;
+      color: var(--ion-text-color, #1e293b);
+      line-height: 1.5;
+    }
+
+    /* ======================
+       REQUEST FORM
+       ====================== */
+    .request-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .form-card {
+      background: var(--ion-card-background, #fff);
+      border-radius: 14px;
+      padding: 1.25rem;
+      border: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+      box-shadow: 0 2px 8px var(--shadow-color, rgba(0,0,0,0.06));
+    }
+
+    .form-header {
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+    }
+
+    .form-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0;
+    }
+
+    /* Form Fields */
+    .form-field {
+      margin-bottom: 1.25rem;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+      margin-bottom: 0.5rem;
+    }
+
+    .field-label .required {
+      color: #dc2626;
+      margin-left: 0.15rem;
+    }
+
+    /* Custom Select */
+    .select-wrapper {
+      position: relative;
+    }
+
+    .custom-select {
+      width: 100%;
+      padding: 0.75rem 2.5rem 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      appearance: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .custom-select:focus {
+      outline: none;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ion-color-step-600, #64748b);
+      pointer-events: none;
+      font-size: 0.75rem;
+    }
+
+    /* Custom Input */
+    .custom-input {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      transition: all 0.2s;
+    }
+
+    .custom-input:focus {
+      outline: none;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
+    }
+
+    .custom-input::placeholder {
+      color: var(--ion-color-step-400, #94a3b8);
+    }
+
+    /* Custom Textarea */
+    .custom-textarea {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1.5px solid var(--ion-border-color, rgba(0,0,0,0.15));
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      color: var(--ion-text-color, #1e293b);
+      background: var(--ion-card-background, #fff);
+      font-family: inherit;
+      resize: vertical;
+      transition: all 0.2s;
+    }
+
+    .custom-textarea:focus {
+      outline: none;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
+    }
+
+    .custom-textarea::placeholder {
+      color: var(--ion-color-step-400, #94a3b8);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-radius: 10px;
+      padding: 0.85rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+    }
+
+    .info-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .info-content {
+      flex: 1;
+    }
+
+    .info-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 0.25rem;
+    }
+
+    .info-text {
+      font-size: 0.8125rem;
+      color: #1e3a8a;
+      line-height: 1.4;
+    }
+
+    /* Submit Button */
+    .submit-button {
+      width: 100%;
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+      transition: all 0.2s;
+    }
+
+    .submit-button:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+    }
+
+    .submit-button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .submit-button.disabled:active {
+      transform: none;
+    }
+
+    .button-icon {
+      font-size: 1.125rem;
+      line-height: 1;
+    }
+
+    /* ======================
+       RECENT REQUESTS
+       ====================== */
+    .recent-section {
+      margin-top: 1.5rem;
+    }
+
+    .recent-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0 0 0.85rem 0;
+    }
+
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .recent-card {
+      background: var(--ion-card-background, #fff);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--ion-border-color, rgba(0,0,0,0.08));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .recent-info {
+      flex: 1;
+    }
+
+    .recent-customer {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ion-text-color, #1e293b);
+      margin-bottom: 0.2rem;
+    }
+
+    .recent-amount {
+      font-size: 0.8125rem;
+      color: var(--ion-color-step-600, #64748b);
+    }
+
+    /* ======================
+       RESPONSIVE
+       ====================== */
+    @media (min-width: 768px) {
+      .waivers-container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .form-card {
+        padding: 1.5rem;
+      }
+
+      .details-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  `]
 })
 export class CollectorWaiversPage implements OnInit {
   private collectorService = inject(CollectorService);
@@ -344,17 +905,6 @@ export class CollectorWaiversPage implements OnInit {
     reason: '',
     notes: '',
   };
-
-  constructor() {
-    addIcons({
-      timeOutline,
-      checkmarkCircleOutline,
-      closeCircleOutline,
-      alertCircleOutline,
-      addCircleOutline,
-      documentTextOutline,
-    });
-  }
 
   async ngOnInit() {
     const user = this.authService.currentUser();

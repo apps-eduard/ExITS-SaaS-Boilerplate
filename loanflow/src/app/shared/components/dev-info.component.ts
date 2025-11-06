@@ -22,23 +22,21 @@ import { Location } from '@angular/common';
       (click)="showInfo()"
       class="dev-info-button"
     >
-      <ion-icon slot="icon-only" name="code-slash-outline" class="dev-icon"></ion-icon>
+      <ion-icon slot="icon-only" name="code-slash-outline"></ion-icon>
     </ion-button>
   `,
   styles: [`
     .dev-info-button {
+      --background-hover: rgba(255, 255, 255, 0.15);
+      --border-radius: 50%;
       --padding-start: 8px;
       --padding-end: 8px;
+      position: relative;
       margin: 0;
     }
     
-    .dev-icon {
-      color: var(--ion-color-primary);
+    ion-icon {
       font-size: 20px;
-    }
-    
-    ion-button::part(native) {
-      padding: 4px 8px;
     }
   `]
 })

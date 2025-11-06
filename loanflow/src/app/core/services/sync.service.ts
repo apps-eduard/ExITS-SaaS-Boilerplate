@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { ApiService } from './api.service';
 import { Network, ConnectionStatus } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 
 interface PendingSync {
   id?: number;
@@ -19,6 +20,7 @@ export class SyncService {
   private sqlite: SQLiteConnection = new SQLiteConnection(CapacitorSQLite);
   private db: SQLiteDBConnection | null = null;
   private readonly DB_NAME = 'loanflow.db';
+  private initPromise: Promise<void> | null = null;
 
   // Reactive state
   public isOnline = signal(true);
@@ -26,8 +28,19 @@ export class SyncService {
   public isSyncing = signal(false);
 
   constructor(private api: ApiService) {
-    this.initializeDatabase();
+    // Don't initialize immediately - wait for platform to be ready
     this.setupNetworkListener();
+  }
+
+  /**
+   * Ensure database is initialized (lazy initialization)
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.db) return; // Already initialized
+    if (this.initPromise) return this.initPromise; // Initialization in progress
+
+    this.initPromise = this.initializeDatabase();
+    return this.initPromise;
   }
 
   /**
@@ -35,6 +48,18 @@ export class SyncService {
    */
   private async initializeDatabase(): Promise<void> {
     try {
+      // For web platform, wait a bit to ensure jeep-sqlite is loaded
+      if (Capacitor.getPlatform() === 'web') {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if jeep-sqlite element exists
+        const jeepEl = document.querySelector('jeep-sqlite');
+        if (!jeepEl) {
+          console.warn('SyncService: jeep-sqlite element not found, SQLite disabled for this session');
+          return;
+        }
+      }
+
       // Create connection
       this.db = await this.sqlite.createConnection(
         this.DB_NAME,
@@ -64,6 +89,7 @@ export class SyncService {
       console.log('SyncService: Database initialized successfully');
     } catch (error) {
       console.error('SyncService: Failed to initialize database', error);
+      this.db = null; // Reset on error
     }
   }
 
@@ -91,8 +117,10 @@ export class SyncService {
    * Queue data for sync
    */
   async queueForSync(type: 'visit' | 'collection' | 'payment', data: any): Promise<void> {
+    await this.ensureInitialized();
+    
     if (!this.db) {
-      console.error('SyncService: Database not initialized');
+      console.warn('SyncService: Database not available, data will not be queued');
       return;
     }
 
@@ -120,6 +148,8 @@ export class SyncService {
    * Sync all pending data to server
    */
   async syncPendingData(): Promise<void> {
+    await this.ensureInitialized();
+    
     if (!this.db || !this.isOnline() || this.isSyncing()) {
       return;
     }
@@ -214,6 +244,8 @@ export class SyncService {
    * Clear all pending sync data (use with caution)
    */
   async clearPendingSync(): Promise<void> {
+    await this.ensureInitialized();
+    
     if (!this.db) return;
 
     try {

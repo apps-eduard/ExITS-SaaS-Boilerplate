@@ -2,8 +2,6 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
   IonContent,
   IonButton,
   IonIcon,
@@ -27,7 +25,7 @@ import {
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface ApplicationTimeline {
   id: number;
@@ -55,8 +53,6 @@ interface TimelineStep {
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader,
-    IonToolbar,
     IonContent,
     IonButton,
     IonIcon,
@@ -66,34 +62,24 @@ interface TimelineStep {
     IonCardContent,
     IonBadge,
     IonSpinner,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-left">
-            <ion-button (click)="goBack()" class="icon-btn back-btn" fill="clear" title="Go Back">
-              <span class="back-emoji">◄</span>
-            </ion-button>
-          </div>
-          
-          <div class="toolbar-center">
+    <ion-content [fullscreen]="true" class="main-content">
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
             <span class="app-emoji">📋</span>
             <span class="app-title">Application Status</span>
           </div>
           
-          <div class="toolbar-right">
-            <app-dev-info />
-            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-            </ion-button>
+          <div class="top-bar-right">
+            <app-header-utils />
           </div>
         </div>
-      </ion-toolbar>
-    </ion-header>
+      </div>
 
-    <ion-content class="main-content">
       <div class="timeline-container">
         @if (loading()) {
           <div class="loading-state">
@@ -199,61 +185,62 @@ interface TimelineStep {
     </ion-content>
   `,
   styles: [`
-    .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --color: white;
-      --min-height: 64px;
+    /* Fixed Top Bar Styles */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
-    .toolbar-content {
+    .top-bar-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      height: 56px;
       padding: 0 1rem;
-      height: 64px;
     }
 
-    .toolbar-left, .toolbar-right {
+    .top-bar-left {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.75rem;
+      flex: 1;
     }
 
-    .toolbar-center {
+    .top-bar-right {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex: 1;
-      justify-content: center;
     }
 
     .app-emoji {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
+      line-height: 1;
     }
 
     .app-title {
       font-size: 1.125rem;
-      font-weight: 700;
+      font-weight: 600;
       color: white;
+      letter-spacing: -0.01em;
     }
 
-    .back-emoji, .theme-emoji {
-      font-size: 1.5rem;
-    }
-
-    .back-emoji {
-      font-size: 2rem;
-      font-weight: bold;
-    }
-
+    /* Main Content Background */
     .main-content {
-      --background: linear-gradient(180deg, rgba(236, 233, 252, 0.85) 0%, rgba(255, 255, 255, 0.95) 45%, var(--ion-background-color) 100%);
+      --background: linear-gradient(to bottom, #f7f7f9 0%, #eeeef2 100%);
     }
 
+    /* Timeline Container with safe area padding */
     .timeline-container {
-      padding: 1rem;
-      max-width: 600px;
-      margin: 0 auto;
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
 
     .loading-state, .error-state {

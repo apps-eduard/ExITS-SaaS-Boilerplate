@@ -17,46 +17,64 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
   },
   
-  // Customer routes
+  // Customer routes with bottom tabs
   {
     path: 'customer',
     canActivate: [customerGuard],
+    loadComponent: () => import('./features/customer/customer-layout.component').then((m) => m.CustomerLayoutComponent),
     children: [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/customer/customer_dashboard.page').then((m) => m.CustomerDashboardPage),
       },
       {
-        path: 'profile',
-        loadComponent: () => import('./features/customer/profile.page').then((m) => m.ProfilePage),
-      },
-      {
         path: 'loans',
-        loadComponent: () => import('./features/customer/loans.page').then((m) => m.CustomerLoansPage),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/customer/loans.page').then((m) => m.CustomerLoansPage),
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/customer/loan-details.page').then((m) => m.LoanDetailsPage),
+          },
+        ],
       },
       {
-        path: 'loans/:id',
-        loadComponent: () => import('./features/customer/loan-details.page').then((m) => m.LoanDetailsPage),
-      },
-      {
-        path: 'applications/:id',
-        loadComponent: () => import('./features/customer/application-timeline.page').then((m) => m.ApplicationTimelinePage),
+        path: 'apply',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
+          },
+          {
+            path: 'form',
+            loadComponent: () => import('./features/customer/loan-application-form.page').then((m) => m.LoanApplicationFormPage),
+          },
+        ],
       },
       {
         path: 'payments',
         loadComponent: () => import('./features/customer/payments.page').then((m) => m.CustomerPaymentsPage),
       },
       {
-        path: 'apply',
-        loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
+        path: 'profile',
+        loadComponent: () => import('./features/customer/profile.page').then((m) => m.ProfilePage),
+      },
+      // Legacy routes for compatibility
+      {
+        path: 'applications/:id',
+        loadComponent: () => import('./features/customer/application-timeline.page').then((m) => m.ApplicationTimelinePage),
       },
       {
         path: 'apply-loan',
-        loadComponent: () => import('./features/customer/apply-loan.page').then((m) => m.ApplyLoanPage),
+        redirectTo: 'apply',
+        pathMatch: 'full',
       },
       {
         path: 'apply-loan/form',
-        loadComponent: () => import('./features/customer/loan-application-form.page').then((m) => m.LoanApplicationFormPage),
+        redirectTo: 'apply/form',
+        pathMatch: 'full',
       },
       {
         path: '',
@@ -66,10 +84,11 @@ export const routes: Routes = [
     ],
   },
   
-  // Collector routes
+  // Collector routes with bottom tabs
   {
     path: 'collector',
     canActivate: [collectorGuard],
+    loadComponent: () => import('./features/collector/collector-layout.component').then((m) => m.CollectorLayoutComponent),
     children: [
       {
         path: 'dashboard',
@@ -84,20 +103,22 @@ export const routes: Routes = [
         loadComponent: () => import('./features/collector/disbursements.page').then((m) => m.CollectorDisbursementsPage),
       },
       {
-        path: 'visits',
-        loadComponent: () => import('./features/collector/visits.page').then((m) => m.CollectorVisitsPage),
-      },
-      {
         path: 'waivers',
         loadComponent: () => import('./features/collector/waivers.page').then((m) => m.CollectorWaiversPage),
       },
       {
-        path: 'customers',
-        loadComponent: () => import('./features/collector/route.page').then((m) => m.CollectorRoutePage),
-      },
-      {
         path: 'route',
         loadComponent: () => import('./features/collector/route.page').then((m) => m.CollectorRoutePage),
+      },
+      // Detail pages outside tabs
+      {
+        path: 'visits',
+        loadComponent: () => import('./features/collector/visits.page').then((m) => m.CollectorVisitsPage),
+      },
+      {
+        path: 'customers',
+        redirectTo: 'route',
+        pathMatch: 'full',
       },
       {
         path: 'visit/:customerId',

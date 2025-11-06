@@ -4,9 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -16,8 +13,10 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
   IonButtons,
-  IonBackButton,
   IonModal,
   IonInput,
   IonSelect,
@@ -49,6 +48,7 @@ import {
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Geolocation } from '@capacitor/geolocation';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-collector-visits',
@@ -56,9 +56,6 @@ import { Geolocation } from '@capacitor/geolocation';
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonRefresher,
     IonRefresherContent,
@@ -68,8 +65,10 @@ import { Geolocation } from '@capacitor/geolocation';
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
     IonButtons,
-    IonBackButton,
     IonModal,
     IonInput,
     IonSelect,
@@ -78,18 +77,29 @@ import { Geolocation } from '@capacitor/geolocation';
     IonBadge,
     IonItem,
     IonLabel,
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/collector/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Customer Visits</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <ion-content [fullscreen]="true" class="main-content">
+      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
 
-    <ion-content class="ion-padding">
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📍</span>
+            <span class="app-title">Customer Visits</span>
+          </div>
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Container -->
+      <div class="visits-container">
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
@@ -205,6 +215,7 @@ import { Geolocation } from '@capacitor/geolocation';
           </div>
         }
       </div>
+      </div><!-- Close visits-container -->
 
       <!-- Check-In Modal -->
       <ion-modal [isOpen]="showCheckInModal()" (didDismiss)="closeCheckInModal()">
@@ -397,6 +408,58 @@ import { Geolocation } from '@capacitor/geolocation';
       </ion-modal>
     </ion-content>
   `,
+  styles: [`
+    .main-content {
+      --background: #f8fafc;
+    }
+
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+      padding-top: env(safe-area-inset-top);
+    }
+
+    .top-bar-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 56px;
+      padding: 0 1rem;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .app-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.01em;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .visits-container {
+      padding: calc(56px + env(safe-area-inset-top) + 0.85rem) 0.85rem calc(60px + env(safe-area-inset-bottom) + 0.85rem) 0.85rem;
+    }
+  `]
 })
 export class CollectorVisitsPage implements OnInit {
   private collectorService = inject(CollectorService);

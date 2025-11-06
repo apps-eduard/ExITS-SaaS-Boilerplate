@@ -1,28 +1,20 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar class="custom-toolbar">
-    <div class="toolbar-content">
-      <div class="toolbar-left">
-        <ion-button (click)="goBack()" class="icon-btn back-btn" fill="clear" title="Go Back">
-          <span class="back-emoji">◄</span>
-        </ion-button>
-      </div>
-      
-      <div class="toolbar-center">
+<ion-content [fullscreen]="true" class="main-content">
+  <!-- Fixed Top Bar -->
+  <div class="fixed-top-bar">
+    <div class="top-bar-content">
+      <div class="top-bar-left">
         <span class="app-emoji">💳</span>
         <span class="app-title">Apply for Loan</span>
       </div>
       
-      <div class="toolbar-right">
-        <app-dev-info />
-        <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-          <span class="theme-emoji">{{ themeService.isDark() ? '☀️' : '🌙' }}</span>
-        </ion-button>
+      <div class="top-bar-right">
+        <app-header-utils />
       </div>
     </div>
-  </ion-toolbar>
-</ion-header>
+  </div>
 
-<ion-content class="ion-padding">
+  <!-- Content Container with Padding -->
+  <div class="application-form-container">
   @if (loading()) {
     <div class="loading-container">
       <ion-spinner name="crescent"></ion-spinner>
@@ -266,4 +258,5 @@
       {{ submitting() ? 'Submitting...' : 'Submit Application' }}
     </ion-button>
   }
+  </div>
 </ion-content>

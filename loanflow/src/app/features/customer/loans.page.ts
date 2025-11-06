@@ -33,7 +33,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface Loan {
   id: number;
@@ -55,53 +55,34 @@ interface Loan {
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader,
-    IonToolbar,
     IonContent,
-    IonButton,
     IonIcon,
     IonBadge,
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
     IonChip,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-left">
-            <ion-button (click)="goBack()" class="icon-btn" fill="clear">
-              <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
-            </ion-button>
-          </div>
-          
-          <div class="toolbar-center">
-            <ion-icon name="document-text-outline" class="title-icon"></ion-icon>
-            <span class="title-text">My Loans</span>
-          </div>
-          
-          <div class="toolbar-right">
-            <!-- Dev Info (Development Only) -->
-            <app-dev-info />
-            
-            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <ion-icon 
-                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-                slot="icon-only"
-                class="theme-icon"
-              ></ion-icon>
-            </ion-button>
-          </div>
-        </div>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="main-content">
+    <ion-content [fullscreen]="true" class="main-content">
       <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
+
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📄</span>
+            <span class="app-title">My Loans</span>
+          </div>
+          
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
 
       <div class="loans-container">
         <!-- Summary Cards -->
@@ -272,92 +253,60 @@ interface Loan {
     </ion-content>
   `,
   styles: [`
-    /* ===== HEADER STYLES ===== */
-    .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea, #764ba2);
-      --color: white;
-      --border-style: none;
-      --min-height: 60px;
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
+    /* ===== FIXED TOP BAR ===== */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding-top: env(safe-area-inset-top);
     }
 
-    .toolbar-content {
+    .top-bar-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
-      width: 100%;
-      height: 60px;
-      color: white;
+      padding: 0.75rem 1rem;
+      height: 56px;
     }
 
-    .toolbar-left,
-    .toolbar-right {
+    .top-bar-left {
       display: flex;
       align-items: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 0;
+      gap: 0.5rem;
     }
 
-    .toolbar-left {
-      justify-content: flex-start;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
-    }
-
-    .toolbar-center {
+    .top-bar-right {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      flex: 0 0 auto;
+      gap: 0.25rem;
     }
 
-    .info-text {
-      font-size: 13px;
-      font-weight: 600;
-      opacity: 0.95;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .app-emoji {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
 
-    .title-icon {
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-
-    .title-text {
-      font-size: 18px;
+    .app-title {
+      font-size: 1rem;
       font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .icon-btn {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      margin: 0;
-      height: 40px;
-      width: 40px;
-    }
-
-    .icon-btn ion-icon {
-      font-size: 22px;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      letter-spacing: -0.02em;
     }
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      --background: var(--ion-background-color);
+      --background: linear-gradient(160deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.06)), var(--ion-background-color);
     }
 
     .loans-container {
-      padding: 1rem;
+      padding: 0 1rem 1rem 1rem;
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       max-width: 600px;
       margin: 0 auto;
     }
@@ -366,8 +315,8 @@ interface Loan {
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.25rem;
+      gap: 0.65rem;
+      margin-bottom: 1rem;
     }
 
     .summary-card {

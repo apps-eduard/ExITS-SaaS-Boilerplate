@@ -4,9 +4,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonRefresher,
   IonRefresherContent,
@@ -14,9 +11,12 @@ import {
   IonIcon,
   IonBadge,
   IonSkeletonText,
-  IonButtons,
   IonChip,
   IonModal,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
   IonInput,
   IonSelect,
   IonSelectOption,
@@ -56,8 +56,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
 import { CollectorTabsComponent } from '../../shared/components/collector-tabs.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface RouteCustomer {
   customerId: number;
@@ -92,9 +92,6 @@ interface CollectionStats {
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonRefresher,
     IonRefresherContent,
@@ -102,44 +99,37 @@ interface CollectionStats {
     IonIcon,
     IonBadge,
     IonSkeletonText,
-    IonButtons,
     IonModal,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
     CurrencyMaskDirective,
-    DevInfoComponent,
-    CollectorTabsComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <ion-buttons slot="start">
-          <ion-button (click)="logout()" class="header-btn">
-            <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>
-          <div class="header-title">
-            <ion-icon name="map-outline" class="title-icon"></ion-icon>
-            <span class="title-text">Route</span>
-          </div>
-        </ion-title>
-        <ion-buttons slot="end">
-          <!-- Dev Info (Development Only) -->
-          <app-dev-info />
-          
-          <ion-button (click)="themeService.toggleTheme()" class="header-btn">
-            <ion-icon [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" slot="icon-only" class="theme-icon"></ion-icon>
-          </ion-button>
-          <ion-button (click)="syncNow()" class="header-btn">
-            <ion-icon [name]="syncing() ? 'sync-outline' : 'sync-outline'" slot="icon-only" [class.animate-spin]="syncing()"></ion-icon>
-            @if (syncService.pendingSyncCount() > 0) {
-              <ion-badge color="danger" class="sync-badge">
-                {{ syncService.pendingSyncCount() }}
-              </ion-badge>
-            }
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
+    <ion-content [fullscreen]="true" class="main-content">
+      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
 
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📍</span>
+            <span class="app-title">My Route</span>
+          </div>
+          
+          <div class="top-bar-right">
+            <app-header-utils />
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Container with Padding -->
+      <div class="route-container">
+        
       <!-- Sync Status Banner -->
       @if (!syncService.isOnline()) {
         <div class="offline-banner">
@@ -147,14 +137,6 @@ interface CollectionStats {
           <span>Offline Mode - {{ syncService.pendingSyncCount() }} pending sync</span>
         </div>
       }
-    </ion-header>
-
-    <ion-content class="main-content">
-      <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-        <ion-refresher-content></ion-refresher-content>
-      </ion-refresher>
-
-      <div class="dashboard-container">
         
         <!-- User Info Header -->
         <div class="user-header">
@@ -647,11 +629,66 @@ interface CollectionStats {
         </ion-content>
       </ng-template>
     </ion-modal>
-
-    <!-- Bottom Navigation Tabs -->
-    <app-collector-tabs />
   `,
   styles: [`
+    /* Fixed Top Bar Styles */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .top-bar-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 1rem;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-emoji {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .app-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: -0.01em;
+    }
+
+    /* Main Content Background */
+    .main-content {
+      --background: linear-gradient(to bottom, #f7f7f9 0%, #eeeef2 100%);
+    }
+
+    /* Container with safe area padding */
+    .route-container {
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
     /* ===== HEADER STYLES ===== */
     .custom-toolbar {
       --background: linear-gradient(135deg, #a855f7, #6366f1);
@@ -2298,14 +2335,6 @@ export class CollectorRoutePage implements OnInit {
       } else {
         console.warn('⚠️ No customers assigned to this collector');
         this.customers.set([]);
-        
-        const toast = await this.toastController.create({
-          message: 'No customers assigned to your route today',
-          duration: 3000,
-          position: 'bottom',
-          color: 'warning'
-        });
-        await toast.present();
       }
       
       this.calculateStats();

@@ -36,7 +36,7 @@ interface DisbursementData {
     ></app-data-management-page>
 
     <!-- Disbursement Modal -->
-    <div *ngIf="showDisbursementModal()" 
+    <div *ngIf="showDisbursementModal()"
          class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <!-- Modal Header -->
@@ -46,7 +46,7 @@ interface DisbursementData {
               <span class="text-xl">💰</span>
               <h3 class="text-base font-semibold text-gray-900 dark:text-white">Disburse Loan</h3>
             </div>
-            <button 
+            <button
               (click)="closeDisbursementModal()"
               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +65,7 @@ interface DisbursementData {
             </div>
             <div class="flex justify-between text-xs">
               <span class="text-gray-600 dark:text-gray-400">Customer:</span>
-              <span class="text-gray-900 dark:text-white font-medium">{{ selectedLoan()?.customer?.fullName }}</span>
+              <span class="text-gray-900 dark:text-white font-medium">{{ getCustomerName(selectedLoan()) }}</span>
             </div>
             <div class="flex justify-between text-xs">
               <span class="text-gray-600 dark:text-gray-400">Principal Amount:</span>
@@ -87,7 +87,7 @@ interface DisbursementData {
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Disbursement Method <span class="text-red-500">*</span>
               </label>
-              <select 
+              <select
                 [(ngModel)]="disbursementData.disbursementMethod"
                 name="disbursementMethod"
                 (ngModelChange)="onDisbursementMethodChange($event)"
@@ -110,7 +110,7 @@ interface DisbursementData {
                   <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(Auto-generated)</span>
                 }
               </label>
-              <input 
+              <input
                 type="text"
                 [(ngModel)]="disbursementData.disbursementReference"
                 name="disbursementReference"
@@ -128,7 +128,7 @@ interface DisbursementData {
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Notes (Optional)
               </label>
-              <textarea 
+              <textarea
                 [(ngModel)]="disbursementData.disbursementNotes"
                 name="disbursementNotes"
                 rows="3"
@@ -236,15 +236,60 @@ export class LoanDisbursementComponent implements OnInit {
       icon: '🔢',
       sortable: true,
       type: 'text',
-      width: '15%'
+      width: '12%'
     },
     {
       key: 'customer',
       label: 'Customer',
       icon: '👤',
       type: 'text',
-      format: (value) => value?.fullName || 'N/A',
-      width: '20%'
+      format: (value, row) => {
+        // Use customer object from backend (now includes firstName, lastName)
+        if (value?.fullName && value.fullName.trim() !== '') {
+          return value.fullName;
+        }
+        // Fallback to building from firstName and lastName
+        const firstName = value?.firstName || row?.firstName || '';
+        const lastName = value?.lastName || row?.lastName || '';
+        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+        if (fullName) {
+          return fullName;
+        }
+        // Fallback to email/customerCode
+        if (value?.email) {
+          return value.email;
+        }
+        if (value?.customerCode) {
+          return value.customerCode;
+        }
+        return 'N/A';
+      },
+      width: '18%'
+    },
+    {
+      key: 'assignedEmployeeName',
+      label: 'Collector',
+      icon: '🚶',
+      type: 'text',
+      format: (value, row) => {
+        // Backend now provides assignedEmployeeName directly
+        if (value && value.trim()) {
+          return value;
+        }
+        // Check customer object as well
+        if (row?.customer?.assignedEmployeeName && row.customer.assignedEmployeeName.trim()) {
+          return row.customer.assignedEmployeeName;
+        }
+        // Check other possible field names for backward compatibility
+        if (row?.collectorName && row.collectorName.trim()) {
+          return row.collectorName;
+        }
+        if (row?.assignedCollector?.fullName && row.assignedCollector.fullName.trim()) {
+          return row.assignedCollector.fullName;
+        }
+        return 'Unassigned';
+      },
+      width: '15%'
     },
     {
       key: 'principalAmount',
@@ -254,7 +299,7 @@ export class LoanDisbursementComponent implements OnInit {
       type: 'number',
       align: 'right',
       format: (value) => `₱${this.formatCurrency(value)}`,
-      width: '15%'
+      width: '12%'
     },
     {
       key: 'interestRate',
@@ -263,7 +308,7 @@ export class LoanDisbursementComponent implements OnInit {
       type: 'text',
       align: 'center',
       format: (value, row) => `${value}% ${row?.interestType === 'flat' ? 'Flat' : 'Reducing'}`,
-      width: '12%'
+      width: '10%'
     },
     {
       key: 'loanTermMonths',
@@ -272,7 +317,7 @@ export class LoanDisbursementComponent implements OnInit {
       type: 'text',
       align: 'center',
       format: (value) => `${value} months`,
-      width: '10%'
+      width: '8%'
     },
     {
       key: 'createdAt',
@@ -282,7 +327,7 @@ export class LoanDisbursementComponent implements OnInit {
       type: 'date',
       align: 'center',
       format: (value) => this.formatDate(value),
-      width: '13%'
+      width: '11%'
     },
     {
       key: 'status',
@@ -292,7 +337,7 @@ export class LoanDisbursementComponent implements OnInit {
       align: 'center',
       getBadgeClass: (value) => this.getStatusClass(value),
       format: (value) => value?.toUpperCase().replace('_', ' ') || 'N/A',
-      width: '10%'
+      width: '9%'
     },
     {
       key: 'actions',
@@ -337,7 +382,8 @@ export class LoanDisbursementComponent implements OnInit {
     this.loanService.listLoans(tenantId.toString(), this.filterValues).subscribe({
       next: (response) => {
         console.log('📊 Loans received:', response.data);
-        console.log('📊 First loan:', response.data[0]);
+        console.log('📊 First loan FULL DATA:', JSON.stringify(response.data[0], null, 2));
+        console.log('📊 First loan customer object:', response.data[0]?.customer);
         this.loans.set(response.data);
         this.pagination.set(response.pagination);
         this.loading.set(false);
@@ -396,11 +442,11 @@ export class LoanDisbursementComponent implements OnInit {
     const loan = this.selectedLoan();
     const date = new Date();
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
-    const timeStr = date.getHours().toString().padStart(2, '0') + 
-                   date.getMinutes().toString().padStart(2, '0') + 
+    const timeStr = date.getHours().toString().padStart(2, '0') +
+                   date.getMinutes().toString().padStart(2, '0') +
                    date.getSeconds().toString().padStart(2, '0');
     const loanNumber = loan?.loanNumber || 'UNKNOWN';
-    
+
     return `CASH-${dateStr}-${timeStr}-${loanNumber}`;
   }
 
@@ -427,7 +473,7 @@ export class LoanDisbursementComponent implements OnInit {
 
     const tenantId = this.authService.getTenantId();
     const currentUser = this.authService.currentUser();
-    
+
     if (!tenantId) {
       alert('No tenant ID found');
       this.processing.set(false);
@@ -487,5 +533,37 @@ export class LoanDisbursementComponent implements OnInit {
       month: 'short',
       day: 'numeric'
     });
+  }
+
+  getCustomerName(loan: Loan | null): string {
+    if (!loan) return 'N/A';
+
+    const customer = loan.customer;
+    if (!customer) return 'N/A';
+
+    // Try fullName first (backend now populates this correctly)
+    if (customer.fullName && customer.fullName.trim() !== '') {
+      return customer.fullName;
+    }
+
+    // Build from firstName and lastName (backend now includes these)
+    const firstName = (customer as any).firstName || '';
+    const lastName = (customer as any).lastName || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+    if (fullName) {
+      return fullName;
+    }
+
+    // Fallback to email
+    if (customer.email) {
+      return customer.email;
+    }
+
+    // Fallback to customerCode
+    if (customer.customerCode) {
+      return customer.customerCode;
+    }
+
+    return 'N/A';
   }
 }

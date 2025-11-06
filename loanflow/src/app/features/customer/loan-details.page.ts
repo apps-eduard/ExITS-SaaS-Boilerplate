@@ -2,10 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
   IonContent,
-  IonBackButton,
   IonButton,
   IonIcon,
   IonBadge,
@@ -30,7 +27,7 @@ import {
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 interface LoanDetails {
   id: number;
@@ -84,46 +81,32 @@ interface Payment {
   standalone: true,
   imports: [
     CommonModule,
-  IonHeader,
-  IonToolbar,
-  IonContent,
-  IonBackButton,
+    IonContent,
     IonButton,
     IonIcon,
     IonBadge,
     IonSkeletonText,
     IonProgressBar,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="custom-toolbar">
-        <div class="toolbar-content">
-          <div class="toolbar-left">
-            <ion-back-button defaultHref="/customer/dashboard" class="icon-btn"></ion-back-button>
+    <ion-content [fullscreen]="true" class="main-content">
+      <!-- Fixed Top Bar -->
+      <div class="fixed-top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <span class="app-emoji">📋</span>
+            <span class="app-title">Loan Details</span>
           </div>
           
-          <div class="toolbar-center">
-            <span class="title-text">Loan Details</span>
-          </div>
-          
-          <div class="toolbar-right">
-            <!-- Dev Info (Development Only) -->
-            <app-dev-info />
-            
-            <ion-button (click)="toggleTheme()" class="icon-btn" fill="clear">
-              <ion-icon 
-                [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
-                slot="icon-only"
-                class="theme-icon"
-              ></ion-icon>
-            </ion-button>
+          <div class="top-bar-right">
+            <app-header-utils />
           </div>
         </div>
-      </ion-toolbar>
-    </ion-header>
+      </div>
 
-    <ion-content class="main-content">
+      <!-- Content Container with Padding -->
+      <div class="loan-details-container">
       @if (loading()) {
         <div class="loading-container">
           <div class="stat-card">
@@ -378,84 +361,66 @@ interface Payment {
           <ion-button (click)="loadLoanDetails()">Retry</ion-button>
         </div>
       }
+      </div>
     </ion-content>
   `,
   styles: [`
-    .custom-toolbar {
-      --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
-      --color: white;
-      --min-height: 60px;
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
+    /* Fixed Top Bar Styles */
+    .fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
-    .toolbar-content {
+    .top-bar-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
-      width: 100%;
-      height: 60px;
-      color: white;
+      height: 56px;
+      padding: 0 1rem;
     }
 
-    .toolbar-left,
-    .toolbar-right {
+    .top-bar-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 0.75rem;
       flex: 1;
-      min-width: 0;
     }
 
-    .toolbar-left {
-      justify-content: flex-start;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
-    }
-
-    .toolbar-center {
+    .top-bar-right {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      flex: 0 0 auto;
+      gap: 0.5rem;
     }
 
-    .info-text {
-      font-size: 13px;
+    .app-emoji {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .app-title {
+      font-size: 1.125rem;
       font-weight: 600;
-      opacity: 0.95;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      color: white;
+      letter-spacing: -0.01em;
     }
 
-    .title-text {
-      font-size: 18px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .icon-btn {
-      --color: white;
-      --padding-start: 8px;
-      --padding-end: 8px;
-      margin: 0;
-      height: 40px;
-      width: 40px;
-    }
-
-    .icon-btn ion-icon {
-      font-size: 22px;
-    }
-
+    /* Main Content Background */
     .main-content {
-      --background: var(--ion-background-color);
+      --background: linear-gradient(to bottom, #f7f7f9 0%, #eeeef2 100%);
+    }
+
+    /* Container with safe area padding */
+    .loan-details-container {
+      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
+      padding-left: 0;
+      padding-right: 0;
     }
 
     .details-container {

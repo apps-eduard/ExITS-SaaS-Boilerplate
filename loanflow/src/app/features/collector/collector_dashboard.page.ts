@@ -16,7 +16,7 @@ import { AuthService } from '@app/core/services/auth.service';
 import { NotificationService } from '@app/core/services/notification.service';
 import { ThemeService } from '@app/core/services/theme.service';
 import { Observable } from 'rxjs';
-import { DevInfoComponent } from '../../shared/components/dev-info.component';
+import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,7 +32,7 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
     IonIcon,
     IonContent,
     IonBadge,
-    DevInfoComponent
+    HeaderUtilsComponent
   ],
   template: `
     <ion-header>
@@ -49,12 +49,9 @@ import { DevInfoComponent } from '../../shared/components/dev-info.component';
         </ion-title>
         
         <ion-buttons slot="end">
-          <!-- Dev Info (Development Only) -->
-          <app-dev-info />
+          <!-- Dev Info and Theme Toggle -->
+          <app-header-utils />
           
-          <ion-button class="header-btn" (click)="themeService.toggleTheme()">
-            <ion-icon slot="icon-only" [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'"></ion-icon>
-          </ion-button>
           <ion-button class="header-btn" routerLink="/notifications">
             <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
             @if ((notifications$ | async)?.length) {

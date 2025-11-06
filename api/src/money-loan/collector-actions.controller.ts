@@ -15,6 +15,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MoneyLoanService } from './money-loan.service';
 import { CollectorAssignmentService } from './services/collector-assignment.service';
+import { CollectorPenaltyWaiversService } from './services/collector-penalty-waivers.service';
 import { ApproveLoanDto, DisburseLoanDto, CreatePaymentDto } from './dto/money-loan.dto';
 
 @Controller('money-loan/collectors/:collectorId')
@@ -23,16 +24,18 @@ export class CollectorActionsController {
   constructor(
     private moneyLoanService: MoneyLoanService,
     private collectorAssignmentService: CollectorAssignmentService,
+    private collectorPenaltyWaiversService: CollectorPenaltyWaiversService,
   ) {}
 
   /**
    * Verify collector can only access their own routes or admin/manager can access any
    */
   private verifyCollectorAccess(req: any, collectorId: number) {
-    const userId = req.user.id;
-    const permissions = req.user.permissions || [];
-    
-    const isOwnRoute = userId === collectorId;
+    const userId = req.user?.id;
+    const permissions = req.user?.permissions || [];
+
+    // Normalize comparison (userId may be string when issued from JWT)
+    const isOwnRoute = String(userId) === String(collectorId);
     const isAdmin = permissions.includes('money-loan:manage') || permissions.includes('users:read');
     
     if (!isOwnRoute && !isAdmin) {
@@ -117,8 +120,9 @@ export class CollectorActionsController {
       .count('* as count')
       .first();
 
+    // Get pending waivers
     const pendingWaivers = await knex('money_loan_penalty_waivers')
-      .where({ requested_by_collector_id: collectorId, tenant_id: tenantId, status: 'pending' })
+      .where({ requested_by: collectorId, tenant_id: tenantId, status: 'pending' })
       .count('* as count')
       .first();
 
@@ -291,26 +295,37 @@ export class CollectorActionsController {
     this.verifyCollectorAccess(req, collectorId);
 
     const tenantId = req.user.tenantId;
-    const knex = this.moneyLoanService['knexService'].instance;
-
-    const loans = await knex('money_loan_loans as mll')
-      .join('customers as c', 'mll.customer_id', 'c.id')
-      .join('money_loan_products as mlp', 'mll.loan_product_id', 'mlp.id')
-      .where('c.assigned_employee_id', collectorId)
-      .where('mll.tenant_id', tenantId)
-      .whereIn('mll.status', ['pending', 'approved'])
-      .select(
-        'mll.*',
-        'c.first_name as customerFirstName',
-        'c.last_name as customerLastName',
-        'c.phone as customerPhone',
-        'mlp.name as productName',
-      )
-      .orderBy('mll.created_at', 'desc');
+    const data = await this.moneyLoanService.getCollectorPendingDisbursements(
+      tenantId,
+      collectorId,
+    );
 
     return {
       success: true,
-      data: loans,
+      data,
+    };
+  }
+
+  /**
+   * Get pending penalty waivers requested by this collector's customers
+   */
+  @Get('waivers/pending')
+  async getPendingWaivers(
+    @Param('collectorId') collectorIdParam: string,
+    @Req() req: any,
+  ) {
+    const collectorId = parseInt(collectorIdParam);
+    this.verifyCollectorAccess(req, collectorId);
+
+    const tenantId = req.user.tenantId;
+    const data = await this.collectorPenaltyWaiversService.getPendingWaivers(
+      collectorId,
+      tenantId,
+    );
+
+    return {
+      success: true,
+      data,
     };
   }
 
