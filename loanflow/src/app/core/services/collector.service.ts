@@ -264,9 +264,9 @@ export class CollectorService {
   ): Observable<any> {
     // Map frontend DTO to backend DTO format
     const backendDto = {
-      approvedAmount: dto.approvedAmount,
-      approvedTermDays: dto.approvedTermDays,
-      interestRate: dto.approvedInterestRate, // Map approvedInterestRate to interestRate
+      approvedAmount: Number(dto.approvedAmount),
+      approvedTermDays: Number(dto.approvedTermDays),
+      interestRate: Number(dto.approvedInterestRate), // Map approvedInterestRate to interestRate
       interestType: 'flat', // Default to flat interest
       notes: dto.notes,
     };
@@ -328,9 +328,15 @@ export class CollectorService {
     loanId: number,
     dto: DisburseDto
   ): Observable<any> {
+    const backendDto = {
+      disbursementMethod: dto.disbursementMethod,
+      disbursementReference: dto.referenceNumber ?? undefined,
+      disbursementNotes: dto.notes,
+    };
+
     return this.apiService.post(
       `money-loan/collectors/${collectorId}/loans/${loanId}/disburse`,
-      dto
+      backendDto
     );
   }
 

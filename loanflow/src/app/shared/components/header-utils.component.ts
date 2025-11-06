@@ -2,9 +2,10 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { moonOutline, sunnyOutline } from 'ionicons/icons';
+import { moonOutline, sunnyOutline, logOutOutline } from 'ionicons/icons';
 import { ThemeService } from '../../core/services/theme.service';
 import { DevInfoComponent } from './dev-info.component';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * Shared header utilities component
@@ -24,6 +25,11 @@ import { DevInfoComponent } from './dev-info.component';
         [name]="themeService.isDark() ? 'sunny-outline' : 'moon-outline'" 
         slot="icon-only"
       ></ion-icon>
+    </ion-button>
+
+    <!-- Logout -->
+    <ion-button (click)="logout()" class="header-btn logout-btn">
+      <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
     </ion-button>
   `,
   styles: [`
@@ -47,11 +53,17 @@ import { DevInfoComponent } from './dev-info.component';
 })
 export class HeaderUtilsComponent {
   public themeService = inject(ThemeService);
+  private authService = inject(AuthService);
 
   constructor() {
     addIcons({
       moonOutline,
       sunnyOutline,
+      logOutOutline,
     });
+  }
+
+  logout(): void {
+    this.authService.logout();
   }
 }

@@ -345,7 +345,7 @@ export class CollectorActionsController {
     const tenantId = req.user.tenantId;
     const loanIdNum = parseInt(loanId);
 
-    // Get loan
+    // Get loan or fallback to approved application
     const knex = this.moneyLoanService['knexService'].instance;
     const loan = await knex('money_loan_loans')
       .join('customers', 'money_loan_loans.customer_id', 'customers.id')
@@ -353,22 +353,40 @@ export class CollectorActionsController {
       .select('money_loan_loans.*', 'customers.assigned_employee_id')
       .first();
 
+    let application: any = null;
+
     if (!loan) {
-      throw new NotFoundException('Loan not found');
+      application = await knex('money_loan_applications')
+        .where({ id: loanIdNum, tenant_id: tenantId, status: 'approved' })
+        .first();
+
+      if (!application) {
+        throw new NotFoundException('Loan not found');
+      }
     }
+
+  const customerId = loan?.customerId ?? application?.customerId ?? application?.customer_id;
 
     // Verify customer is assigned to this collector
     await this.collectorAssignmentService.verifyCustomerAccess(
-      loan.customerId,
+      customerId,
       collectorId,
       tenantId,
     );
+
+    const rawPrincipalAmount = loan?.principalAmount
+      ?? application?.approvedAmount
+      ?? application?.approved_amount
+      ?? application?.requestedAmount
+      ?? application?.requested_amount
+      ?? 0;
+    const principalAmount = Number(rawPrincipalAmount) || 0;
 
     // Check disbursement limits
     const limitCheck = await this.collectorAssignmentService.canDisburse(
       collectorId,
       tenantId,
-      loan.principalAmount,
+      principalAmount,
     );
 
     if (!limitCheck.canDisburse) {
@@ -387,10 +405,10 @@ export class CollectorActionsController {
     await this.collectorAssignmentService.logAction({
       tenantId,
       collectorId,
-      customerId: loan.customerId,
+      customerId,
       actionType: 'disburse_loan',
-      loanId: loanIdNum,
-      amount: loan.principalAmount,
+      loanId: disbursedLoan?.id ?? loanIdNum,
+      amount: principalAmount,
       status: 'success',
     });
 

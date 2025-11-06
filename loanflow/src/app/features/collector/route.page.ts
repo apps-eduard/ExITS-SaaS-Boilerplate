@@ -24,7 +24,8 @@ import {
   IonLabel,
   IonList,
   ToastController,
-  ModalController
+  ModalController,
+  ViewWillEnter
 } from '@ionic/angular/standalone';
 import { CurrencyMaskDirective } from '../../shared/directives/currency-mask.directive';
 import { addIcons } from 'ionicons';
@@ -1979,7 +1980,7 @@ interface CollectionStats {
     }
   `]
 })
-export class CollectorRoutePage implements OnInit {
+export class CollectorRoutePage implements OnInit, ViewWillEnter {
   @ViewChild('partialAmountInput') partialAmountInput?: ElementRef<HTMLInputElement>;
 
   loading = signal(false);
@@ -2048,7 +2049,11 @@ export class CollectorRoutePage implements OnInit {
 
   ngOnInit() {
     this.currentUser.set(this.authService.currentUser());
-    this.loadRouteData();
+  }
+
+  async ionViewWillEnter() {
+    this.currentUser.set(this.authService.currentUser());
+    await this.loadRouteData();
   }
 
   isExpanded(loanId: number) {

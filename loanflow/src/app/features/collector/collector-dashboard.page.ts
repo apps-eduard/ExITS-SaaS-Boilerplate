@@ -28,6 +28,7 @@ import {
   cardOutline,
   refreshOutline,
   arrowForwardOutline,
+  chevronForwardOutline,
 } from 'ionicons/icons';
 import { CollectorService, CollectorDailySummary, CollectorLimits } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -678,6 +679,7 @@ export class CollectorDashboardPage implements OnInit {
       cardOutline,
       refreshOutline,
       arrowForwardOutline,
+      chevronForwardOutline,
     });
   }
 
