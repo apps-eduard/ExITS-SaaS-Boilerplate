@@ -1,14 +1,21 @@
-import { Component, OnInit, signal, inject, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, signal, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { MoneyloanApplicationService } from '../../shared/services/moneyloan-application.service';
-import { LoanCalculatorService } from '../../shared/services/loan-calculator.service';
+import { LoanService } from '../../shared/services/loan.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { ComponentPathService } from '../../../../../core/services/component-path.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { ConfirmationService } from '../../../../../core/services/confirmation.service';
 import { CurrencyMaskDirective } from '../../../../../shared/directives/currency-mask.directive';
+import {
+  LoanCalculationPreview,
+  LoanCalculationRequest,
+  LoanInterestType,
+  PaymentFrequency,
+} from '../../shared/models/loan-calculation.model';
 import {
   DataManagementPageComponent,
   StatCard,
@@ -210,6 +217,15 @@ interface LoanApplication {
             </div>
 
             <!-- Payment Summary - Final Design -->
+            @if (loanPreviewLoading()) {
+              <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                ⏳ Calculating preview…
+              </div>
+            } @else if (loanPreviewError()) {
+              <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded px-3 py-2 text-xs text-red-700 dark:text-red-300">
+                ⚠️ {{ loanPreviewError() }}
+              </div>
+            }
             <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-700 p-2.5">
               <h3 class="text-xs font-bold text-gray-900 dark:text-white mb-2">Payment Summary</h3>
               
@@ -512,14 +528,17 @@ interface LoanApplication {
   `,
   styles: []
 })
-export class LoanApplicationsComponent implements OnInit, AfterViewInit {
+export class LoanApplicationsComponent implements OnInit, AfterViewInit, OnDestroy {
   private applicationService = inject(MoneyloanApplicationService);
-  private calculatorService = inject(LoanCalculatorService);
+  private loanService = inject(LoanService);
   private authService = inject(AuthService);
   private componentPathService = inject(ComponentPathService);
   private toastService = inject(ToastService);
   private confirmationService = inject(ConfirmationService);
   private http = inject(HttpClient);
+  private previewSubscription?: Subscription;
+  private previewTimer?: ReturnType<typeof setTimeout>;
+  private lastPreviewKey: string | null = null;
 
   @ViewChild('notesTextarea') notesTextarea?: ElementRef<HTMLTextAreaElement>;
 
@@ -533,6 +552,8 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
   selectedApplication = signal<LoanApplication | null>(null);
   amountError = signal<string>('');
   notesError = signal<string>('');
+  loanPreviewLoading = signal(false);
+  loanPreviewError = signal<string | null>(null);
   private tenantId: string | number = '';
 
   approvalData = {
@@ -1162,40 +1183,72 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
 
   calculateLoanAmounts(): void {
     const app = this.selectedApplication();
-    if (!app) return;
-
-    const amount = Number(this.approvalData.approved_amount) || 0;
-    const termDays = Number(this.approvalData.approved_term_days) || 0;
-    const interestRate = Number(this.approvalData.approved_interest_rate) || 0;
-
-    if (amount <= 0 || termDays <= 0 || interestRate <= 0) {
-      this.approvalData.calculated_interest = 0;
-      this.approvalData.calculated_total = 0;
-      this.approvalData.calculated_processing_fee = 0;
-      this.approvalData.calculated_platform_fee = 0;
-      this.approvalData.calculated_net_proceeds = 0;
+    if (!app) {
+      this.resetCalculatedFields();
+      this.cancelPendingPreview();
+      this.loanPreviewLoading.set(false);
+      this.loanPreviewError.set(null);
+      this.lastPreviewKey = null;
       return;
     }
 
-    // Convert days to months for the calculator (assumes 30 days = 1 month)
+    const amount = Math.max(0, Number(this.approvalData.approved_amount) || 0);
+    const termDays = Math.max(0, Number(this.approvalData.approved_term_days) || 0);
+    const interestRate = Math.max(0, Number(this.approvalData.approved_interest_rate) || 0);
+
+    if (amount <= 0 || termDays <= 0 || interestRate < 0) {
+      this.resetCalculatedFields();
+      this.cancelPendingPreview();
+      this.loanPreviewLoading.set(false);
+      this.loanPreviewError.set(null);
+      this.lastPreviewKey = null;
+      return;
+    }
+
     const termMonths = Math.max(1, Math.round(termDays / 30));
+    const request = this.buildPreviewRequest(app, amount, termMonths, interestRate);
+    if (!request) {
+      this.resetCalculatedFields();
+      this.cancelPendingPreview();
+      this.loanPreviewLoading.set(false);
+      this.loanPreviewError.set(null);
+      this.lastPreviewKey = null;
+      return;
+    }
 
-    const calculation = this.calculatorService.calculate({
-      loanAmount: amount,
-      termMonths: termMonths,
-      paymentFrequency: app.product_payment_frequency as any || 'monthly',
-      interestRate: interestRate,
-      interestType: (app.product_interest_type as any) || 'flat',
-      processingFeePercentage: app.product_processing_fee_percent || 0,
-      platformFee: app.product_platform_fee || 0,
-      latePenaltyPercentage: 0
-    });
+    const cacheKey = JSON.stringify(request);
+    if (this.lastPreviewKey === cacheKey && !this.loanPreviewLoading()) {
+      return;
+    }
 
-    this.approvalData.calculated_interest = calculation.interestAmount;
-    this.approvalData.calculated_total = calculation.totalRepayable;
-    this.approvalData.calculated_processing_fee = calculation.processingFeeAmount;
-    this.approvalData.calculated_platform_fee = calculation.platformFee;
-    this.approvalData.calculated_net_proceeds = calculation.netProceeds;
+    this.lastPreviewKey = null;
+    this.cancelPendingPreview();
+    this.loanPreviewLoading.set(true);
+    this.loanPreviewError.set(null);
+
+    this.previewTimer = setTimeout(() => {
+      this.previewSubscription = this.loanService.calculateLoanPreview(request).subscribe({
+        next: (preview: LoanCalculationPreview) => {
+          const calculation = preview.calculation;
+          this.approvalData.calculated_interest = calculation.interestAmount;
+          this.approvalData.calculated_total = calculation.totalRepayable;
+          this.approvalData.calculated_processing_fee = calculation.processingFeeAmount;
+          this.approvalData.calculated_platform_fee = calculation.platformFee;
+          this.approvalData.calculated_net_proceeds = calculation.netProceeds;
+          this.loanPreviewLoading.set(false);
+          this.loanPreviewError.set(null);
+          this.lastPreviewKey = cacheKey;
+        },
+        error: (error) => {
+          console.error('Error calculating loan preview:', error);
+          this.loanPreviewLoading.set(false);
+          const message = error?.error?.message || 'Unable to calculate loan preview';
+          this.loanPreviewError.set(message);
+          this.resetCalculatedFields();
+          this.lastPreviewKey = null;
+        },
+      });
+    }, 200);
   }
 
   onApprovalDataChange(): void {
@@ -1375,6 +1428,65 @@ export class LoanApplicationsComponent implements OnInit, AfterViewInit {
         this.toastService.error('Failed to reject application: ' + (error.error?.message || error.message));
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.cancelPendingPreview();
+  }
+
+  private buildPreviewRequest(app: LoanApplication, amount: number, termMonths: number, interestRate: number): LoanCalculationRequest | null {
+    const loanAmount = Math.max(0, Number(amount) || 0);
+    if (loanAmount <= 0) {
+      return null;
+    }
+
+    const term = Math.max(1, Math.round(Number(termMonths) || 0));
+    if (!Number.isFinite(term) || term <= 0) {
+      return null;
+    }
+
+    return {
+      loanAmount,
+      termMonths: term,
+      paymentFrequency: this.normalizePaymentFrequency(app.product_payment_frequency),
+      interestRate: Math.max(0, Number(interestRate) || 0),
+      interestType: this.normalizeInterestType(app.product_interest_type),
+      processingFeePercentage: Math.max(0, Number(app.product_processing_fee_percent) || 0),
+      platformFee: Math.max(0, Number(app.product_platform_fee) || 0),
+      latePenaltyPercentage: 0,
+    };
+  }
+
+  private normalizePaymentFrequency(value?: string): PaymentFrequency {
+    const allowed: PaymentFrequency[] = ['daily', 'weekly', 'biweekly', 'monthly'];
+    const normalized = (value || 'monthly').toString().toLowerCase() as PaymentFrequency;
+    return allowed.includes(normalized) ? normalized : 'monthly';
+  }
+
+  private normalizeInterestType(value?: string): LoanInterestType {
+    const allowed: LoanInterestType[] = ['flat', 'reducing', 'compound'];
+    const normalized = (value || 'flat').toString().toLowerCase() as LoanInterestType;
+    return allowed.includes(normalized) ? normalized : 'flat';
+  }
+
+  private cancelPendingPreview(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = undefined;
+    }
+
+    if (this.previewSubscription) {
+      this.previewSubscription.unsubscribe();
+      this.previewSubscription = undefined;
+    }
+  }
+
+  private resetCalculatedFields(): void {
+    this.approvalData.calculated_interest = 0;
+    this.approvalData.calculated_total = 0;
+    this.approvalData.calculated_processing_fee = 0;
+    this.approvalData.calculated_platform_fee = 0;
+    this.approvalData.calculated_net_proceeds = 0;
   }
 
   formatNumber(value: number): string {

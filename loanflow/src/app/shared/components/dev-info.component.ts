@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonIcon, IonButton, ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -41,6 +41,8 @@ import { Location } from '@angular/common';
   `]
 })
 export class DevInfoComponent {
+  @Output() devIconClicked = new EventEmitter<void>();
+  
   constructor(
     private router: Router,
     private location: Location,
@@ -50,6 +52,9 @@ export class DevInfoComponent {
   }
 
   async showInfo() {
+    // Emit event for parent component to handle logging
+    this.devIconClicked.emit();
+    
     const currentUrl = this.router.url;
     const urlSegments = currentUrl.split('/').filter(s => s);
     const moduleName = urlSegments[0] || 'root';

@@ -58,7 +58,7 @@ export class CollectorDisbursementsService {
     // Calculate net disbursement amount
     const netDisbursementAmount = loan.principal_amount - loan.processing_fee - loan.platform_fee;
 
-    // Update loan
+    // Update loan status to 'active'
     const [updatedLoan] = await knex('money_loan_loans')
       .where({ id: loanId })
       .update({
@@ -72,6 +72,16 @@ export class CollectorDisbursementsService {
         updated_at: knex.fn.now(),
       })
       .returning('*');
+
+    // Update corresponding application status to 'disbursed'
+    if (loan.application_id) {
+      await knex('money_loan_applications')
+        .where({ id: loan.application_id, tenant_id: tenantId })
+        .update({
+          status: 'disbursed',
+          updated_at: knex.fn.now(),
+        });
+    }
 
     // Generate repayment schedule
     await this.generateRepaymentSchedule(loanId, updatedLoan, tenantId);

@@ -1,40 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonContent,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonList,
-  IonLabel,
-  IonBadge,
-  IonIcon,
   IonSpinner,
   IonRefresher,
   IonRefresherContent,
-  IonSegment,
-  IonSegmentButton,
-  IonNote,
-  IonButton,
   ToastController,
 } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import {
-  cashOutline,
-  cardOutline,
-  walletOutline,
-  receiptOutline,
-  calendarOutline,
-  checkmarkCircleOutline,
-  timeOutline,
-  closeCircleOutline,
-  refreshOutline,
-  chevronDownOutline,
-  chevronUpOutline,
-} from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -62,22 +36,11 @@ interface Payment {
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     IonContent,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    IonList,
-    IonLabel,
-    IonBadge,
-    IonIcon,
     IonSpinner,
     IonRefresher,
     IonRefresherContent,
-    IonSegment,
-    IonSegmentButton,
-    IonNote,
-    IonButton,
     CustomerTopBarComponent
   ],
   template: `
@@ -96,7 +59,7 @@ interface Payment {
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrapper purple">
-              <ion-icon name="receipt-outline"></ion-icon>
+              <span class="emoji-icon">🧾</span>
             </div>
             <div class="stat-content">
               <div class="stat-label">Total Payments</div>
@@ -106,7 +69,7 @@ interface Payment {
 
           <div class="stat-card">
             <div class="stat-icon-wrapper green">
-              <ion-icon name="wallet-outline"></ion-icon>
+              <span class="emoji-icon">💰</span>
             </div>
             <div class="stat-content">
               <div class="stat-label">Total Paid</div>
@@ -169,10 +132,16 @@ interface Payment {
                 No {{ selectedFilter() }} payments found. Try a different filter.
               }
             </p>
-            <button class="refresh-btn" (click)="refreshPayments()" [disabled]="loading()">
-              <ion-icon name="refresh-outline"></ion-icon>
-              <span>Refresh</span>
-            </button>
+            <div class="empty-actions">
+              <button class="refresh-btn" (click)="refreshPayments()" [disabled]="loading()">
+                <span class="emoji-icon-inline">🔄</span>
+                <span>Refresh</span>
+              </button>
+              <button class="dashboard-btn" routerLink="/customer/dashboard">
+                <span class="emoji-icon-inline">🏠</span>
+                <span>Back to Dashboard</span>
+              </button>
+            </div>
           </div>
         }
 
@@ -190,7 +159,7 @@ interface Payment {
                 <div class="card-header">
                   <div class="header-left">
                     <div class="payment-icon" [class]="getPaymentMethodClass(payment.paymentMethod)">
-                      <ion-icon [name]="getPaymentMethodIcon(payment.paymentMethod)"></ion-icon>
+                      <span class="emoji-icon">{{ getPaymentMethodEmoji(payment.paymentMethod) }}</span>
                     </div>
                     <div class="payment-main">
                       <div class="payment-amount">₱{{ formatCurrency(payment.amount) }}</div>
@@ -207,11 +176,11 @@ interface Payment {
                 <!-- Card Summary (Always Visible) -->
                 <div class="card-summary">
                   <div class="summary-item">
-                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span class="emoji-icon-small">🧾</span>
                     <span>{{ payment.loanNumber }}</span>
                   </div>
                   <div class="summary-item">
-                    <ion-icon name="calendar-outline"></ion-icon>
+                    <span class="emoji-icon-small">📅</span>
                     <span>{{ formatDate(payment.paymentDate) }}</span>
                   </div>
                 </div>
@@ -272,9 +241,9 @@ interface Payment {
 
                 <!-- Expand Indicator -->
                 <div class="expand-indicator">
-                  <ion-icon 
-                    [name]="expandedPaymentId() === payment.id ? 'chevron-up-outline' : 'chevron-down-outline'"
-                  ></ion-icon>
+                  <span class="emoji-icon-small">
+                    {{ expandedPaymentId() === payment.id ? '🔼' : '🔽' }}
+                  </span>
                 </div>
               </div>
             }
@@ -339,9 +308,9 @@ interface Payment {
       background: linear-gradient(135deg, #10b981, #059669);
     }
 
-    .stat-icon-wrapper ion-icon {
+    .stat-icon-wrapper .emoji-icon {
       font-size: 1.5rem;
-      color: white;
+      line-height: 1;
     }
 
     .stat-content {
@@ -458,19 +427,32 @@ interface Payment {
       max-width: 300px;
     }
 
-    .refresh-btn {
+    .empty-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .refresh-btn,
+    .dashboard-btn {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
       padding: 0.75rem 1.5rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
       border: none;
       border-radius: 10px;
       font-size: 0.9375rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
     }
 
     .refresh-btn:active {
@@ -480,6 +462,20 @@ interface Payment {
     .refresh-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    .dashboard-btn {
+      background: var(--ion-color-light);
+      color: var(--ion-text-color);
+      border: 1.5px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+    }
+
+    .dashboard-btn:active {
+      transform: scale(0.95);
+    }
+
+    .emoji-icon-inline {
+      font-size: 1rem;
     }
 
     /* Payment Cards */
@@ -551,9 +547,19 @@ interface Payment {
       background: linear-gradient(135deg, #0ea5e9, #0284c7);
     }
 
-    .payment-icon ion-icon {
+    .emoji-icon {
       font-size: 1.5rem;
-      color: white;
+      line-height: 1;
+    }
+
+    .emoji-icon-small {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .emoji-icon-inline {
+      font-size: 1.125rem;
+      line-height: 1;
     }
 
     .payment-main {
@@ -617,10 +623,6 @@ interface Payment {
       gap: 0.5rem;
       font-size: 0.8125rem;
       color: var(--ion-color-step-600, #64748b);
-    }
-
-    .summary-item ion-icon {
-      font-size: 1rem;
     }
 
     /* Card Details */
@@ -724,12 +726,6 @@ interface Payment {
       padding-top: 0.5rem;
     }
 
-    .expand-indicator ion-icon {
-      font-size: 1.25rem;
-      color: var(--ion-color-step-400, #94a3b8);
-      transition: transform 0.3s ease;
-    }
-
     /* Animations */
     @keyframes fadeInUp {
       from {
@@ -786,19 +782,6 @@ export class CustomerPaymentsPage implements OnInit {
     private toastController: ToastController,
     private router: Router
   ) {
-    addIcons({
-      cashOutline,
-      cardOutline,
-      walletOutline,
-      receiptOutline,
-      calendarOutline,
-      checkmarkCircleOutline,
-      timeOutline,
-      closeCircleOutline,
-      refreshOutline,
-      chevronDownOutline,
-      chevronUpOutline,
-    });
   }
 
   ngOnInit() {
@@ -881,19 +864,22 @@ export class CustomerPaymentsPage implements OnInit {
     this.router.navigate(['/customer/dashboard']);
   }
 
-  getPaymentMethodIcon(method: string): string {
+  getPaymentMethodEmoji(method: string): string {
     switch (method.toLowerCase()) {
       case 'cash':
-        return 'cash-outline';
+        return '💵';
       case 'card':
       case 'credit_card':
       case 'debit_card':
-        return 'card-outline';
+        return '💳';
       case 'bank_transfer':
       case 'online_banking':
-        return 'wallet-outline';
+        return '🏦';
+      case 'gcash':
+      case 'paymaya':
+        return '📱';
       default:
-        return 'receipt-outline';
+        return '💰';
     }
   }
 

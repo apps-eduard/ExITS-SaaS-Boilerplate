@@ -273,6 +273,7 @@ export class LoanCalculatorService {
     const gracePeriods = {
       daily: 0,
       weekly: 1,
+      biweekly: 2,
       monthly: 3
     };
     return gracePeriods[frequency as keyof typeof gracePeriods] || 0;
@@ -331,6 +332,7 @@ export class LoanCalculatorService {
     const days = {
       daily: 1,
       weekly: 7,
+      biweekly: 14,
       monthly: 30
     };
     return days[frequency as keyof typeof days] || 30;

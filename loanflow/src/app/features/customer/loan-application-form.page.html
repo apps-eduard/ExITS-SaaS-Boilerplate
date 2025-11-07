@@ -15,6 +15,13 @@
 
   <!-- Content Container with Padding -->
   <div class="application-form-container">
+  
+  <!-- Back Button in Content -->
+  <button class="content-back-button" (click)="goBack()">
+    <span class="back-icon">←</span>
+    <span class="back-text">Back to Products</span>
+  </button>
+
   @if (loading()) {
     <div class="loading-container">
       <ion-spinner name="crescent"></ion-spinner>
@@ -71,7 +78,10 @@
     <!-- Application Form -->
     <ion-card class="application-form">
       <ion-card-header>
-        <ion-card-title>Loan Details</ion-card-title>
+        <ion-card-title>
+          <span class="title-icon">📋</span>
+          Loan Details
+        </ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <!-- Amount Slider -->
@@ -120,9 +130,6 @@
               <ion-label slot="start">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
               <ion-label slot="end">{{ Math.round((product()!.fixedTermDays || 90) / 30) }}m</ion-label>
             </ion-range>
-            <div class="fixed-term-note">
-              ⚠️ This product has a fixed loan term. The term cannot be changed.
-            </div>
           } @else {
             <!-- Flexible term: Show slider ENABLED -->
             <ion-range
@@ -141,16 +148,16 @@
 
         <!-- Payment Frequency (Display Only) -->
         <div class="form-section">
-          <ion-label class="section-label">
-            <span class="label-emoji">📅</span>
-            <span class="label-text">Payment Frequency</span>
-          </ion-label>
-          <div class="frequency-display">
-            <div class="frequency-badge">
-              {{ getPaymentFrequencyDisplay() }} Payments
+          <div class="frequency-row">
+            <div class="frequency-left">
+              <span class="label-emoji">📅</span>
+              <span class="label-text">Payment Frequency</span>
             </div>
-            <p class="frequency-note">Payment frequency is set by the loan product</p>
+            <div class="frequency-value">
+              {{ getPaymentFrequencyDisplay() }}
+            </div>
           </div>
+          <p class="frequency-note">Payment frequency is set by the loan product</p>
         </div>
 
         <!-- Purpose -->

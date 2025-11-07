@@ -5,6 +5,8 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsEnum,
+  IsDateString,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -22,6 +24,7 @@ export enum LoanTermType {
 export enum PaymentFrequency {
   DAILY = 'daily',
   WEEKLY = 'weekly',
+  BIWEEKLY = 'biweekly',
   MONTHLY = 'monthly',
 }
 
@@ -300,4 +303,45 @@ export class CreatePaymentDto {
   @IsString()
   @IsOptional()
   notes?: string;
+}
+
+export class LoanCalculationRequestDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  loanAmount: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  termMonths: number;
+
+  @IsEnum(PaymentFrequency)
+  paymentFrequency: PaymentFrequency;
+
+  @Type(() => Number)
+  @IsNumber()
+  interestRate: number;
+
+  @IsEnum(LoanInterestType)
+  interestType: LoanInterestType;
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  processingFeePercentage?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  platformFee?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  latePenaltyPercentage?: number;
+
+  @IsDateString()
+  @IsOptional()
+  disbursementDate?: string;
 }

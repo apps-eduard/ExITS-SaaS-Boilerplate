@@ -17,10 +17,15 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { CustomerService } from './customer.service';
 import { CustomerLoginDto } from './dto/customer-auth.dto';
+import { MoneyLoanService } from '../money-loan/money-loan.service';
+import { LoanCalculationRequestDto } from '../money-loan/dto/money-loan.dto';
 
 @Controller('customers')
 export class CustomerController {
-  constructor(private customerService: CustomerService) {}
+  constructor(
+    private customerService: CustomerService,
+    private moneyLoanService: MoneyLoanService,
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -186,6 +191,21 @@ export class CustomerController {
       success: true,
       message: 'Profile updated successfully',
       data: updatedCustomer,
+    };
+  }
+
+  @Post('auth/loan-preview')
+  @UseGuards(JwtAuthGuard)
+  async calculateLoanPreview(@Req() req: any, @Body() payload: LoanCalculationRequestDto) {
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant context is required for loan preview');
+    }
+
+    const preview = await this.moneyLoanService.calculateLoanPreview(Number(tenantId), payload);
+    return {
+      success: true,
+      data: preview,
     };
   }
 

@@ -2,29 +2,12 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   IonContent,
-  IonIcon,
-  IonBadge,
   IonRefresher,
   IonRefresherContent,
   IonSkeletonText,
   ToastController
 } from '@ionic/angular/standalone';
-import { Router } from '@angular/router';
-import { addIcons } from 'ionicons';
-import {
-  documentTextOutline,
-  calendarOutline,
-  cashOutline,
-  checkmarkCircleOutline,
-  timeOutline,
-  alertCircleOutline,
-  eyeOutline,
-  chevronDownOutline,
-  chevronUpOutline,
-  walletOutline,
-  trendingUpOutline,
-  ribbonOutline
-} from 'ionicons/icons';
+import { Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -49,9 +32,8 @@ interface Loan {
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     IonContent,
-    IonIcon,
-    IonBadge,
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
@@ -70,7 +52,7 @@ interface Loan {
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrapper purple-gradient">
-              <ion-icon name="wallet-outline" class="stat-icon"></ion-icon>
+              <span class="emoji-icon">💼</span>
             </div>
             <div class="stat-content">
               <div class="stat-label">Total Loans</div>
@@ -84,7 +66,7 @@ interface Loan {
 
           <div class="stat-card">
             <div class="stat-icon-wrapper green-gradient">
-              <ion-icon name="trending-up-outline" class="stat-icon"></ion-icon>
+              <span class="emoji-icon">📈</span>
             </div>
             <div class="stat-content">
               <div class="stat-label">Total Balance</div>
@@ -101,31 +83,47 @@ interface Loan {
         <div class="filter-tabs">
           <button 
             class="filter-tab"
-            [class.active]="filter() === 'all'"
-            (click)="setFilter('all')"
-          >
-            All ({{ loans().length }})
-          </button>
-          <button 
-            class="filter-tab"
             [class.active]="filter() === 'active'"
-            (click)="setFilter('active')"
+            (click)="applyFilter('active')"
           >
-            Active ({{ filterCount('active') }})
+            Active
+            <span class="tab-count">{{ filterCount('active') }}</span>
+            @if (filter() === 'active') {
+              <span class="tab-indicator"></span>
+            }
           </button>
           <button 
             class="filter-tab"
             [class.active]="filter() === 'completed'"
-            (click)="setFilter('completed')"
+            (click)="applyFilter('completed')"
           >
-            Completed ({{ filterCount('completed') }})
+            Completed
+            <span class="tab-count">{{ filterCount('completed') }}</span>
+            @if (filter() === 'completed') {
+              <span class="tab-indicator"></span>
+            }
           </button>
           <button 
             class="filter-tab"
-            [class.active]="filter() === 'overdue'"
-            (click)="setFilter('overdue')"
+            [class.active]="filter() === 'all'"
+            (click)="applyFilter('all')"
           >
-            Overdue ({{ filterCount('overdue') }})
+            All
+            <span class="tab-count">{{ filterCount('all') }}</span>
+            @if (filter() === 'all') {
+              <span class="tab-indicator"></span>
+            }
+          </button>
+          <button 
+            class="filter-tab"
+            [class.active]="filter() === 'submitted'"
+            (click)="applyFilter('submitted')"
+          >
+            Submitted
+            <span class="tab-count">{{ filterCount('submitted') }}</span>
+            @if (filter() === 'submitted') {
+              <span class="tab-indicator"></span>
+            }
           </button>
         </div>
 
@@ -140,19 +138,75 @@ interface Loan {
               </div>
             }
           </div>
-        } @else if (filteredLoans().length === 0) {
+        } @else if (filter() === 'submitted' && applications().length === 0) {
           <div class="empty-state">
-            <div class="empty-icon">
-              <ion-icon name="ribbon-outline"></ion-icon>
+            <div class="empty-icon">📋</div>
+            <h3 class="empty-title">No Submitted Applications</h3>
+            <p class="empty-message">
+              You don't have any submitted applications at the moment.
+            </p>
+            <div class="empty-actions">
+              <button class="refresh-btn" (click)="loadApplications()" [disabled]="loading()">
+                <span class="emoji-icon-inline">🔄</span>
+                <span>Refresh</span>
+              </button>
+              <button class="dashboard-btn" routerLink="/customer/dashboard">
+                <span class="emoji-icon-inline">🏠</span>
+                <span>Back to Dashboard</span>
+              </button>
             </div>
-            <div class="empty-title">No loans found</div>
-            <div class="empty-subtitle">
+          </div>
+        } @else if (filter() !== 'submitted' && filteredLoans().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">🎗️</div>
+            <h3 class="empty-title">No Loans Found</h3>
+            <p class="empty-message">
               @if (filter() === 'all') {
-                You don't have any loans yet
+                Your loan history will appear here once you apply for your first loan.
+              } @else if (filter() === 'active') {
+                No active loans at the moment. Check "Submitted" to see pending applications.
+              } @else if (filter() === 'completed') {
+                No completed loans yet. Your paid-off loans will appear here.
               } @else {
-                No {{ filter() }} loans at the moment
+                No loans found for this filter.
               }
+            </p>
+            <div class="empty-actions">
+              <button class="refresh-btn" (click)="loadLoans()" [disabled]="loading()">
+                <span class="emoji-icon-inline">🔄</span>
+                <span>Refresh</span>
+              </button>
+              <button class="dashboard-btn" routerLink="/customer/dashboard">
+                <span class="emoji-icon-inline">🏠</span>
+                <span>Back to Dashboard</span>
+              </button>
             </div>
+          </div>
+        } @else if (filter() === 'submitted') {
+          <!-- Applications List -->
+          <div class="loans-list">
+            @for (app of applications(); track app.id; let idx = $index) {
+              <div 
+                class="loan-card application-card"
+                [style.animation-delay]="idx * 50 + 'ms'"
+                (click)="viewApplication(app.id)"
+              >
+                <!-- Compact Header -->
+                <div class="app-header">
+                  <div class="app-left">
+                    <div class="app-icon">📋</div>
+                    <div class="app-info">
+                      <div class="app-number">{{ app.applicationNumber }}</div>
+                      <div class="app-product">{{ app.productName }}</div>
+                    </div>
+                  </div>
+                  <div class="app-right">
+                    <div class="app-amount">₱{{ formatCurrency(app.amount) }}</div>
+                    <div class="app-status">{{ app.status | titlecase }}</div>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
         } @else {
           <div class="loans-list">
@@ -172,17 +226,16 @@ interface Loan {
                       'status-overdue': loan.status === 'overdue',
                       'status-pending': loan.status === 'pending'
                     }">
-                      <ion-icon name="ribbon-outline"></ion-icon>
+                      <span class="emoji-icon-small">🎗️</span>
                     </div>
                     <div>
                       <div class="loan-number">{{ loan.loanNumber }}</div>
                       <div class="loan-date">Applied: {{ loan.dueDate }}</div>
                     </div>
                   </div>
-                  <ion-icon 
-                    [name]="expandedLoanId() === loan.id ? 'chevron-up-outline' : 'chevron-down-outline'"
-                    class="expand-icon"
-                  ></ion-icon>
+                  <span class="emoji-icon-small">
+                    {{ expandedLoanId() === loan.id ? '🔼' : '🔽' }}
+                  </span>
                 </div>
 
                 <!-- Status Badge -->
@@ -238,7 +291,7 @@ interface Loan {
                     <div class="details-grid">
                       <div class="detail-row">
                         <div class="detail-icon-wrapper">
-                          <ion-icon name="calendar-outline"></ion-icon>
+                          <span class="emoji-icon-tiny">📅</span>
                         </div>
                         <div class="detail-content">
                           <div class="detail-label">Due Date</div>
@@ -248,7 +301,7 @@ interface Loan {
 
                       <div class="detail-row">
                         <div class="detail-icon-wrapper">
-                          <ion-icon name="cash-outline"></ion-icon>
+                          <span class="emoji-icon-tiny">💵</span>
                         </div>
                         <div class="detail-content">
                           <div class="detail-label">Monthly Payment</div>
@@ -263,7 +316,7 @@ interface Loan {
                       (click)="viewLoanDetails(loan); $event.stopPropagation()"
                     >
                       View Full Details
-                      <ion-icon name="chevron-down-outline" style="transform: rotate(-90deg);"></ion-icon>
+                      <span class="emoji-icon-inline" style="transform: rotate(-90deg);">🔽</span>
                     </button>
                   </div>
                 }
@@ -354,9 +407,30 @@ interface Loan {
       background: linear-gradient(135deg, #10b981, #059669);
     }
 
-    .stat-icon {
+    .emoji-icon {
       font-size: 1.5rem;
-      color: white;
+      line-height: 1;
+    }
+
+    .emoji-icon-small {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .emoji-icon-tiny {
+      font-size: 1.125rem;
+      line-height: 1;
+    }
+
+    .emoji-icon-inline {
+      font-size: 1.125rem;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .emoji-icon-large {
+      font-size: 2.5rem;
+      line-height: 1;
     }
 
     .stat-content {
@@ -387,40 +461,66 @@ interface Loan {
     .filter-tabs {
       display: flex;
       gap: 0.5rem;
-      margin-bottom: 1rem;
-      overflow-x: auto;
-      padding-bottom: 0.25rem;
-      scrollbar-width: none;
-      animation: fadeInUp 0.5s ease-out 0.1s backwards;
-    }
-
-    .filter-tabs::-webkit-scrollbar {
-      display: none;
+      margin-bottom: 1.25rem;
+      background: var(--ion-card-background, #fff);
+      padding: 0.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      animation: fadeInUp 0.4s ease-out 0.1s both;
     }
 
     .filter-tab {
-      flex-shrink: 0;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      border: 1.5px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
-      background: var(--ion-card-background);
-      color: var(--ion-color-medium);
-      font-size: 0.813rem;
-      font-weight: 600;
+      flex: 1;
+      padding: 0.65rem 0.75rem;
+      border: none;
+      background: transparent;
+      color: var(--ion-color-step-600, #64748b);
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
     }
 
     .filter-tab.active {
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      border-color: transparent;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
-    .filter-tab:not(.active):hover {
-      border-color: #667eea;
-      color: #667eea;
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .filter-tab.active .tab-count {
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+    }
+
+    .tab-indicator {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 3px;
+      background: white;
+      border-radius: 3px 3px 0 0;
     }
 
     /* ===== LOADING STATE ===== */
@@ -453,38 +553,89 @@ interface Loan {
 
     /* ===== EMPTY STATE ===== */
     .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       text-align: center;
       padding: 3rem 1.5rem;
-      animation: fadeInUp 0.5s ease-out;
+      animation: fadeInUp 0.4s ease-out;
     }
 
     .empty-icon {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 1.5rem;
-      border-radius: 50%;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-size: 4rem;
+      margin-bottom: 1rem;
       animation: float 3s ease-in-out infinite;
     }
 
-    .empty-icon ion-icon {
-      font-size: 2.5rem;
-      color: #667eea;
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
     }
 
     .empty-title {
-      font-size: 1.125rem;
+      font-size: 1.25rem;
       font-weight: 700;
-      color: var(--ion-text-color);
-      margin-bottom: 0.5rem;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0 0 0.5rem 0;
     }
 
-    .empty-subtitle {
-      font-size: 0.875rem;
-      color: var(--ion-color-medium);
+    .empty-message {
+      font-size: 0.9375rem;
+      color: var(--ion-color-step-600, #64748b);
+      margin: 0 0 1.5rem 0;
+      line-height: 1.5;
+      max-width: 300px;
+    }
+
+    .empty-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .refresh-btn,
+    .dashboard-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .refresh-btn:active {
+      transform: scale(0.95);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .dashboard-btn {
+      background: var(--ion-color-light);
+      color: var(--ion-text-color);
+      border: 1.5px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+    }
+
+    .dashboard-btn:active {
+      transform: scale(0.95);
+    }
+
+    .emoji-icon-inline {
+      font-size: 1rem;
     }
 
     /* ===== LOANS LIST ===== */
@@ -514,6 +665,77 @@ interface Loan {
       box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
     }
 
+    /* ===== APPLICATION CARD ===== */
+    .application-card {
+      cursor: pointer;
+      padding: 1rem;
+    }
+
+    .application-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .app-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .app-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-number {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      margin-bottom: 0.15rem;
+    }
+
+    .app-product {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .app-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .app-amount {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ion-color-primary);
+      margin-bottom: 0.15rem;
+    }
+
+    .app-status {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--ion-color-warning);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* ===== CARD HEADER ===== */
     .loan-card-header {
       display: flex;
@@ -536,11 +758,6 @@ interface Loan {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-    }
-
-    .loan-icon-wrapper ion-icon {
-      font-size: 1.25rem;
-      color: white;
     }
 
     .loan-icon-wrapper.status-active {
@@ -569,12 +786,6 @@ interface Loan {
     .loan-date {
       font-size: 0.75rem;
       color: var(--ion-color-medium);
-    }
-
-    .expand-icon {
-      font-size: 1.25rem;
-      color: var(--ion-color-medium);
-      transition: transform 0.3s ease;
     }
 
     /* ===== STATUS BADGE ===== */
@@ -736,11 +947,6 @@ interface Loan {
       flex-shrink: 0;
     }
 
-    .detail-icon-wrapper ion-icon {
-      font-size: 1.125rem;
-      color: white;
-    }
-
     .detail-content {
       flex: 1;
     }
@@ -778,10 +984,6 @@ interface Loan {
     .view-details-btn:hover {
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
       transform: translateY(-2px);
-    }
-
-    .view-details-btn ion-icon {
-      font-size: 1.125rem;
     }
 
     /* ===== DARK MODE ===== */
@@ -825,7 +1027,8 @@ interface Loan {
 export class CustomerLoansPage implements OnInit {
   loading = signal(false);
   loans = signal<Loan[]>([]);
-  filter = signal<string>('all');
+  applications = signal<any[]>([]);
+  filter = signal<string>('active');
   expandedLoanId = signal<number | null>(null);
 
   constructor(
@@ -835,45 +1038,38 @@ export class CustomerLoansPage implements OnInit {
     public themeService: ThemeService,
     private toastController: ToastController
   ) {
-    addIcons({
-      documentTextOutline,
-      calendarOutline,
-      cashOutline,
-      checkmarkCircleOutline,
-      timeOutline,
-      alertCircleOutline,
-      eyeOutline,
-      chevronDownOutline,
-      chevronUpOutline,
-      walletOutline,
-      trendingUpOutline,
-      ribbonOutline
-    });
   }
 
   ngOnInit() {
     this.loadLoans();
+    this.loadApplications();
   }
 
   async loadLoans() {
     this.loading.set(true);
     try {
       const response = await this.apiService.getCustomerLoans().toPromise();
+      console.log('🔍 Loans API Response:', response);
       const loansData = response?.data || response;
+      console.log('🔍 Loans Data:', loansData);
+      console.log('🔍 Is Array:', Array.isArray(loansData));
+      console.log('🔍 Loans Count:', loansData?.length);
       
       if (loansData && Array.isArray(loansData)) {
         const mappedLoans = loansData.map((loan: any) => {
+          console.log('🔍 Original Loan:', loan);
           const amount = parseFloat(loan.principalAmount || loan.principal_amount || loan.amount || 0);
           const balance = parseFloat(loan.outstandingBalance || loan.outstanding_balance || loan.balance || loan.remainingBalance || loan.remaining_balance || 0);
           const totalPaid = parseFloat(loan.amountPaid || loan.amount_paid || 0);
           const progress = amount > 0 ? Math.round((totalPaid / amount) * 100) : 0;
 
           let actualStatus = this.mapLoanStatus(loan.status);
+          console.log('🔍 Status mapping:', loan.status, '→', actualStatus);
           if (balance <= 0 && amount > 0) {
             actualStatus = 'completed';
           }
 
-          return {
+          const mappedLoan = {
             id: loan.id,
             loanNumber: loan.loanNumber || loan.loan_number || `LN-${loan.id}`,
             amount: amount,
@@ -885,9 +1081,14 @@ export class CustomerLoansPage implements OnInit {
             dueDate: loan.dueDate || loan.due_date || loan.maturityDate || loan.maturity_date || 'N/A',
             progress: progress
           };
+          console.log('🔍 Mapped Loan:', mappedLoan);
+          return mappedLoan;
         });
 
+        console.log('🔍 All Mapped Loans:', mappedLoans);
         this.loans.set(mappedLoans);
+      } else {
+        console.log('❌ Loans data is not an array or is empty');
       }
     } catch (error) {
       console.error('Error loading loans:', error);
@@ -903,35 +1104,139 @@ export class CustomerLoansPage implements OnInit {
     }
   }
 
+  async loadApplications() {
+    try {
+      const response = await this.apiService.getCustomerApplications().toPromise();
+      console.log('🔍 Applications API Response:', response);
+      const applicationsData = response?.data || response;
+      console.log('🔍 Applications Data:', applicationsData);
+      console.log('🔍 Is Array:', Array.isArray(applicationsData));
+      console.log('🔍 Applications Count:', applicationsData?.length);
+      
+      if (applicationsData && Array.isArray(applicationsData)) {
+        const mappedApplications = applicationsData.map((app: any) => {
+          console.log('🔍 Original Application - Full Object:', JSON.stringify(app, null, 2));
+          
+          // Generate application number if not present
+          const appNumber = app.application_number || 
+                           app.applicationNumber || 
+                           `APP-${app.customer_id || app.customerId || 1}-${app.created_at || Date.now()}`;
+          
+          console.log('🔍 Application Number:', appNumber);
+          
+          const mappedApp = {
+            id: app.id,
+            applicationNumber: appNumber,
+            amount: parseFloat(app.requested_amount || app.requestedAmount || app.amount || 0),
+            productName: app.productName || app.product_name || 'N/A',
+            status: app.status || 'submitted',
+            createdAt: app.created_at || app.createdAt,
+            updatedAt: app.updated_at || app.updatedAt
+          };
+          
+          console.log('🔍 Mapped Application:', mappedApp);
+          return mappedApp;
+        });
+        
+        console.log('🔍 Mapped Applications:', mappedApplications);
+        this.applications.set(mappedApplications);
+      }
+    } catch (error) {
+      console.error('Error loading applications:', error);
+    }
+  }
+
   async handleRefresh(event: any) {
-    await this.loadLoans();
+    await Promise.all([this.loadLoans(), this.loadApplications()]);
     event.target.complete();
   }
 
   mapLoanStatus(status: string): string {
     if (!status) return 'active';
     status = status.toLowerCase();
+    
+    // Completed statuses
     if (status === 'paid' || status === 'paid_off' || status === 'completed' || status === 'closed' || status === 'fully_paid') {
       return 'completed';
     }
+    
+    // Overdue statuses
     if (status === 'overdue' || status === 'late' || status === 'delinquent') {
       return 'overdue';
     }
-    if (status === 'pending' || status === 'processing' || status === 'approved') {
+    
+    // In Progress statuses (applications that are pending approval or approved but not disbursed)
+    if (status === 'pending' || status === 'processing' || status === 'submitted' || status === 'approved') {
       return 'pending';
     }
+    
+    // Rejected status
+    if (status === 'rejected') {
+      return 'rejected';
+    }
+    
+    // Disbursed status (application disbursed, loan being repaid)
+    if (status === 'disbursed') {
+      return 'disbursed';
+    }
+    
+    // Active status (loan is active and being repaid)
     return 'active';
   }
 
   filteredLoans() {
+    const allLoans = this.loans();
+    
     if (this.filter() === 'all') {
-      return this.loans();
+      return allLoans;
     }
-    return this.loans().filter(loan => loan.status === this.filter());
+    
+    if (this.filter() === 'completed') {
+      // "Completed" - show completed loans from money_loan_loans
+      return allLoans.filter(loan => 
+        loan.status === 'completed' || loan.status === 'paid' || loan.status === 'closed'
+      );
+    }
+    
+    if (this.filter() === 'submitted') {
+      // "Submitted" - return empty for loans, applications will be shown separately
+      return [];
+    }
+    
+    // "Active" - show only active loans (being repaid)
+    return allLoans.filter(loan => 
+      loan.status === 'active'
+    );
   }
 
   filterCount(status: string): number {
-    return this.loans().filter(loan => loan.status === status).length;
+    const allLoans = this.loans();
+    const allApplications = this.applications();
+    
+    if (status === 'all') {
+      return allLoans.length;
+    }
+    
+    if (status === 'completed') {
+      // Count completed loans from money_loan_loans
+      return allLoans.filter(loan => 
+        loan.status === 'completed' || loan.status === 'paid' || loan.status === 'closed'
+      ).length;
+    }
+    
+    if (status === 'submitted') {
+      // Count submitted applications from money_loan_applications
+      return allApplications.length;
+    }
+    
+    // Active count - only active loans
+    return allLoans.filter(loan => 
+      loan.status === 'active'
+    ).length;
+  }
+
+  applyFilter(filter: string) {
+    this.filter.set(filter);
   }
 
   setFilter(filter: string) {
@@ -955,5 +1260,9 @@ export class CustomerLoansPage implements OnInit {
 
   viewLoanDetails(loan: Loan) {
     this.router.navigate(['/customer/loans', loan.id]);
+  }
+
+  viewApplication(applicationId: number) {
+    this.router.navigate(['/customer/applications', applicationId]);
   }
 }

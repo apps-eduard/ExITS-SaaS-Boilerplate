@@ -592,7 +592,7 @@ exports.up = async function up(knex) {
     table.decimal('requested_amount', 15, 2).notNullable();
     table.integer('requested_term_days').notNullable();
     table.string('purpose', 200);
-    table.enum('status', ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'cancelled']).defaultTo('draft');
+    table.enum('status', ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'cancelled', 'disbursed']).defaultTo('draft');
     table.integer('reviewed_by').references('id').inTable('users').onDelete('SET NULL');
     table.timestamp('reviewed_at');
     table.text('review_notes');

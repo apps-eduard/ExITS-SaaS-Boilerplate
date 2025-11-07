@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiService } from './api.service';
+import { LoanCalculationPreview, LoanCalculationRequest } from '../models/loan-calculation.model';
 
 // ==================== INTERFACES ====================
 
@@ -294,6 +295,10 @@ export class CollectorService {
     ).pipe(
       map((response: any) => response.data || response)
     );
+  }
+
+  calculateLoanPreview(payload: LoanCalculationRequest): Observable<LoanCalculationPreview> {
+    return this.apiService.calculateLoanPreview(payload);
   }
 
   /**

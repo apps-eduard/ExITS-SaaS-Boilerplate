@@ -8,12 +8,94 @@ import {
   CreateLoanProductDto,
   UpdateLoanProductDto,
   LoanTermType,
+  LoanCalculationRequestDto,
 } from './dto/money-loan.dto';
 
 @Injectable()
 export class MoneyLoanService {
   constructor(private knexService: KnexService) {
     // Clean implementation - no more manual fixes needed
+  }
+
+  async calculateLoanPreview(tenantId: number, payload: LoanCalculationRequestDto) {
+    const {
+      loanAmount,
+      termMonths,
+      paymentFrequency,
+      interestRate,
+      interestType,
+      processingFeePercentage = 0,
+      platformFee = 0,
+      latePenaltyPercentage = 0,
+      disbursementDate,
+    } = payload;
+
+    if (!loanAmount || loanAmount <= 0) {
+      throw new BadRequestException('Loan amount must be greater than zero');
+    }
+
+    if (!termMonths || termMonths <= 0) {
+      throw new BadRequestException('Term must be at least one month');
+    }
+
+    const { LoanCalculatorService } = require('./loan-calculator.service');
+    const calculator = new LoanCalculatorService();
+
+    const calculation = calculator.calculate({
+      loanAmount,
+      termMonths,
+      paymentFrequency,
+      interestRate,
+      interestType,
+      processingFeePercentage,
+      platformFee,
+      latePenaltyPercentage,
+    });
+
+    const scheduleStart = disbursementDate ? new Date(disbursementDate) : new Date();
+    const schedule = calculator.generateSchedule(calculation, scheduleStart);
+
+    const round = (value: number) => Math.round((value ?? 0) * 100) / 100;
+
+    const normalizedCalculation = {
+      ...calculation,
+      interestAmount: round(calculation.interestAmount),
+      processingFeeAmount: round(calculation.processingFeeAmount),
+      platformFee: round(calculation.platformFee),
+      netProceeds: round(calculation.netProceeds),
+      totalRepayable: round(calculation.totalRepayable),
+      installmentAmount: round(calculation.installmentAmount),
+      totalDeductions: round(calculation.totalDeductions),
+      monthlyEquivalent: calculation.monthlyEquivalent !== undefined
+        ? round(calculation.monthlyEquivalent)
+        : undefined,
+    };
+
+    const schedulePreview = schedule.map(item => ({
+      paymentNumber: item.paymentNumber,
+      dueDate: item.dueDate,
+      installmentAmount: round(item.installmentAmount),
+      principal: round(item.principal),
+      interest: round(item.interest),
+      remainingBalance: round(item.remainingBalance),
+      cumulativePaid: round(item.cumulativePaid),
+    }));
+
+    console.log('🧮 Loan preview requested:', {
+      tenantId,
+      loanAmount,
+      termMonths,
+      paymentFrequency,
+      interestRate,
+      interestType,
+      processingFeePercentage,
+      platformFee,
+    });
+
+    return {
+      calculation: normalizedCalculation,
+      schedule: schedulePreview,
+    };
   }
 
   async createApplication(tenantId: number, createDto: CreateLoanApplicationDto) {
@@ -1040,8 +1122,15 @@ export class MoneyLoanService {
         .insert(loanData)
         .returning('*');
 
-      // Note: Application remains 'approved' - the linked loan record indicates it was disbursed
-      console.log('✅ Loan created for approved application');
+      // Update application status to 'disbursed'
+      await knex('money_loan_applications')
+        .where({ id: application.id, tenant_id: tenantId })
+        .update({
+          status: 'disbursed',
+          updated_at: knex.fn.now(),
+        });
+
+      console.log('✅ Loan created and application status updated to disbursed');
 
       // Return the created loan with customer and product details
       const [loanWithDetails] = await knex('money_loan_loans as mll')
@@ -1081,7 +1170,15 @@ export class MoneyLoanService {
         disbursement_notes: disburseDto.disbursementNotes,
       });
 
-    // Note: Application remains 'approved' - the loan's active status indicates disbursement
+    // Update corresponding application status to 'disbursed' if exists
+    if (loan.application_id) {
+      await knex('money_loan_applications')
+        .where({ id: loan.application_id, tenant_id: tenantId })
+        .update({
+          status: 'disbursed',
+          updated_at: knex.fn.now(),
+        });
+    }
 
     const [updatedRow] = await knex('money_loan_loans as mll')
       .leftJoin('customers as c', 'mll.customer_id', 'c.id')

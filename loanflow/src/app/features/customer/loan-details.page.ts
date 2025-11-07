@@ -4,26 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonContent,
   IonButton,
-  IonIcon,
   IonBadge,
   IonSkeletonText,
   IonProgressBar,
   ToastController
 } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import {
-  calendarOutline,
-  cashOutline,
-  cardOutline,
-  documentTextOutline,
-  checkmarkCircleOutline,
-  timeOutline,
-  alertCircleOutline,
-  walletOutline,
-  trendingUpOutline,
-  moonOutline,
-  sunnyOutline
-} from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -83,7 +68,6 @@ interface Payment {
     CommonModule,
     IonContent,
     IonButton,
-    IonIcon,
     IonBadge,
     IonSkeletonText,
     IonProgressBar,
@@ -100,7 +84,7 @@ interface Payment {
           </div>
           
           <div class="top-bar-right">
-            <app-header-utils />
+            <app-header-utils (devIconClicked)="logLoanDetailsToConsole()" />
           </div>
         </div>
       </div>
@@ -117,64 +101,60 @@ interface Payment {
       } @else if (loanDetails()) {
         <div class="details-container">
           
-          <!-- Loan Header Card -->
-          <div class="loan-header-card">
-            <div class="loan-number-row">
-              <h1 class="loan-number">{{ loanDetails()!.loanNumber }}</h1>
-              <ion-badge 
-                [color]="getStatusColor(loanDetails()!.status)"
-                class="status-badge"
-              >
-                {{ loanDetails()!.status }}
-              </ion-badge>
-            </div>
-            <p class="product-name">{{ loanDetails()!.productName }}</p>
-          </div>
-
-          <!-- Amount Stats Grid -->
-          <div class="stats-grid">
-            <div class="stat-card stat-primary">
-              <div class="stat-icon-wrapper">
-                <ion-icon name="cash-outline"></ion-icon>
+          <!-- Modern Compact Card -->
+          <div class="modern-loan-card">
+            <!-- Header -->
+            <div class="card-header">
+              <div class="header-top">
+                <h1 class="loan-title">{{ loanDetails()!.loanNumber }}</h1>
+                <ion-badge 
+                  [color]="getStatusColor(loanDetails()!.status)"
+                  class="status-badge-compact"
+                >
+                  {{ loanDetails()!.status }}
+                </ion-badge>
               </div>
-              <p class="stat-value">₱{{ formatCurrency(loanDetails()!.principalAmount) }}</p>
-              <p class="stat-label">Principal Amount</p>
+              <p class="product-subtitle">{{ loanDetails()!.productName }}</p>
             </div>
 
-            <div class="stat-card stat-warning">
-              <div class="stat-icon-wrapper">
-                <ion-icon name="wallet-outline"></ion-icon>
+            <!-- Stats Grid - Compact -->
+            <div class="compact-stats-list">
+              <div class="stat-row">
+                <div class="stat-row-label">
+                  <span class="stat-icon-inline">💵</span>
+                  <span>Principal Amount</span>
+                </div>
+                <div class="stat-row-value">₱{{ formatCurrency(loanDetails()!.principalAmount) }}</div>
               </div>
-              <p class="stat-value">₱{{ formatCurrency(loanDetails()!.outstandingBalance) }}</p>
-              <p class="stat-label">Outstanding Balance</p>
-            </div>
-
-            <div class="stat-card stat-success">
-              <div class="stat-icon-wrapper">
-                <ion-icon name="checkmark-circle-outline"></ion-icon>
+              <div class="stat-row">
+                <div class="stat-row-label">
+                  <span class="stat-icon-inline">💰</span>
+                  <span>Outstanding Balance</span>
+                </div>
+                <div class="stat-row-value">₱{{ formatCurrency(loanDetails()!.outstandingBalance) }}</div>
               </div>
-              <p class="stat-value">₱{{ formatCurrency(loanDetails()!.totalPaid) }}</p>
-              <p class="stat-label">Total Paid</p>
-            </div>
-
-            <div class="stat-card stat-purple">
-              <div class="stat-icon-wrapper">
-                <ion-icon name="trending-up-outline"></ion-icon>
+              <div class="stat-row">
+                <div class="stat-row-label">
+                  <span class="stat-icon-inline">✅</span>
+                  <span>Total Paid</span>
+                </div>
+                <div class="stat-row-value">₱{{ formatCurrency(loanDetails()!.totalPaid) }}</div>
               </div>
-              <p class="stat-value">{{ loanDetails()!.paymentProgress }}%</p>
-              <p class="stat-label">Progress</p>
             </div>
-          </div>
 
-          <!-- Progress Bar -->
-          <div class="progress-card">
-            <p class="progress-label">Payment Progress</p>
-            <ion-progress-bar 
-              [value]="loanDetails()!.paymentProgress / 100"
-              color="success"
-              class="progress-bar"
-            ></ion-progress-bar>
-            <p class="progress-text">{{ loanDetails()!.paymentProgress }}% Complete</p>
+            <!-- Progress Bar -->
+            <div class="progress-section-compact">
+              <div class="progress-header-compact">
+                <span>Payment Progress</span>
+                <span class="progress-percent">{{ loanDetails()!.paymentProgress }}%</span>
+              </div>
+              <ion-progress-bar 
+                [value]="loanDetails()!.paymentProgress / 100"
+                color="success"
+                class="progress-bar-compact"
+              ></ion-progress-bar>
+            </div>
+
           </div>
 
           <!-- Loan Terms -->
@@ -235,16 +215,16 @@ interface Payment {
           </div>
 
           <!-- Next Payment -->
-          @if (loanDetails()!.nextPaymentDate && loanDetails()!.nextPaymentAmount > 0) {
+          @if (loanDetails()!.nextPaymentDate && loanDetails()!.nextPaymentAmount > 0 && loanDetails()!.outstandingBalance > 0) {
             <div class="payment-due-card">
               <div class="payment-due-header">
-                <ion-icon name="time-outline" class="payment-due-icon"></ion-icon>
+                <span class="emoji-icon-large payment-due-icon">⏰</span>
                 <h3 class="payment-due-title">Next Payment Due</h3>
               </div>
               <div class="payment-due-body">
                 <p class="payment-due-amount">₱{{ formatCurrency(loanDetails()!.nextPaymentAmount) }}</p>
                 <p class="payment-due-date">
-                  <ion-icon name="calendar-outline"></ion-icon>
+                  <span class="emoji-icon-inline">📅</span>
                   {{ formatDate(loanDetails()!.nextPaymentDate) }}
                 </p>
               </div>
@@ -253,56 +233,94 @@ interface Payment {
                 class="pay-now-btn"
                 (click)="makePayment()"
               >
-                <ion-icon name="card-outline" slot="start"></ion-icon>
+                <span class="emoji-icon-inline" slot="start">💳</span>
                 Make Payment
               </ion-button>
             </div>
           }
 
           <!-- Repayment Schedule -->
-          @if (loanDetails()!.schedule && loanDetails()!.schedule.length > 0) {
-            <div class="section-card">
-              <h2 class="section-title">
-                <ion-icon name="calendar-outline"></ion-icon>
-                Repayment Schedule
-              </h2>
+          @if (loanDetails()!.schedule && loanDetails()!.schedule.length > 0 && loanDetails()!.outstandingBalance > 0) {
+            <div class="section-card schedule-card">
+              <div class="section-header-toggle" (click)="scheduleExpanded.set(!scheduleExpanded())">
+                <h2 class="section-title">
+                  <div class="title-with-icon">
+                    <span class="emoji-icon">📅</span>
+                    <span>Repayment Schedule</span>
+                  </div>
+                  <div class="schedule-progress-badge">
+                    {{ getFullyPaidCount() + getPartiallyPaidCount() }}/{{ loanDetails()!.schedule.length }} Paid/Partial
+                  </div>
+                </h2>
+                <span class="emoji-icon toggle-icon">
+                  {{ scheduleExpanded() ? '🔼' : '🔽' }}
+                </span>
+              </div>
               
-              <!-- Schedule Summary -->
-              <div class="schedule-summary">
-                <div class="summary-item">
-                  <span class="summary-label">Total</span>
-                  <span class="summary-value">{{ loanDetails()!.schedule.length }}</span>
+              <!-- Schedule Summary (Always Visible) -->
+              <div class="schedule-summary-modern">
+                <div class="summary-item-modern paid-item">
+                  <div class="summary-icon-wrapper paid-icon">
+                    <span class="emoji-icon-small">✅</span>
+                  </div>
+                  <div class="summary-content">
+                    <span class="summary-value-modern">{{ getFullyPaidCount() }}</span>
+                    <span class="summary-label-modern">Fully Paid</span>
+                  </div>
                 </div>
-                <div class="summary-item">
-                  <span class="summary-label">Paid</span>
-                  <span class="summary-value paid">{{ getPaidCount() }}</span>
+                <div class="summary-item-modern pending-item">
+                  <div class="summary-icon-wrapper pending-icon">
+                    <span class="emoji-icon-small">⏳</span>
+                  </div>
+                  <div class="summary-content">
+                    <span class="summary-value-modern">{{ getPendingCount() }}</span>
+                    <span class="summary-label-modern">Pending</span>
+                  </div>
                 </div>
-                <div class="summary-item">
-                  <span class="summary-label">Pending</span>
-                  <span class="summary-value pending">{{ getPendingCount() }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Overdue</span>
-                  <span class="summary-value overdue">{{ getOverdueCount() }}</span>
+                <div class="summary-item-modern overdue-item">
+                  <div class="summary-icon-wrapper overdue-icon">
+                    <span class="emoji-icon-small">⚠️</span>
+                  </div>
+                  <div class="summary-content">
+                    <span class="summary-value-modern">{{ getOverdueCount() }}</span>
+                    <span class="summary-label-modern">Overdue</span>
+                  </div>
                 </div>
               </div>
 
-              <div class="schedule-list">
-                @for (item of loanDetails()!.schedule; track item.id) {
-                  <div class="schedule-item" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.overdue]="item.status === 'overdue'">
-                    <div class="schedule-left">
-                      <div class="repayment-number">Repayment #{{ item.installmentNumber }}</div>
-                      <div class="repayment-date">{{ formatDate(item.dueDate) }}</div>
-                    </div>
-                    <div class="schedule-right">
-                      <div class="repayment-amount">₱{{ formatCurrency(item.totalAmount) }}</div>
-                      <div class="repayment-status" [class.status-paid]="item.status === 'paid'" [class.status-pending]="item.status === 'pending'" [class.status-overdue]="item.status === 'overdue'">
-                        {{ getScheduleStatusLabel(item.status) }}
+              @if (scheduleExpanded()) {
+                <div class="schedule-list expandable-content">
+                  @for (item of loanDetails()!.schedule; track item.id; let idx = $index) {
+                    <div 
+                      class="schedule-item-modern" 
+                      [class.paid]="item.status === 'paid'" 
+                      [class.pending]="item.status === 'pending'" 
+                      [class.overdue]="item.status === 'overdue'"
+                      [style.animation-delay]="idx * 30 + 'ms'"
+                    >
+                      <div class="schedule-status-indicator"></div>
+                      <div class="schedule-content">
+                        <div class="schedule-header">
+                          <div class="installment-info">
+                            <div class="installment-number">Installment #{{ item.installmentNumber }}</div>
+                            <div class="installment-date">
+                              <span class="emoji-icon-inline">📅</span>
+                              {{ formatDate(item.dueDate) }}
+                            </div>
+                          </div>
+                          <div class="installment-status-badge" [class.badge-paid]="item.status === 'paid'" [class.badge-pending]="item.status === 'pending'" [class.badge-overdue]="item.status === 'overdue'">
+                            {{ getScheduleStatusLabel(item.status) }}
+                          </div>
+                        </div>
+                        <div class="schedule-amount-row">
+                          <div class="amount-label">Amount Due</div>
+                          <div class="amount-value">₱{{ formatCurrency(item.totalAmount) }}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
             </div>
           }
 
@@ -310,38 +328,24 @@ interface Payment {
           @if (loanDetails()!.payments && loanDetails()!.payments.length > 0) {
             <div class="section-card">
               <h2 class="section-title">
-                <ion-icon name="card-outline"></ion-icon>
+                <span class="emoji-icon">💳</span>
                 Payment History
               </h2>
               <div class="payments-list">
-                @for (payment of loanDetails()!.payments; track payment.id) {
-                  <div class="payment-item">
-                    <div class="payment-header">
-                      <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
-                      <span class="payment-date">{{ formatDate(payment.paymentDate) }}</span>
+                @for (payment of loanDetails()!.payments; track payment.id; let idx = $index) {
+                  <div class="payment-item" [style.animation-delay]="idx * 50 + 'ms'">
+                    <div class="payment-icon-wrapper">
+                      <span class="emoji-icon-small">✅</span>
                     </div>
-                    <div class="payment-body">
-                      <div class="payment-row">
-                        <span class="payment-label">Amount Paid:</span>
-                        <span class="payment-amount">₱{{ formatCurrency(payment.amount) }}</span>
-                      </div>
-                      <div class="payment-row">
-                        <span class="payment-label">Principal:</span>
-                        <span class="payment-value">₱{{ formatCurrency(payment.principalPaid) }}</span>
-                      </div>
-                      <div class="payment-row">
-                        <span class="payment-label">Interest:</span>
-                        <span class="payment-value">₱{{ formatCurrency(payment.interestPaid) }}</span>
-                      </div>
-                      @if (payment.referenceNumber) {
-                        <div class="payment-row">
-                          <span class="payment-label">Reference:</span>
-                          <span class="payment-value">{{ payment.referenceNumber }}</span>
+                    <div class="payment-content">
+                      <div class="payment-main-row">
+                        <div class="payment-date-amount">
+                          <div class="payment-date">{{ formatDate(payment.paymentDate) }}</div>
+                          <div class="payment-amount">₱{{ formatCurrency(payment.amount) }}</div>
                         </div>
-                      }
-                      <div class="payment-row">
-                        <span class="payment-label">Method:</span>
-                        <span class="payment-value">{{ payment.paymentMethod || 'N/A' }}</span>
+                        <div class="payment-method-badge" [ngClass]="getPaymentMethodClass(payment.paymentMethod)">
+                          {{ payment.paymentMethod || 'N/A' }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -355,7 +359,7 @@ interface Payment {
         </div>
       } @else {
         <div class="error-container">
-          <ion-icon name="alert-circle-outline" class="error-icon"></ion-icon>
+          <span class="emoji-icon-large error-icon">⚠️</span>
           <h2>Loan Not Found</h2>
           <p>Unable to load loan details. Please try again.</p>
           <ion-button (click)="loadLoanDetails()">Retry</ion-button>
@@ -445,6 +449,161 @@ interface Payment {
       margin-bottom: 1rem;
     }
 
+    /* Modern Compact Loan Card */
+    .modern-loan-card {
+      background: var(--ion-card-background);
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.06));
+    }
+
+    .card-header {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.3rem;
+    }
+
+    .loan-title {
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+    }
+
+    .status-badge-compact {
+      font-size: 0.5rem;
+      font-weight: 600;
+      padding: 0.35rem 0.5rem;
+      border-radius: 10px;
+    }
+
+    .product-subtitle {
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+
+    /* Compact Stats List */
+    .compact-stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: .5rem;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4em 0;
+      border-bottom: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-row-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+    }
+
+    .stat-icon-inline {
+      font-size: 1.25rem;
+    }
+
+    .stat-row-value {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--ion-text-color);
+    }
+
+    /* Compact Stats Grid */
+    .compact-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .compact-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+      border-radius: 12px;
+    }
+
+    .compact-stat .stat-icon {
+      font-size: 1.75rem;
+      flex-shrink: 0;
+    }
+
+    .compact-stat .stat-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stat-value-compact {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin-bottom: 0.15rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stat-label-compact {
+      font-size: 0.7rem;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Progress Section Compact */
+    .progress-section-compact {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.06));
+    }
+
+    .progress-header-compact {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+    }
+
+    .progress-percent {
+      color: var(--ion-color-success);
+      font-weight: 700;
+    }
+
+    .progress-bar-compact {
+      height: 8px;
+      border-radius: 4px;
+    }
+
     /* Loan Header */
     .loan-header-card {
       background: linear-gradient(135deg, #667eea, #764ba2);
@@ -507,9 +666,25 @@ interface Payment {
       background: var(--ion-color-primary);
     }
 
-    .stat-icon-wrapper ion-icon {
+    .emoji-icon {
       font-size: 1.5rem;
-      color: white;
+      line-height: 1;
+    }
+
+    .emoji-icon-small {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .emoji-icon-inline {
+      font-size: 1.125rem;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .emoji-icon-large {
+      font-size: 2rem;
+      line-height: 1;
     }
 
     .stat-value {
@@ -566,8 +741,8 @@ interface Payment {
     }
 
     .section-title {
-      font-size: 1.125rem;
-      font-weight: 700;
+      font-size: 0.9rem;
+      font-weight: 500;
       color: var(--ion-text-color);
       margin: 0 0 1rem 0;
       display: flex;
@@ -575,8 +750,66 @@ interface Payment {
       gap: 0.5rem;
     }
 
-    .section-title ion-icon {
-      font-size: 1.25rem;
+    /* Section Header with Toggle */
+    .section-header-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      margin: -0.5rem -0.5rem 1rem -0.5rem;
+      border-radius: 12px;
+      transition: background 0.2s ease;
+    }
+
+    .section-header-toggle:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    .section-header-toggle .section-title {
+      margin: 0;
+      flex: 1;
+    }
+
+    .toggle-icon {
+      font-size: 1.5rem;
+      color: var(--ion-color-medium);
+      transition: transform 0.3s ease, color 0.3s ease;
+    }
+
+    .section-header-toggle:hover .toggle-icon {
+      color: var(--ion-color-primary);
+    }
+
+    /* Expandable Content Animation */
+    @keyframes expandPanel {
+      from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        max-height: 5000px;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .expandable-content {
+      animation: expandPanel 0.4s ease-out;
+      overflow: hidden;
     }
 
     /* Compact Terms Section */
@@ -816,6 +1049,266 @@ interface Payment {
       height: 48px;
     }
 
+    /* Enhanced Schedule Card */
+    .schedule-card {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.03), rgba(118, 75, 162, 0.02)), var(--ion-card-background);
+    }
+
+    .title-with-icon {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .schedule-progress-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      margin-left: 0.5rem;
+    }
+
+    /* Modern Schedule Summary */
+    .schedule-summary-modern {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      .schedule-summary-modern {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
+
+    @media (min-width: 481px) and (max-width: 768px) {
+      .schedule-summary-modern {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .summary-item-modern {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem;
+      background: var(--ion-card-background);
+      border-radius: 10px;
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
+      transition: all 0.3s ease;
+      min-width: 0;
+    }
+
+    .summary-item-modern:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .summary-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .paid-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .pending-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .overdue-icon {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .summary-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .summary-value-modern {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      line-height: 1;
+    }
+
+    .summary-label-modern {
+      font-size: 0.7rem;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Modern Schedule Items */
+    .schedule-item-modern {
+      position: relative;
+      display: flex;
+      gap: 0.75rem;
+      padding: 1.25rem;
+      background: var(--ion-card-background);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
+      border-radius: 14px;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      animation: fadeInUp 0.4s ease-out backwards;
+    }
+
+    .schedule-item-modern:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateX(4px);
+    }
+
+    .schedule-status-indicator {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--ion-color-medium);
+      transition: background 0.3s ease;
+    }
+
+    .schedule-item-modern.paid .schedule-status-indicator {
+      background: linear-gradient(180deg, #10b981, #059669);
+    }
+
+    .schedule-item-modern.pending .schedule-status-indicator {
+      background: linear-gradient(180deg, #f59e0b, #d97706);
+    }
+
+    .schedule-item-modern.overdue .schedule-status-indicator {
+      background: linear-gradient(180deg, #ef4444, #dc2626);
+    }
+
+    .schedule-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .schedule-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .installment-info {
+      flex: 1;
+    }
+
+    .installment-number {
+      font-size: 0.938rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      margin-bottom: 0.25rem;
+    }
+
+    .installment-date {
+      font-size: 0.813rem;
+      color: var(--ion-color-medium);
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .installment-status-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .badge-paid {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+    }
+
+    .badge-pending {
+      background: rgba(245, 158, 11, 0.1);
+      color: #d97706;
+    }
+
+    .badge-overdue {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+
+    .schedule-amount-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.03));
+      border-radius: 10px;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .schedule-amount-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+      }
+
+      .schedule-header {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .installment-status-badge {
+        align-self: flex-start;
+      }
+
+      .amount-value {
+        font-size: 1rem;
+      }
+
+      .summary-value-modern {
+        font-size: 1.25rem;
+      }
+    }
+
+    .amount-label {
+      font-size: 0.813rem;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+    }
+
+    .amount-value {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    .schedule-item-modern.paid .amount-value {
+      color: #10b981;
+    }
+
+    .schedule-item-modern.pending .amount-value {
+      color: #f59e0b;
+    }
+
+    .schedule-item-modern.overdue .amount-value {
+      color: #ef4444;
+    }
+
+    /* Old schedule summary - keeping for backward compatibility */
     .schedule-summary {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -1300,16 +1793,6 @@ interface Payment {
       }
     }
 
-    .schedule-value.paid-text ion-icon {
-      font-size: 1.1rem;
-    }
-
-    @media (min-width: 500px) {
-      .schedule-value.paid-text ion-icon {
-        font-size: 1.2rem;
-      }
-    }
-
     /* Payments List */
     .payments-list {
       display: flex;
@@ -1318,27 +1801,101 @@ interface Payment {
     }
 
     .payment-item {
-      background: var(--ion-item-background);
-      border: 1px solid var(--ion-border-color, #e5e7eb);
+      background: var(--ion-card-background);
+      border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
       border-radius: 12px;
-      padding: 1rem;
+      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.3s ease;
+      animation: fadeInUp 0.5s ease-out backwards;
     }
 
+    .payment-item:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .payment-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .payment-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .payment-main-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .payment-date-amount {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .payment-date {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium);
+      margin-bottom: 0.15rem;
+    }
+
+    .payment-amount {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+    }
+
+    .payment-method-badge {
+      padding: 0.3rem 0.65rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      flex-shrink: 0;
+    }
+
+    .payment-method-badge.cash {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+    }
+
+    .payment-method-badge.card,
+    .payment-method-badge.credit-card,
+    .payment-method-badge.debit-card {
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+    }
+
+    .payment-method-badge.bank,
+    .payment-method-badge.bank-transfer {
+      background: rgba(245, 158, 11, 0.1);
+      color: #d97706;
+    }
+
+    .payment-method-badge.gcash,
+    .payment-method-badge.e-wallet {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    /* Old payment styles - keeping for backward compatibility */
     .payment-header {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       margin-bottom: 0.75rem;
-    }
-
-    .payment-header ion-icon {
-      font-size: 1.25rem;
-    }
-
-    .payment-date {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--ion-text-color);
     }
 
     .payment-body {
@@ -1356,12 +1913,6 @@ interface Payment {
 
     .payment-label {
       color: var(--ion-color-medium);
-    }
-
-    .payment-amount {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--ion-color-success);
     }
 
     .payment-value {
@@ -1391,6 +1942,8 @@ export class LoanDetailsPage implements OnInit {
   loanId = signal<number | null>(null);
   loading = signal(false);
   loanDetails = signal<LoanDetails | null>(null);
+  scheduleExpanded = signal(false);
+  paymentsExpanded = signal(false);
 
   constructor(
     private route: ActivatedRoute,
@@ -1400,19 +1953,6 @@ export class LoanDetailsPage implements OnInit {
     public themeService: ThemeService,
     private toastController: ToastController
   ) {
-    addIcons({
-      calendarOutline,
-      cashOutline,
-      cardOutline,
-      documentTextOutline,
-      checkmarkCircleOutline,
-      timeOutline,
-      alertCircleOutline,
-      walletOutline,
-      trendingUpOutline,
-      moonOutline,
-      sunnyOutline
-    });
   }
 
   ngOnInit() {
@@ -1447,27 +1987,59 @@ export class LoanDetailsPage implements OnInit {
       console.log('💰 Payment data:', loanData?.payments);
       
       if (loanData && loanData.loan) {
+        // Log raw schedule data before mapping
+        console.log('🔍 Raw schedule items from backend:', loanData.schedule?.slice(0, 3));
+        
         // Flatten the response structure for template compatibility
         const flattenedData = {
           ...loanData.loan,
-          schedule: (loanData.schedule || []).map((item: any) => ({
-            id: item.id,
-            installmentNumber: item.installment_number || item.installmentNumber,
-            dueDate: item.due_date || item.dueDate,
-            principalAmount: item.principal_amount || item.principalAmount || 0,
-            interestAmount: item.interest_amount || item.interestAmount || 0,
-            totalAmount: item.total_amount || item.totalAmount || 0,
-            outstandingAmount: item.outstanding_amount || item.outstandingAmount || 0,
-            status: item.status
-          })),
+          schedule: (loanData.schedule || []).map((item: any) => {
+            const mappedItem = {
+              id: item.id,
+              installmentNumber: item.installment_number || item.installmentNumber,
+              dueDate: item.due_date || item.dueDate,
+              principalAmount: item.principal_amount || item.principalAmount || 0,
+              interestAmount: item.interest_amount || item.interestAmount || 0,
+              totalAmount: item.total_amount || item.totalAmount || 0,
+              outstandingAmount: item.outstanding_amount || item.outstandingAmount || 0,
+              status: item.status
+            };
+            
+            // Log first 3 mapped items
+            if (item.installment_number <= 3 || item.installmentNumber <= 3) {
+              console.log(`🔍 Mapped installment #${mappedItem.installmentNumber}:`, {
+                status: mappedItem.status,
+                outstanding: mappedItem.outstandingAmount,
+                total: mappedItem.totalAmount
+              });
+            }
+            
+            return mappedItem;
+          }),
           payments: loanData.payments || [],
-          paymentProgress: loanData.paymentProgress || 0,
           // Calculate totalPaid from payments
           totalPaid: loanData.payments?.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0) || 0
         };
         
+        // Calculate payment progress correctly
+        const principalAmount = parseFloat(flattenedData.principalAmount || flattenedData.principal_amount || 0);
+        const outstandingBalance = parseFloat(flattenedData.outstandingBalance || flattenedData.outstanding_balance || 0);
+        
+        let paymentProgress = 0;
+        if (principalAmount > 0) {
+          if (outstandingBalance <= 0) {
+            paymentProgress = 100; // Fully paid
+          } else {
+            const amountPaid = principalAmount - outstandingBalance;
+            paymentProgress = Math.round((amountPaid / principalAmount) * 100);
+          }
+        }
+        
+        flattenedData.paymentProgress = paymentProgress;
+        
         console.log('📈 Total Paid:', flattenedData.totalPaid);
         console.log('📉 Outstanding:', flattenedData.outstandingBalance);
+        console.log('📊 Payment Progress:', paymentProgress + '%');
         console.log('📅 Mapped schedule:', flattenedData.schedule);
         
         this.loanDetails.set(flattenedData);
@@ -1534,19 +2106,94 @@ export class LoanDetailsPage implements OnInit {
     return `Every ${daysDiff} days`;
   }
 
+  getFullyPaidCount(): number {
+    const schedule = this.loanDetails()?.schedule || [];
+    return schedule.filter(s => 
+      s.status === 'paid' || s.status === 'completed' || s.status === 'paid_off'
+    ).length;
+  }
+
+  getPartiallyPaidCount(): number {
+    const schedule = this.loanDetails()?.schedule || [];
+    return schedule.filter(s => s.status === 'partially_paid').length;
+  }
+
   getPaidCount(): number {
-    return this.loanDetails()?.schedule.filter(s => s.status === 'paid').length || 0;
+    const schedule = this.loanDetails()?.schedule || [];
+    
+    // Log all statuses for debugging
+    console.log('🔍 Schedule item statuses:', schedule.map(s => ({ 
+      installment: s.installmentNumber, 
+      status: s.status,
+      outstanding: s.outstandingAmount 
+    })));
+    
+    // Count only FULLY paid installments
+    const fullyPaidCount = schedule.filter(s => 
+      s.status === 'paid' || s.status === 'completed' || s.status === 'paid_off'
+    ).length;
+    
+    // Count partially paid installments
+    const partiallyPaidCount = schedule.filter(s => 
+      s.status === 'partially_paid'
+    ).length;
+
+    console.log(`✅ Fully paid: ${fullyPaidCount}, Partially paid: ${partiallyPaidCount}, Total: ${schedule.length}`);
+    
+    // Return fully paid + partially paid for consistency with collector view
+    return fullyPaidCount + partiallyPaidCount;
   }
 
   getPendingCount(): number {
-    return this.loanDetails()?.schedule.filter(s => s.status === 'pending' || s.status === 'upcoming').length || 0;
+    const schedule = this.loanDetails()?.schedule || [];
+    // Pending means not yet paid or partially paid - just pure pending/upcoming
+    return schedule.filter(s => s.status === 'pending' || s.status === 'upcoming').length;
   }
 
   getOverdueCount(): number {
     return this.loanDetails()?.schedule.filter(s => s.status === 'overdue').length || 0;
   }
 
+  getPaymentMethodClass(method: string): string {
+    if (!method) return '';
+    const m = method.toLowerCase();
+    if (m.includes('cash')) return 'cash';
+    if (m.includes('card') || m.includes('credit') || m.includes('debit')) return 'card';
+    if (m.includes('bank') || m.includes('transfer')) return 'bank';
+    if (m.includes('gcash') || m.includes('wallet')) return 'gcash';
+    return '';
+  }
+
   async makePayment() {
     await this.router.navigate(['/customer/payments']);
+  }
+
+  logLoanDetailsToConsole() {
+    console.log('========================================');
+    console.log('📋 LOAN DETAILS - FULL DATA');
+    console.log('========================================');
+    console.log('Raw Loan Details Object:', this.loanDetails());
+    console.log('----------------------------------------');
+    console.log('JSON Format:', JSON.stringify(this.loanDetails(), null, 2));
+    console.log('========================================');
+    
+    if (this.loanDetails()) {
+      const details = this.loanDetails()!;
+      console.log('📊 Key Metrics:');
+      console.log('  - Loan Number:', details.loanNumber);
+      console.log('  - Status:', details.status);
+      console.log('  - Principal Amount:', details.principalAmount);
+      console.log('  - Outstanding Balance:', details.outstandingBalance);
+      console.log('  - Total Paid:', details.totalPaid);
+      console.log('  - Payment Progress:', details.paymentProgress + '%');
+      console.log('  - Interest Rate:', details.interestRate);
+      console.log('  - Term:', details.term);
+      console.log('----------------------------------------');
+      console.log('📅 Schedule Items:', details.schedule?.length || 0);
+      console.log('💰 Payment Records:', details.payments?.length || 0);
+      console.log('========================================');
+    } else {
+      console.log('⚠️ No loan details available');
+    }
   }
 }

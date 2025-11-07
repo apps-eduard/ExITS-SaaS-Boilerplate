@@ -2,8 +2,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+import { LoanCalculationPreview, LoanCalculationRequest } from '../models/loan-calculation.model';
 
 interface QueryParams {
   [key: string]: string | number | boolean;
@@ -73,6 +75,11 @@ export class ApiService {
   getCustomerLoans(): Observable<any> {
     console.log(`🔵 API Call: GET ${this.apiUrl}/customers/auth/loans`);
     return this.get<any>('customers/auth/loans');
+  }
+
+  getCustomerApplications(): Observable<any> {
+    console.log(`🔵 API Call: GET ${this.apiUrl}/customers/auth/applications`);
+    return this.get<any>('customers/auth/applications');
   }
 
   getLoanById(loanId: number | string): Observable<any> {
@@ -145,13 +152,24 @@ export class ApiService {
     return this.post<any>('loan-applications', applicationData);
   }
 
+  calculateLoanPreview(payload: LoanCalculationRequest): Observable<LoanCalculationPreview> {
+    const userRole = this.authService.userRole();
+    const endpoint = userRole === 'customer'
+      ? 'customers/auth/loan-preview'
+      : 'money-loan/calculate';
+
+    return this.post<any>(endpoint, payload).pipe(
+      map((response: any) => response?.data || response)
+    );
+  }
+
   getPendingApplications(tenantId: string, customerId: number): Observable<any> {
     // Fetch ALL applications and loans for this customer
     // The frontend will filter which ones should block new applications
-    // We need to get: submitted, approved, active (and exclude completed, rejected, disbursed applications)
+    // We need to get: submitted, approved, active, disbursed (exclude only completed, rejected)
     return this.get<any>(`tenants/${tenantId}/platforms/moneyloan/loans`, {
       customerId,
-      status: 'submitted,approved,pending,active', // Include active loans
+      status: 'submitted,approved,pending,active,disbursed', // Include active and disbursed loans
       limit: 100
     });
   }

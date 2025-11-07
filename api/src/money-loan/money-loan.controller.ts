@@ -3,12 +3,22 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { MoneyLoanService } from './money-loan.service';
-import { CreateLoanApplicationDto, ApproveLoanDto, DisburseLoanDto, CreatePaymentDto } from './dto/money-loan.dto';
+import { CreateLoanApplicationDto, ApproveLoanDto, DisburseLoanDto, CreatePaymentDto, LoanCalculationRequestDto } from './dto/money-loan.dto';
 
 @Controller('money-loan')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class MoneyLoanController {
   constructor(private moneyLoanService: MoneyLoanService) {}
+
+  @Post('calculate')
+  @Permissions('money-loan:read')
+  async calculateLoanPreview(@Req() req: any, @Body() payload: LoanCalculationRequestDto) {
+    const preview = await this.moneyLoanService.calculateLoanPreview(req.user.tenantId, payload);
+    return {
+      success: true,
+      data: preview,
+    };
+  }
 
   @Post('applications')
   @Permissions('money-loan:create')

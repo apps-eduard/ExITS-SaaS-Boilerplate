@@ -1,4 +1,4 @@
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -17,7 +17,7 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [CommonModule, IonButton, IonIcon, DevInfoComponent],
   template: `
     <!-- Dev Info (Development Only) -->
-    <app-dev-info />
+    <app-dev-info (devIconClicked)="onDevIconClicked()" />
     
     <!-- Theme Toggle -->
     <ion-button (click)="themeService.toggleTheme()" class="header-btn">
@@ -55,6 +55,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class HeaderUtilsComponent {
   @Input() showLogout = true;
+  @Output() devIconClicked = new EventEmitter<void>();
   
   public themeService = inject(ThemeService);
   private authService = inject(AuthService);
@@ -65,6 +66,10 @@ export class HeaderUtilsComponent {
       sunnyOutline,
       logOutOutline,
     });
+  }
+
+  onDevIconClicked(): void {
+    this.devIconClicked.emit();
   }
 
   logout(): void {

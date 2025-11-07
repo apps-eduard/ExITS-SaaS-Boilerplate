@@ -1,7 +1,16 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, PenaltyCalculation } from '../shared/services/loan-calculator.service';
+import { Subscription } from 'rxjs';
+import { LoanService } from '../shared/services/loan.service';
+import {
+  LoanCalculationPreview,
+  LoanCalculationRequest,
+  LoanCalculationResult,
+  LoanSchedulePreviewItem,
+  PaymentFrequency,
+  LoanInterestType,
+} from '../shared/models/loan-calculation.model';
 
 @Component({
   selector: 'app-loan-calculator',
@@ -181,7 +190,23 @@ import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, Penal
 
         <!-- Right: Results -->
         <div class="lg:col-span-2 space-y-6">
-          @if (result()) {
+          @if (previewLoading()) {
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+              <div class="text-5xl mb-4 animate-spin">⏳</div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Calculating preview…</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Hang tight while we fetch the latest amortization schedule.</p>
+            </div>
+          } @else if (previewError()) {
+            <div class="bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 p-6">
+              <div class="flex items-start gap-3">
+                <div class="text-2xl">⚠️</div>
+                <div>
+                  <h3 class="text-lg font-semibold text-red-700 dark:text-red-400">Unable to calculate preview</h3>
+                  <p class="text-sm text-red-600 dark:text-red-300">{{ previewError() }}</p>
+                </div>
+              </div>
+            </div>
+          } @else if (result()) {
             <!-- Summary Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <!-- Net Proceeds -->
@@ -347,7 +372,7 @@ import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, Penal
                     <div class="flex justify-between items-center">
                       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Payment Schedule</h3>
                       <button
-                        (click)="generateSchedule()"
+                        (click)="calculate()"
                         class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         🔄 Regenerate
@@ -381,7 +406,7 @@ import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, Penal
                       </div>
                     } @else {
                       <p class="text-center text-gray-500 dark:text-gray-400 py-8">
-                        Click "Regenerate" to create schedule
+                        Adjust the loan details to generate a payment schedule
                       </p>
                     }
                   </div>
@@ -462,23 +487,38 @@ import { LoanCalculatorService, LoanParams, LoanCalculation, ScheduleItem, Penal
   `,
   styles: []
 })
-export class LoanCalculatorComponent {
-  private calculatorService = new LoanCalculatorService();
+export class LoanCalculatorComponent implements OnDestroy {
+  private loanService = inject(LoanService);
+  private previewSubscription?: Subscription;
+  private previewTimer?: ReturnType<typeof setTimeout>;
+  private lastCacheKey: string | null = null;
 
-  // Input signals
+  // Input state
   loanAmount = 10000;
   termMonths = 1;
-  paymentFrequency: 'daily' | 'weekly' | 'monthly' = 'weekly';
-  interestType: 'flat' | 'reducing' | 'compound' = 'flat';
+  paymentFrequency: PaymentFrequency = 'weekly';
+  interestType: LoanInterestType = 'flat';
   interestRate = 5;
   processingFeePercentage = 0;
   platformFee = 50;
   latePenaltyPercentage = 1;
 
-  // Results
-  result = signal<LoanCalculation | null>(null);
-  schedule = signal<ScheduleItem[]>([]);
-  penaltyResult = signal<PenaltyCalculation | null>(null);
+  // Preview state
+  preview = signal<LoanCalculationPreview | null>(null);
+  result = computed<LoanCalculationResult | null>(() => this.preview()?.calculation ?? null);
+  schedule = computed<LoanSchedulePreviewItem[]>(() => this.preview()?.schedule ?? []);
+  penaltyResult = signal<{
+    installmentAmount: number;
+    daysLate: number;
+    gracePeriod: number;
+    effectiveLateDays: number;
+    penaltyRate: number;
+    penaltyAmount: number;
+    totalDue: number;
+  } | null>(null);
+
+  previewLoading = signal(false);
+  previewError = signal<string | null>(null);
 
   // UI State
   activeTab = signal<'schedule' | 'penalty'>('schedule');
@@ -489,64 +529,142 @@ export class LoanCalculatorComponent {
   }
 
   calculate(): void {
-    const params: LoanParams = {
-      loanAmount: this.loanAmount,
-      termMonths: this.termMonths,
-      paymentFrequency: this.paymentFrequency,
-      interestRate: this.interestRate,
-      interestType: this.interestType,
-      processingFeePercentage: this.processingFeePercentage,
-      platformFee: this.platformFee,
-      latePenaltyPercentage: this.latePenaltyPercentage
-    };
+    const request = this.buildRequest();
+    if (!request) {
+      this.resetPreview();
+      return;
+    }
 
-    const calculation = this.calculatorService.calculate(params);
-    this.result.set(calculation);
+    const cacheKey = JSON.stringify(request);
+    if (this.lastCacheKey === cacheKey && this.preview()) {
+      this.calculatePenalty();
+      return;
+    }
 
-    // Auto-generate schedule
-    this.generateSchedule();
+    this.lastCacheKey = null;
+    this.cancelPendingRequest();
+    this.previewLoading.set(true);
+    this.previewError.set(null);
 
-    // Reset penalty calculator
-    this.calculatePenalty();
-  }
-
-  generateSchedule(): void {
-    const calc = this.result();
-    if (!calc) return;
-
-    const startDate = new Date();
-    const scheduleItems = this.calculatorService.generateSchedule(calc, startDate);
-    this.schedule.set(scheduleItems);
+    this.previewTimer = setTimeout(() => {
+      this.previewSubscription = this.loanService.calculateLoanPreview(request).subscribe({
+        next: (response) => {
+          this.previewLoading.set(false);
+          this.preview.set(response);
+          this.lastCacheKey = cacheKey;
+          this.calculatePenalty();
+        },
+        error: (error) => {
+          console.error('Error fetching loan preview:', error);
+          this.previewLoading.set(false);
+          const message = error?.error?.message || 'Unable to calculate loan preview';
+          this.previewError.set(message);
+          this.preview.set(null);
+          this.lastCacheKey = null;
+          this.penaltyResult.set(null);
+        },
+      });
+    }, 200);
   }
 
   calculatePenalty(): void {
     const calc = this.result();
-    if (!calc) return;
+    if (!calc) {
+      this.penaltyResult.set(null);
+      return;
+    }
 
-    const dueDate = new Date();
-    const paymentDate = new Date();
-    paymentDate.setDate(paymentDate.getDate() + this.daysLate);
+    const daysLate = Math.max(0, Number(this.daysLate) || 0);
+    const gracePeriod = calc.gracePeriodDays ?? 0;
+    const effectiveLateDays = Math.max(0, daysLate - gracePeriod);
+    const penaltyRate = Math.max(0, Number(this.latePenaltyPercentage) || 0);
+    const penaltyAmount = calc.installmentAmount * (penaltyRate / 100) * effectiveLateDays;
+    const totalDue = calc.installmentAmount + penaltyAmount;
 
-    const penalty = this.calculatorService.calculatePenalty(
-      calc.installmentAmount,
-      dueDate,
-      paymentDate,
-      this.paymentFrequency,
-      this.latePenaltyPercentage
-    );
-
-    this.penaltyResult.set(penalty);
+    this.penaltyResult.set({
+      installmentAmount: calc.installmentAmount,
+      daysLate,
+      gracePeriod,
+      effectiveLateDays,
+      penaltyRate,
+      penaltyAmount,
+      totalDue,
+    });
   }
 
   formatCurrency(amount: number): string {
-    return this.calculatorService.formatCurrency(amount);
+    const value = Number.isFinite(amount) ? amount : 0;
+    return `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: string | Date): string {
+    const parsed = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
-    }).format(date);
+      year: 'numeric',
+    }).format(parsed);
+  }
+
+  private buildRequest(): LoanCalculationRequest | null {
+    const amount = Math.max(0, Number(this.loanAmount) || 0);
+    if (amount <= 0) {
+      return null;
+    }
+
+    const term = Math.max(1, Math.round(Number(this.termMonths) || 0));
+    if (!Number.isFinite(term) || term <= 0) {
+      return null;
+    }
+
+    const paymentFrequency = this.normalizeFrequency(this.paymentFrequency);
+    const interestType = this.normalizeInterestType(this.interestType);
+
+    return {
+      loanAmount: amount,
+      termMonths: term,
+      paymentFrequency,
+      interestRate: Math.max(0, Number(this.interestRate) || 0),
+      interestType,
+      processingFeePercentage: Math.max(0, Number(this.processingFeePercentage) || 0),
+      platformFee: Math.max(0, Number(this.platformFee) || 0),
+      latePenaltyPercentage: Math.max(0, Number(this.latePenaltyPercentage) || 0),
+    };
+  }
+
+  private normalizeFrequency(value: string | PaymentFrequency): PaymentFrequency {
+    const frequency = (value || 'weekly').toString().toLowerCase() as PaymentFrequency;
+    const allowed: PaymentFrequency[] = ['daily', 'weekly', 'biweekly', 'monthly'];
+    return allowed.includes(frequency) ? frequency : 'weekly';
+  }
+
+  private normalizeInterestType(value: string | LoanInterestType): LoanInterestType {
+    const interest = (value || 'flat').toString().toLowerCase() as LoanInterestType;
+    const allowed: LoanInterestType[] = ['flat', 'reducing', 'compound'];
+    return allowed.includes(interest) ? interest : 'flat';
+  }
+
+  private cancelPendingRequest(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = undefined;
+    }
+    if (this.previewSubscription) {
+      this.previewSubscription.unsubscribe();
+      this.previewSubscription = undefined;
+    }
+  }
+
+  private resetPreview(): void {
+    this.cancelPendingRequest();
+    this.previewLoading.set(false);
+    this.previewError.set(null);
+    this.preview.set(null);
+    this.lastCacheKey = null;
+    this.penaltyResult.set(null);
+  }
+
+  ngOnDestroy(): void {
+    this.cancelPendingRequest();
   }
 }

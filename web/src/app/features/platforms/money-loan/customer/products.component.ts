@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -6,7 +6,15 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CurrencyMaskDirective } from '../../../../shared/directives/currency-mask.directive';
-import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/services/loan-calculator.service';
+import { LoanService } from '../shared/services/loan.service';
+import {
+  LoanCalculationPreview,
+  LoanCalculationRequest,
+  LoanCalculationResult,
+  PaymentFrequency,
+  LoanInterestType,
+} from '../shared/models/loan-calculation.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-customer-products',
@@ -400,12 +408,14 @@ import { LoanCalculatorService, LoanCalculation, LoanParams } from '../shared/se
     </div>
   `
 })
-export class CustomerProductsComponent implements OnInit {
+export class CustomerProductsComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
-  private loanCalculator = inject(LoanCalculatorService);
+  private loanService = inject(LoanService);
+  private previewSubscription?: Subscription;
+  private previewTimer?: ReturnType<typeof setTimeout>;
 
   // Expose Math to template
   Math = Math;
@@ -433,7 +443,9 @@ export class CustomerProductsComponent implements OnInit {
   calcAmount = 0;
   calcTermMonths = 3;
 
-  private calculationCache: { key: string; result: LoanCalculation } | null = null;
+  private calculationCache: { key: string; result: LoanCalculationPreview } | null = null;
+  previewLoading = signal(false);
+  previewError = signal<string | null>(null);
 
   // Validation errors
   amountError = signal<string>('');
@@ -831,7 +843,7 @@ export class CustomerProductsComponent implements OnInit {
       return;
     }
 
-    this.invalidateCalculationCache();
+  this.resetPreviewState();
     this.selectedProduct.set(product);
     this.calcAmount = product.minAmount || 10000;
 
@@ -849,9 +861,8 @@ export class CustomerProductsComponent implements OnInit {
     this.showCalculator.set(true);
 
     // Trigger initial validation and calculation
-    this.validateLoanAmount();
-    this.validateLoanTerm();
-    this.invalidateCalculationCache();
+  this.validateLoanAmount();
+  this.validateLoanTerm();
   }
 
   closeCalculator() {
@@ -860,7 +871,7 @@ export class CustomerProductsComponent implements OnInit {
     // Clear validation errors when closing
     this.amountError.set('');
     this.termError.set('');
-    this.invalidateCalculationCache();
+    this.resetPreviewState();
   }
 
   submitApplication() {
@@ -932,8 +943,71 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   calculateLoan() {
-    // Clear cached calculation so values recompute on next access
-    this.invalidateCalculationCache();
+    const product = this.selectedProduct();
+    if (!product) {
+      this.resetPreviewState();
+      return;
+    }
+
+    const amount = Number(this.calcAmount) || 0;
+    const rawTerm = Number(this.calcTermMonths) || 0;
+    const termMonths = Math.max(1, Math.round(rawTerm));
+
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(termMonths) || termMonths <= 0) {
+      this.resetPreviewState();
+      return;
+    }
+
+    const frequency = this.normalizeFrequency(product.paymentFrequency);
+    const interestType = this.normalizeInterestType(product.interestType);
+
+    const keyParts = [
+      product.id ?? 'unknown',
+      amount,
+      termMonths,
+      frequency,
+      interestType,
+      Number(product.interestRate) || 0,
+      Number(product.processingFeePercent) || 0,
+      Number(product.platformFee) || 0,
+      Number(product.latePaymentPenaltyPercent) || 0,
+    ];
+    const cacheKey = keyParts.join('|');
+
+    if (this.calculationCache && this.calculationCache.key === cacheKey) {
+      return;
+    }
+
+    const request: LoanCalculationRequest = {
+      loanAmount: amount,
+      termMonths,
+      paymentFrequency: frequency,
+      interestRate: Number(product.interestRate) || 0,
+      interestType,
+      processingFeePercentage: Number(product.processingFeePercent) || 0,
+      platformFee: Number(product.platformFee) || 0,
+      latePenaltyPercentage: Number(product.latePaymentPenaltyPercent) || 0,
+    };
+
+    this.cancelPreviewRequest();
+    this.previewLoading.set(true);
+    this.previewError.set(null);
+    this.calculationCache = null;
+
+    this.previewTimer = setTimeout(() => {
+      this.previewSubscription = this.loanService.calculateLoanPreview(request).subscribe({
+        next: (preview) => {
+          this.previewLoading.set(false);
+          this.calculationCache = { key: cacheKey, result: preview };
+        },
+        error: (error) => {
+          console.error('Error fetching loan preview:', error);
+          this.previewLoading.set(false);
+          const message = error?.error?.message || 'Unable to calculate loan preview at the moment';
+          this.previewError.set(message);
+        },
+      });
+    }, 250);
   }
 
   validateLoanTerm() {
@@ -1079,75 +1153,46 @@ export class CustomerProductsComponent implements OnInit {
   }
 
   private invalidateCalculationCache(): void {
+    this.resetPreviewState(false);
+  }
+
+  private getLoanCalculation(): LoanCalculationResult | null {
+    return this.calculationCache?.result?.calculation ?? null;
+  }
+
+  private normalizeFrequency(frequency: string | undefined): PaymentFrequency {
+    const value = (frequency || 'weekly').toLowerCase() as PaymentFrequency;
+    const allowed: PaymentFrequency[] = ['daily', 'weekly', 'biweekly', 'monthly'];
+    return allowed.includes(value) ? value : 'weekly';
+  }
+
+  private normalizeInterestType(type: string | undefined): LoanInterestType {
+    const value = (type || 'flat').toLowerCase() as LoanInterestType;
+    const allowed: LoanInterestType[] = ['flat', 'reducing', 'compound'];
+    return allowed.includes(value) ? value : 'flat';
+  }
+
+  private cancelPreviewRequest(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = undefined;
+    }
+    if (this.previewSubscription) {
+      this.previewSubscription.unsubscribe();
+      this.previewSubscription = undefined;
+    }
+  }
+
+  private resetPreviewState(clearError = true): void {
+    this.cancelPreviewRequest();
+    this.previewLoading.set(false);
+    if (clearError) {
+      this.previewError.set(null);
+    }
     this.calculationCache = null;
   }
 
-  private getLoanCalculation(): LoanCalculation | null {
-    const product = this.selectedProduct();
-    if (!product) return null;
-
-    const amount = Number(this.calcAmount);
-    const term = Number(this.calcTermMonths);
-
-    if (!amount || amount <= 0 || !term || term <= 0 || isNaN(amount) || isNaN(term)) {
-      return null;
-    }
-
-    const normalizedFrequency = this.normalizeFrequency(product.paymentFrequency);
-    const normalizedInterest = this.normalizeInterestType(product.interestType);
-    const roundedTerm = Math.max(1, Math.round(term));
-
-    const keyParts = [
-      product.id ?? 'unknown',
-      amount,
-      roundedTerm,
-      normalizedFrequency,
-      normalizedInterest,
-      Number(product.interestRate) || 0,
-      Number(product.processingFeePercent) || 0,
-      Number(product.platformFee) || 0,
-      Number(product.latePaymentPenaltyPercent) || 0
-    ];
-    const cacheKey = keyParts.join('|');
-
-    if (this.calculationCache && this.calculationCache.key === cacheKey) {
-      return this.calculationCache.result;
-    }
-
-    const params: LoanParams = {
-      loanAmount: amount,
-      termMonths: roundedTerm,
-      paymentFrequency: normalizedFrequency,
-      interestRate: Number(product.interestRate) || 0,
-      interestType: normalizedInterest,
-      processingFeePercentage: Number(product.processingFeePercent) || 0,
-      platformFee: Number(product.platformFee) || 0,
-      latePenaltyPercentage: Number(product.latePaymentPenaltyPercent) || 0
-    };
-
-    try {
-      const result = this.loanCalculator.calculate(params);
-      this.calculationCache = { key: cacheKey, result };
-      return result;
-    } catch (error) {
-      console.error('Error computing loan calculation:', error);
-      return null;
-    }
-  }
-
-  private normalizeFrequency(frequency: string | undefined): LoanParams['paymentFrequency'] {
-    const value = (frequency || 'weekly').toLowerCase();
-  const allowed = ['daily', 'weekly', 'biweekly', 'monthly'] as LoanParams['paymentFrequency'][];
-    return allowed.includes(value as LoanParams['paymentFrequency'])
-      ? (value as LoanParams['paymentFrequency'])
-      : 'weekly';
-  }
-
-  private normalizeInterestType(type: string | undefined): LoanParams['interestType'] {
-    const value = (type || 'flat').toLowerCase();
-  const allowed = ['flat', 'reducing', 'compound'] as LoanParams['interestType'][];
-    return allowed.includes(value as LoanParams['interestType'])
-      ? (value as LoanParams['interestType'])
-      : 'flat';
+  ngOnDestroy(): void {
+    this.cancelPreviewRequest();
   }
 }

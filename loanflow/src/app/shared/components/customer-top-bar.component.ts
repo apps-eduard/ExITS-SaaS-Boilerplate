@@ -2,12 +2,7 @@
 import { Component, Input, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { IonButton, IonIcon, IonBadge } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import {
-  notificationsOutline,
-  notifications,
-} from 'ionicons/icons';
+import { IonBadge } from '@ionic/angular/standalone';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { HeaderUtilsComponent } from './header-utils.component';
@@ -17,8 +12,6 @@ import { HeaderUtilsComponent } from './header-utils.component';
   standalone: true,
   imports: [
     CommonModule,
-    IonButton,
-    IonIcon,
     IonBadge,
     HeaderUtilsComponent
   ],
@@ -41,20 +34,16 @@ import { HeaderUtilsComponent } from './header-utils.component';
           
           <!-- Notifications Bell -->
           @if (notificationsLink) {
-            <ion-button 
+            <button 
               (click)="goToNotifications()" 
               class="icon-btn notifications-btn" 
-              fill="clear" 
               title="Notifications"
             >
-              <ion-icon 
-                slot="icon-only" 
-                [name]="unreadCount() > 0 ? 'notifications' : 'notifications-outline'"
-              ></ion-icon>
+              <span class="emoji-icon">🔔</span>
               @if (unreadCount() > 0) {
                 <ion-badge class="notification-badge">{{ unreadCount() }}</ion-badge>
               }
-            </ion-button>
+            </button>
           }
         </div>
       </div>
@@ -135,11 +124,20 @@ import { HeaderUtilsComponent } from './header-utils.component';
       --color: white;
       height: 40px;
       margin: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 0.5rem;
     }
 
-    .icon-btn ion-icon {
+    .emoji-icon {
       font-size: 1.5rem;
-      color: white;
+      line-height: 1;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
     }
 
     .notifications-btn {
@@ -186,11 +184,6 @@ export class CustomerTopBarComponent {
     private authService: AuthService,
     private notificationService: NotificationService
   ) {
-    addIcons({
-      'notifications-outline': notificationsOutline,
-      'notifications': notifications,
-    });
-
     // Subscribe to notification count changes
     effect(() => {
       this.notificationService.unreadCount$.subscribe(count => {

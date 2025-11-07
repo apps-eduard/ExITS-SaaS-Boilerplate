@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, OnDestroy } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -30,7 +30,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../../core/services/theme.service';
 import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
-import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
+import { ApiService } from '../../core/services/api.service';
+import { LoanCalculationResult, LoanCalculationPreview, LoanSchedulePreviewItem, LoanCalculationRequest } from '../../core/models/loan-calculation.model';
 
 interface LoanProduct {
   id: number;
@@ -80,14 +81,14 @@ interface LoanApplicationRequest {
     HeaderUtilsComponent
   ]
 })
-export class LoanApplicationFormPage implements OnInit {
+export class LoanApplicationFormPage implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
   private toastController = inject(ToastController);
   private loadingController = inject(LoadingController);
   private location = inject(Location);
-  private loanCalculator = inject(LoanCalculatorService);
+  private apiService = inject(ApiService);
   
   themeService = inject(ThemeService);
 
@@ -99,6 +100,11 @@ export class LoanApplicationFormPage implements OnInit {
   requestedAmount = signal(0);
   requestedTermMonths = signal(1);
   purpose = signal('');
+  calculation = signal<LoanCalculationResult | null>(null);
+  schedulePreview = signal<LoanSchedulePreviewItem[]>([]);
+  calculationLoading = signal(false);
+  calculationError = signal<string | null>(null);
+  private calculationTimer: any = null;
   
   // Expose Math to template
   Math = Math;
@@ -118,6 +124,13 @@ export class LoanApplicationFormPage implements OnInit {
   
   toggleTheme() {
     this.themeService.toggleTheme();
+  }
+
+  ngOnDestroy() {
+    if (this.calculationTimer) {
+      clearTimeout(this.calculationTimer);
+      this.calculationTimer = null;
+    }
   }
 
   async ngOnInit() {
@@ -173,6 +186,77 @@ export class LoanApplicationFormPage implements OnInit {
       }
     }
   }
+
+  private triggerCalculation(immediate = false) {
+    if (this.calculationTimer) {
+      clearTimeout(this.calculationTimer);
+      this.calculationTimer = null;
+    }
+
+    if (!this.product()) {
+      this.calculation.set(null);
+      this.schedulePreview.set([]);
+      return;
+    }
+
+    if (immediate) {
+      this.fetchCalculation();
+      return;
+    }
+
+    this.calculationTimer = setTimeout(() => this.fetchCalculation(), 500);
+  }
+
+  private async fetchCalculation() {
+    const product = this.product();
+    if (!product) {
+      return;
+    }
+
+    const principal = this.requestedAmount();
+    const termMonths = Math.max(1, this.requestedTermMonths());
+
+    if (!principal || !termMonths) {
+      this.calculation.set(null);
+      this.schedulePreview.set([]);
+      return;
+    }
+
+    const payload: LoanCalculationRequest = {
+      loanAmount: principal,
+      termMonths,
+      paymentFrequency: product.paymentFrequency || 'monthly',
+      interestRate: Number(product.interestRate) || 0,
+      interestType: this.resolveInterestType(product.interestType),
+      processingFeePercentage: Number(product.processingFee) || 0,
+      platformFee: Number(product.platformFee) || 0,
+      latePenaltyPercentage: 0,
+      disbursementDate: new Date().toISOString(),
+    };
+
+    this.calculationLoading.set(true);
+    this.calculationError.set(null);
+
+    try {
+      const preview = await this.apiService.calculateLoanPreview(payload).toPromise();
+      const calculation = (preview as LoanCalculationPreview)?.calculation ?? (preview as any)?.calculation ?? (preview as any) ?? null;
+      const schedule = (preview as LoanCalculationPreview)?.schedule ?? (preview as any)?.schedule ?? [];
+
+      this.calculation.set(calculation);
+      this.schedulePreview.set(Array.isArray(schedule) ? schedule : []);
+
+      if (calculation) {
+        console.log('📊 Loan preview result:', calculation);
+      }
+    } catch (error: any) {
+      console.error('❌ Loan preview error:', error);
+      this.calculation.set(null);
+      this.schedulePreview.set([]);
+      this.calculationError.set(error?.error?.message || 'Unable to calculate loan preview');
+    } finally {
+      this.calculationLoading.set(false);
+    }
+  }
   
   loadProductFromState(productData: any) {
     console.log('✅ Loading product from state:', productData);
@@ -211,6 +295,8 @@ export class LoanApplicationFormPage implements OnInit {
     console.log('📅 Initial Term (months):', this.requestedTermMonths());
     console.log('💵 Total Repayment:', this.getTotalRepayment());
     console.log('📊 Daily Payment:', this.getDailyPayment());
+
+    this.triggerCalculation(true);
   }
 
   async loadProduct(productId: number) {
@@ -276,6 +362,8 @@ export class LoanApplicationFormPage implements OnInit {
         console.log('📅 Initial Term (months):', this.requestedTermMonths());
         console.log('💵 Total Repayment:', this.getTotalRepayment());
         console.log('📊 Daily Payment:', this.getDailyPayment());
+
+        this.triggerCalculation(true);
       } else {
         throw new Error('Invalid product data');
       }
@@ -306,6 +394,8 @@ export class LoanApplicationFormPage implements OnInit {
     } else {
       this.requestedAmount.set(value);
     }
+
+    this.triggerCalculation();
   }
 
   onTermChange(event: any) {
@@ -333,6 +423,8 @@ export class LoanApplicationFormPage implements OnInit {
     } else {
       this.requestedTermMonths.set(value);
     }
+
+    this.triggerCalculation();
   }
 
   getEstimatedMonthlyPayment(): number {
@@ -464,54 +556,7 @@ export class LoanApplicationFormPage implements OnInit {
   }
 
   private getCalculation(): LoanCalculationResult | null {
-    const product = this.product();
-    if (!product) {
-      console.warn('⚠️ No product set');
-      return null;
-    }
-
-    const principal = this.requestedAmount();
-    if (!principal) {
-      console.warn('⚠️ No principal amount');
-      return null;
-    }
-
-    const termMonths = Math.max(1, this.requestedTermMonths());
-    if (!termMonths) {
-      console.warn('⚠️ No term months');
-      return null;
-    }
-
-    const monthlyInterestRate = Number(product.interestRate) || 0;
-    const interestType = this.resolveInterestType(product.interestType);
-    const platformFeePerMonth = Number(product.platformFee) || 0;
-    const processingFeePercent = Number(product.processingFee) || 0;
-    const paymentFrequency = product.paymentFrequency || 'monthly';
-
-    console.log('📊 Calculation Params:', {
-      loanAmount: principal,
-      termMonths,
-      paymentFrequency,
-      monthlyInterestRate,
-      interestType,
-      processingFeePercentage: processingFeePercent,
-      platformFeePerMonth: platformFeePerMonth
-    });
-
-    const result = this.loanCalculator.calculate({
-      loanAmount: principal,
-      termMonths,
-      paymentFrequency,
-      interestRate: monthlyInterestRate,
-      interestType,
-      processingFeePercentage: processingFeePercent,
-      platformFee: platformFeePerMonth,
-      latePenaltyPercentage: 0
-    });
-
-    console.log('📊 Calculation Result:', result);
-
-    return result;
+    return this.calculation();
   }
 
   private resolveInterestType(rawType?: string): 'flat' | 'reducing' | 'compound' {

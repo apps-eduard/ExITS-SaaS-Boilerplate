@@ -1,5 +1,5 @@
 // Collector Applications Page - Approve/Reject Applications
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -50,7 +50,7 @@ import {
   RejectApplicationDto,
 } from '../../core/services/collector.service';
 import { AuthService } from '../../core/services/auth.service';
-import { LoanCalculatorService, LoanCalculationResult } from '../../core/services/loan-calculator.service';
+import { LoanCalculationResult, LoanCalculationPreview, LoanCalculationRequest } from '../../core/models/loan-calculation.model';
 import { CollectorTopBarComponent } from '../../shared/components/collector-top-bar.component';
 
 @Component({
@@ -1029,7 +1029,7 @@ import { CollectorTopBarComponent } from '../../shared/components/collector-top-
     }
   `],
 })
-export class CollectorApplicationsPage implements OnInit {
+export class CollectorApplicationsPage implements OnInit, OnDestroy {
   private collectorService = inject(CollectorService);
   private authService = inject(AuthService);
   private router = inject(Router);
@@ -1061,13 +1061,16 @@ export class CollectorApplicationsPage implements OnInit {
 
   // Loan calculation
   calculation = signal<LoanCalculationResult | null>(null);
+  calculationLoading = signal(false);
+  calculationError = signal<string | null>(null);
+  private calculationTimer: any = null;
 
   productProcessingFeePercent = 0;
   productPlatformFee = 0;
   productPaymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' = 'daily';
   productInterestType: 'flat' | 'reducing' | 'compound' = 'flat';
 
-  constructor(private loanCalculator: LoanCalculatorService) {
+  constructor() {
     addIcons({
       documentTextOutline,
       checkmarkCircleOutline,
@@ -1087,6 +1090,13 @@ export class CollectorApplicationsPage implements OnInit {
     if (user) {
       this.collectorId.set(Number(user.id));
       this.loadApplications();
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.calculationTimer) {
+      clearTimeout(this.calculationTimer);
+      this.calculationTimer = null;
     }
   }
 
@@ -1189,34 +1199,64 @@ export class CollectorApplicationsPage implements OnInit {
       this.approveForm.approvedInterestRate = 2.5;
     }
 
-    this.showApproveModal.set(true);
-    // Calculate initial loan breakdown
-    this.calculateLoan();
+  this.showApproveModal.set(true);
+  // Calculate initial loan breakdown
+  this.calculateLoan(true);
   }
 
-  calculateLoan() {
+  calculateLoan(immediate = false) {
     this.approveForm.interestType = this.productInterestType;
-    if (this.approveForm.approvedAmount > 0 && 
-        this.approveForm.approvedTermDays > 0 && 
-        this.approveForm.approvedInterestRate > 0) {
-      
-      const termMonths = Math.ceil(this.approveForm.approvedTermDays / 30);
-      const processingFeePercent = Math.max(0, this.productProcessingFeePercent || 0);
-      const platformFee = Math.max(0, this.productPlatformFee || 0);
-      
-      const result = this.loanCalculator.calculate({
-        loanAmount: this.approveForm.approvedAmount,
-        termMonths: termMonths,
-        paymentFrequency: this.productPaymentFrequency,
-        interestRate: this.approveForm.approvedInterestRate,
-        interestType: this.productInterestType,
-        processingFeePercentage: processingFeePercent,
-        platformFee: platformFee
-      });
-      
-      this.calculation.set(result);
-    } else {
+
+    const amount = this.approveForm.approvedAmount;
+    const termDays = this.approveForm.approvedTermDays;
+    const interestRate = this.approveForm.approvedInterestRate;
+
+    if (this.calculationTimer) {
+      clearTimeout(this.calculationTimer);
+      this.calculationTimer = null;
+    }
+
+    const hasValidInputs = amount > 0 && termDays > 0 && interestRate > 0;
+
+    if (!hasValidInputs) {
       this.calculation.set(null);
+      return;
+    }
+
+    const execute = async () => {
+      const termMonths = Math.max(1, Math.ceil(termDays / 30));
+      const payload: LoanCalculationRequest = {
+        loanAmount: amount,
+        termMonths,
+        paymentFrequency: this.productPaymentFrequency || 'monthly',
+        interestRate,
+        interestType: this.productInterestType,
+        processingFeePercentage: Math.max(0, this.productProcessingFeePercent || 0),
+        platformFee: Math.max(0, this.productPlatformFee || 0),
+        latePenaltyPercentage: 0,
+        disbursementDate: new Date().toISOString(),
+      };
+
+      this.calculationLoading.set(true);
+      this.calculationError.set(null);
+
+      try {
+        const preview = await this.collectorService.calculateLoanPreview(payload).toPromise();
+        const calculation = (preview as LoanCalculationPreview)?.calculation ?? (preview as any)?.calculation ?? (preview as any) ?? null;
+        this.calculation.set(calculation);
+      } catch (error: any) {
+        console.error('❌ Collector loan preview error:', error);
+        this.calculation.set(null);
+        this.calculationError.set(error?.error?.message || 'Unable to calculate loan preview');
+      } finally {
+        this.calculationLoading.set(false);
+      }
+    };
+
+    if (immediate) {
+      execute();
+    } else {
+      this.calculationTimer = setTimeout(() => execute(), 500);
     }
   }
 

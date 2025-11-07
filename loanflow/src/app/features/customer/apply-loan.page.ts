@@ -2,30 +2,18 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
-  IonButtons,
   IonButton,
-  IonIcon,
   IonRefresher,
   IonRefresherContent,
   IonSkeletonText,
   ToastController,
   ModalController
 } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import {
-  arrowBackOutline,
-  moonOutline,
-  sunnyOutline,
-  refreshOutline
-} from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { HeaderUtilsComponent } from '../../shared/components/header-utils.component';
+import { CustomerTopBarComponent } from '../../shared/components/customer-top-bar.component';
 
 interface LoanProduct {
   id: number;
@@ -52,12 +40,11 @@ interface LoanProduct {
   imports: [
     CommonModule,
     IonContent,
-    IonIcon,
     IonButton,
     IonRefresher,
     IonRefresherContent,
     IonSkeletonText,
-    HeaderUtilsComponent
+    CustomerTopBarComponent
   ],
   template: `
     <ion-content [fullscreen]="true" class="main-content">
@@ -65,19 +52,11 @@ interface LoanProduct {
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <!-- Fixed Top Bar -->
-      <div class="fixed-top-bar">
-        <div class="top-bar-content">
-          <div class="top-bar-left">
-            <span class="app-emoji">💳</span>
-            <span class="app-title">Apply for Loan</span>
-          </div>
-          
-          <div class="top-bar-right">
-            <app-header-utils />
-          </div>
-        </div>
-      </div>
+      <app-customer-top-bar
+        emoji="💳"
+        title="Apply for Loan"
+        subtitle="Choose your loan product"
+      />
 
       <div class="products-container">
         <!-- Header Section -->
@@ -111,7 +90,7 @@ interface LoanProduct {
               It looks like your lender is still setting things up. We will let you know as soon as new loan products are ready.
             </p>
             <div class="empty-hint">
-              <ion-icon [icon]="'refresh-outline'"></ion-icon>
+              <span class="emoji-icon-inline">🔄</span>
               <span>We refresh the catalog automatically throughout the day.</span>
             </div>
             <div class="empty-actions">
@@ -121,7 +100,7 @@ interface LoanProduct {
                 (click)="refreshProducts()"
                 [disabled]="loading()"
               >
-                <ion-icon slot="start" [icon]="'refresh-outline'"></ion-icon>
+                <span class="emoji-icon-inline" slot="start">🔄</span>
                 Refresh products
               </ion-button>
               <button type="button" class="empty-secondary" (click)="goToDashboard()">
@@ -155,18 +134,18 @@ interface LoanProduct {
                   </span>
                 </div>
 
-                <div class="product-highlights">
-                  <div class="highlight-chip">
-                    <span class="chip-emoji">💰</span>
-                    <span class="chip-text">₱{{ formatCurrency(product.minAmount) }} - ₱{{ formatCurrency(product.maxAmount) }}</span>
+                <div class="product-info">
+                  <div class="info-item">
+                    <span class="info-emoji">💰</span>
+                    <span class="info-text">₱{{ formatCurrency(product.minAmount) }} - ₱{{ formatCurrency(product.maxAmount) }}</span>
                   </div>
-                  <div class="highlight-chip">
-                    <span class="chip-emoji">📈</span>
-                    <span class="chip-text">{{ product.interestRate }}% monthly ({{ product.interestType || 'flat' }})</span>
+                  <div class="info-item">
+                    <span class="info-emoji">📈</span>
+                    <span class="info-text">{{ product.interestRate }}% monthly ({{ product.interestType || 'flat' }})</span>
                   </div>
-                  <div class="highlight-chip">
-                    <span class="chip-emoji">🕒</span>
-                    <span class="chip-text">
+                  <div class="info-item">
+                    <span class="info-emoji">🕒</span>
+                    <span class="info-text">
                       @if (product.loanTermType === 'fixed') {
                         {{ Math.round((product.fixedTermDays || 90) / 30) }} month term
                       } @else {
@@ -175,46 +154,24 @@ interface LoanProduct {
                     </span>
                   </div>
                   @if (product.paymentFrequency) {
-                    <div class="highlight-chip">
-                      <span class="chip-emoji">📅</span>
-                      <span class="chip-text">{{ formatFrequency(product.paymentFrequency) }} payments</span>
+                    <div class="info-item">
+                      <span class="info-emoji">📅</span>
+                      <span class="info-text">{{ formatFrequency(product.paymentFrequency) }} payments</span>
+                    </div>
+                  }
+                  @if (product.processingFee > 0) {
+                    <div class="info-item">
+                      <span class="info-emoji">⚙️</span>
+                      <span class="info-text">Processing fee {{ product.processingFee }}%</span>
+                    </div>
+                  }
+                  @if (product.platformFee && product.platformFee > 0) {
+                    <div class="info-item">
+                      <span class="info-emoji">🛡️</span>
+                      <span class="info-text">Platform fee ₱{{ formatCurrency(product.platformFee) }}/mo</span>
                     </div>
                   }
                 </div>
-
-                <!-- Example Calculation Preview -->
-                <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mt-3">
-                  <div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Example (₱{{ formatCurrency(product.minAmount) }} for {{ Math.round(product.minTerm / 30) }} months)</div>
-                  <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <div class="text-gray-500">Processing Fee ({{ product.processingFee }}%)</div>
-                      <div class="font-medium">₱{{ formatCurrency(product.minAmount * (product.processingFee / 100)) }}</div>
-                    </div>
-                    @if (product.platformFee && product.platformFee > 0) {
-                      <div>
-                        <div class="text-gray-500">Platform Fee</div>
-                        <div class="font-medium">₱{{ formatCurrency(product.platformFee * Math.round(product.minTerm / 30)) }}</div>
-                      </div>
-                    }
-                  </div>
-                </div>
-
-                @if (product.processingFee > 0 || (product.platformFee && product.platformFee > 0)) {
-                  <div class="product-meta">
-                    @if (product.processingFee > 0) {
-                      <div class="meta-item">
-                        <span class="meta-emoji">⚙️</span>
-                        <span class="meta-text">Processing fee {{ product.processingFee }}%</span>
-                      </div>
-                    }
-                    @if (product.platformFee && product.platformFee > 0) {
-                      <div class="meta-item">
-                        <span class="meta-emoji">🛡️</span>
-                        <span class="meta-text">Platform fee ₱{{ formatCurrency(product.platformFee) }}/mo</span>
-                      </div>
-                    }
-                  </div>
-                }
 
                 @if (product.features && product.features.length > 0) {
                   <div class="features-section">
@@ -365,9 +322,10 @@ interface LoanProduct {
       margin-bottom: 1.75rem;
     }
 
-    .empty-hint ion-icon {
+    .emoji-icon-inline {
       font-size: 1rem;
-      color: #2563eb;
+      line-height: 1;
+      display: inline-block;
     }
 
     .empty-actions {
@@ -419,95 +377,8 @@ interface LoanProduct {
 
     .products-container {
       padding: 0 1rem 1rem 1rem;
-      padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
+      padding-top: calc(84px + env(safe-area-inset-top) + 0.85rem);
       padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .custom-toolbar {
-      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --color: white;
-      --border-style: none;
-      --min-height: 64px;
-      --padding-top: 0;
-      --padding-bottom: 0;
-      --padding-start: 0;
-      --padding-end: 0;
-    }
-
-    .toolbar-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1rem;
-      width: 100%;
-      height: 64px;
-    }
-
-    .toolbar-left,
-    .toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex: 0 0 auto;
-    }
-
-    .toolbar-center {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex: 1;
-      justify-content: center;
-    }
-
-    .app-emoji {
-      font-size: 1.75rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    }
-
-    .app-title {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: white;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-      letter-spacing: -0.02em;
-    }
-
-    .icon-btn {
-      --padding-start: 8px;
-      --padding-end: 8px;
-      margin: 0;
-      height: 40px;
-      width: 40px;
-    }
-
-    .back-emoji,
-    .theme-emoji {
-      font-size: 1.5rem;
-      display: inline-flex;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-    }
-
-    .back-emoji {
-      font-size: 2rem;
-      font-weight: bold;
-    }
-
-    .back-btn {
-      --color: rgba(255, 255, 255, 0.95);
-    }
-
-    .back-btn:hover .back-emoji {
-      filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.6));
-    }
-
-    /* ===== MAIN CONTENT ===== */
-    .main-content {
-      --background: linear-gradient(180deg, rgba(236, 233, 252, 0.85) 0%, rgba(255, 255, 255, 0.95) 45%, var(--ion-background-color) 100%);
-    }
-
-    .products-container {
-      padding: 1rem;
       max-width: 600px;
       margin: 0 auto;
     }
@@ -643,16 +514,18 @@ interface LoanProduct {
       display: flex;
       flex-direction: column;
       gap: 0.85rem;
+      max-width: 100%;
     }
 
     .product-card {
       background: var(--ion-card-background);
       border: 1px solid var(--ion-border-color, #e5e7eb);
       border-radius: 14px;
-      padding: 1.05rem;
+      padding: 1.25rem 1.5rem;
       box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
       transition: all 0.3s ease;
       position: relative;
+      width: 100%;
     }
 
     .product-card:hover {
@@ -767,54 +640,29 @@ interface LoanProduct {
       white-space: nowrap;
     }
 
-    .product-highlights {
-      margin-top: 0.9rem;
-      display: grid;
-      gap: 0.5rem;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    .product-info {
+      margin-top: 1rem;
+      margin-left: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
     }
 
-    .highlight-chip {
+    .info-item {
       display: flex;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.45rem 0.6rem;
-      border-radius: 12px;
-      background: rgba(148, 163, 184, 0.12);
-      font-size: 0.8rem;
-      font-weight: 600;
+      gap: 0.5rem;
+      font-size: 0.85rem;
       color: var(--ion-text-color);
     }
 
-    .chip-emoji {
-      font-size: 1rem;
+    .info-emoji {
+      font-size: 1.1rem;
+      flex-shrink: 0;
     }
 
-    .chip-text {
+    .info-text {
       flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .product-meta {
-      margin-top: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.78rem;
-      color: rgba(var(--ion-text-color-rgb, 15, 23, 42), 0.75);
-    }
-
-    .meta-emoji {
-      font-size: 1rem;
     }
 
     .features-section {
@@ -1067,12 +915,6 @@ export class ApplyLoanPage implements OnInit {
     public themeService: ThemeService,
     private toastController: ToastController
   ) {
-    addIcons({
-      arrowBackOutline,
-      moonOutline,
-      sunnyOutline,
-      refreshOutline
-    });
   }
 
   ngOnInit() {
@@ -1290,15 +1132,21 @@ export class ApplyLoanPage implements OnInit {
       // Build map of productId -> application/loan
       // ONLY include applications/loans that should block new applications:
       // - Applications: submitted, approved (waiting for disbursement)
-      // - Loans: active (currently being repaid)
-      // EXCLUDE: completed, disbursed (application), rejected
+      // - Loans: active (currently being repaid), disbursed (money transferred)
+      // EXCLUDE: completed, rejected
       const appMap = new Map<number, any>();
       const pendingIds: number[] = [];
       
       applications.forEach((app: any) => {
         // Handle both loans and applications - they use different field names
         const productId = app.loan_product_id || app.loanProductId || app.product_id;
-        const status = (app.status || '').toLowerCase();
+        let status = (app.status || '').toLowerCase();
+        
+        // Fix: If status is 'approved' but loan has been disbursed, update status
+        if (status === 'approved' && (app.disbursement_date || app.disbursementDate || app.disbursed_at || app.disbursedAt)) {
+          status = 'disbursed';
+          app.status = 'disbursed'; // Update the app object
+        }
         
         console.log('🔍 Processing app/loan:', {
           id: app.id,
@@ -1306,13 +1154,14 @@ export class ApplyLoanPage implements OnInit {
           productId,
           status: app.status,
           amount: app.amount || app.principal_amount || app.principalAmount,
+          disbursementDate: app.disbursement_date || app.disbursementDate,
           rawApp: app
         });
         
         // Only include if status blocks new applications
         // submitted/approved = pending application
-        // active = loan is being repaid
-        const shouldBlock = ['submitted', 'approved', 'active', 'pending'].includes(status);
+        // active/disbursed = loan is active or disbursed (blocks new applications)
+        const shouldBlock = ['submitted', 'approved', 'active', 'disbursed', 'pending'].includes(status);
         
         console.log(`🔍 Product ${productId}, Status: ${status}, Should Block: ${shouldBlock}`);
         

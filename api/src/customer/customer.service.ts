@@ -1104,6 +1104,7 @@ export class CustomerService {
         'money_loan_applications.customer_id': customerId,
         'money_loan_applications.tenant_id': tenantId,
       })
+      .whereIn('money_loan_applications.status', ['submitted', 'under_review'])
       .orderBy('money_loan_applications.created_at', 'desc');
   }
 
@@ -1567,50 +1568,29 @@ export class CustomerService {
     // Calculate total paid from payments
     let totalPaid = 0;
     for (const payment of payments) {
-      totalPaid += parseFloat(payment.amount || '0');
+      const amount = parseFloat(payment.amount || '0');
+      console.log(`💰 Payment ${payment.id}: amount = ${amount}, status = ${payment.status}`);
+      totalPaid += amount;
     }
+    console.log(`📊 TOTAL PAID calculated from ${payments.length} payments: ${totalPaid}`);
 
-    console.log(`💰 Total paid from ${payments.length} payments: ${totalPaid}`);
-    console.log(`📊 Generated ${schedule.length} installments using centralized calculator`);
+    // Instead of using stored schedules, use the MoneyLoanService to generate dynamic schedule
+    // This ensures customer view matches collector view calculations
+    const { MoneyLoanService } = require('../money-loan/money-loan.service');
+    const moneyLoanService = new MoneyLoanService(this.knexService);
+    
+    console.log('🔄 Using dynamic schedule generation (same as collector view)');
+    const scheduleData = await moneyLoanService.generateRepaymentSchedule(tenantId, loanId);
+    
+    console.log(`📅 Generated ${scheduleData.length} schedule items dynamically`);
 
-    // Map schedule to response format with payment status
-    const scheduleData = schedule.map((item) => {
-      const previousInstallmentsTotal = (item.paymentNumber - 1) * calculation.installmentAmount;
-      const thisInstallmentEnd = item.paymentNumber * calculation.installmentAmount;
-
-      let status = 'pending';
-      if (totalPaid >= thisInstallmentEnd - 0.01) { // Small tolerance for rounding
-        status = 'paid';
-      } else if (totalPaid > previousInstallmentsTotal + 0.01) { // Only partial if clearly beyond previous total
-        status = 'partial';
-      }
-
-      // Check if overdue
-      const today = new Date();
-      if (status !== 'paid' && item.dueDate < today) {
-        status = 'overdue';
-      }
-
-      return {
-        id: item.paymentNumber,
-        installment_number: item.paymentNumber,
-        installmentNumber: item.paymentNumber,
-        due_date: item.dueDate,
-        dueDate: item.dueDate,
-        principal_amount: item.principal,
-        principalAmount: item.principal,
-        interest_amount: item.interest,
-        interestAmount: item.interest,
-        total_amount: item.installmentAmount,
-        totalAmount: item.installmentAmount,
-        outstanding_amount: item.remainingBalance,
-        outstandingAmount: item.remainingBalance,
-        status,
-      };
-    });
+    const scheduleTotalAmount = scheduleData.reduce((sum: number, installment: any) => sum + (installment.totalAmount || 0), 0);
 
     const outstandingBalance = parseFloat(loan.outstanding_balance ?? loan.outstandingBalance ?? 0);
-    const paymentProgress = principalAmount > 0 ? Math.round((totalPaid / calculation.totalRepayable) * 100) : 0;
+    const totalRepayableForProgress = scheduleTotalAmount > 0 ? scheduleTotalAmount : calculation.totalRepayable;
+    const paymentProgress = totalRepayableForProgress > 0
+      ? Math.min(100, Math.round((totalPaid / totalRepayableForProgress) * 100))
+      : 0;
 
     return {
       loan: {
@@ -1619,8 +1599,8 @@ export class CustomerService {
         principalAmount: principalAmount,
         interestRate,
         interestType,
-        totalInterest: calculation.interestAmount,
-        totalAmount: calculation.totalRepayable,
+        totalInterest: parseFloat(loan.total_interest ?? loan.totalInterest ?? calculation.interestAmount ?? 0),
+        totalAmount: totalRepayableForProgress,
         outstandingBalance: outstandingBalance,
         status: loan.status,
         disbursementDate: loan.disbursement_date ?? loan.disbursementDate,

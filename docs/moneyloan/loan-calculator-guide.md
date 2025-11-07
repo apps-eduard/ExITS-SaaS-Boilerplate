@@ -1,6 +1,6 @@
 # Money Loan Calculator Guide
 
-This guide documents the shared loan calculation rules implemented in `LoanCalculatorService`. It explains the expected inputs, formulas, and sample outputs so product, admin, and customer surfaces present the same numbers.
+This guide documents the canonical backend calculator that powers every Money Loan preview. All channels (web admin, web customer, and mobile) now call the same NestJS endpoint, so the numbers shown to borrowers always align with the single source of truth.
 
 ---
 
@@ -93,52 +93,96 @@ Given `A = loanAmount`, `T = termMonths`, `I = interestRate` (monthly %), `PF = 
 
 ---
 
-## 4. Service API Reference
+## 4. API Reference (Single Source of Truth)
+
+Frontends call one of two HTTP endpoints, both backed by the same NestJS service:
+
+| Audience | Endpoint | Notes |
+| --- | --- | --- |
+| Admin / Back-office | `POST /api/money-loan/calculate` | Requires platform auth. |
+| Customer-authenticated | `POST /api/customers/auth/loan-preview` | Uses the logged-in customer context. |
+
+### Request payload
 
 ```ts
-export interface LoanParams {
-  loanAmount: number;
-  termMonths: number;
-  paymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  interestRate: number;              // monthly percentage
-  interestType: 'flat' | 'reducing' | 'compound';
-  processingFeePercentage: number;
-  platformFee: number;               // fee per month
-  latePenaltyPercentage: number;
-}
-
-export interface LoanCalculation {
-  loanAmount: number;
-  termMonths: number;
-  paymentFrequency: string;
-  interestAmount: number;
-  processingFeeAmount: number;
-  platformFee: number;               // total for entire term
-  netProceeds: number;
-  totalRepayable: number;
-  numPayments: number;
-  installmentAmount: number;
-  effectiveInterestRate: number;
-  gracePeriodDays: number;
-  totalDeductions: number;           // upfront fees only
-  monthlyEquivalent?: number;        // for comparisons across frequencies
+interface LoanCalculationRequest {
+   loanAmount: number;
+   termMonths: number;
+   paymentFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+   interestRate: number;              // monthly percentage
+   interestType: 'flat' | 'reducing' | 'compound';
+   processingFeePercentage?: number;
+   platformFee?: number;              // fee per month
+   latePenaltyPercentage?: number;
+   disbursementDate?: string;         // optional ISO string
 }
 ```
 
-`LoanCalculatorService.calculate(params)` returns a `LoanCalculation`. Helper methods also expose:
+### Response payload
 
-- `generateSchedule(calculation, startDate)` – builds a payment schedule using the installment amount and frequency.
-- `getGracePeriod(frequency)` – returns default grace days (`0` daily, `1` weekly, `3` monthly).
-- `convertToMonthlyEquivalent(installment, frequency)` – normalizes periodic payments back to a monthly rate.
+```ts
+interface LoanCalculationPreview {
+   calculation: LoanCalculationResult;
+   schedule: LoanSchedulePreviewItem[];
+}
+
+interface LoanCalculationResult {
+   loanAmount: number;
+   termMonths: number;
+   paymentFrequency: string;
+   interestAmount: number;
+   processingFeeAmount: number;
+   platformFee: number;               // total for entire term
+   netProceeds: number;
+   totalRepayable: number;
+   numPayments: number;
+   installmentAmount: number;
+   effectiveInterestRate: number;
+   gracePeriodDays: number;
+   totalDeductions: number;           // upfront fees only
+   monthlyEquivalent?: number;
+}
+
+interface LoanSchedulePreviewItem {
+   paymentNumber: number;
+   dueDate: string;
+   installmentAmount: number;
+   principal: number;
+   interest: number;
+   remainingBalance: number;
+   cumulativePaid: number;
+}
+```
+
+### Example request
+
+```http
+POST /api/money-loan/calculate
+Content-Type: application/json
+
+{
+   "loanAmount": 1000,
+   "termMonths": 3,
+   "paymentFrequency": "weekly",
+   "interestRate": 5,
+   "interestType": "flat",
+   "processingFeePercentage": 1,
+   "platformFee": 50,
+   "latePenaltyPercentage": 1
+}
+
+// → 200 OK
+// { "success": true, "data": { calculation, schedule } }
+```
 
 ---
 
 ## 5. Integration Notes
 
-- **Single Source of Truth**: Both admin previews and customer modals should rely on the shared service (directly or via small wrappers). Avoid duplicating formulas in components.
+- **Single Source of Truth**: Web (admin/customer) and mobile now proxy through lightweight wrappers (`LoanService.calculateLoanPreview` and `ApiService.calculateLoanPreview`). Do not reintroduce local math helpers.
 - **Cache Carefully**: Components may memoize results per product/amount/term combination. Invalidate caches whenever inputs change to prevent stale figures.
-- **Rounding**: The service returns raw decimal amounts. Apply rounding rules at the presentation layer (e.g., round up to nearest peso for payment prompts).
-- **Validation**: Ensure UI validation keeps `loanAmount` within a product’s min/max range and rounds `termMonths` to whole integers before passing data to the service.
+- **Rounding**: The API returns raw decimal amounts. Apply product-specific rounding rules at the presentation layer (e.g., round up to nearest peso for payment prompts).
+- **Validation**: Ensure UI validation keeps `loanAmount` within the product’s min/max range and rounds `termMonths` to whole integers before sending the preview request.
 - **Platform Fee per Month**: Remember that platform fees stack with the number of active months. A longer term increases both net deductions and total repayment.
 
 ---

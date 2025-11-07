@@ -81,6 +81,7 @@ interface TimelineStep {
       </div>
 
       <div class="timeline-container">
+
         @if (loading()) {
           <div class="loading-state">
             <ion-spinner name="crescent"></ion-spinner>
@@ -174,6 +175,14 @@ interface TimelineStep {
               </div>
             }
           </div>
+
+          <!-- Back to Dashboard Button -->
+          <div class="dashboard-button-container">
+            <button class="dashboard-button" (click)="goBack()">
+              <span class="dashboard-icon">🏠</span>
+              <span class="dashboard-text">Back to Dashboard</span>
+            </button>
+          </div>
         } @else {
           <div class="error-state">
             <ion-icon name="document-text-outline" class="error-icon"></ion-icon>
@@ -185,6 +194,69 @@ interface TimelineStep {
     </ion-content>
   `,
   styles: [`
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes progressPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+      }
+    }
+
     /* Fixed Top Bar Styles */
     .fixed-top-bar {
       position: fixed;
@@ -221,6 +293,7 @@ interface TimelineStep {
     .app-emoji {
       font-size: 1.5rem;
       line-height: 1;
+      animation: scaleIn 0.5s ease-out;
     }
 
     .app-title {
@@ -228,6 +301,7 @@ interface TimelineStep {
       font-weight: 600;
       color: white;
       letter-spacing: -0.01em;
+      animation: slideInRight 0.5s ease-out 0.1s backwards;
     }
 
     /* Main Content Background */
@@ -241,6 +315,57 @@ interface TimelineStep {
       padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
       padding-left: 1rem;
       padding-right: 1rem;
+    }
+
+    /* ===== DASHBOARD BUTTON ===== */
+    .dashboard-button-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+      padding: 1rem 0;
+      animation: fadeInUp 0.5s ease-out 0.8s backwards;
+    }
+
+    .dashboard-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      padding: 0.875rem 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      letter-spacing: -0.01em;
+    }
+
+    .dashboard-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+      transition: transform 0.3s ease;
+    }
+
+    .dashboard-text {
+      letter-spacing: 0.01em;
+    }
+
+    .dashboard-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .dashboard-button:hover .dashboard-icon {
+      transform: scale(1.1) rotate(-5deg);
+    }
+
+    .dashboard-button:active {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .loading-state, .error-state {
@@ -260,6 +385,33 @@ interface TimelineStep {
 
     .app-header-card {
       margin-bottom: 1rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+      border: 1px solid rgba(102, 126, 234, 0.1);
+      animation: fadeInUp 0.5s ease-out;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .app-header-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .app-header-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+    }
+
+    .app-header-card:hover::before {
+      left: 100%;
     }
 
     .header-content {
@@ -272,44 +424,72 @@ interface TimelineStep {
       font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 0.25rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .product-name {
       margin: 0;
       color: var(--ion-color-medium);
       font-size: 0.9rem;
+      font-weight: 500;
     }
 
     .app-details {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.85rem;
       margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
     }
 
     .detail-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 0.65rem;
+      background: var(--ion-color-light);
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .detail-item:hover {
+      transform: translateX(4px);
+      background: rgba(102, 126, 234, 0.08);
     }
 
     .detail-label {
       color: var(--ion-color-medium);
-      font-size: 0.9rem;
+      font-size: 0.875rem;
+      font-weight: 500;
     }
 
     .detail-value {
-      font-weight: 600;
+      font-weight: 700;
       font-size: 1rem;
+      color: var(--ion-text-color);
     }
 
     .timeline-card {
       margin-bottom: 1rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      animation: fadeInUp 0.5s ease-out 0.2s backwards;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .timeline-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     }
 
     .timeline-title {
       font-size: 1.1rem;
       font-weight: 700;
+      color: var(--ion-text-color);
     }
 
     .timeline {
@@ -323,14 +503,21 @@ interface TimelineStep {
       left: 1.25rem;
       top: 0;
       bottom: 0;
-      width: 2px;
-      background: var(--ion-color-light);
+      width: 3px;
+      background: linear-gradient(to bottom, var(--ion-color-light) 0%, rgba(102, 126, 234, 0.1) 100%);
+      border-radius: 2px;
     }
 
     .timeline-step {
       position: relative;
       margin-bottom: 2rem;
+      animation: slideInRight 0.5s ease-out backwards;
     }
+
+    .timeline-step:nth-child(1) { animation-delay: 0.3s; }
+    .timeline-step:nth-child(2) { animation-delay: 0.4s; }
+    .timeline-step:nth-child(3) { animation-delay: 0.5s; }
+    .timeline-step:nth-child(4) { animation-delay: 0.6s; }
 
     .timeline-step:last-child {
       margin-bottom: 0;
@@ -347,15 +534,20 @@ interface TimelineStep {
       align-items: center;
       justify-content: center;
       z-index: 1;
+      border: 3px solid var(--ion-card-background);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
 
     .step-icon ion-icon {
       font-size: 1.25rem;
       color: var(--ion-color-medium);
+      transition: all 0.3s ease;
     }
 
     .timeline-step.completed .step-icon {
-      background: var(--ion-color-success);
+      background: linear-gradient(135deg, #10b981, #059669);
+      animation: scaleIn 0.4s ease-out;
     }
 
     .timeline-step.completed .step-icon ion-icon {
@@ -363,35 +555,48 @@ interface TimelineStep {
     }
 
     .timeline-step.current .step-icon {
-      background: var(--ion-color-primary);
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      animation: progressPulse 2s infinite;
     }
 
     .timeline-step.current .step-icon ion-icon {
       color: white;
+      animation: pulse 1.5s infinite;
     }
 
     .timeline-step.rejected .step-icon {
-      background: var(--ion-color-danger);
+      background: linear-gradient(135deg, #ef4444, #dc2626);
     }
 
     .timeline-step.rejected .step-icon ion-icon {
       color: white;
     }
 
+    .timeline-step:hover .step-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+
     .step-content {
-      padding-left: 0.5rem;
+      padding-left: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .timeline-step:hover .step-content {
+      transform: translateX(4px);
     }
 
     .step-title {
       font-size: 1rem;
-      font-weight: 600;
-      margin: 0 0 0.25rem 0;
+      font-weight: 700;
+      margin: 0 0 0.35rem 0;
+      color: var(--ion-text-color);
     }
 
     .step-date {
-      font-size: 0.85rem;
-      color: var(--ion-color-medium);
+      font-size: 0.8125rem;
+      color: var(--ion-color-step-600, #64748b);
       margin: 0;
+      font-weight: 500;
     }
 
     .step-status {
@@ -407,42 +612,71 @@ interface TimelineStep {
 
     .action-buttons {
       margin-top: 1rem;
+      animation: fadeInUp 0.5s ease-out 0.7s backwards;
     }
 
     .info-message {
       padding: 1rem;
-      border-radius: 12px;
+      border-radius: 14px;
       display: flex;
       align-items: flex-start;
-      gap: 0.75rem;
+      gap: 0.85rem;
       margin-bottom: 1rem;
+      border: 1.5px solid transparent;
+      transition: all 0.3s ease;
+      animation: scaleIn 0.4s ease-out;
+    }
+
+    .info-message:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .info-message ion-icon {
-      font-size: 1.5rem;
+      font-size: 1.75rem;
       flex-shrink: 0;
     }
 
     .info-message p {
       margin: 0;
       flex: 1;
-      font-size: 0.9rem;
-      line-height: 1.4;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      font-weight: 500;
     }
 
     .info-message.success {
       background: rgba(16, 185, 129, 0.1);
-      color: var(--ion-color-success);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.2);
     }
 
     .info-message.warning {
       background: rgba(245, 158, 11, 0.1);
-      color: var(--ion-color-warning);
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.2);
     }
 
     .info-message.error {
       background: rgba(239, 68, 68, 0.1);
-      color: var(--ion-color-danger);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    ion-button {
+      --border-radius: 12px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: -0.01em;
+      transition: all 0.3s ease;
+    }
+
+    ion-button:hover {
+      transform: translateY(-2px);
+    }
+
+    ion-button:active {
+      transform: translateY(0);
     }
 
     body.dark .info-message.success {

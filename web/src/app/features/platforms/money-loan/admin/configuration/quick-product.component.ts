@@ -1,11 +1,17 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LoanCalculatorService, LoanParams, LoanCalculation } from '../../shared/services/loan-calculator.service';
+import { Subscription } from 'rxjs';
 import { LoanService } from '../../shared/services/loan.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import {
+  LoanCalculationRequest,
+  LoanCalculationResult,
+  LoanInterestType,
+  PaymentFrequency,
+} from '../../shared/models/loan-calculation.model';
 
 @Component({
   selector: 'app-quick-product',
@@ -483,7 +489,23 @@ import { AuthService } from '../../../../../core/services/auth.service';
               }
             </div>
 
-            @if (preview()) {
+            @if (previewLoading()) {
+              <div class="text-center py-8 text-gray-500 dark:text-gray-300">
+                <div class="text-4xl mb-3 animate-spin">⏳</div>
+                <p class="text-xs font-semibold">Calculating preview…</p>
+                <p class="text-xs opacity-70">Fetching the latest repayment details.</p>
+              </div>
+            } @else if (previewError()) {
+              <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg p-4">
+                <div class="flex items-start gap-2">
+                  <span class="text-lg">⚠️</span>
+                  <div class="text-xs space-y-1">
+                    <p class="font-semibold">Unable to generate preview</p>
+                    <p>{{ previewError() }}</p>
+                  </div>
+                </div>
+              </div>
+            } @else if (preview()) {
               <!-- Quick Stats Grid -->
               <div class="grid grid-cols-2 gap-2 mb-3">
                 <div class="bg-green-50 dark:bg-green-900/20 rounded p-2">
@@ -816,12 +838,14 @@ import { AuthService } from '../../../../../core/services/auth.service';
   `,
   styles: []
 })
-export class QuickProductComponent {
-  private calculatorService = inject(LoanCalculatorService);
+export class QuickProductComponent implements OnDestroy {
   private loanService = inject(LoanService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private previewSubscription?: Subscription;
+  private previewTimer?: ReturnType<typeof setTimeout>;
+  private lastPreviewKey: string | null = null;
 
   // Form fields
   productCode = '';
@@ -834,13 +858,13 @@ export class QuickProductComponent {
   minTermMonths = 1;
   maxTermMonths = 6;
   interestRate = 5;
-  interestType: 'flat' | 'reducing' | 'compound' = 'flat';
+  interestType: LoanInterestType = 'flat';
   processingFeePercent = 0;
   platformFee = 50;
   latePaymentPenaltyPercent = 1;
   gracePeriodDays = 1;
   isActive = true;
-  paymentFrequency: 'daily' | 'weekly' | 'monthly' = 'weekly';
+  paymentFrequency: PaymentFrequency = 'weekly';
   previewLoanAmount = 50000; // For accurate preview calculation
   previewTermMonths = 3; // For accurate preview calculation
   previewDaysOverdue = 5; // For penalty calculation
@@ -848,7 +872,9 @@ export class QuickProductComponent {
 
   // State
   saving = signal(false);
-  preview = signal<LoanCalculation | null>(null);
+  preview = signal<LoanCalculationResult | null>(null);
+  previewLoading = signal(false);
+  previewError = signal<string | null>(null);
   products = signal<any[]>([]);
   loading = signal(false);
   editingProductId: number | null = null;
@@ -1006,14 +1032,17 @@ export class QuickProductComponent {
   }
 
   calculatePenalty(): void {
-    if (!this.preview()) {
+    const preview = this.preview();
+    if (!preview) {
       this.penaltyAmount.set(0);
       return;
     }
 
-    // Use the grace period from the form, not from the preview calculation
-    const billableDays = Math.max(0, this.previewDaysOverdue - this.gracePeriodDays);
-    const dailyPenalty = this.preview()!.installmentAmount * (this.latePaymentPenaltyPercent / 100);
+    const overdueDays = Math.max(0, Number(this.previewDaysOverdue) || 0);
+    const graceDays = Math.max(0, Number(this.gracePeriodDays) || 0);
+    const penaltyRate = Math.max(0, Number(this.latePaymentPenaltyPercent) || 0);
+    const billableDays = Math.max(0, overdueDays - graceDays);
+    const dailyPenalty = preview.installmentAmount * (penaltyRate / 100);
     const totalPenalty = dailyPenalty * billableDays;
 
     this.penaltyAmount.set(totalPenalty);
@@ -1021,45 +1050,65 @@ export class QuickProductComponent {
 
   calculatePreview(): void {
     if (this.minAmount <= 0) {
-      this.preview.set(null);
+      this.resetPreview();
       return;
     }
 
-    // Ensure preview amount is within range
-    let calculationAmount = this.previewLoanAmount;
+    let calculationAmount = Number(this.previewLoanAmount) || 0;
     if (calculationAmount < this.minAmount || calculationAmount > this.maxAmount) {
-      calculationAmount = (this.minAmount + this.maxAmount) / 2;
+      calculationAmount = (Number(this.minAmount) + Number(this.maxAmount)) / 2;
       this.previewLoanAmount = calculationAmount;
     }
 
-    // Determine the term to use based on term type
     let calculationTerm: number;
     if (this.loanTermType === 'fixed') {
-      calculationTerm = this.fixedTermMonths;
-      this.previewTermMonths = this.fixedTermMonths; // Sync preview with fixed term
+      calculationTerm = Math.max(1, Math.round(Number(this.fixedTermMonths) || 0));
+      this.fixedTermMonths = calculationTerm;
+      this.previewTermMonths = calculationTerm;
     } else {
-      // For flexible terms, ensure preview term is within range
-      calculationTerm = this.previewTermMonths;
+      calculationTerm = Math.max(1, Math.round(Number(this.previewTermMonths) || 0));
       if (calculationTerm < this.minTermMonths || calculationTerm > this.maxTermMonths) {
         calculationTerm = Math.ceil((this.minTermMonths + this.maxTermMonths) / 2);
         this.previewTermMonths = calculationTerm;
       }
     }
 
-    const params: LoanParams = {
-      loanAmount: calculationAmount,
-      termMonths: calculationTerm,
-      paymentFrequency: this.paymentFrequency,
-      interestRate: this.interestRate,
-      interestType: this.interestType,
-      processingFeePercentage: this.processingFeePercent,
-      platformFee: this.platformFee,
-      latePenaltyPercentage: this.latePaymentPenaltyPercent
-    };
+    const request = this.buildPreviewRequest(calculationAmount, calculationTerm);
+    if (!request) {
+      this.resetPreview();
+      return;
+    }
 
-    const calculation = this.calculatorService.calculate(params);
-    this.preview.set(calculation);
-    this.calculatePenalty(); // Update penalty when preview changes
+    const cacheKey = JSON.stringify(request);
+    if (this.lastPreviewKey === cacheKey && this.preview()) {
+      this.calculatePenalty();
+      return;
+    }
+
+    this.lastPreviewKey = null;
+    this.cancelPendingPreview();
+    this.previewLoading.set(true);
+    this.previewError.set(null);
+
+    this.previewTimer = setTimeout(() => {
+      this.previewSubscription = this.loanService.calculateLoanPreview(request).subscribe({
+        next: (response) => {
+          this.previewLoading.set(false);
+          this.preview.set(response.calculation);
+          this.lastPreviewKey = cacheKey;
+          this.calculatePenalty();
+        },
+        error: (error) => {
+          console.error('Error fetching loan preview:', error);
+          this.previewLoading.set(false);
+          const message = error?.error?.message || 'Unable to calculate loan preview';
+          this.previewError.set(message);
+          this.preview.set(null);
+          this.lastPreviewKey = null;
+          this.penaltyAmount.set(0);
+        },
+      });
+    }, 200);
   }
 
   saveProduct(): void {
@@ -1311,6 +1360,70 @@ export class QuickProductComponent {
   }
 
   formatCurrency(amount: number): string {
-    return this.calculatorService.formatCurrency(amount);
+    const value = Number.isFinite(amount) ? amount : 0;
+    return `₱${value.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  ngOnDestroy(): void {
+    this.cancelPendingPreview();
+  }
+
+  private buildPreviewRequest(amount: number, termMonths: number): LoanCalculationRequest | null {
+    const loanAmount = Math.max(0, Number(amount) || 0);
+    if (loanAmount <= 0) {
+      return null;
+    }
+
+    const term = Math.max(1, Math.round(Number(termMonths) || 0));
+    if (!Number.isFinite(term) || term <= 0) {
+      return null;
+    }
+
+    return {
+      loanAmount,
+      termMonths: term,
+      paymentFrequency: this.normalizeFrequency(this.paymentFrequency),
+      interestRate: Math.max(0, Number(this.interestRate) || 0),
+      interestType: this.normalizeInterestType(this.interestType),
+      processingFeePercentage: Math.max(0, Number(this.processingFeePercent) || 0),
+      platformFee: Math.max(0, Number(this.platformFee) || 0),
+      latePenaltyPercentage: Math.max(0, Number(this.latePaymentPenaltyPercent) || 0),
+    };
+  }
+
+  private normalizeFrequency(value: string | PaymentFrequency): PaymentFrequency {
+    const normalized = (value || 'weekly').toString().toLowerCase() as PaymentFrequency;
+    const allowed: PaymentFrequency[] = ['daily', 'weekly', 'biweekly', 'monthly'];
+    return allowed.includes(normalized) ? normalized : 'weekly';
+  }
+
+  private normalizeInterestType(value: string | LoanInterestType): LoanInterestType {
+    const normalized = (value || 'flat').toString().toLowerCase() as LoanInterestType;
+    const allowed: LoanInterestType[] = ['flat', 'reducing', 'compound'];
+    return allowed.includes(normalized) ? normalized : 'flat';
+  }
+
+  private cancelPendingPreview(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = undefined;
+    }
+
+    if (this.previewSubscription) {
+      this.previewSubscription.unsubscribe();
+      this.previewSubscription = undefined;
+    }
+  }
+
+  private resetPreview(): void {
+    this.cancelPendingPreview();
+    this.previewLoading.set(false);
+    this.previewError.set(null);
+    this.preview.set(null);
+    this.lastPreviewKey = null;
+    this.penaltyAmount.set(0);
   }
 }

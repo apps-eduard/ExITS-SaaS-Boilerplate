@@ -25,7 +25,8 @@ import {
   peopleOutline,
   chevronForwardOutline,
   calendarOutline,
-  alertCircleOutline
+  alertCircleOutline,
+  refreshOutline
 } from 'ionicons/icons';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -50,6 +51,8 @@ interface RecentLoan {
   balance: number;
   status: string;
   dueDate: string;
+  productName?: string;
+  type?: string;
 }
 
 interface AssignedCollector {
@@ -314,7 +317,10 @@ interface AssignedCollector {
         <!-- Recent Loans -->
   <div class="section-card animate-fade-up delay-5">
           <div class="section-header">
-            <h2 class="section-title">Recent Loans</h2>
+            <div class="section-header-left">
+              <span class="section-emoji">📋</span>
+              <h2 class="section-title">Recent Loans</h2>
+            </div>
             <ion-button 
               routerLink="/customer/loans"
               fill="clear" 
@@ -326,66 +332,103 @@ interface AssignedCollector {
             </ion-button>
           </div>
 
+          <!-- Filter Tabs -->
+          <div class="filter-tabs">
+            <button 
+              class="filter-tab"
+              [class.active]="loanFilter() === 'active'"
+              (click)="applyLoanFilter('active')"
+            >
+              Active
+              <span class="tab-count">{{ loanFilterCount('active') }}</span>
+              @if (loanFilter() === 'active') {
+                <span class="tab-indicator"></span>
+              }
+            </button>
+            <button 
+              class="filter-tab"
+              [class.active]="loanFilter() === 'all'"
+              (click)="applyLoanFilter('all')"
+            >
+              In Progress
+              <span class="tab-count">{{ loanFilterCount('all') }}</span>
+              @if (loanFilter() === 'all') {
+                <span class="tab-indicator"></span>
+              }
+            </button>
+          </div>
+
           @if (loading()) {
             <div class="loans-loading">
-              @for (i of [1,2,3]; track i) {
-                <div class="loan-skeleton">
-                  <ion-skeleton-text animated class="skeleton-header"></ion-skeleton-text>
-                  <ion-skeleton-text animated class="skeleton-amount"></ion-skeleton-text>
+              @for (i of [1,2]; track i) {
+                <div class="loan-skeleton-compact">
+                  <ion-skeleton-text animated class="skeleton-compact-header"></ion-skeleton-text>
+                  <ion-skeleton-text animated class="skeleton-compact-body"></ion-skeleton-text>
                 </div>
               }
             </div>
-          } @else if (recentLoans().length === 0) {
+          } @else if (filteredRecentLoans().length === 0) {
             <div class="empty-state">
               <div class="empty-icon-wrapper">
                 <ion-icon name="document-text-outline" class="empty-icon"></ion-icon>
               </div>
-              <p class="empty-title">No loans yet</p>
-              <p class="empty-subtitle">Start your journey by applying for a loan</p>
-              <ion-button 
-                routerLink="/customer/apply"
-                size="default"
-                class="empty-cta"
-              >
-                <ion-icon name="add-circle-outline" slot="start"></ion-icon>
-                Apply for a Loan
-              </ion-button>
+              <p class="empty-title">No Active Loans</p>
+              <p class="empty-subtitle">Ready to take the next step? Apply for a loan and unlock financial opportunities.</p>
+              <div class="empty-actions">
+                <ion-button 
+                  routerLink="/customer/apply"
+                  size="default"
+                  class="empty-cta-primary"
+                  expand="block"
+                >
+                  <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+                  Apply for a Loan
+                </ion-button>
+                <ion-button 
+                  (click)="loadDashboardData()"
+                  size="default"
+                  fill="outline"
+                  class="empty-cta-secondary"
+                  expand="block"
+                >
+                  <ion-icon name="refresh-outline" slot="start"></ion-icon>
+                  Refresh Dashboard
+                </ion-button>
+              </div>
             </div>
           } @else {
-            <div class="loans-list">
-              @for (loan of recentLoans().slice(0, 3); track loan.id) {
+            <div class="loans-list-compact">
+              @for (loan of filteredRecentLoans().slice(0, 3); track loan.id) {
                 <div 
-                  class="loan-item"
+                  class="loan-item-compact"
                   (click)="navigateToLoanOrApplication(loan)"
                 >
-                  <div class="loan-header">
-                    <span class="loan-number">{{ loan.loanNumber }}</span>
-                    <ion-badge 
-                      [color]="getLoanStatusColor(loan.status)"
-                      class="loan-status"
-                    >
-                      {{ formatLoanStatus(loan.status) }}
-                    </ion-badge>
+                  <div class="loan-compact-content">
+                    <!-- Row 1: App# and Status -->
+                    <div class="loan-compact-row">
+                      <span class="loan-compact-number">{{ loan.loanNumber }}</span>
+                      <ion-badge 
+                        [color]="getLoanStatusColor(loan.status)"
+                        class="loan-compact-status"
+                      >
+                        {{ formatLoanStatus(loan.status) }}
+                      </ion-badge>
+                    </div>
+                    
+                    <!-- Row 2: Product Name and Amount -->
+                    <div class="loan-compact-row">
+                      <span class="loan-product-name">{{ loan.productName || 'Loan Product' }}</span>
+                      <span class="loan-amount-value">₱{{ formatCurrency(loan.amount) }}</span>
+                    </div>
+                    
+                    <!-- Row 3: Due Date -->
+                    <div class="loan-compact-footer">
+                      <span class="due-icon-compact">📅</span>
+                      <span class="due-text-compact">{{ loan.dueDate }}</span>
+                    </div>
                   </div>
-                  <div class="loan-body">
-                    <div class="loan-amounts">
-                      <div class="loan-amount-item">
-                        <p class="loan-amount-label">Amount</p>
-                        <p class="loan-amount-value">₱{{ formatCurrency(loan.amount) }}</p>
-                      </div>
-                      <div class="loan-amount-divider"></div>
-                      <div class="loan-amount-item">
-                        <p class="loan-amount-label">Balance</p>
-                        <p class="loan-amount-value">₱{{ formatCurrency(loan.balance) }}</p>
-                      </div>
-                    </div>
-                    <div class="loan-footer">
-                      <div class="loan-due">
-                        <ion-icon name="calendar-outline" class="due-icon"></ion-icon>
-                        <span class="due-text">{{ loan.dueDate }}</span>
-                      </div>
-                      <ion-icon name="chevron-forward-outline" class="loan-arrow"></ion-icon>
-                    </div>
+                  <div class="loan-compact-arrow">
+                    <ion-icon name="chevron-forward-outline" class="arrow-icon"></ion-icon>
                   </div>
                 </div>
               }
@@ -422,6 +465,57 @@ interface AssignedCollector {
       to {
         opacity: 1;
         transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
       }
     }
 
@@ -641,6 +735,13 @@ interface AssignedCollector {
       box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
       position: relative;
       overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .insights-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+      border-color: rgba(102, 126, 234, 0.25);
     }
 
     .insight-item {
@@ -666,6 +767,11 @@ interface AssignedCollector {
       background: conic-gradient(rgba(14, 165, 233, 0.85) 0 0%, rgba(148, 163, 184, 0.25) 0% 100%);
       position: relative;
       flex-shrink: 0;
+      transition: transform 0.3s ease;
+    }
+
+    .insights-card:hover .insight-ring {
+      transform: scale(1.05) rotate(5deg);
     }
 
     .ring-center {
@@ -681,6 +787,11 @@ interface AssignedCollector {
       color: var(--ion-text-color);
       box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.1);
       font-weight: 700;
+      transition: all 0.3s ease;
+    }
+
+    .insights-card:hover .ring-center {
+      box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.15);
     }
 
     .ring-value {
@@ -805,11 +916,18 @@ interface AssignedCollector {
       overflow: hidden;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
       border: 1px solid var(--ion-border-color, #e5e7eb);
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+      border-color: rgba(102, 126, 234, 0.3);
     }
 
     .stat-card:active {
-      transform: scale(0.98);
+      transform: translateY(-2px) scale(0.98);
     }
 
     .stat-header {
@@ -826,10 +944,16 @@ interface AssignedCollector {
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover .stat-icon-wrapper {
+      transform: rotate(10deg) scale(1.1);
     }
 
     .stat-icon {
       font-size: 1.25rem;
+      transition: transform 0.3s ease;
     }
 
     .stat-icon-primary {
@@ -1005,6 +1129,72 @@ interface AssignedCollector {
       height: 48px;
     }
 
+    /* ===== FILTER TABS ===== */
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      background: var(--ion-card-background, #fff);
+      padding: 0.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      animation: fadeInUp 0.4s ease-out 0.1s both;
+    }
+
+    .filter-tab {
+      flex: 1;
+      padding: 0.65rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--ion-color-step-600, #64748b);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .filter-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .filter-tab.active .tab-count {
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+    }
+
+    .tab-indicator {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 3px;
+      background: white;
+      border-radius: 3px 3px 0 0;
+    }
+
     /* ===== SECTION CARD ===== */
     .section-card {
       background: var(--ion-card-background);
@@ -1019,15 +1209,27 @@ interface AssignedCollector {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .section-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-emoji {
+      font-size: 1.25rem;
+      line-height: 1;
     }
 
     .section-title {
-      font-size: 0.95rem;
+      font-size: 1rem;
       font-weight: 700;
       color: var(--ion-text-color);
       margin: 0;
       line-height: 1.3;
+      letter-spacing: -0.01em;
     }
 
     .view-all-btn {
@@ -1179,42 +1381,101 @@ interface AssignedCollector {
     }
 
     .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       text-align: center;
-      padding: 2.5rem 1rem;
+      padding: 3rem 1.5rem;
+      animation: fadeUp 0.5s ease-out;
     }
 
     .empty-icon-wrapper {
-      width: 80px;
-      height: 80px;
-      background: var(--ion-color-light);
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 1rem;
+      margin: 0 auto 1.5rem;
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+    }
+
+    .empty-icon-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+      opacity: 0;
+      animation: pulse 2s ease-in-out infinite;
     }
 
     .empty-icon {
-      font-size: 2.5rem;
-      color: var(--ion-color-medium);
+      font-size: 3rem;
+      color: #667eea;
+      animation: scaleIn 0.6s ease-out 0.2s backwards;
     }
 
     .empty-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--ion-text-color);
-      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ion-text-color, #1e293b);
+      margin: 0 0 0.75rem 0;
+      animation: slideInRight 0.5s ease-out 0.3s backwards;
     }
 
     .empty-subtitle {
-      font-size: 0.875rem;
-      color: var(--ion-color-medium);
-      margin: 0 0 1.5rem 0;
+      font-size: 0.9375rem;
+      color: var(--ion-color-step-600, #64748b);
+      margin: 0 0 2rem 0;
+      line-height: 1.6;
+      max-width: 320px;
+      animation: slideInRight 0.5s ease-out 0.4s backwards;
     }
 
-    .empty-cta {
+    .empty-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 300px;
+      animation: slideInRight 0.5s ease-out 0.5s backwards;
+    }
+
+    .empty-cta-primary {
       --border-radius: 12px;
+      --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --background-activated: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+      --box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0.3px;
+      height: 48px;
+      transition: all 0.3s ease;
+    }
+
+    .empty-cta-primary:hover {
+      transform: translateY(-2px);
+      --box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .empty-cta-secondary {
+      --border-radius: 12px;
+      --border-width: 1.5px;
+      --border-color: var(--ion-border-color, rgba(0, 0, 0, 0.1));
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0.3px;
+      height: 48px;
+      transition: all 0.3s ease;
+    }
+
+    .empty-cta-secondary:hover {
+      transform: translateY(-2px);
+      --background: var(--ion-color-light);
     }
 
     .loans-list {
@@ -1229,16 +1490,32 @@ interface AssignedCollector {
       border-radius: 14px;
       padding: 1rem;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loan-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.03), rgba(118, 75, 162, 0.03));
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
 
     .loan-item:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      transform: translateY(-4px);
+      border-color: rgba(102, 126, 234, 0.2);
+    }
+
+    .loan-item:hover::before {
+      opacity: 1;
     }
 
     .loan-item:active {
-      transform: translateY(0);
+      transform: translateY(-2px);
     }
 
     .loan-header {
@@ -1333,6 +1610,160 @@ interface AssignedCollector {
     .loan-item:hover .loan-arrow {
       opacity: 1;
       transform: translateX(4px);
+    }
+
+    /* ===== COMPACT LOAN ITEMS ===== */
+    .loans-list-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .loan-item-compact {
+      background: var(--ion-item-background);
+      border: 1px solid var(--ion-border-color, #e5e7eb);
+      border-radius: 12px;
+      padding: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loan-item-compact::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.04), rgba(118, 75, 162, 0.04));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .loan-item-compact:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      transform: translateX(4px);
+      border-color: rgba(102, 126, 234, 0.25);
+    }
+
+    .loan-item-compact:hover::before {
+      opacity: 1;
+    }
+
+    .loan-item-compact:active {
+      transform: translateX(2px) scale(0.99);
+    }
+
+    .loan-compact-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .loan-compact-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .loan-compact-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ion-color-medium);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .loan-compact-status {
+      font-size: 0.625rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      letter-spacing: 0.3px;
+    }
+
+    .loan-product-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .loan-amount-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #667eea;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+    }
+
+    .loan-compact-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--ion-color-step-600, #64748b);
+    }
+
+    .due-icon-compact {
+      font-size: 0.875rem;
+      line-height: 1;
+    }
+
+    .due-text-compact {
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .loan-compact-arrow {
+      display: flex;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .arrow-icon {
+      font-size: 1.125rem;
+      color: var(--ion-color-medium);
+      opacity: 0.3;
+      transition: all 0.3s ease;
+    }
+
+    .loan-item-compact:hover .arrow-icon {
+      opacity: 1;
+      transform: translateX(4px);
+      color: #667eea;
+    }
+
+    /* ===== COMPACT SKELETONS ===== */
+    .loan-skeleton-compact {
+      background: var(--ion-card-background);
+      border-radius: 12px;
+      padding: 0.75rem;
+      border: 1px solid var(--ion-border-color, #e5e7eb);
+    }
+
+    .skeleton-compact-header {
+      width: 40%;
+      height: 14px;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .skeleton-compact-body {
+      width: 70%;
+      height: 18px;
+      border-radius: 4px;
     }
 
     /* ===== FOOTER SPACING ===== */
@@ -1521,6 +1952,7 @@ export class CustomerDashboardPage implements OnInit {
     nextPaymentDate: ''
   });
   recentLoans = signal<RecentLoan[]>([]);
+  loanFilter = signal<'active' | 'all'>('active');
   assignedCollector = signal<AssignedCollector | null>(null);
 
   constructor(
@@ -1543,7 +1975,8 @@ export class CustomerDashboardPage implements OnInit {
       peopleOutline,
       chevronForwardOutline,
       calendarOutline,
-      alertCircleOutline
+      alertCircleOutline,
+      refreshOutline
     });
   }
 
@@ -1867,6 +2300,44 @@ export class CustomerDashboardPage implements OnInit {
   clampedProgress(): number {
     const progress = this.paymentProgress();
     return Math.max(0, Math.min(100, progress));
+  }
+
+  filteredRecentLoans(): RecentLoan[] {
+    const loans = this.recentLoans();
+    if (this.loanFilter() === 'all') {
+      // "In Progress" - show pending, submitted, approved loans
+      return loans.filter(loan => 
+        loan.status === 'pending' || 
+        loan.status === 'submitted' ||
+        loan.status === 'approved'
+      );
+    }
+    // "Active" - show active and disbursed loans
+    return loans.filter(loan => 
+      loan.status === 'active' || 
+      loan.status === 'disbursed'
+    );
+  }
+
+  loanFilterCount(filter: 'active' | 'all'): number {
+    const loans = this.recentLoans();
+    if (filter === 'all') {
+      // "In Progress" count - pending, submitted, approved loans
+      return loans.filter(loan => 
+        loan.status === 'pending' || 
+        loan.status === 'submitted' ||
+        loan.status === 'approved'
+      ).length;
+    }
+    // "Active" count - active and disbursed loans
+    return loans.filter(loan => 
+      loan.status === 'active' || 
+      loan.status === 'disbursed'
+    ).length;
+  }
+
+  applyLoanFilter(filter: 'active' | 'all') {
+    this.loanFilter.set(filter);
   }
 
   currentDateTime(): string {

@@ -7,11 +7,13 @@ import { LoansController, LoanProductsController } from './loans.controller';
 import { CustomerService } from './customer.service';
 import { KnexModule } from '../database/knex.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { MoneyLoanModule } from '../money-loan/money-loan.module';
 
 @Module({
   imports: [
-  KnexModule,
-  RbacModule,
+    KnexModule,
+    RbacModule,
+    MoneyLoanModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

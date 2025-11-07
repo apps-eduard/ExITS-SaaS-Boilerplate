@@ -1,7 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Loan, LoanOverview, RepaymentSchedule, LoanPayment } from '../models/loan.models';
+import { LoanCalculationPreview, LoanCalculationRequest } from '../models/loan-calculation.model';
 
 @Injectable({
   providedIn: 'root'
@@ -122,5 +124,25 @@ export class LoanService {
     return this.http.get<{ success: boolean; data: any }>(
       `${this.baseUrl}/payments/today`
     );
+  }
+
+  // ==================== LOAN PREVIEW ====================
+
+  calculateLoanPreview(payload: LoanCalculationRequest): Observable<LoanCalculationPreview> {
+    return this.http
+      .post<{ success: boolean; data: LoanCalculationPreview }>(
+        `${this.baseUrl}/calculate`,
+        payload
+      )
+      .pipe(map(response => response.data));
+  }
+
+  calculateCustomerLoanPreview(payload: LoanCalculationRequest): Observable<LoanCalculationPreview> {
+    return this.http
+      .post<{ success: boolean; data: LoanCalculationPreview }>(
+        `/api/customers/auth/loan-preview`,
+        payload
+      )
+      .pipe(map(response => response.data));
   }
 }

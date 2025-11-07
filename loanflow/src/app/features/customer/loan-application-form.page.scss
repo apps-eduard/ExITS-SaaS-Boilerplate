@@ -7,7 +7,8 @@
   z-index: 100;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding-top: env(safe-area-inset-top);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  transition: box-shadow 0.3s ease;
 }
 
 .top-bar-content {
@@ -34,6 +35,7 @@
 .app-emoji {
   font-size: 1.5rem;
   line-height: 1;
+  animation: fadeInSlide 0.5s ease;
 }
 
 .app-title {
@@ -41,6 +43,18 @@
   font-weight: 600;
   color: white;
   letter-spacing: -0.01em;
+  animation: fadeInSlide 0.5s ease 0.1s backwards;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ===== MAIN CONTENT ===== */
@@ -51,16 +65,71 @@
 .application-form-container {
   padding-top: calc(56px + env(safe-area-inset-top) + 0.85rem);
   padding-bottom: calc(60px + env(safe-area-inset-bottom) + 0.85rem);
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* ===== CONTENT BACK BUTTON ===== */
+.content-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--ion-card-background, #fff);
+  border: 1.5px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+  border-radius: 12px;
+  color: var(--ion-text-color);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  animation: slideInLeft 0.4s ease-out;
+
+  .back-icon {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.3s ease;
+  }
+
+  .back-text {
+    letter-spacing: -0.01em;
+  }
+
+  &:hover {
+    transform: translateX(-4px);
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    
+    .back-icon {
+      transform: translateX(-3px);
+    }
+  }
+
+  &:active {
+    transform: translateX(-2px) scale(0.98);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 ion-content {
   --background: linear-gradient(180deg, rgba(236, 233, 252, 0.9) 0%, rgba(255, 255, 255, 0.95) 35%, var(--ion-background-color) 100%);
-  --padding-top: 0.75rem;
+  --padding-top: 0.5rem;
   --padding-bottom: 0.5rem;
-  --padding-start: 0.75rem;
-  --padding-end: 0.75rem;
+  --padding-start: 0.25rem;
+  --padding-end: 0.25rem;
 }
 
 .loading-container {
@@ -74,19 +143,39 @@ ion-content {
   ion-spinner {
     width: 40px;
     height: 40px;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
   p {
     color: var(--ion-text-color);
     opacity: 0.7;
     font-size: 0.875rem;
+    animation: fadeIn 0.5s ease;
   }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .product-summary {
   margin-bottom: 0.6rem;
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(76, 81, 191, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(76, 81, 191, 0.12);
+  overflow: hidden;
+  animation: slideInUp 0.5s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(76, 81, 191, 0.18);
+  }
 
   ion-card-content {
     padding: 0.75rem 0.9rem 0.85rem;
@@ -118,6 +207,12 @@ ion-content {
     justify-content: center;
     background: rgba(255, 255, 255, 0.6);
     box-shadow: inset 0 0 0 1px rgba(103, 114, 229, 0.25);
+    transition: transform 0.3s ease;
+    animation: scaleIn 0.5s ease 0.2s backwards;
+  }
+
+  .product-emoji:hover {
+    transform: scale(1.1) rotate(5deg);
   }
 
   .headline-text {
@@ -144,58 +239,130 @@ ion-content {
   .product-chip {
     padding: 0.28rem 0.55rem;
     border-radius: 999px;
-    background: rgba(99, 102, 241, 0.15);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
     color: rgba(67, 56, 202, 0.9);
     font-size: 0.62rem;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     white-space: nowrap;
+    animation: fadeIn 0.5s ease 0.3s backwards;
+    transition: all 0.3s ease;
+  }
+
+  .product-chip:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
   }
 
   .product-highlights {
-    display: grid;
-    gap: 0.4rem;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    margin-left: 1.5rem;
   }
 
   .highlight-chip {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.55rem;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.65);
-    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
-    font-size: 0.76rem;
-    font-weight: 600;
+    gap: 0.5rem;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: 0.85rem;
+    font-weight: 500;
     color: var(--ion-text-color);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease backwards;
+    border: none;
+  }
+
+  .highlight-chip:nth-child(1) { animation-delay: 0.1s; }
+  .highlight-chip:nth-child(2) { animation-delay: 0.2s; }
+  .highlight-chip:nth-child(3) { animation-delay: 0.3s; }
+  .highlight-chip:nth-child(4) { animation-delay: 0.4s; }
+
+  .highlight-chip:hover {
+    transform: translateX(4px);
+    color: var(--ion-color-primary);
   }
 
   .chip-emoji {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+  }
+
+  .highlight-chip:hover .chip-emoji {
+    transform: scale(1.2);
   }
 
   .chip-text {
     flex: 1;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .application-form {
   margin-bottom: 0.65rem;
-  border-radius: 12px;
+  border-radius: 14px;
+  animation: slideInUp 0.5s ease 0.2s backwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
 
   ion-card-header {
     padding: 0.65rem 0.85rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.15);
   }
 
   ion-card-title {
     font-size: 0.95rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .title-icon {
+      font-size: 1.1rem;
+      animation: bounce 2s ease-in-out infinite;
+    }
   }
 
   ion-card-content {
@@ -204,6 +371,11 @@ ion-content {
 
   .form-section {
     margin-bottom: 1rem;
+    animation: fadeInUp 0.5s ease backwards;
+
+    &:nth-child(1) { animation-delay: 0.3s; }
+    &:nth-child(2) { animation-delay: 0.4s; }
+    &:nth-child(3) { animation-delay: 0.5s; }
 
     &:last-child {
       margin-bottom: 0;
@@ -212,8 +384,8 @@ ion-content {
     .section-label {
       display: flex;
       align-items: center;
-  gap: 0.35rem;
-  font-size: 0.84rem;
+      gap: 0.35rem;
+      font-size: 0.84rem;
       font-weight: 600;
       margin-bottom: 0.375rem;
       color: var(--ion-text-color);
@@ -222,7 +394,8 @@ ion-content {
       line-height: 1.2;
 
       .label-emoji {
-  font-size: 1rem;
+        font-size: 1rem;
+        animation: bounce 2s ease-in-out infinite;
       }
 
       .label-text {
@@ -238,30 +411,54 @@ ion-content {
         border-radius: 4px;
         font-weight: 600;
         text-transform: uppercase;
+        animation: pulse 2s ease-in-out infinite;
       }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
     }
 
     .amount-display,
     .term-display {
       text-align: center;
-  font-size: 1.18rem;
+      font-size: 1.18rem;
       font-weight: 700;
       color: var(--ion-color-primary);
       margin-bottom: 0.375rem;
+      transition: all 0.3s ease;
+      animation: scaleIn 0.5s ease;
+    }
+
+    .amount-display:hover,
+    .term-display:hover {
+      transform: scale(1.05);
+      text-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
 
     ion-range {
       --bar-background: var(--ion-color-light);
       --bar-background-active: var(--ion-color-primary);
       --knob-background: var(--ion-color-primary);
-      --knob-size: 20px;
+      --knob-size: 22px;
       --pin-background: var(--ion-color-primary);
-  padding: 0.3rem 0;
+      padding: 0.3rem 0;
+      transition: all 0.3s ease;
+
+      &:hover {
+        --knob-size: 24px;
+      }
 
       ion-label {
         font-size: 0.75rem;
         color: var(--ion-text-color);
         opacity: 0.7;
+        transition: opacity 0.3s ease;
+      }
+      
+      &:hover ion-label {
+        opacity: 1;
       }
       
       &[disabled] {
@@ -281,17 +478,24 @@ ion-content {
       display: block;
       text-align: center;
       margin-top: 0.5rem;
-  padding: 0.55rem;
-      background: var(--ion-color-light);
+      padding: 0.55rem;
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1));
       border-radius: 8px;
+      border: 1px solid rgba(236, 72, 153, 0.2);
       color: var(--ion-text-color);
-      opacity: 0.8;
+      opacity: 0.9;
       font-size: 0.8125rem;
+      animation: fadeIn 0.5s ease;
     }
 
     ion-item {
       --background: transparent;
       --padding-start: 0;
+      transition: transform 0.3s ease;
+
+      &:hover {
+        transform: translateX(2px);
+      }
 
       ion-label {
         display: flex;
@@ -310,11 +514,18 @@ ion-content {
         border-radius: 8px;
         margin-top: 0.375rem;
         font-size: 0.875rem;
+        transition: all 0.3s ease;
+
+        &:focus-within {
+          --background: rgba(102, 126, 234, 0.05);
+          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
       }
     }
 
     .frequency-display {
       margin-top: 0.5rem;
+      animation: fadeIn 0.5s ease 0.6s backwards;
       
       .frequency-badge {
         display: inline-flex;
@@ -327,6 +538,13 @@ ion-content {
         font-weight: 600;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         letter-spacing: 0.01em;
+        transition: all 0.3s ease;
+        cursor: default;
+      }
+
+      .frequency-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
       }
 
       .frequency-note {
@@ -334,23 +552,94 @@ ion-content {
         font-size: 0.75rem;
         color: var(--ion-color-medium);
         font-style: italic;
+        animation: fadeIn 0.5s ease 0.7s backwards;
       }
+    }
+
+    .frequency-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0.85rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+      border-radius: 10px;
+      border: 1px solid rgba(102, 126, 234, 0.15);
+      margin-bottom: 0.5rem;
+      animation: fadeIn 0.5s ease 0.6s backwards;
+      transition: all 0.3s ease;
+    }
+
+    .frequency-row:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+      border-color: rgba(102, 126, 234, 0.25);
+      transform: translateX(2px);
+    }
+
+    .frequency-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      .label-emoji {
+        font-size: 1.1rem;
+        animation: bounce 2s ease-in-out infinite;
+      }
+      
+      .label-text {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--ion-text-color);
+      }
+    }
+
+    .frequency-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ion-color-primary);
+      padding: 0.35rem 0.75rem;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .frequency-row:hover .frequency-value {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(102, 126, 234, 0.35);
+      transform: scale(1.05);
+    }
+
+    .frequency-note {
+      margin-top: 0;
+      font-size: 0.72rem;
+      color: var(--ion-color-medium);
+      font-style: italic;
+      text-align: center;
+      animation: fadeIn 0.5s ease 0.7s backwards;
     }
   }
 }
 
 .repayment-summary {
   margin-bottom: 0.65rem;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(160deg, #1f2a44, #2c2a68);
   color: #e2e8f0;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
   overflow: hidden;
+  animation: slideInUp 0.5s ease 0.4s backwards;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35);
+  }
 
   ion-card-header {
     padding: 0.7rem 0.85rem 0.55rem;
     border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(255, 255, 255, 0.02);
   }
 
   ion-card-title {
@@ -371,6 +660,12 @@ ion-content {
 
   .summary-title-icon {
     font-size: 1.15rem;
+    animation: rotate 3s linear infinite;
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .basic-charges {
@@ -381,6 +676,13 @@ ion-content {
     background: rgba(15, 23, 42, 0.32);
     border-radius: 12px;
     border: 1px solid rgba(148, 163, 184, 0.25);
+    animation: fadeInUp 0.5s ease 0.5s backwards;
+    transition: all 0.3s ease;
+  }
+
+  .basic-charges:hover {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(148, 163, 184, 0.35);
   }
 
   .summary-line {
@@ -389,6 +691,12 @@ ion-content {
     align-items: center;
     font-size: 0.8rem;
     color: rgba(226, 232, 240, 0.92);
+    transition: all 0.3s ease;
+  }
+
+  .summary-line:hover {
+    color: rgba(226, 232, 240, 1);
+    transform: translateX(2px);
   }
 
   .summary-label {
@@ -413,6 +721,14 @@ ion-content {
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(4, 120, 87, 0.38));
     border: 1px solid rgba(45, 212, 191, 0.45);
+    animation: fadeInUp 0.5s ease 0.6s backwards;
+    transition: all 0.3s ease;
+  }
+
+  .net-row:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(4, 120, 87, 0.45));
+    border-color: rgba(45, 212, 191, 0.6);
+    transform: scale(1.02);
   }
 
   .net-left {
@@ -423,6 +739,7 @@ ion-content {
 
   .net-icon {
     font-size: 1.2rem;
+    animation: pulse 2s ease-in-out infinite;
   }
 
   .net-text {
@@ -447,6 +764,11 @@ ion-content {
     font-size: 0.96rem;
     font-weight: 700;
     color: #bbf7d0;
+    transition: transform 0.3s ease;
+  }
+
+  .net-row:hover .net-value {
+    transform: scale(1.1);
   }
 
   .interest-row {
@@ -460,6 +782,17 @@ ion-content {
     border-radius: 10px;
     padding: 0.65rem 0.75rem;
     border: 1px solid rgba(148, 163, 184, 0.23);
+    animation: fadeInUp 0.5s ease backwards;
+    transition: all 0.3s ease;
+  }
+
+  .interest-item:nth-child(1) { animation-delay: 0.7s; }
+  .interest-item:nth-child(2) { animation-delay: 0.8s; }
+
+  .interest-item:hover {
+    background: rgba(15, 23, 42, 0.45);
+    border-color: rgba(148, 163, 184, 0.35);
+    transform: translateY(-2px);
   }
 
   .interest-label {
@@ -491,6 +824,15 @@ ion-content {
     gap: 0.15rem;
     border: 1px solid rgba(148, 163, 184, 0.3);
     background: rgba(15, 23, 42, 0.32);
+    animation: fadeInUp 0.5s ease backwards;
+    transition: all 0.3s ease;
+  }
+
+  .total-card:nth-child(1) { animation-delay: 0.9s; }
+  .total-card:nth-child(2) { animation-delay: 1s; }
+
+  .total-card:hover {
+    transform: translateY(-3px) scale(1.02);
   }
 
   .total-card.primary {
@@ -498,9 +840,19 @@ ion-content {
     border-color: rgba(59, 130, 246, 0.55);
   }
 
+  .total-card.primary:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.45), rgba(37, 99, 235, 0.55));
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+  }
+
   .total-card.secondary {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(124, 58, 237, 0.45));
     border-color: rgba(168, 85, 247, 0.55);
+  }
+
+  .total-card.secondary:hover {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.45), rgba(124, 58, 237, 0.55));
+    box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
   }
 
   .total-label {
@@ -527,6 +879,7 @@ ion-content {
     color: rgba(226, 232, 240, 0.75);
     text-transform: uppercase;
     letter-spacing: 0.12em;
+    animation: fadeIn 0.5s ease 1.1s backwards;
   }
 
   .separator {
@@ -541,10 +894,19 @@ ion-content {
     border-radius: 12px;
     background: rgba(251, 191, 36, 0.18);
     border: 1px solid rgba(245, 158, 11, 0.45);
+    animation: fadeInUp 0.5s ease 1.2s backwards;
+    transition: all 0.3s ease;
+  }
+
+  .summary-note:hover {
+    background: rgba(251, 191, 36, 0.25);
+    border-color: rgba(245, 158, 11, 0.6);
+    transform: translateX(4px);
   }
 
   .note-icon {
     font-size: 1.1rem;
+    animation: bounce 2s ease-in-out infinite;
   }
 
   .note-text {
@@ -561,28 +923,40 @@ ion-content {
 
 .submit-button {
   margin: 0.75rem 0.75rem 1rem 0.75rem;
-  --background: var(--ion-color-primary);
-  --background-hover: var(--ion-color-primary-shade);
-  --border-radius: 10px;
+  --background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-primary-shade) 100%);
+  --background-hover: linear-gradient(135deg, var(--ion-color-primary-shade) 0%, var(--ion-color-primary-tint) 100%);
+  --border-radius: 12px;
   font-size: 0.9375rem;
   font-weight: 600;
-  height: 48px;
+  height: 50px;
+  animation: slideInUp 0.5s ease 1.3s backwards;
+  box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);
 
   &::part(native) {
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &:not([disabled]):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.4);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.5);
+  }
+
+  &:not([disabled]):active {
+    transform: translateY(-1px) scale(0.98);
   }
 
   &[disabled] {
     opacity: 0.5;
+    cursor: not-allowed;
   }
   
   ion-icon {
     font-size: 1.25rem;
+    transition: transform 0.3s ease;
+  }
+
+  &:not([disabled]):hover ion-icon {
+    transform: translateX(4px);
   }
 }
 

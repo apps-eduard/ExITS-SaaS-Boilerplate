@@ -85,10 +85,8 @@ import { environment } from '../../../environments/environment';
             </div>
             <div class="hero-copy">
               <p class="hero-kicker">Keep things current</p>
-              <h1 class="hero-title">Hey {{ getHeroName() }}!</h1>
-              <p class="hero-subtitle">
-                Updated details unlock faster approvals and give us the confidence to tailor better offers for you.
-              </p>
+              <h1 class="hero-title">{{ getHeroName() }}!</h1>
+       
               <div class="hero-progress">
                 <div class="progress-meta">
                   <span class="progress-label">Profile completion</span>
