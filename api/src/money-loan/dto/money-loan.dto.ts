@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsDateString,
   Min,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -106,6 +107,27 @@ export class CreateLoanProductDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductPlatformFeeInAdvance?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductProcessingFeeInAdvance?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductInterestInAdvance?: boolean;
+
+  @IsString()
+  @IsOptional()
+  availabilityType?: 'all' | 'selected';
+
+  @IsArray()
+  @IsOptional()
+  @Type(() => Number)
+  selectedCustomerIds?: number[];
 }
 
 export class UpdateLoanProductDto {
@@ -186,6 +208,27 @@ export class UpdateLoanProductDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductPlatformFeeInAdvance?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductProcessingFeeInAdvance?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  deductInterestInAdvance?: boolean;
+
+  @IsString()
+  @IsOptional()
+  availabilityType?: 'all' | 'selected';
+
+  @IsArray()
+  @IsOptional()
+  @Type(() => Number)
+  selectedCustomerIds?: number[];
 }
 
 export class CreateLoanApplicationDto {
@@ -344,4 +387,41 @@ export class LoanCalculationRequestDto {
   @IsDateString()
   @IsOptional()
   disbursementDate?: string;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  deductPlatformFeeInAdvance?: boolean;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  deductProcessingFeeInAdvance?: boolean;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  deductInterestInAdvance?: boolean;
+}
+
+export class PenaltyCalculationRequestDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  installmentAmount: number;
+
+  @IsDateString()
+  dueDate: string;
+
+  @IsDateString()
+  @IsOptional()
+  paymentDate?: string;
+
+  @IsEnum(PaymentFrequency)
+  paymentFrequency: PaymentFrequency;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  latePenaltyPercentage: number;
 }

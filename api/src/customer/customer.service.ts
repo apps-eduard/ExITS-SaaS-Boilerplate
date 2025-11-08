@@ -317,18 +317,23 @@ export class CustomerService {
   }
 
   private mapCustomerListRow(row: any) {
+    const firstName = row.firstName ?? '';
+    const lastName = row.lastName ?? '';
+    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Customer';
+    
     return {
       id: row.id,
       tenantId: row.tenantId,
       customerCode: row.customerCode,
-      firstName: row.firstName ?? '',
-      lastName: row.lastName ?? '',
+      firstName: firstName,
+      lastName: lastName,
+      fullName: fullName,
       email: row.email ?? null,
       phone: row.phone ?? null,
       dateOfBirth: this.formatDateString(row.dateOfBirth) ?? '',
       status: row.status ?? 'active',
       kycStatus: row.kycStatus ?? 'pending',
-  creditScore: row.creditScore !== undefined && row.creditScore !== null ? Number(row.creditScore) : 650,
+      creditScore: row.creditScore !== undefined && row.creditScore !== null ? Number(row.creditScore) : 650,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

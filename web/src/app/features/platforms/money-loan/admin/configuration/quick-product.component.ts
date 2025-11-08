@@ -1,9 +1,10 @@
-import { Component, signal, inject, OnDestroy } from '@angular/core';
+import { Component, signal, inject, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LoanService } from '../../shared/services/loan.service';
+import { CustomerService } from '../../shared/services/customer.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import {
@@ -11,6 +12,7 @@ import {
   LoanCalculationResult,
   LoanInterestType,
   PaymentFrequency,
+  LoanSchedulePreviewItem,
 } from '../../shared/models/loan-calculation.model';
 
 @Component({
@@ -96,6 +98,14 @@ import {
                   class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
                 >
                   ❌ Cancel Edit
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  (click)="resetForm()"
+                  class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+                >
+                  🔄 Reset Form
                 </button>
               }
             </div>
@@ -183,41 +193,41 @@ import {
             <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded space-y-2">
               <p class="text-xs font-semibold text-purple-700 dark:text-purple-400">📅 Loan Terms</p>
 
-              <!-- Term Type Selector -->
-              <div>
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term Type</label>
-                <select
-                  [(ngModel)]="loanTermType"
-                  (ngModelChange)="onTermTypeChange()"
-                  name="loanTermType"
-                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="fixed">Fixed Term</option>
-                  <option value="flexible">Flexible Range</option>
-                </select>
-              </div>
-
-              <!-- Fixed Term -->
-              @if (loanTermType === 'fixed') {
+              <div class="grid grid-cols-3 gap-2">
+                <!-- Term Type Selector -->
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fixed Term (Months)</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="fixedTermMonths"
-                    (input)="validateFixedTermMonths()"
-                    (blur)="validateFixedTermMonths()"
-                    name="fixedTermMonths"
-                    min="1"
-                    step="1"
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term Type</label>
+                  <select
+                    [(ngModel)]="loanTermType"
+                    (ngModelChange)="onTermTypeChange()"
+                    name="loanTermType"
                     class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
-                    placeholder="3"
-                  />
+                  >
+                    <option value="fixed">Fixed Term</option>
+                    <option value="flexible">Flexible Range</option>
+                  </select>
                 </div>
-              }
 
-              <!-- Flexible Range -->
-              @if (loanTermType === 'flexible') {
-                <div class="grid grid-cols-2 gap-2">
+                <!-- Fixed Term -->
+                @if (loanTermType === 'fixed') {
+                  <div class="col-span-2">
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fixed Term (Months)</label>
+                    <input
+                      type="number"
+                      [(ngModel)]="fixedTermMonths"
+                      (input)="validateFixedTermMonths()"
+                      (blur)="validateFixedTermMonths()"
+                      name="fixedTermMonths"
+                      min="1"
+                      step="1"
+                      class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 focus:outline-none dark:bg-gray-800 dark:text-white"
+                      placeholder="3"
+                    />
+                  </div>
+                }
+
+                <!-- Flexible Range -->
+                @if (loanTermType === 'flexible') {
                   <div>
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Min (months)</label>
                     <input
@@ -246,15 +256,15 @@ import {
                       placeholder="6"
                     />
                   </div>
-                </div>
-              }
+                }
+              </div>
             </div>
 
             <!-- Payment Frequency -->
             <div class="bg-indigo-50 dark:bg-indigo-900/20 p-2.5 rounded space-y-2">
               <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-400">🔄 Payment Frequency</p>
-              <div class="space-y-1.5">
-                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center gap-1.5 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
                   <input
                     type="radio"
                     [(ngModel)]="paymentFrequency"
@@ -263,9 +273,9 @@ import {
                     (ngModelChange)="calculatePreview()"
                     class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
-                  <span class="text-xs text-gray-700 dark:text-gray-300">📅 Daily (30 payments/month)</span>
+                  <span class="text-xs text-gray-700 dark:text-gray-300">📅 Daily</span>
                 </label>
-                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+                <label class="flex items-center gap-1.5 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
                   <input
                     type="radio"
                     [(ngModel)]="paymentFrequency"
@@ -274,9 +284,9 @@ import {
                     (ngModelChange)="calculatePreview()"
                     class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
-                  <span class="text-xs text-gray-700 dark:text-gray-300">📆 Weekly (4 payments/month)</span>
+                  <span class="text-xs text-gray-700 dark:text-gray-300">📆 Weekly</span>
                 </label>
-                <label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
+                <label class="flex items-center gap-1.5 p-1.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/30 cursor-pointer">
                   <input
                     type="radio"
                     [(ngModel)]="paymentFrequency"
@@ -285,7 +295,7 @@ import {
                     (ngModelChange)="calculatePreview()"
                     class="w-3.5 h-3.5 text-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
-                  <span class="text-xs text-gray-700 dark:text-gray-300">🗓️ Monthly (1 payment/month)</span>
+                  <span class="text-xs text-gray-700 dark:text-gray-300">🗓️ Monthly</span>
                 </label>
               </div>
             </div>
@@ -388,6 +398,96 @@ import {
               </div>
             </div>
 
+            <!-- Deduct Fees in Advance -->
+            <div class="bg-green-50 dark:bg-green-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-green-700 dark:text-green-400">💸 Deduct Fees in Advance</p>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 p-1.5 rounded transition">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="deductPlatformFeeInAdvance"
+                    (ngModelChange)="calculatePreview()"
+                    name="deductPlatformFeeInAdvance"
+                    class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  />
+                  <span>Platform Fee</span>
+                </label>
+
+                <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 p-1.5 rounded transition">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="deductProcessingFeeInAdvance"
+                    (ngModelChange)="calculatePreview()"
+                    name="deductProcessingFeeInAdvance"
+                    class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  />
+                  <span>Processing Fee</span>
+                </label>
+
+                <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 p-1.5 rounded transition">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="deductInterestInAdvance"
+                    (ngModelChange)="calculatePreview()"
+                    name="deductInterestInAdvance"
+                    class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  />
+                  <span>Interest</span>
+                </label>
+              </div>
+
+              @if (deductPlatformFeeInAdvance || deductProcessingFeeInAdvance || deductInterestInAdvance) {
+                <div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                  <p class="text-xs text-yellow-800 dark:text-yellow-400">
+                    ⚠️ Customer receives: <span class="font-semibold">₱{{ formatCurrency(getNetDisbursement()) }}</span>
+                  </p>
+                </div>
+              }
+            </div>
+
+            <!-- Product Availability -->
+            <div class="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded space-y-2">
+              <p class="text-xs font-semibold text-orange-700 dark:text-orange-400">👥 Product Availability</p>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 p-1.5 rounded transition">
+                  <input
+                    type="radio"
+                    [(ngModel)]="availabilityType"
+                    name="availabilityType"
+                    value="all"
+                    (ngModelChange)="onAvailabilityTypeChange()"
+                    class="w-3.5 h-3.5 text-orange-600 focus:ring-1 focus:ring-orange-500"
+                  />
+                  <span>🌐 All Customers</span>
+                </label>
+
+                <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 p-1.5 rounded transition">
+                  <input
+                    type="radio"
+                    [(ngModel)]="availabilityType"
+                    name="availabilityType"
+                    value="selected"
+                    (ngModelChange)="onAvailabilityTypeChange()"
+                    class="w-3.5 h-3.5 text-orange-600 focus:ring-1 focus:ring-orange-500"
+                  />
+                  <span>🎯 Selected Only</span>
+                </label>
+
+                @if (availabilityType === 'selected') {
+                  <button
+                    type="button"
+                    (click)="openCustomerSelector()"
+                    class="text-xs bg-orange-600 hover:bg-orange-700 text-white py-1.5 px-3 rounded flex items-center justify-center gap-1"
+                  >
+                    <span>👤</span>
+                    <span>Select ({{ selectedCustomerIds.length }})</span>
+                  </button>
+                }
+              </div>
+            </div>
+
             <!-- Action Buttons -->
             <div class="flex gap-2 pt-2">
               <button
@@ -431,7 +531,6 @@ import {
               <input
                 type="number"
                 [(ngModel)]="previewLoanAmount"
-                (ngModelChange)="onPreviewAmountChange()"
                 name="previewLoanAmount"
                 [min]="minAmount"
                 [max]="maxAmount"
@@ -470,7 +569,6 @@ import {
                 <input
                   type="number"
                   [(ngModel)]="previewTermMonths"
-                  (ngModelChange)="onPreviewTermChange()"
                   name="previewTermMonths"
                   [min]="minTermMonths"
                   [max]="maxTermMonths"
@@ -489,6 +587,22 @@ import {
               }
             </div>
 
+            <!-- Compute Button -->
+            <button
+              type="button"
+              (click)="calculatePreview()"
+              [disabled]="previewLoading()"
+              class="w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              @if (previewLoading()) {
+                <span>⏳</span>
+                <span>Computing...</span>
+              } @else {
+                <span>🧮</span>
+                <span>Compute Preview</span>
+              }
+            </button>
+
             @if (previewLoading()) {
               <div class="text-center py-8 text-gray-500 dark:text-gray-300">
                 <div class="text-4xl mb-3 animate-spin">⏳</div>
@@ -506,11 +620,61 @@ import {
                 </div>
               </div>
             } @else if (preview()) {
+              <!-- Deduct in Advance Warning -->
+              @if (deductPlatformFeeInAdvance || deductProcessingFeeInAdvance || deductInterestInAdvance) {
+                <div class="mb-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700">
+                  <div class="flex items-start gap-2">
+                    <span class="text-lg">💸</span>
+                    <div class="flex-1 space-y-1.5">
+                      <p class="text-xs font-semibold text-yellow-800 dark:text-yellow-300">Fees Deducted in Advance</p>
+                      <div class="text-xs text-yellow-700 dark:text-yellow-400 space-y-0.5">
+                        @if (deductPlatformFeeInAdvance) {
+                          <div class="flex justify-between">
+                            <span>Platform Fee:</span>
+                            <span class="font-semibold">-{{ formatCurrency(preview()!.platformFee) }}</span>
+                          </div>
+                        }
+                        @if (deductProcessingFeeInAdvance) {
+                          <div class="flex justify-between">
+                            <span>Processing Fee:</span>
+                            <span class="font-semibold">-{{ formatCurrency(preview()!.processingFeeAmount) }}</span>
+                          </div>
+                        }
+                        @if (deductInterestInAdvance) {
+                          <div class="flex justify-between">
+                            <span>Interest:</span>
+                            <span class="font-semibold">-{{ formatCurrency(preview()!.interestAmount) }}</span>
+                          </div>
+                        }
+                      </div>
+                      <div class="pt-1.5 mt-1.5 border-t border-yellow-400 dark:border-yellow-700">
+                        <div class="flex justify-between items-center">
+                          <span class="text-xs font-bold text-yellow-900 dark:text-yellow-200">Customer Receives:</span>
+                          <span class="text-base font-bold text-yellow-900 dark:text-yellow-200">{{ formatCurrency(getNetDisbursement()) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+
               <!-- Quick Stats Grid -->
               <div class="grid grid-cols-2 gap-2 mb-3">
                 <div class="bg-green-50 dark:bg-green-900/20 rounded p-2">
-                  <p class="text-xs text-green-600 dark:text-green-400">Net Proceeds</p>
-                  <p class="text-sm font-bold text-green-700 dark:text-green-300">{{ formatCurrency(preview()!.netProceeds) }}</p>
+                  <p class="text-xs text-green-600 dark:text-green-400">
+                    @if (deductPlatformFeeInAdvance || deductProcessingFeeInAdvance || deductInterestInAdvance) {
+                      <span>Disbursed Amount</span>
+                    } @else {
+                      <span>Net Proceeds</span>
+                    }
+                  </p>
+                  <p class="text-sm font-bold text-green-700 dark:text-green-300">
+                    @if (deductPlatformFeeInAdvance || deductProcessingFeeInAdvance || deductInterestInAdvance) {
+                      {{ formatCurrency(getNetDisbursement()) }}
+                    } @else {
+                      {{ formatCurrency(preview()!.netProceeds) }}
+                    }
+                  </p>
                 </div>
                 <div class="bg-blue-50 dark:bg-blue-900/20 rounded p-2">
                   <p class="text-xs text-blue-600 dark:text-blue-400">Total Repayable</p>
@@ -526,44 +690,83 @@ import {
                 </div>
               </div>
 
-              <!-- Detailed Breakdown -->
-              <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-3 space-y-1.5 text-xs">
-                <div class="flex justify-between">
-                  <span class="text-gray-600 dark:text-gray-400">Loan Amount</span>
-                  <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(preview()!.loanAmount) }}</span>
+              <!-- Payment Cadence Summary -->
+              <div class="bg-white dark:bg-gray-900/40 rounded border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                    <span>🔁</span>
+                    <span>Payment Cadence</span>
+                  </p>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ getPaymentFrequencyLabel() }}</span>
+                    @if (cadencePreview().length) {
+                      <button
+                        type="button"
+                        (click)="toggleUpcomingInstallments()"
+                        class="text-[11px] px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition"
+                        title="Toggle upcoming installments"
+                      >
+                        {{ showUpcomingInstallments() ? 'Hide' : 'Show' }}
+                      </button>
+                    }
+                  </div>
                 </div>
-                <div class="flex justify-between text-red-600 dark:text-red-400">
-                  <span>- Interest ({{ interestRate }}%)</span>
-                  <span>{{ formatCurrency(preview()!.interestAmount) }}</span>
+                <div class="space-y-1 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Installment</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(preview()!.installmentAmount) }} {{ getCadenceSuffix() }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Schedule</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">
+                      {{ preview()!.numPayments }} {{ preview()!.numPayments === 1 ? 'payment' : 'payments' }}
+                      ({{ getDurationDescriptor() }})
+                    </span>
+                  </div>
+                  @if (getFirstPaymentDate()) {
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">First Due</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ getFirstPaymentDate() }}</span>
+                    </div>
+                  }
+                  @if (getLastPaymentDate()) {
+                    <div class="flex justify-between">
+                      <span class="text-gray-600 dark:text-gray-400">Final Due</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ getLastPaymentDate() }}</span>
+                    </div>
+                  }
                 </div>
-                @if (preview()!.processingFeeAmount > 0) {
-                  <div class="flex justify-between text-red-600 dark:text-red-400">
-                    <span>- Processing Fee</span>
-                    <span>{{ formatCurrency(preview()!.processingFeeAmount) }}</span>
+                @if (cadencePreview().length) {
+                  <div class="pt-2 mt-2 border-t border-indigo-100 dark:border-indigo-800/60">
+                    <p class="text-[11px] font-semibold uppercase text-indigo-600 dark:text-indigo-300 tracking-wide mb-1.5">
+                      Upcoming Installments
+                    </p>
+                    @if (showUpcomingInstallments()) {
+                      <div class="space-y-1.5">
+                        @for (item of cadencePreview(); track item.paymentNumber) {
+                          <div class="flex items-start justify-between text-xs">
+                            <div>
+                              <p class="font-medium text-gray-700 dark:text-gray-300">{{ getCadenceLabel(item.paymentNumber) }}</p>
+                              @if (getCadenceDueDate(item)) {
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ getCadenceDueDate(item) }}</p>
+                              }
+                            </div>
+                            <div class="text-right">
+                              <p class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(item.installmentAmount) }}</p>
+                            </div>
+                          </div>
+                        }
+                        @if (cadenceRemainingCount() > 0) {
+                          <p class="text-[11px] text-gray-500 dark:text-gray-400 italic">
+                            + {{ cadenceRemainingCount() }} more {{ cadenceRemainingCount() === 1 ? 'payment' : 'payments' }}
+                          </p>
+                        }
+                      </div>
+                    } @else {
+                      <p class="text-[11px] text-gray-500 dark:text-gray-400 italic">Upcoming installments hidden</p>
+                    }
                   </div>
                 }
-                @if (preview()!.platformFee > 0) {
-                  <div class="flex justify-between text-red-600 dark:text-red-400">
-                    <span>- Platform Fee</span>
-                    <span>{{ formatCurrency(preview()!.platformFee) }}</span>
-                  </div>
-                }
-                <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
-                  <div class="flex justify-between font-semibold text-green-700 dark:text-green-400">
-                    <span>Net Proceeds</span>
-                    <span>{{ formatCurrency(preview()!.netProceeds) }}</span>
-                  </div>
-                </div>
-                <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5 mt-1.5">
-                  <div class="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Payments</span>
-                    <span>{{ preview()!.numPayments }} × {{ formatCurrency(preview()!.installmentAmount) }}</span>
-                  </div>
-                  <div class="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Grace Period</span>
-                    <span>{{ preview()!.gracePeriodDays }} day(s)</span>
-                  </div>
-                </div>
               </div>
 
               <!-- Penalty Calculator Section -->
@@ -626,21 +829,6 @@ import {
             }
           </div>
 
-          <!-- Info Card -->
-          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <div class="flex gap-2">
-              <span class="text-blue-600 dark:text-blue-400">💡</span>
-              <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                <p class="font-semibold">Quick Tips:</p>
-                <ul class="list-disc list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
-                  <li>Preview uses mid-range values for calculations</li>
-                  <li>Interest is deducted upfront (flat model)</li>
-                  <li>Effective APR shows true cost to borrower</li>
-                  <li>All fields marked with * are required</li>
-                </ul>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     }
@@ -730,9 +918,9 @@ import {
                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Code</th>
                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Product</th>
                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Amount Range</th>
-                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Term Type</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Term</th>
                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Interest</th>
-                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Frequency</th>
+                        <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Availability</th>
                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Status</th>
                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                       </tr>
@@ -776,15 +964,18 @@ import {
                               <p class="text-gray-500 dark:text-gray-400 capitalize">{{ product.interestType }}</p>
                             </div>
                           </td>
-                          <td class="px-3 py-2">
-                            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                              <span class="text-xs">
-                                @if (product.paymentFrequency === 'daily') { 📅 }
-                                @if (product.paymentFrequency === 'weekly') { 📆 }
-                                @if (product.paymentFrequency === 'monthly') { 🗓️ }
-                              </span>
-                              <span class="text-xs font-medium capitalize">{{ product.paymentFrequency || 'weekly' }}</span>
-                            </div>
+                          <td class="px-3 py-2 text-center">
+                            @if (product.availabilityType === 'all') {
+                              <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                                <span class="text-xs">🌐</span>
+                                <span class="text-xs font-medium">All Customers</span>
+                              </div>
+                            } @else {
+                              <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                                <span class="text-xs">🎯</span>
+                                <span class="text-xs font-medium">Selected ({{ product.selectedCustomerIds?.length || 0 }})</span>
+                              </div>
+                            }
                           </td>
                           <td class="px-3 py-2 text-center">
                             @if (product.isActive) {
@@ -835,11 +1026,247 @@ import {
         </div>
       </div>
     </div>
+
+    <!-- Customer Selector Modal -->
+    @if (showCustomerSelector) {
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="closeCustomerSelector()">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" (click)="$event.stopPropagation()">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">👥 Select Customers</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Choose which customers can access this product
+              </p>
+            </div>
+            <button
+              (click)="closeCustomerSelector()"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <span class="text-2xl">×</span>
+            </button>
+          </div>
+
+          <!-- Search and Actions Bar -->
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="relative flex-1">
+                <input
+                  type="text"
+                  [(ngModel)]="customerSearchQuery"
+                  (input)="onCustomerSearchChange()"
+                  placeholder="🔍 Search by name, code, or email..."
+                  class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+                @if (searchingCustomers()) {
+                  <div class="absolute right-3 top-2.5">
+                    <div class="animate-spin text-blue-600 text-sm">⏳</div>
+                  </div>
+                }
+              </div>
+              <select
+                [(ngModel)]="customerPageSize"
+                (ngModelChange)="onPageSizeChange()"
+                class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option [value]="10">10 per page</option>
+                <option [value]="25">25 per page</option>
+                <option [value]="50">50 per page</option>
+                <option [value]="100">100 per page</option>
+              </select>
+            </div>
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                @if (selectedCustomerIds.length > 0) {
+                  <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                    {{ selectedCustomerIds.length }} selected
+                  </span>
+                  <button
+                    (click)="clearAllSelections()"
+                    class="text-xs text-red-600 hover:text-red-700 dark:text-red-400 font-medium"
+                  >
+                    Clear
+                  </button>
+                }
+              </div>
+              <button
+                (click)="selectAllOnPage()"
+                [disabled]="filteredCustomers().length === 0"
+                class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Select All on Page
+              </button>
+            </div>
+          </div>
+
+          <!-- Customer Table -->
+          <div class="flex-1 overflow-auto">
+            @if (loadingCustomers()) {
+              <div class="flex items-center justify-center h-64">
+                <div class="text-center">
+                  <div class="animate-spin text-4xl mb-3">⏳</div>
+                  <p class="text-sm text-gray-500">Loading customers...</p>
+                </div>
+              </div>
+            } @else if (filteredCustomers().length === 0) {
+              <div class="flex items-center justify-center h-64">
+                <div class="text-center">
+                  <div class="text-5xl mb-3">📭</div>
+                  <p class="text-sm text-gray-500 font-medium">No customers found</p>
+                  @if (customerSearchQuery.trim()) {
+                    <button
+                      (click)="clearSearchAndReload()"
+                      class="mt-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
+                    >
+                      Clear search
+                    </button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <tr>
+                    <th class="w-10 px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        [checked]="areAllOnPageSelected()"
+                        [indeterminate]="areSomeOnPageSelected()"
+                        (change)="toggleAllOnPage()"
+                        class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Code</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                  @for (customer of filteredCustomers(); track customer.id) {
+                    <tr 
+                      class="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition"
+                      [class.bg-blue-50]="isCustomerSelected(customer.id)"
+                      [class.dark:bg-blue-900/20]="isCustomerSelected(customer.id)"
+                      (click)="toggleCustomerSelection(customer.id)"
+                    >
+                      <td class="px-4 py-3" (click)="$event.stopPropagation()">
+                        <input
+                          type="checkbox"
+                          [checked]="isCustomerSelected(customer.id)"
+                          (change)="toggleCustomerSelection(customer.id)"
+                          class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">
+                          {{ customer.customerCode }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">
+                          {{ customer.fullName }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                          {{ customer.email || '-' }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span 
+                          class="inline-flex px-2 py-0.5 text-xs font-medium rounded-full"
+                          [class]="customer.kycStatus === 'verified' 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'"
+                        >
+                          {{ customer.kycStatus || 'pending' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <!-- Pagination Footer -->
+          <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-gray-600 dark:text-gray-400">
+                Showing {{ ((customerPagination().page - 1) * customerPageSize) + 1 }} 
+                to {{ Math.min(customerPagination().page * customerPageSize, customerPagination().total) }}
+                of {{ customerPagination().total }} customers
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <button
+                  (click)="goToCustomerPage(1)"
+                  [disabled]="customerPagination().page === 1 || loadingCustomers()"
+                  class="px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  ⏮ First
+                </button>
+                <button
+                  (click)="goToCustomerPage(customerPagination().page - 1)"
+                  [disabled]="customerPagination().page === 1 || loadingCustomers()"
+                  class="px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  ← Prev
+                </button>
+                
+                <span class="px-3 py-1 text-xs font-medium text-gray-900 dark:text-white">
+                  Page {{ customerPagination().page }} of {{ Math.ceil(customerPagination().total / customerPageSize) || 1 }}
+                </span>
+                
+                <button
+                  (click)="goToCustomerPage(customerPagination().page + 1)"
+                  [disabled]="!customerPagination().hasMore || loadingCustomers()"
+                  class="px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Next →
+                </button>
+                <button
+                  (click)="goToCustomerPage(Math.ceil(customerPagination().total / customerPageSize))"
+                  [disabled]="!customerPagination().hasMore || loadingCustomers()"
+                  class="px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Last ⏭
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              <span class="font-semibold text-blue-600 dark:text-blue-400">{{ selectedCustomerIds.length }}</span> customer(s) selected
+            </div>
+            <div class="flex gap-2">
+              <button
+                (click)="closeCustomerSelector()"
+                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+              >
+                Cancel
+              </button>
+              <button
+                (click)="confirmCustomerSelection()"
+                class="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm transition"
+              >
+                ✓ Confirm Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: []
 })
 export class QuickProductComponent implements OnDestroy {
   private loanService = inject(LoanService);
+  private customerService = inject(CustomerService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
   private router = inject(Router);
@@ -865,14 +1292,71 @@ export class QuickProductComponent implements OnDestroy {
   gracePeriodDays = 1;
   isActive = true;
   paymentFrequency: PaymentFrequency = 'weekly';
-  previewLoanAmount = 50000; // For accurate preview calculation
-  previewTermMonths = 3; // For accurate preview calculation
+  previewLoanAmount = 0; // Default to min amount, set in ngOnInit
+  previewTermMonths = 0; // Default to min term, set in ngOnInit
   previewDaysOverdue = 5; // For penalty calculation
   penaltyAmount = signal<number>(0);
+  
+  // Deduct in advance options
+  deductPlatformFeeInAdvance = false;
+  deductProcessingFeeInAdvance = false;
+  deductInterestInAdvance = false;
+  
+  // Product availability
+  availabilityType: 'all' | 'selected' = 'all';
+  selectedCustomerIds: number[] = [];
+  showCustomerSelector = false;
+  
+  // Customer selection
+  customers = signal<any[]>([]);
+  filteredCustomers = signal<any[]>([]);
+  loadingCustomers = signal(false);
+  searchingCustomers = signal(false);
+  customerSearchQuery = '';
+  customerPageSize = 10;
+  customerPagination = signal({ page: 1, limit: 10, total: 0, hasMore: false });
+  private searchTimeout?: ReturnType<typeof setTimeout>;
 
   // State
   saving = signal(false);
   preview = signal<LoanCalculationResult | null>(null);
+  previewSchedule = signal<LoanSchedulePreviewItem[]>([]);
+  showUpcomingInstallments = signal<boolean>(true);
+
+  private readonly cadencePreviewLimits: Record<PaymentFrequency, number> = {
+    daily: 7,
+    weekly: 4,
+    biweekly: 3,
+    monthly: 3,
+  };
+
+  cadencePreview = computed<LoanSchedulePreviewItem[]>(() => {
+    const schedule = this.previewSchedule();
+    if (!schedule.length) {
+      return [];
+    }
+
+    const preview = this.preview();
+    const frequency = this.normalizeFrequency(
+      (preview?.paymentFrequency as PaymentFrequency) || this.paymentFrequency
+    );
+    const limit = this.cadencePreviewLimits[frequency] ?? 4;
+    return schedule.slice(0, limit);
+  });
+
+  cadenceRemainingCount = computed<number>(() => {
+    const schedule = this.previewSchedule();
+    if (!schedule.length) {
+      return 0;
+    }
+
+    const preview = this.preview();
+    const frequency = this.normalizeFrequency(
+      (preview?.paymentFrequency as PaymentFrequency) || this.paymentFrequency
+    );
+    const limit = this.cadencePreviewLimits[frequency] ?? 4;
+    return Math.max(0, schedule.length - limit);
+  });
   previewLoading = signal(false);
   previewError = signal<string | null>(null);
   products = signal<any[]>([]);
@@ -883,7 +1367,11 @@ export class QuickProductComponent implements OnDestroy {
   filteredProducts = signal<any[]>([]);
 
   constructor() {
-    this.calculatePreview();
+    // Set default preview values to minimum amounts
+  this.previewLoanAmount = this.minAmount;
+  this.previewTermMonths = this.minTermMonths;
+    
+    // Don't auto-calculate on init, user must click "Compute Preview"
     this.loadProducts();
   }
 
@@ -964,6 +1452,15 @@ export class QuickProductComponent implements OnDestroy {
       this.minAmount = 0;
     }
 
+    // Keep preview amount aligned with minimums
+    if (this.editingProductId) {
+      if (this.previewLoanAmount < this.minAmount) {
+        this.previewLoanAmount = this.minAmount;
+      }
+    } else {
+      this.previewLoanAmount = this.minAmount;
+    }
+
     // Trigger preview calculation
     this.calculatePreview();
   }
@@ -994,6 +1491,17 @@ export class QuickProductComponent implements OnDestroy {
     // Ensure minimum is at least 1
     if (this.minTermMonths < 1) {
       this.minTermMonths = 1;
+    }
+
+    // Align preview term with the new minimum when flexible
+    if (this.loanTermType === 'flexible') {
+      if (this.editingProductId) {
+        if (this.previewTermMonths < this.minTermMonths) {
+          this.previewTermMonths = this.minTermMonths;
+        }
+      } else {
+        this.previewTermMonths = this.minTermMonths;
+      }
     }
 
     // Trigger preview calculation
@@ -1095,6 +1603,7 @@ export class QuickProductComponent implements OnDestroy {
         next: (response) => {
           this.previewLoading.set(false);
           this.preview.set(response.calculation);
+          this.previewSchedule.set(response.schedule || []);
           this.lastPreviewKey = cacheKey;
           this.calculatePenalty();
         },
@@ -1106,6 +1615,7 @@ export class QuickProductComponent implements OnDestroy {
           this.preview.set(null);
           this.lastPreviewKey = null;
           this.penaltyAmount.set(0);
+          this.previewSchedule.set([]);
         },
       });
     }, 200);
@@ -1159,7 +1669,12 @@ export class QuickProductComponent implements OnDestroy {
       latePaymentPenaltyPercent: this.latePaymentPenaltyPercent,
       gracePeriodDays: this.gracePeriodDays,
       paymentFrequency: this.paymentFrequency,
-      isActive: this.isActive
+      isActive: this.isActive,
+      deductPlatformFeeInAdvance: this.deductPlatformFeeInAdvance,
+      deductProcessingFeeInAdvance: this.deductProcessingFeeInAdvance,
+      deductInterestInAdvance: this.deductInterestInAdvance,
+      availabilityType: this.availabilityType,
+      selectedCustomerIds: this.availabilityType === 'selected' ? this.selectedCustomerIds : []
     };
 
     if (this.editingProductId) {
@@ -1169,6 +1684,7 @@ export class QuickProductComponent implements OnDestroy {
           if (response.success) {
             this.toastService.success('Product updated successfully! ✅');
             this.resetForm();
+            this.activeView = 'products';
             this.loadProducts();
           } else {
             this.toastService.error(response.message || 'Failed to update product');
@@ -1211,20 +1727,23 @@ export class QuickProductComponent implements OnDestroy {
       next: (response) => {
         if (response.success && response.data) {
           console.log('📦 Raw products from API:', response.data);
+          console.log('🔍 First product keys:', response.data[0] ? Object.keys(response.data[0]) : 'no products');
+          console.log('🔍 First product minAmount:', response.data[0]?.minAmount);
+          console.log('🔍 First product maxAmount:', response.data[0]?.maxAmount);
 
-          // Ensure all numeric fields have defaults to prevent NaN
+          // Ensure all numeric fields are converted from strings to numbers (PostgreSQL returns decimals as strings)
           const normalizedProducts = response.data.map((p: any) => ({
             ...p,
-            minAmount: p.minAmount || 0,
-            maxAmount: p.maxAmount || 0,
-            interestRate: p.interestRate || 0,
-            minTermDays: p.minTermDays || 30,
-            maxTermDays: p.maxTermDays || 360,
-            fixedTermDays: p.fixedTermDays || 90,
-            processingFeePercent: p.processingFeePercent || 0,
-            platformFee: p.platformFee || 0,
-            latePaymentPenaltyPercent: p.latePaymentPenaltyPercent || 0,
-            gracePeriodDays: p.gracePeriodDays || 0
+            minAmount: Number(p.minAmount) || 0,
+            maxAmount: Number(p.maxAmount) || 0,
+            interestRate: Number(p.interestRate) || 0,
+            minTermDays: Number(p.minTermDays) || 30,
+            maxTermDays: Number(p.maxTermDays) || 360,
+            fixedTermDays: Number(p.fixedTermDays) || 90,
+            processingFeePercent: Number(p.processingFeePercent) || 0,
+            platformFee: Number(p.platformFee) || 0,
+            latePaymentPenaltyPercent: Number(p.latePaymentPenaltyPercent) || 0,
+            gracePeriodDays: Number(p.gracePeriodDays) || 0
           }));
 
           console.log('✅ Normalized products:', normalizedProducts);
@@ -1269,6 +1788,16 @@ export class QuickProductComponent implements OnDestroy {
     this.gracePeriodDays = Number(product.gracePeriodDays) || 0;
     this.paymentFrequency = product.paymentFrequency || 'weekly';
     this.isActive = product.isActive;
+    
+    // Load deduct in advance options
+    this.deductPlatformFeeInAdvance = product.deductPlatformFeeInAdvance || false;
+    this.deductProcessingFeeInAdvance = product.deductProcessingFeeInAdvance || false;
+    this.deductInterestInAdvance = product.deductInterestInAdvance || false;
+    
+    // Load availability options
+    this.availabilityType = product.availabilityType || 'all';
+    this.selectedCustomerIds = product.selectedCustomerIds || [];
+    
     this.calculatePreview();
 
     // Scroll to top
@@ -1345,10 +1874,180 @@ export class QuickProductComponent implements OnDestroy {
     this.gracePeriodDays = 1;
     this.isActive = true;
     this.paymentFrequency = 'weekly';
-    this.previewLoanAmount = 50000;
-    this.previewTermMonths = 3;
+    this.previewLoanAmount = this.minAmount;
+    this.previewTermMonths = this.minTermMonths;
     this.previewDaysOverdue = 5;
+    this.deductPlatformFeeInAdvance = false;
+    this.deductProcessingFeeInAdvance = false;
+    this.deductInterestInAdvance = false;
+    this.availabilityType = 'all';
+    this.selectedCustomerIds = [];
+    this.previewSchedule.set([]);
     this.calculatePreview();
+  }
+
+  onAvailabilityTypeChange(): void {
+    if (this.availabilityType === 'all') {
+      this.selectedCustomerIds = [];
+    }
+  }
+
+  openCustomerSelector(): void {
+    this.showCustomerSelector = true;
+    this.customerSearchQuery = '';
+    this.loadCustomers(1);
+  }
+
+  closeCustomerSelector(): void {
+    this.showCustomerSelector = false;
+    this.customerSearchQuery = '';
+    this.filteredCustomers.set([]);
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+  }
+
+  onCustomerSearchChange(): void {
+    // Clear previous timeout
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Debounce search by 400ms
+    this.searchTimeout = setTimeout(() => {
+      this.loadCustomers(1);
+    }, 400);
+  }
+
+  loadCustomers(page: number = 1): void {
+    this.loadingCustomers.set(true);
+    
+    const query = this.customerSearchQuery.trim();
+    
+    // Build params object, only include search if it has a value
+    const params: any = {
+      page: page,
+      limit: this.customerPageSize
+    };
+    
+    if (query) {
+      params.search = query;
+    }
+    
+    console.log('🔍 Loading customers with params:', params);
+    
+    this.customerService.listCustomers(params).subscribe({
+      next: (response) => {
+        console.log('✅ Customers loaded:', response);
+        
+        if (response.success && response.data) {
+          this.filteredCustomers.set(response.data);
+          console.log('📋 Filtered customers set:', response.data.length);
+          console.log('📋 Raw pagination from API:', response.pagination);
+
+          // Update pagination info
+          if (response.pagination) {
+            const totalPages = response.pagination.totalPages || response.pagination.pages || 1;
+            this.customerPagination.set({
+              page: response.pagination.page,
+              limit: response.pagination.limit,
+              total: response.pagination.total,
+              hasMore: response.pagination.page < totalPages
+            });
+            console.log('📄 Pagination:', this.customerPagination());
+          }
+        } else {
+          console.warn('⚠️ No data in response or success=false');
+        }
+        this.loadingCustomers.set(false);
+      },
+      error: (error) => {
+        console.error('❌ Error loading customers:', error);
+        this.toastService.error('Failed to load customers: ' + (error.error?.message || error.message));
+        this.loadingCustomers.set(false);
+      }
+    });
+  }
+
+  goToCustomerPage(page: number): void {
+    if (page < 1) return;
+    const maxPage = Math.ceil(this.customerPagination().total / this.customerPageSize);
+    if (page > maxPage) return;
+    
+    this.loadCustomers(page);
+  }
+
+  onPageSizeChange(): void {
+    this.customerPagination.update(p => ({ ...p, limit: this.customerPageSize }));
+    this.loadCustomers(1);
+  }
+
+  clearSearchAndReload(): void {
+    this.customerSearchQuery = '';
+    this.loadCustomers(1);
+  }
+
+  isCustomerSelected(customerId: number): boolean {
+    return this.selectedCustomerIds.includes(customerId);
+  }
+
+  toggleCustomerSelection(customerId: number): void {
+    const index = this.selectedCustomerIds.indexOf(customerId);
+    if (index > -1) {
+      this.selectedCustomerIds.splice(index, 1);
+    } else {
+      this.selectedCustomerIds.push(customerId);
+    }
+  }
+
+  areAllOnPageSelected(): boolean {
+    if (this.filteredCustomers().length === 0) return false;
+    return this.filteredCustomers().every((c: any) => this.isCustomerSelected(c.id));
+  }
+
+  areSomeOnPageSelected(): boolean {
+    if (this.filteredCustomers().length === 0) return false;
+    const selected = this.filteredCustomers().filter((c: any) => this.isCustomerSelected(c.id));
+    return selected.length > 0 && selected.length < this.filteredCustomers().length;
+  }
+
+  toggleAllOnPage(): void {
+    const allSelected = this.areAllOnPageSelected();
+    const pageIds = this.filteredCustomers().map((c: any) => c.id);
+    
+    if (allSelected) {
+      // Deselect all on page
+      this.selectedCustomerIds = this.selectedCustomerIds.filter(id => !pageIds.includes(id));
+    } else {
+      // Select all on page
+      pageIds.forEach(id => {
+        if (!this.selectedCustomerIds.includes(id)) {
+          this.selectedCustomerIds.push(id);
+        }
+      });
+    }
+  }
+
+  selectAllOnPage(): void {
+    const pageIds = this.filteredCustomers().map((c: any) => c.id);
+    pageIds.forEach(id => {
+      if (!this.selectedCustomerIds.includes(id)) {
+        this.selectedCustomerIds.push(id);
+      }
+    });
+    this.toastService.success(`${pageIds.length} customer(s) selected`);
+  }
+
+  clearAllSelections(): void {
+    const count = this.selectedCustomerIds.length;
+    this.selectedCustomerIds = [];
+    this.toastService.info(`${count} selection(s) cleared`);
+  }
+
+  confirmCustomerSelection(): void {
+    this.showCustomerSelector = false;
+    this.customerSearchQuery = '';
+    this.toastService.success(`${this.selectedCustomerIds.length} customer(s) selected`);
   }
 
   // Make Math available in template
@@ -1357,6 +2056,131 @@ export class QuickProductComponent implements OnDestroy {
   cancelEdit(): void {
     this.resetForm();
     this.toastService.info('Edit cancelled');
+  }
+
+  getNetDisbursement(): number {
+    const preview = this.preview();
+    if (!preview) {
+      return this.previewLoanAmount;
+    }
+
+    let netAmount = preview.loanAmount;
+
+    // Use product deduct settings for calculator display
+    if (this.deductPlatformFeeInAdvance) {
+      netAmount -= preview.platformFee;
+    }
+
+    if (this.deductProcessingFeeInAdvance) {
+      netAmount -= preview.processingFeeAmount;
+    }
+
+    if (this.deductInterestInAdvance) {
+      netAmount -= preview.interestAmount;
+    }
+
+    return Math.max(0, netAmount);
+  }
+
+  getPaymentFrequencyLabel(): string {
+    const frequency = this.normalizeFrequency((this.preview()?.paymentFrequency as PaymentFrequency) || this.paymentFrequency);
+    const labels: Record<PaymentFrequency, string> = {
+      daily: 'Daily Payments',
+      weekly: 'Weekly Payments',
+      biweekly: 'Bi-Weekly Payments',
+      monthly: 'Monthly Payments',
+    };
+    return labels[frequency];
+  }
+
+  getCadenceSuffix(): string {
+    const frequency = this.normalizeFrequency((this.preview()?.paymentFrequency as PaymentFrequency) || this.paymentFrequency);
+    const suffix: Record<PaymentFrequency, string> = {
+      daily: 'per day',
+      weekly: 'per week',
+      biweekly: 'every 2 weeks',
+      monthly: 'per month',
+    };
+    return suffix[frequency];
+  }
+
+  toggleUpcomingInstallments(): void {
+    this.showUpcomingInstallments.set(!this.showUpcomingInstallments());
+  }
+
+  getCadenceLabel(paymentNumber: number): string {
+    const frequency = this.normalizeFrequency(
+      (this.preview()?.paymentFrequency as PaymentFrequency) || this.paymentFrequency
+    );
+    const labels: Record<PaymentFrequency, string> = {
+      daily: 'Day',
+      weekly: 'Week',
+      biweekly: 'Bi-Week',
+      monthly: 'Month',
+    };
+    const base = labels[frequency] || 'Payment';
+    return `${base} ${paymentNumber}`;
+  }
+
+  getCadenceDueDate(item: LoanSchedulePreviewItem): string | null {
+    return this.formatScheduleDate(item.dueDate);
+  }
+
+  getDurationDescriptor(): string {
+    const preview = this.preview();
+    if (!preview) {
+      return '—';
+    }
+
+    const frequency = this.normalizeFrequency(preview.paymentFrequency as PaymentFrequency);
+    const spanMap: Record<PaymentFrequency, { multiplier: number; unit: string }> = {
+      daily: { multiplier: 1, unit: 'day' },
+      weekly: { multiplier: 1, unit: 'week' },
+      biweekly: { multiplier: 2, unit: 'week' },
+      monthly: { multiplier: 1, unit: 'month' },
+    };
+
+    const meta = spanMap[frequency];
+    const totalUnits = Math.max(0, Math.round(preview.numPayments * meta.multiplier));
+    if (!totalUnits) {
+      return '—';
+    }
+
+    const unitLabel = totalUnits === 1 ? meta.unit : `${meta.unit}s`;
+    return `≈ ${totalUnits} ${unitLabel}`;
+  }
+
+  getFirstPaymentDate(): string | null {
+    const schedule = this.previewSchedule();
+    if (!schedule.length) {
+      return null;
+    }
+    return this.formatScheduleDate(schedule[0].dueDate);
+  }
+
+  getLastPaymentDate(): string | null {
+    const schedule = this.previewSchedule();
+    if (!schedule.length) {
+      return null;
+    }
+    return this.formatScheduleDate(schedule[schedule.length - 1].dueDate);
+  }
+
+  private formatScheduleDate(value: string | Date): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toLocaleDateString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   formatCurrency(amount: number): string {
@@ -1391,6 +2215,9 @@ export class QuickProductComponent implements OnDestroy {
       processingFeePercentage: Math.max(0, Number(this.processingFeePercent) || 0),
       platformFee: Math.max(0, Number(this.platformFee) || 0),
       latePenaltyPercentage: Math.max(0, Number(this.latePaymentPenaltyPercent) || 0),
+      deductPlatformFeeInAdvance: this.deductPlatformFeeInAdvance,
+      deductProcessingFeeInAdvance: this.deductProcessingFeeInAdvance,
+      deductInterestInAdvance: this.deductInterestInAdvance,
     };
   }
 
@@ -1425,5 +2252,6 @@ export class QuickProductComponent implements OnDestroy {
     this.preview.set(null);
     this.lastPreviewKey = null;
     this.penaltyAmount.set(0);
+    this.previewSchedule.set([]);
   }
 }

@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { MoneyLoanService } from './money-loan.service';
-import { CreateLoanApplicationDto, ApproveLoanDto, DisburseLoanDto, CreatePaymentDto, LoanCalculationRequestDto } from './dto/money-loan.dto';
+import { CreateLoanApplicationDto, ApproveLoanDto, DisburseLoanDto, CreatePaymentDto, LoanCalculationRequestDto, PenaltyCalculationRequestDto } from './dto/money-loan.dto';
 
 @Controller('money-loan')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -17,6 +17,16 @@ export class MoneyLoanController {
     return {
       success: true,
       data: preview,
+    };
+  }
+
+  @Post('calculate/penalty')
+  @Permissions('money-loan:read')
+  async calculateLatePenalty(@Req() req: any, @Body() payload: PenaltyCalculationRequestDto) {
+    const data = await this.moneyLoanService.calculateLatePaymentPenalty(req.user.tenantId, payload);
+    return {
+      success: true,
+      data,
     };
   }
 
@@ -303,6 +313,15 @@ export class MoneyLoanController {
     @Query('status') status?: string,
     @Query('kycStatus') kycStatus?: string,
   ) {
+    console.log('🔍 [GET /customers] Params:', {
+      tenantId: req.user.tenantId,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10,
+      search,
+      status,
+      kycStatus,
+    });
+
     const customers = await this.moneyLoanService.getCustomers(req.user.tenantId, {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10,
@@ -310,6 +329,13 @@ export class MoneyLoanController {
       status,
       kycStatus,
     });
+
+    console.log('✅ [GET /customers] Result:', {
+      count: customers.data.length,
+      total: customers.pagination.total,
+      pagination: customers.pagination,
+    });
+
     return {
       success: true,
       data: customers.data,

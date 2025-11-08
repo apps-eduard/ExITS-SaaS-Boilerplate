@@ -4,7 +4,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { MoneyLoanService } from './money-loan.service';
 
-@Controller('customers')
+@Controller('money-loan/customers')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CustomersController {
   constructor(private readonly moneyLoanService: MoneyLoanService) {}

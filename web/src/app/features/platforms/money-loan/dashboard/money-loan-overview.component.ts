@@ -25,7 +25,12 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
       </div>
 
       <!-- Key Metrics Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/config/quick-product')"
+                  class="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/60 text-blue-700 dark:text-blue-300 rounded-lg transition-all border border-blue-200 dark:border-blue-700">
+            <span>⚡</span>
+            <span class="hidden sm:inline">Quick Create</span>
+          </button>
         <!-- Total Loans -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
              (click)="navigateTo('/platforms/money-loan/dashboard/loans/all')">
@@ -101,6 +106,11 @@ import { ComponentPathService } from '../../../../core/services/component-path.s
       <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
         <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          <button (click)="navigateTo('/platforms/money-loan/dashboard/config/quick-product')"
+                  class="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg transition-all border border-blue-200 dark:border-blue-800">
+            <span>⚡</span>
+            <span class="hidden sm:inline">Quick Create</span>
+          </button>
           <button (click)="navigateTo('/platforms/money-loan/dashboard/customers/all')"
                   class="flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all border border-gray-200 dark:border-gray-600">
             <span>👥</span>

@@ -9,6 +9,9 @@ export interface LoanParams {
   processingFeePercentage: number;
   platformFee: number;
   latePenaltyPercentage?: number;
+  deductPlatformFeeInAdvance?: boolean;
+  deductProcessingFeeInAdvance?: boolean;
+  deductInterestInAdvance?: boolean;
 }
 
 export interface LoanCalculation {
@@ -16,6 +19,8 @@ export interface LoanCalculation {
   loanAmount: number;
   termMonths: number;
   paymentFrequency: string;
+  latePenaltyPercentage?: number;
+  penaltyPerDay?: number;
   
   // Calculated values
   interestAmount: number;
@@ -120,6 +125,10 @@ export class LoanCalculatorService {
       interestType,
       processingFeePercentage,
       platformFee,
+      latePenaltyPercentage,
+      deductPlatformFeeInAdvance = true,
+      deductProcessingFeeInAdvance = true,
+      deductInterestInAdvance = false,
     } = params;
 
     const normalizedTerm = Math.max(1, Math.round(termMonths));
@@ -144,17 +153,22 @@ export class LoanCalculatorService {
     }
 
     // Processing fee calculation (percent of principal, collected upfront)
-    const processingFeeAmount = loanAmount * (processingFeePercentage / 100);
+  const processingFeeAmount = loanAmount * (processingFeePercentage / 100);
 
     // Platform fee is charged per month of the term
     const platformFeeTotal = platformFee * normalizedTerm;
 
-    // ⚠️ IMPORTANT: Total Repayable = Principal + Interest + Processing Fee + Platform Fee
-    // This is the total amount the customer must pay back to the lender
-    const totalRepayable = loanAmount + interestAmount + processingFeeAmount + platformFeeTotal;
+  const upfrontProcessingFee = deductProcessingFeeInAdvance ? processingFeeAmount : 0;
+  const upfrontPlatformFee = deductPlatformFeeInAdvance ? platformFeeTotal : 0;
+  const upfrontInterest = deductInterestInAdvance ? interestAmount : 0;
 
-    // Net proceeds = what borrower actually receives after upfront fees are deducted
-    const netProceeds = loanAmount - processingFeeAmount - platformFeeTotal;
+  // ⚠️ IMPORTANT: Total Repayable = Principal + Interest + Processing Fee + Platform Fee
+  // This is the total amount the customer must pay back to the lender
+  const totalRepayable = loanAmount + interestAmount + processingFeeAmount + platformFeeTotal;
+
+  // Net proceeds = what borrower actually receives after upfront deductions
+  const totalUpfrontDeductions = upfrontProcessingFee + upfrontPlatformFee + upfrontInterest;
+  const netProceeds = Math.max(0, loanAmount - totalUpfrontDeductions);
 
     // Installment amount (guard against divide-by-zero)
     const installmentAmount = numPayments > 0 ? totalRepayable / numPayments : 0;
@@ -170,17 +184,23 @@ export class LoanCalculatorService {
     const gracePeriodDays = this.getGracePeriod(paymentFrequency);
 
     // Total deductions (upfront only)
-    const totalDeductions = processingFeeAmount + platformFeeTotal;
+  const totalDeductions = totalUpfrontDeductions;
 
     // Monthly equivalent (for comparison)
     const monthlyEquivalent = paymentFrequency === 'monthly'
       ? installmentAmount
       : this.convertToMonthlyEquivalent(installmentAmount, paymentFrequency);
 
+    const penaltyPerDay = latePenaltyPercentage !== undefined
+      ? installmentAmount * (latePenaltyPercentage / 100)
+      : undefined;
+
     return {
       loanAmount,
       termMonths: normalizedTerm,
       paymentFrequency,
+      latePenaltyPercentage,
+      penaltyPerDay,
       interestAmount,
       processingFeeAmount,
       platformFee: platformFeeTotal,
@@ -251,8 +271,9 @@ export class LoanCalculatorService {
    * Compound interest: interest on interest
    */
   private calculateCompoundInterest(principal: number, ratePercent: number, termMonths: number): number {
+    const normalizedTerm = Math.max(1, termMonths);
     const monthlyRate = ratePercent / 100;
-    const compounded = principal * Math.pow(1 + monthlyRate, termMonths);
+    const compounded = principal * Math.pow(1 + monthlyRate, normalizedTerm);
     return compounded - principal;
   }
 

@@ -11,6 +11,9 @@ export interface LoanCalculationRequest {
   platformFee?: number;
   latePenaltyPercentage?: number;
   disbursementDate?: string;
+  deductPlatformFeeInAdvance?: boolean;
+  deductProcessingFeeInAdvance?: boolean;
+  deductInterestInAdvance?: boolean;
 }
 
 export interface LoanCalculationResult {

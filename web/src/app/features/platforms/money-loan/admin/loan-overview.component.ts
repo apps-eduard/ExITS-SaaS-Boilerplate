@@ -137,9 +137,20 @@ import { LoanOverview } from '../shared/models/loan.models';
       </div>
 
       <!-- Quick Actions -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
-          routerLink="/money-loan/customers"
+          routerLink="/platforms/money-loan/dashboard/config/quick-product"
+          class="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 p-4 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+        >
+          <span class="text-2xl">⚡</span>
+          <div class="text-left">
+            <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Quick Create Product</p>
+            <p class="text-xs text-blue-600 dark:text-blue-400">Launch the streamlined loan product setup</p>
+          </div>
+        </button>
+
+        <button
+          routerLink="/platforms/money-loan/dashboard/customers/all"
           class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <span class="text-2xl">👥</span>
@@ -150,7 +161,7 @@ import { LoanOverview } from '../shared/models/loan.models';
         </button>
 
         <button
-          routerLink="/money-loan/loans"
+          routerLink="/platforms/money-loan/dashboard/loans/all"
           class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <span class="text-2xl">💳</span>
@@ -161,7 +172,7 @@ import { LoanOverview } from '../shared/models/loan.models';
         </button>
 
         <button
-          routerLink="payments/record"
+          routerLink="/platforms/money-loan/dashboard/payments/record"
           class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <span class="text-2xl">💸</span>

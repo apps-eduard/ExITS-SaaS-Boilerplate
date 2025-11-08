@@ -9,6 +9,7 @@ import {
   UpdateLoanProductDto,
   LoanTermType,
   LoanCalculationRequestDto,
+  PenaltyCalculationRequestDto,
 } from './dto/money-loan.dto';
 
 @Injectable()
@@ -28,6 +29,9 @@ export class MoneyLoanService {
       platformFee = 0,
       latePenaltyPercentage = 0,
       disbursementDate,
+      deductPlatformFeeInAdvance = true,
+      deductProcessingFeeInAdvance = true,
+      deductInterestInAdvance = false,
     } = payload;
 
     if (!loanAmount || loanAmount <= 0) {
@@ -50,6 +54,9 @@ export class MoneyLoanService {
       processingFeePercentage,
       platformFee,
       latePenaltyPercentage,
+      deductPlatformFeeInAdvance,
+      deductProcessingFeeInAdvance,
+      deductInterestInAdvance,
     });
 
     const scheduleStart = disbursementDate ? new Date(disbursementDate) : new Date();
@@ -68,6 +75,10 @@ export class MoneyLoanService {
       totalDeductions: round(calculation.totalDeductions),
       monthlyEquivalent: calculation.monthlyEquivalent !== undefined
         ? round(calculation.monthlyEquivalent)
+        : undefined,
+      latePenaltyPercentage: calculation.latePenaltyPercentage,
+      penaltyPerDay: calculation.penaltyPerDay !== undefined
+        ? round(calculation.penaltyPerDay)
         : undefined,
     };
 
@@ -95,6 +106,55 @@ export class MoneyLoanService {
     return {
       calculation: normalizedCalculation,
       schedule: schedulePreview,
+    };
+  }
+
+  async calculateLatePaymentPenalty(tenantId: number, payload: PenaltyCalculationRequestDto) {
+    void tenantId; // tenant-based rules can be layered later
+    const {
+      installmentAmount,
+      paymentFrequency,
+      latePenaltyPercentage,
+    } = payload;
+
+    if (installmentAmount === undefined || installmentAmount < 0) {
+      throw new BadRequestException('installmentAmount must be zero or greater');
+    }
+
+    const dueDate = new Date(payload.dueDate);
+    if (Number.isNaN(dueDate.getTime())) {
+      throw new BadRequestException('Invalid dueDate');
+    }
+
+    const paymentDate = payload.paymentDate ? new Date(payload.paymentDate) : new Date();
+    if (Number.isNaN(paymentDate.getTime())) {
+      throw new BadRequestException('Invalid paymentDate');
+    }
+
+    if (latePenaltyPercentage === undefined || latePenaltyPercentage < 0) {
+      throw new BadRequestException('latePenaltyPercentage must be zero or greater');
+    }
+
+    const { LoanCalculatorService } = require('./loan-calculator.service');
+    const calculator = new LoanCalculatorService();
+
+    const result = calculator.calculatePenalty(
+      Number(installmentAmount),
+      dueDate,
+      paymentDate,
+      paymentFrequency,
+      Number(latePenaltyPercentage),
+    );
+
+    const round = (value: number) => Math.round((value ?? 0) * 100) / 100;
+
+    return {
+      ...result,
+      installmentAmount: round(result.installmentAmount),
+      penaltyRate: Number(latePenaltyPercentage),
+      latePenaltyPercentage: Number(latePenaltyPercentage),
+      penaltyAmount: round(result.penaltyAmount),
+      totalDue: round(result.totalDue),
     };
   }
 
@@ -1636,7 +1696,7 @@ export class MoneyLoanService {
     console.log('🔍 [GET PRODUCTS] Raw products from DB:', products);
     
     // Transform database fields to camelCase with proper formatting
-    const transformed = products.map(product => this.transformProductFields(product));
+    const transformed = await Promise.all(products.map(product => this.transformProductFields(product)));
     
     console.log('✅ [GET PRODUCTS] Transformed products:', transformed);
     
@@ -1655,34 +1715,26 @@ export class MoneyLoanService {
     }
 
     // Transform database fields to camelCase with proper formatting
-    return this.transformProductFields(product);
+    return await this.transformProductFields(product);
   }
 
-  private transformProductFields(product: any) {
-    // Knex already converts snake_case to camelCase via postProcessResponse
-    // So we just return the product with proper field selection
+  private async transformProductFields(product: any) {
+    const knex = this.knexService.instance;
+    
+    // Get assigned customer IDs if availability_type is 'selected'
+    let selectedCustomerIds = [];
+    if (product.availabilityType === 'selected') {
+      const assignments = await knex('money_loan_product_customers')
+        .where('product_id', product.id)
+        .pluck('customer_id');
+      selectedCustomerIds = assignments;
+    }
+    
+    // Knex postProcessResponse already converts snake_case to camelCase
+    // Just add the selectedCustomerIds from the junction table
     return {
-      id: product.id,
-      tenantId: product.tenantId,
-      productCode: product.productCode,
-      name: product.name,
-      description: product.description,
-      minAmount: product.minAmount,
-      maxAmount: product.maxAmount,
-      interestRate: product.interestRate,
-      interestType: product.interestType,
-      loanTermType: product.loanTermType,
-      fixedTermDays: product.fixedTermDays,
-      minTermDays: product.minTermDays,
-      maxTermDays: product.maxTermDays,
-      processingFeePercent: product.processingFeePercent,
-      platformFee: product.platformFee,
-      latePaymentPenaltyPercent: product.latePaymentPenaltyPercent,
-      gracePeriodDays: product.gracePeriodDays,
-      paymentFrequency: product.paymentFrequency,
-      isActive: product.isActive,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
+      ...product,
+      selectedCustomerIds,
     };
   }
 
@@ -1726,6 +1778,10 @@ export class MoneyLoanService {
       grace_period_days: dto.gracePeriodDays ?? 0,
       payment_frequency: dto.paymentFrequency ?? 'weekly',
       is_active: dto.isActive ?? true,
+      deduct_platform_fee_in_advance: dto.deductPlatformFeeInAdvance ?? false,
+      deduct_processing_fee_in_advance: dto.deductProcessingFeeInAdvance ?? false,
+      deduct_interest_in_advance: dto.deductInterestInAdvance ?? false,
+      availability_type: dto.availabilityType ?? 'all',
     };
 
     this.sanitizePayload(insertPayload);
@@ -1736,6 +1792,16 @@ export class MoneyLoanService {
         .returning('id');
 
       const createdId = typeof result === 'object' ? result.id : result;
+      
+      // Handle customer assignments if availabilityType is 'selected'
+      if (dto.availabilityType === 'selected' && dto.selectedCustomerIds && dto.selectedCustomerIds.length > 0) {
+        const customerAssignments = dto.selectedCustomerIds.map(customerId => ({
+          product_id: createdId,
+          customer_id: customerId,
+        }));
+        await knex('money_loan_product_customers').insert(customerAssignments);
+      }
+      
       return await this.getProductById(tenantId, Number(createdId));
     } catch (error: any) {
       if (error?.code === '23505') {
@@ -1828,6 +1894,18 @@ export class MoneyLoanService {
     if (dto.loanTermType !== undefined) {
       updates.loan_term_type = dto.loanTermType;
     }
+    if (dto.deductPlatformFeeInAdvance !== undefined) {
+      updates.deduct_platform_fee_in_advance = dto.deductPlatformFeeInAdvance;
+    }
+    if (dto.deductProcessingFeeInAdvance !== undefined) {
+      updates.deduct_processing_fee_in_advance = dto.deductProcessingFeeInAdvance;
+    }
+    if (dto.deductInterestInAdvance !== undefined) {
+      updates.deduct_interest_in_advance = dto.deductInterestInAdvance;
+    }
+    if (dto.availabilityType !== undefined) {
+      updates.availability_type = dto.availabilityType;
+    }
 
     if (targetLoanTermType === LoanTermType.FIXED) {
       updates.fixed_term_days = dto.fixedTermDays ?? existing.fixedTermDays;
@@ -1859,6 +1937,23 @@ export class MoneyLoanService {
       await knex('money_loan_products')
         .where({ tenant_id: tenantId, id: productId })
         .update(updates);
+      
+      // Handle customer assignments if availabilityType is updated
+      if (dto.availabilityType !== undefined) {
+        // Delete existing assignments
+        await knex('money_loan_product_customers')
+          .where({ product_id: productId })
+          .del();
+        
+        // Add new assignments if selected
+        if (dto.availabilityType === 'selected' && dto.selectedCustomerIds && dto.selectedCustomerIds.length > 0) {
+          const customerAssignments = dto.selectedCustomerIds.map(customerId => ({
+            product_id: productId,
+            customer_id: customerId,
+          }));
+          await knex('money_loan_product_customers').insert(customerAssignments);
+        }
+      }
     } catch (error: any) {
       if (error?.code === '23505') {
         throw new ConflictException('Product code already exists for this tenant');
@@ -1982,8 +2077,14 @@ export class MoneyLoanService {
       .limit(limit)
       .offset(offset);
 
+    // Add fullName to each customer
+    const dataWithFullName = data.map(customer => ({
+      ...customer,
+      fullName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown Customer'
+    }));
+
     return {
-      data,
+      data: dataWithFullName,
       pagination: {
         page,
         limit,
